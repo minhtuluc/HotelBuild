@@ -1,0 +1,33 @@
+# Phụ thuộc
+node_modules/
+.pnpm-store/
+
+# Kết quả dựng
+dist/
+build/
+.next/
+out/
+.expo/
+*.tsbuildinfo
+
+# Môi trường & bí mật — KHÔNG BAO GIỜ commit (BR-SYS / NFR-SEC-06)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Ảnh chụp CSDL & sao lưu cục bộ
+*.sql.gz
+*.dump
+dump.sql
+
+# Trình soạn thảo & hệ điều hành
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Nhật ký
+*.log
+npm-debug.log*
