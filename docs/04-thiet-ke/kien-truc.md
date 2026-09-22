@@ -9,12 +9,12 @@
 | # | Ràng buộc | Nguồn | Hệ quả kiến trúc bắt buộc |
 |---|-----------|-------|---------------------------|
 | 1 | Không được bán trùng một **đơn vị bán** `(roomId, bedNo, đêm)` — `bedNo = 0` nghĩa là cả phòng, `1..bedCount` là giường của DOR | BR-INV-03, BR-PROP-04, NFR-REL-01 | Bất biến ép ở tầng CSDL bằng ràng buộc loại trừ ba cột — quyết định ADR-003 |
-| 2 | Kiểm tra tồn và giữ chỗ phải nằm trong **một** transaction có khoá bi quan | BR-INV-02 | Một tiến trình ghi duy nhất sở hữu giao dịch; không tách dịch vụ giữ chỗ riêng |
-| 2 | Cùng đầu vào giá → cùng kết quả trên web khách, Android và API | BR-RATE-17, NFR-MAIN-01 | Động cơ giá là hàm thuần dùng chung trong `packages/domain` — ADR-001, ADR-007 |
+| 2 | Kiểm tra tồn và giữ chỗ phải nằm trong **một** transaction có khoá bi quan | BR-INV-02 | Một workflow sở hữu transaction; nhiều instance tuân cùng giao thức khóa PostgreSQL theo ADR-014 |
+| 2 | Cùng đầu vào giá → cùng kết quả trên customer web, customer Android, operations web, operations Android và API | BR-RATE-17, NFR-MAIN-01 | `packages/domain` là nguồn tính authoritative ở backend; frontend chỉ hiển thị `PriceQuote` từ API — ADR-001, ADR-007 |
 | 3 | Mọi thao tác ghi sinh `AuditLog` trong cùng transaction | BR-GEN-07, BR-SYS-01 | Unit of Work bao cả thực thể nghiệp vụ lẫn bản ghi kiểm toán |
 | 4 | Thao tác ghi idempotent theo `Idempotency-Key` (24 giờ) | BR-GEN-08, NFR-REL-06 | Kho idempotency đặt ở Redis, không ở tầng giao diện |
 | 5 | Đồng bộ tồn/giá lên OTA ngay khi có thay đổi, chậm nhất 5 phút | BR-CHAN-02, NFR-REL-03 | Outbox giao dịch + hàng đợi việc nền; gọi OTA là I/O bất đồng bộ |
-| 6 | Giải phóng hold trong ≤ 60 giây | BR-INV-04, NFR-REL-02 | Job nền chu kỳ ngắn + TTL Redis, không chờ tác nhân người |
+| 6 | Giải phóng hold trong ≤ 60 giây | BR-INV-04, NFR-REL-02 | Job quét Booking trên PostgreSQL, giờ DB sau khóa; hoạt động cả khi Redis mất |
 | 8 | Quá tải phải được xử lý trước T−24h | BR-OVER-04, NFR-OBS-04 | Job quét quá tải theo giờ + cảnh báo leo thang |
 | 9 | Không lưu dữ liệu thẻ; che PII trong log | BR-PAY-04, NFR-SEC-02/03 | Adapter PSP là ranh giới chống rò rỉ; lớp log che dữ liệu |
 | 10 | Ngân sách 750 giờ, nhóm 5 người, một môn học | [05/lộ trình](../05-ke-hoach/lo-trinh.md) | Số đơn vị triển khai tối thiểu; ưu tiên ranh giới module rõ thay vì hạ tầng phân tán |
@@ -27,10 +27,11 @@
 
 ```mermaid
 flowchart TB
-  subgraph CLIENT["Tầng giao — apps/web và apps/mobile"]
-    GUEST["Web khách — Next.js 15<br/>tìm phòng, báo giá, đặt, trả cọc, tự huỷ"]
-    ADMIN["Web back-office — Next.js 15<br/>giá, mùa, kênh, duyệt hoàn, báo cáo"]
-    MOBILE["App Android — Expo / React Native<br/>lễ tân, quản lý cơ sở, buồng phòng"]
+  subgraph CLIENT["Tầng giao — bốn frontend độc lập"]
+    GUESTWEB["Customer Web — Next.js 15<br/>tìm phòng, báo giá, đặt, trả cọc, tự huỷ"]
+    GUESTANDROID["Customer Android — Expo / React Native<br/>tìm phòng, đặt, thanh toán, tự phục vụ"]
+    OPSWEB["Operations Web — Next.js 15<br/>giá, mùa, kênh, duyệt hoàn, báo cáo"]
+    OPSANDROID["Operations Android — Expo / React Native<br/>lễ tân, quản lý cơ sở, buồng phòng"]
   end
 
   subgraph EDGE["Biên"]
@@ -46,7 +47,7 @@ flowchart TB
   subgraph INFRA["Hạ tầng — apps/api/src/infrastructure"]
     REPO["Prisma 6<br/>Repository + Unit of Work"]
     PG[("PostgreSQL 16<br/>ràng buộc loại trừ chống trùng phòng,<br/>AuditLog append-only, OutboxEvent")]
-    REDIS[("Redis 7<br/>hold, khoá phân tán, cache, idempotency")]
+    REDIS[("Redis 7<br/>cache, quote, vận chuyển queue")]
     QUEUE["BullMQ worker<br/>4 job nền + outbox relay"]
     OTAAD["ChannelAdapter<br/>BookingComAdapter, AgodaAdapter, AirbnbAdapter"]
     PSPAD["PaymentGatewayAdapter<br/>VnpayAdapter, MomoAdapter"]
@@ -59,9 +60,10 @@ flowchart TB
     NPROV["Resend, SMS gateway, Zalo OA"]
   end
 
-  GUEST --> RP
-  ADMIN --> RP
-  MOBILE --> RP
+  GUESTWEB --> RP
+  GUESTANDROID --> RP
+  OPSWEB --> RP
+  OPSANDROID --> RP
   RP --> APIGW
   APIGW --> UC
   UC --> DOM
@@ -82,8 +84,8 @@ flowchart TB
 
 | Thành phần | Công nghệ | Trách nhiệm | ADR |
 |------------|-----------|-------------|-----|
-| Web khách + back-office | Next.js 15 App Router, Tailwind, shadcn/ui | Hai route group trong **một** codebase; gọi API qua `packages/contracts` | ADR-005 |
-| App Android | Expo (React Native), Expo Router | Lễ tân / quản lý / buồng phòng; phát hành APK qua EAS Build | ADR-006 |
+| Customer Web + Operations Web | Next.js 15 App Router, Tailwind, shadcn/ui | Hai ứng dụng deploy độc lập; dùng `packages/contracts` + `packages/api-client`, không dùng chung route/auth state | ADR-005 |
+| Customer Android + Operations Android | Expo (React Native), Expo Router | Hai ứng dụng deploy độc lập; dùng `packages/contracts` + `packages/api-client`, khác navigation và quyền | ADR-006 |
 | API | NestJS 11 + Fastify, Node 22 LTS | HTTP, xác thực, điều phối ca sử dụng, phát sự kiện | ADR-002 |
 | Worker | Cùng image Docker, entrypoint khác | 4 job nền + outbox relay | ADR-004, ADR-012 |
 | CSDL | PostgreSQL 16 + `btree_gist` | Nguồn chân lý tồn phòng, kiểm toán, outbox | ADR-003 |
@@ -162,7 +164,7 @@ flowchart LR
 | **INV** | Tồn khả dụng, lịch phòng, kiểm tra trống theo từng đêm — UC-INV-01/02/03 | Không sở hữu bảng riêng; chiếu từ `RoomAssignment`, `RoomBlock`, `Hold`, `ChannelAllotment` | `InventoryApi.checkAvailability`, `InventoryApi.hold`, `InventoryApi.release`, `InventoryApi.availabilityGrid`, `InventoryApi.occupancyRate` | — |
 | **RATE** | Giá cơ bản (kèm cảnh báo khi gói dài ngày không có giá riêng, BR-RATE-19), lịch giá, mùa, hệ số/hoa hồng theo cặp (kênh, cơ sở), khuyến mãi, báo giá — UC-RATE-01/02/03/04/05 | `RatePlan`, `RateCalendar`, `Season`, `Channel`, `ChannelAllotment`, `ChannelPropertySetting`, `Promotion` (đọc `CancellationPolicy`/`CancellationTier` do PAY sở hữu, theo [00 §7.5](../00-tong-quan.md)) | `RateApi.quote`, `RateApi.channelContext`, `RateApi.allotment`, `RateApi.priceForNight` | — |
 | **BOOK** | Vòng đời booking, giữ chỗ, đổi ngày, huỷ toàn phần và **huỷ một phần theo `BookingRoom`** khi `roomCount > 1` (phân bổ `refundBase` theo tỷ lệ giá phòng bị huỷ, lưu thêm `PriceSnapshot` điều chỉnh và giữ bản gốc — BR-CANCEL-19), snapshot giá lưu ngay khi rời `DRAFT` (BR-RATE-16), xoá cứng `DRAFT`/`HELD` có ghi `AuditLog` `beforeJson` trước khi xoá (BR-BOOK-17) — UC-BOOK-01/02/03/04/05/06/07/08 | `Booking`, `BookingRoom`, `RoomAssignment`, `BookingStatusHistory`, `PriceSnapshot`, `Hold` | `BookApi.create`, `BookApi.confirm`, `BookApi.cancel`, `BookApi.reschedule`, `BookApi.findByCode` | `BookingConfirmed`, `BookingCancelled`, `HoldExpired` |
-| **PAY** | Cọc, thanh toán trực tuyến, số dư, hoàn tiền (duyệt hai cấp, huỷ yêu cầu `PENDING`), chính sách huỷ dữ liệu hoá gồm ngưỡng trả phòng sớm, đối soát, hoa hồng — UC-PAY-01/02/03/04/05 · BR-PAY-03/04/07/09, BR-CANCEL-15/16/18 | `Payment`, `RefundRequest`, `CancellationPolicy`, `CancellationTier` | `PaymentApi.recordDeposit`, `PaymentApi.initiateOnline`, `PaymentApi.applyCallback`, `PaymentApi.balanceOf`, `PaymentApi.requestRefund`, `PaymentApi.approveRefund`, `PaymentApi.cancelRefund` | `PaymentSucceeded` |
+| **PAY** | Cọc, thanh toán trực tuyến, số dư, hoàn tiền (người lập/người duyệt độc lập, huỷ yêu cầu `PENDING`), chính sách huỷ dữ liệu hoá gồm ngưỡng trả phòng sớm, đối soát, hoa hồng — UC-PAY-01/02/03/04/05 · BR-PAY-03/04/07/09, BR-CANCEL-15/16/18 | `Payment`, `RefundRequest`, `CancellationPolicy`, `CancellationTier` | `PaymentApi.recordDeposit`, `PaymentApi.initiateOnline`, `PaymentApi.applyCallback`, `PaymentApi.balanceOf`, `PaymentApi.requestRefund`, `PaymentApi.approveRefund`, `PaymentApi.cancelRefund` | `PaymentSucceeded` |
 | **CHAN** | Cấu hình kênh, ánh xạ loại phòng ↔ mã phòng OTA `ChannelMapping` (BR-CHAN-08), đồng bộ tồn/giá, nhận booking & huỷ từ OTA — UC-CHAN-01/02/03 | `ChannelMapping`; cập nhật `Channel.syncStatus`, `consecutiveSyncFailures`, `lastSyncAt`, `lastSyncError` (chủ sở hữu `Channel` là RATE) qua `RateApi` | `ChannelApi.pushAvailability`, `ChannelApi.pushRate`, `ChannelApi.ingestOtaBooking`, `ChannelApi.ingestOtaCancellation`, `ChannelApi.health` | — (tiêu thụ outbox của INV/RATE/BOOK) |
 | **OVER** | Phát hiện quá tải, thang điều chuyển (vận hành thực tế **1 → 2 → 4**; bậc 3 `SAME_TYPE_CROSS_PROPERTY`/`UPGRADE_CROSS_PROPERTY` hiện **không khả dụng** vì ba cơ sở cách nhau 160–300 km), ghép phòng, walk-out — UC-OVER-01/02/03/04/05 | `OverbookingCase`, `RoomMove`, `RoomMerge` | `OverbookingApi.scan`, `OverbookingApi.openCase`, `OverbookingApi.proposeRelocation`, `OverbookingApi.executeRoomMove`, `OverbookingApi.mergeRooms`, `OverbookingApi.walkOut` | `RoomMoveExecuted` |
 | **FO** | Check-in, check-out, no-show, trạng thái buồng phòng — UC-FO-01/02/03/04 | Không sở hữu bảng riêng; ghi `HousekeepingTask` qua `PropertyApi` | `FrontOfficeApi.checkIn`, `FrontOfficeApi.checkOut`, `FrontOfficeApi.markNoShow`, `FrontOfficeApi.arrivals`, `FrontOfficeApi.departures` | — (dùng `PaymentSucceeded`, `BookingConfirmed`) |
@@ -179,20 +181,22 @@ flowchart LR
 
 ---
 
-## 5. Chiến lược chia sẻ mã giữa ba ứng dụng
+## 5. Chiến lược chia sẻ mã giữa backend và bốn frontend
 
 | Gói | Nội dung | Dùng bởi | Bắt buộc vì |
 |-----|----------|----------|--------------|
-| `packages/domain` | Động cơ giá, chính sách huỷ, tính tồn, quy hoạch điều chuyển, VO, lỗi miền | `apps/api`, `apps/web` (báo giá hiển thị tức thời), `apps/mobile`, test | BR-RATE-17: ba giao diện phải ra cùng một con số |
-| `packages/contracts` | Schema `zod` cho DTO vào/ra, mã lỗi `E_<MOD>_<TÊN>`, kiểu đọc từ suy luận zod, tài liệu OpenAPI sinh ra | Cả ba ứng dụng | Một nguồn sự thật cho hợp đồng API (NFR-MAIN-04, ADR-008) |
-| `packages/config` | `tsconfig`, cấu hình ESLint, Prettier dùng chung | Cả ba ứng dụng | Nhất quán quy ước, tránh lệch cấu hình giữa các app (NFR-MAIN-02) |
+| `packages/domain` | Động cơ giá, chính sách huỷ, tính tồn, quy hoạch điều chuyển, VO, lỗi miền | `apps/api`, `apps/worker`, test; frontend không import để tự quyết định nghiệp vụ | BR-RATE-17: mọi surface nhận cùng `PriceQuote` từ backend |
+| `packages/contracts` | Schema `zod` cho DTO vào/ra, mã lỗi `E_<MOD>_<TÊN>`, kiểu đọc từ suy luận zod, tài liệu OpenAPI sinh ra | API, worker và cả bốn frontend | Một nguồn sự thật cho hợp đồng API (NFR-MAIN-04, ADR-008) |
+| `packages/api-client` | Client REST typed, correlation, retry an toàn, `Idempotency-Key`, xử lý lỗi chuẩn | Bốn frontend; không chứa luật giá/policy | Một seam truy cập backend, tránh mỗi app tự viết giao thức |
+| `packages/ui-web` / `packages/ui-native` | Design token và primitive trình bày tương ứng từng nền tảng | Hai web / hai Android | Nhất quán thương hiệu mà không chia sẻ component sai ngữ cảnh |
+| `packages/config` | `tsconfig`, cấu hình ESLint, Prettier dùng chung | Toàn monorepo | Nhất quán quy ước, tránh lệch cấu hình giữa các app (NFR-MAIN-02) |
 
 | Cấm chia sẻ | Lý do |
 |-------------|-------|
 | Mã giao diện (component React, hook, style, navigation) giữa web và Android | Nền tảng và tương tác khác nhau; chia sẻ UI tạo trừu tượng giả, làm chậm cả hai |
 | Truy cập CSDL, Prisma client, SQL, kết nối Redis dưới mọi hình thức | Chỉ `apps/api` được chạm dữ liệu; web/Android đi qua API để giữ phân quyền `propertyScope` (BR-RBAC-02, NFR-SEC-01) |
 | Trạng thái phiên, token, logic xác thực tự viết lại | Xác thực do API quyết định; client chỉ giữ token theo hợp đồng (`packages/contracts`) |
-| Quy tắc nghiệp vụ sao chép vào client (ví dụ bảng bậc huỷ hard-code) | BR-CANCEL-01 cấm `if/else` cứng; client **gọi** động cơ trong `packages/domain` hoặc đọc kết quả từ API |
+| Quy tắc nghiệp vụ sao chép vào client (ví dụ bảng bậc huỷ hard-code) | BR-CANCEL-01 cấm `if/else` cứng; client **gọi API** và đọc kết quả/snapshot, không tự quyết định tiền hoặc quyền |
 | Bí mật, biến môi trường, `process.env` đọc trực tiếp trong `packages/*` | Cấu hình chỉ nạp ở `apps/*/src/config` và kiểm tra bằng zod lúc khởi động |
 
 ---
@@ -228,12 +232,17 @@ ooad-homestay/
 │   │   │       ├── noti/{application,domain,infrastructure,presentation}/
 │   │   │       ├── rep/{application,domain,infrastructure,presentation}/
 │   │   │       └── sys/{application,domain,infrastructure,presentation}/
-│   │   ├── workers/{hold-expiry,overbooking-scan,channel-sync,no-show-mark}.worker.ts
 │   │   ├── prisma/{schema.prisma,migrations/,seed.ts}
 │   │   └── test/{unit,integration}/
-│   ├── web/
-│   │   └── src/{app/(guest),app/(admin),components,lib,hooks,api}/
-│   └── mobile/
+│   ├── worker/
+│   │   └── src/{jobs,outbox,scheduler,adapters}/
+│   ├── customer-web/
+│   │   └── src/{app,components,lib,hooks,api}/
+│   ├── customer-android/
+│   │   └── src/{app,components,screens,hooks,api,storage}/
+│   ├── operations-web/
+│   │   └── src/{app,components,lib,hooks,api}/
+│   └── operations-android/
 │       └── src/{app,components,screens,hooks,api,storage}/
 ├── packages/
 │   ├── domain/
@@ -249,6 +258,9 @@ ooad-homestay/
 │   ├── contracts/
 │   │   └── src/{common,booking,payment,rate,inventory,overbooking,fo,crm,noti,rep}/
 │   │       └── mỗi thư mục: *.schema.ts (zod), *.dto.ts, *.error.ts
+│   ├── api-client/
+│   ├── ui-web/
+│   ├── ui-native/
 │   └── config/{tsconfig.base.json,eslint.preset.cjs,prettier.json}
 ├── infra/
 │   ├── docker-compose.yml            # postgres 16, redis 7, mailhog
@@ -269,7 +281,8 @@ ooad-homestay/
 flowchart TB
   subgraph DEV["Máy phát triển"]
     DC["docker compose<br/>postgres 16 + redis 7 + mailhog"]
-    LOCALWEB["next dev"]
+    LOCALWEB["customer-web + operations-web dev"]
+    LOCALMOBILE["customer-android + operations-android dev"]
     LOCALAPI["nest start --watch"]
   end
 
@@ -288,8 +301,8 @@ flowchart TB
   end
 
   subgraph SAAS["Dịch vụ ngoài"]
-    VERCEL["Vercel — web khách + back-office"]
-    EAS["EAS Build / EAS Update<br/>APK nội bộ, OTA JS"]
+    VERCEL["Vercel — customer-web + operations-web"]
+    EAS["EAS Build / EAS Update<br/>2 Android apps, OTA JS"]
     OTASIM["OTA mô phỏng"]
     PSPSB["VNPay / MoMo sandbox"]
     MAIL["Resend / SMS / Zalo OA"]
@@ -315,8 +328,8 @@ flowchart TB
 |----------|-----------|---------|
 | API + worker | **Một image Docker duy nhất**, hai entrypoint (`api.Dockerfile` chạy `node dist/main.js`, `worker.Dockerfile` chạy `node dist/worker.js`) | Cùng mã, cùng phụ thuộc; triển khai tách để job không tranh CPU với HTTP |
 | CSDL & cache | PostgreSQL 16 và Redis 7 trong `infra/docker-compose.yml` khi phát triển; container có volume + sao lưu PITR khi vận hành | BR-SYS-03, NFR-REL-04: RPO ≤ 15 phút, RTO ≤ 4 giờ |
-| Web | Vercel, hai route group `(guest)` và `(admin)`; biến `NEXT_PUBLIC_API_BASE_URL` trỏ về API | ADR-005 |
-| Android | EAS Build phát hành APK phân phối nội bộ; EAS Update cho bản vá JS thuần | ADR-006; ngoài phạm vi iOS ([00 §3.2](../00-tong-quan.md)) |
+| Customer/operations web | Hai project Vercel độc lập (`customer-web`, `operations-web`), cùng `NEXT_PUBLIC_API_BASE_URL` và contract version gate | ADR-005 |
+| Customer/operations Android | Hai application ID và pipeline EAS độc lập; EAS Update chỉ cho bản vá JS thuần | ADR-006; ngoài phạm vi iOS ([00 §3.2](../00-tong-quan.md)) |
 | Bí mật | GitHub Actions secrets + Vercel Environment Variables + EAS Secrets | NFR-SEC-06: 0 bí mật trong repo; `.env*` bị `.gitignore` |
 | Nạp cấu hình | `zod` kiểm tra biến môi trường lúc khởi động, thiếu biến thì **dừng tiến trình** | NFR-MAIN-05: giá trị nghiệp vụ đọc từ `SystemSetting`, không hard-code |
 | Quy mô | 1 API, 1 worker là đủ cho 55 phòng và 3 cơ sở; nhân bản API ở tầng sau không cần đổi mã | NFR-USE-01: uptime ≥ 99,5%/tháng |
@@ -351,18 +364,18 @@ flowchart TB
 | **Đọc báo cáo** | Materialized view + cache Redis, làm mới theo lịch | REP: công suất, ADR/RevPAR, doanh thu kênh | NFR-PERF-04 |
 | **Tách vật lý (đường nâng cấp)** | Khi vượt ngưỡng tải: thêm read replica cho đường đọc báo cáo; ứng dụng đã tách sẵn nên chỉ đổi `DATABASE_URL` của tầng đọc | — | Chưa cần trong phạm vi môn học |
 
-Nguyên tắc: **một tiến trình ghi** sở hữu bất biến tồn phòng; đường đọc không bao giờ tự quyết định còn phòng — chỉ gọi `InventoryApi.checkAvailability` hoặc đọc cache có nguồn gốc từ đó.
+Nguyên tắc: **một workflow giao dịch chung** sở hữu bất biến tồn phòng; nhiều tiến trình phối hợp bằng khóa PostgreSQL; đường đọc không bao giờ tự quyết định còn phòng — chỉ gọi `InventoryApi.checkAvailability` hoặc đọc cache có nguồn gốc từ đó.
 
 ### 8.2. Chỉ mục (chi tiết DDL ở [csdl.md](csdl.md))
 
 | Bảng | Chỉ mục / ràng buộc | Phục vụ |
 |------|--------------------|---------|
-| `room_assignments` | `EXCLUDE USING gist (room_id WITH =, bed_no WITH =, valid_range WITH &&) WHERE (released_at IS NULL)`; `bed_no` NOT NULL mặc định `0` (cả phòng), `1..bedCount` cho DOR. Cấm khoá đơn kiểu `COALESCE(bed_no::text, room_id)`/`sell_unit_id` — số giường lặp ở mọi phòng nên khoá đó chặn oan gán phòng hợp lệ | BR-INV-03, BR-PROP-04, NFR-REL-01 |
+| `room_assignments` | `EXCLUDE` trên room_id, khoảng đơn vị bán và valid_range như CSDL §3; thêm EXCLUDE booking_room_id/range; `bed_no` NOT NULL mặc định `0` (cả phòng), `1..bedCount` cho DOR. Cấm khoá đơn kiểu `COALESCE(bed_no::text, room_id)`/`sell_unit_id` — số giường lặp ở mọi phòng nên khoá đó chặn oan gán phòng hợp lệ | BR-INV-03, BR-PROP-04, NFR-REL-01 |
 | `room_assignments` | `(booking_room_id)`, `(room_id, start_date)` | Trả phòng khi huỷ/no-show, dựng lịch tồn |
 | `bookings` | `UNIQUE (code)`, `(property_id, status, check_in)`, `(guest_id, created_at)` | Tra cứu theo mã, danh sách đến/đi, chống trùng BR-BOOK-16 |
-| `holds` | `(status, expires_at)` | Job hết hạn hold BR-INV-04 |
+| `bookings` | Trạng thái và hold_expires_at | Nguồn job expiry BR-BOOK-18; Hold là projection |
 | `occupancy_snapshots` | `(property_id, date, room_type_id)`, `room_type_id` rỗng = dòng tổng hợp cấp cơ sở (dòng BR §4.3 đọc); `physical_rooms` = số phòng ACTIVE **đã trừ `RoomBlock`** | Hệ số công suất của bước 4 trong BR-RATE-01 |
-| `payments` | `(booking_id, status)`, `UNIQUE (idempotency_key)`, `(created_by, paid_at)` | Số dư, chống cộng tiền hai lần BR-PAY-03, đối soát tiền mặt theo cặp (người thu, ngày VN) BR-PAY-06/10 |
+| `payments` | `(booking_id, status)`, unique key có phạm vi nghiệp vụ và định danh provider/account/transaction theo CSDL §3, `(created_by, paid_at)` | Số dư, chống cộng tiền hai lần BR-PAY-03, đối soát tiền mặt theo cặp (người thu, ngày VN) BR-PAY-06/10 |
 | `outbox_events` | `(status, created_at)` | Outbox relay |
 | `audit_logs` | `(entity_type, entity_id, at)`, `(actor_id, at)` | UC-SYS-01; bảng append-only BR-SYS-01 |
 | `notifications` | `(status, created_at)` | Gửi lại tối đa 3 lần BR-SYS-06 |
@@ -372,50 +385,47 @@ Nguyên tắc: **một tiến trình ghi** sở hữu bất biến tồn phòng;
 
 ### 8.3. Cache và khoá phân tán (Redis 7 — ADR-004)
 
-| Khoá | Nội dung | TTL | Vô hiệu hoá |
-|------|----------|-----|-------------|
-| `avail:{propertyId}:{roomTypeId}:{date}` | Số phòng khả dụng theo BR-INV-01 | 60 giây | Ghi khi giữ chỗ, huỷ, hết hạn hold, khoá phòng (NFR-REL-02) |
-| `quote:{quoteId}` | `PriceQuote` theo BR-RATE-15 (tra lại bằng `PriceQuote.id`) | 15 phút | Bỏ khi cấu hình giá/mùa/kênh đổi |
-| `occupancy:{propertyId}:{date}` | Hệ số công suất dùng cho bước 4 của BR-RATE-01 | 5 phút (`job.occupancy.snapshotIntervalSeconds`) | Job chụp `OccupancySnapshot`; snapshot cũ hơn ngưỡng bị coi là không hợp lệ (BR-RATE §4.3) |
-| `lock:alloc:{roomTypeId}:{date}` | Khoá phân tán trước khi vào transaction ghi | 10 giây | Tự hết hạn; khoá bi quan `SELECT … FOR UPDATE` vẫn là lớp bảo vệ cuối (BR-INV-02) |
-| `idem:{Idempotency-Key}` | Bản sao đọc nhanh của thực thể `IdempotencyKey` (nguồn chân lý nằm ở CSDL) | 24 giờ | Tự hết hạn; đọc lại trả đúng kết quả cũ (BR-GEN-08, NFR-REL-06) |
-| `chan:sync:{channelCode}` | Bản sao đọc nhanh của `Channel.syncStatus`/`lastSyncAt` cho bảng điều khiển | 1 giờ | Vô hiệu hoá khi `Channel` đổi trạng thái đồng bộ (BR-CHAN-07) |
+Redis chỉ tăng tốc, không sở hữu bất biến tiền/tồn. [ADR-014](adr/ADR-014-giao-dich-ton-phong.md) và [ADR-017](adr/ADR-017-inbox-outbox-idempotency.md) thay các mô tả khóa Redis làm điều kiện trước khi ghi.
 
-Sai cache không được gây bán trùng: **quyết định giữ chỗ luôn đọc CSDL**, cache chỉ phục vụ hiển thị và báo giá.
+| Khoá | Nội dung | Hạn và vô hiệu hoá |
+|---|---|---|
+| avail theo cơ sở/loại/ngày/kênh | Tồn hiển thị theo BR-INV-01 | 60 giây; cập nhật sau thay đổi, lệnh giữ chỗ luôn đọc lại primary |
+| quote theo quoteId | Giá, input fingerprint, principal, policy, commission, engineVersion | 15 phút; không xoá quote còn hạn khi cấu hình đổi; snapshot acceptance theo ADR-015 |
+| occupancy theo cơ sở/ngày | Hệ số công suất | 5 phút; cũ quá ngưỡng dùng hệ số 1,00 theo BR-RATE |
+| idempotency cache | Bản sao kết quả, khóa gồm principal + method/path + key | Không dùng làm nguồn dedup; quyền hiện tại được kiểm trước replay, PostgreSQL giữ request hash và kết quả |
+| channel sync cache | Trạng thái và mốc đồng bộ | Vô hiệu khi Channel đổi; lỗi cache không làm mất công việc |
 
 ### 8.4. Outbox và idempotency
 
-1. Ca sử dụng mở Unit of Work → ghi thực thể + `AuditLog` + `OutboxEvent` trong **một** transaction (BR-GEN-07, BR-CHAN-06).
-2. `OutboxRelay` quét `outbox_events` trạng thái chưa xử lý mỗi **1 giây**, đẩy vào BullMQ theo `eventType`, đánh dấu `processedAt`.
-3. Worker tiêu thụ: đồng bộ kênh, gửi thông báo, cập nhật điểm khách, làm mới mô hình đọc báo cáo.
-4. Gọi OTA/PSP ra ngoài **chỉ** từ worker, có `Idempotency-Key` và mã tương quan; thất bại thì thử lại có backoff, đủ 3 lần thì trả `E_CHAN_SYNC_FAILED`, đặt `Channel.syncStatus = DEGRADED` và báo `MANAGER` (BR-CHAN-07).
-5. Webhook đến từ OTA/PSP đi thẳng vào API, được ghi nhận idempotent rồi phát outbox — không xử lý đồng bộ dài trong request (NFR-PERF-05); callback lặp lại khoá idempotency đã xử lý trả `E_PAY_CALLBACK_DUPLICATE` kèm kết quả cũ, KHÔNG tạo `Payment` mới (BR-PAY-03).
-6. Booking do OTA đẩy vào khi tồn khả dụng đã bằng 0 vẫn PHẢI được ghi nhận `CONFIRMED` với `oversold = true` và tự mở `OverbookingCase`: đây là **miễn trừ tường minh** của BR-CHAN-03, không chịu hạn mức `overbookLimitPct` của BR-OVER-02 (hạn mức đó chỉ áp cho quyết định bán vượt do hệ thống chủ động).
+1. Application workflow ghi thực thể, history, audit, OutboxEvent và kết quả idempotency cùng transaction.
+2. OutboxRelay claim công việc bằng lease PostgreSQL, đẩy queue sau commit. Enqueue thành công không có nghĩa mọi consumer đã hoàn tất; event_deliveries lưu trạng thái từng consumer.
+3. Worker idempotent, ghi completion cùng tác động DB. Crash/mất Redis có thể phát lại; phục hồi từ công việc chưa hoàn tất trong PostgreSQL. Gửi ngoài DB dùng key provider hoặc đối soát.
+4. Webhook xác minh chữ ký/account/order/amount trước dedup; Inbox bền trước ACK đúng provider. Callback hợp lệ lặp lại không cộng tiền. Worker khóa cùng booking/payment với expiry và timeout.
+5. Booking OTA thiếu phòng vẫn CONFIRMED + oversold + OverbookingCase và được tính trong demand; không chịu trần bán vượt chủ động. Chuỗi đồng bộ thất bại theo BR-CHAN-07 đánh dấu DEGRADED và cảnh báo.
+6. Không listener nào giải phóng tồn, cộng tiền hoặc tạo refund lần hai sau khi workflow gốc đã commit các tác động đó. Thông báo/báo cáo/đồng bộ ngoài hệ thống là tác vụ sau commit.
 
 ### 8.5. Bốn job nền
 
-| Job | Chu kỳ | Việc làm | Quy tắc | Thất bại thì |
-|-----|--------|----------|---------|--------------|
-| **Hết hạn hold** | `job.hold.releaseIntervalSeconds` = 30 giây (mục tiêu giải phóng ≤ 60 giây) + lượt đối chiếu `Hold` ↔ `Booking.holdExpiresAt` mỗi `job.holdReconcile.intervalSeconds` = 900 giây (NFR-REL-02) | Quét `Hold` ở `status = ACTIVE` và quá `expiresAt`: chuyển booking `EXPIRED`, giải phóng `RoomAssignment`, trả phòng về tồn, phát `HoldExpired` | BR-INV-04, BR-BOOK-08 | Thử lại 3 lần, sau đó cảnh báo vận hành |
-| **Quét quá tải** | `job.overbooking.scanIntervalMinutes` = 60, nhìn 30 ngày tới | Gộp theo `(propertyId, date, roomTypeId)`, mở/ cập nhật `OverbookingCase`, leo thang khi quá T−24h; case còn `OPEN`/`PROPOSED`/`ESCALATED` khi ngày thiếu phòng đã trôi qua → chuyển `ESCALATED`, giữ vết để báo cáo, KHÔNG tự đóng | BR-OVER-03/04/05 và BR-OVER-16 | Cảnh báo `OWNER` ngay |
-| **Đồng bộ kênh** | `job.channelSync.intervalSeconds` = 300 + theo sự kiện outbox | Đẩy tồn/giá lên mọi kênh đang mở bán; khoá kênh OTA khi tồn ≤ 2; ghi `OutboxEvent` kết quả | BR-CHAN-02/05/06/07 | Đánh dấu `DEGRADED`, cảnh báo `MANAGER` |
-| **Đánh dấu no-show** | `job.noShow.markTime` = 23:59 giờ VN | Booking còn `CONFIRMED` chưa check-in → `NO_SHOW`, áp bậc cuối (hoàn 0% + phụ thu đêm đầu nếu bậc quy định), giải phóng phòng | BR-CANCEL-10, BR-FO-02 | Thử lại; nếu vẫn lỗi, chuyển danh sách cho lễ tân xử lý tay |
+| Job | Chu kỳ | Quyết định |
+|---|---|---|
+| Hết hạn hold | 30 giây; SLA 60 giây | Quét Booking HELD/PENDING_PAYMENT theo holdExpiresAt trên primary; khóa booking rồi tài nguyên, đọc giờ DB sau khóa; đúng hạn là hết hạn. EXPIRED + release assignment/quota + history/audit/outbox cùng TX. Callback đã CONFIRMED thì bỏ qua |
+| Quét quá tải | 60 phút, nhìn 30 ngày | Tính demand theo BR-INV-01, gộp case; quá T−24h hoặc ngày thiếu phòng đã qua mà chưa giải quyết thì ESCALATED, không tự đóng |
+| Đồng bộ kênh | 300 giây và outbox | Push tồn/giá ngoài TX; close OTA theo ngưỡng cấu hình; retry và DEGRADED theo BR-CHAN-07 |
+| No-show | 23:59 ngày VN | Chỉ CONFIRMED chưa check-in; khóa booking và kiểm lại. NO_SHOW + release + nghĩa vụ/hoàn có reservation + history/audit/outbox cùng TX |
 
-Chu kỳ của cả 4 job KHÔNG ĐƯỢC hard-code: mỗi job đọc khoá tương ứng trong `SystemSetting` theo BR-SYS-02 (NFR-MAIN-05).
-
-Yêu cầu chung cho 4 job: **idempotent** (chạy lại không sinh bản ghi trùng), có `correlationId` riêng, ghi log cấu trúc, chỉ đọc/ghi qua ca sử dụng và repository (không SQL thô trong worker), và chạy được nhiều hơn một tiến trình mà không tranh chấp nhờ khoá phân tán.
+Chu kỳ lấy từ SystemSetting. Job idempotent và chạy nhiều instance nhờ khóa/CAS/lease PostgreSQL; Redis mất không ngăn expiry. Đối chiếu cache/hold mỗi 900 giây chỉ sửa projection. PaymentTimeoutJob theo BR-PAY-05/11 không nhả hold trước holdExpiresAt và không kết luận chưa thu tiền.
 
 ### 8.6. Ghi đồng thời và bất biến
 
 | Bước | Cơ chế |
-|------|--------|
-| 1 | Lấy khoá phân tán `lock:alloc:{roomTypeId}:{date}` cho từng đêm của kỳ lưu trú |
-| 2 | Mở transaction; `SELECT … FOR UPDATE` theo `(roomTypeId, date)`, xét từng đêm riêng biệt | 
-| 3 | Chèn `RoomAssignment` cho **đơn vị bán** (phòng, hoặc từng giường DOR khi ghép `MERGE_SHARE`); ràng buộc loại trừ từ chối mọi chồng lấn `(roomId, bedNo, đêm)` |
-| 4 | Hết phòng khi kiểm tra → `E_INV_NO_AVAILABILITY` (HTTP 409) kèm danh sách đêm thiếu (BR-INV-07). Ràng buộc loại trừ từ chối khi ghi (SQLSTATE `23P01`) → tầng hạ tầng BẮT buộc bắt và chuyển thành `E_INV_ROOM_TAKEN` (HTTP 409), cấm nuốt lỗi rồi báo thành công (BR-INV-03) |
-| 5 | Ghi `AuditLog` + `OutboxEvent`, commit; phát sự kiện bất đồng bộ |
+|---|---|
+| 1 | BEGIN và claim idempotency/Inbox bền. Xác định đủ booking/tài nguyên cần khóa |
+| 2 | Khóa booking → property → type → room → quota/promotion → payment thu gốc → refund, từng nhóm theo ID tăng; ADR-014. Khóa property/type có sẵn bảo vệ cả tập assignment rỗng |
+| 3 | Đọc lại facts, version và giờ DB; xét demand mọi kênh từng đêm và khả năng gán cả kỳ. DOR giữ từng giường, không gán bedNo=0 |
+| 4 | Thay trạng thái, assignment, quota, snapshot/allocations theo workflow; 23P01 rollback và trả E_INV_ROOM_TAKEN; deadlock/serialization retry toàn bộ hữu hạn |
+| 5 | History, audit, outbox và kết quả idempotency commit cùng tác động. Chỉ gọi PSP/OTA/thông báo sau commit |
 
-Kịch bản chứng minh: 200 yêu cầu đồng thời cùng một phòng/đêm → **đúng 1 thành công** (NFR-REL-01, tiêu chí thành công #1 ở [00 §12](../00-tong-quan.md)).
+Bài kiểm hai kết nối trong tests/database.test.mjs chứng minh tranh chấp constraint khi writer đầu commit và rollback. Mục tiêu 200 yêu cầu của NFR-REL-01 còn cần ứng dụng và bài tải riêng; không suy ra từ test hai writer.
 
 ### 8.7. Sao lưu và lưu trữ
 
@@ -524,9 +534,9 @@ Ngoài bảng trên, tài liệu này không thêm định danh nào khác.
 
 ## Tham chiếu
 
-- [00 — Tổng quan dự án](../00-tong-quan.md) — bối cảnh, actor, từ điển thực thể, enum, danh mục 52 use case, stack, cấu trúc repo
+- [00 — Tổng quan dự án](../00-tong-quan.md) — bối cảnh, actor, từ điển thực thể, enum, danh mục 53 use case, stack, cấu trúc repo
 - [01 — Yêu cầu phi chức năng](../01-yeu-cau/yeu-cau-phi-chuc-nang.md) — NFR-PERF, NFR-REL, NFR-SEC, NFR-USE, NFR-MAIN, NFR-COMP, NFR-OBS, NFR-LOC
-- [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — 136 quy tắc BR, nguồn chân lý
+- [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — 139 quy tắc BR, nguồn chân lý
 - [03 — Mô hình miền](../03-phan-tich/mo-hinh-mien.md) · [03 — Mô hình động](../03-phan-tich/mo-hinh-dong.md)
 - [04 — ADR](adr/README.md) — 13 quyết định kiến trúc (ADR-001…ADR-013)
 - [04 — Thiết kế lớp](thiet-ke-lop.md) · [04 — Sequence Diagram](sequence-diagram.md)

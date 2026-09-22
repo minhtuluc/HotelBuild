@@ -6,14 +6,16 @@
 
 ## 1. Nguyên tắc vận hành nhóm
 
+Mọi xác nhận nghiệp vụ cần người có thẩm quyền, phạm vi, ngày hiệu lực và liên kết văn bản trong [sổ quyết định §8.1](quan-ly-rui-ro.md). Không phản hồi giữ trạng thái `OPEN`; hết hạn thì nhắc/leo thang và chặn phần phụ thuộc, không tự chấp thuận. DoR/DoD dùng [quy tắc kỹ thuật §9](quy-tac-ky-thuat.md), evidence cổng dùng [lộ trình §6.1](lo-trinh.md). Các bảng mốc dưới đây là kế hoạch, không phải kết quả đã đạt.
+
 Sáu nguyên tắc dẫn đường của [lo-trinh §1](lo-trinh.md) được chuyển thành nghĩa vụ có người gác cổng: (1) **nghiệp vụ trước mã nguồn** — không mở PR mã nghiệp vụ khi BR của module chưa chốt, `PO/BA` gác; (2) **ba bài toán trọng tâm đi trước** — BT-1 (BR-CANCEL-01…19), BT-2 (BR-RATE-01…19), BT-3 (BR-INV-01…07, BR-OVER-01…16) luôn là ưu tiên **M** và xếp trước mọi việc khác khi sprint đã đầy, `PO/BA` gác; (3) **bất biến chống trùng ép ở tầng CSDL** — BR-INV-03 phải có migration SQL thủ công trước API đặt phòng, không nhận PR "làm sau", `ARCH` gác; (4) **miền nghiệp vụ là hàm thuần** — `packages/domain` không import I/O (không Prisma, Nest, HTTP, `Date.now()`), `ARCH` gác; (5) **mỗi tuần có thứ chạy được** — thứ Sáu nào cũng có bản dựng demo chạy thật, không chụp màn hình, `QA` gác; (6) **cắt ngang, không cắt dọc** — khi trễ thì cắt theo [lo-trinh §7](lo-trinh.md), không bao giờ cắt kiểm thử miền, ràng buộc chống trùng hay nhật ký kiểm toán, `PO/BA` gác.
 
 **Nhịp 15 tuần gắn với mốc bàn giao** (khớp [lo-trinh §2–§4](lo-trinh.md)):
 
 | Mốc | Hết tuần | Ngày nghiệm thu | Cổng chất lượng | Người chủ trì | Hồ sơ bắt buộc khi đạt mốc |
 |-----|----------|-----------------|-----------------|----------------|-----------------------------|
-| **M1** | W1 | 27/09/2026 | QG-0 | PO/BA | Báo cáo khảo sát có số liệu **đo thật** ở GĐ-0, thay cho số liệu giả định khảo sát ở [00 §1](../00-tong-quan.md) trước khi dùng làm mốc so sánh; 136 BR soạn thảo; Q-01…Q-12 có câu trả lời hoặc mặc định được chủ đầu tư chấp thuận bằng văn bản |
-| **M2** | W3 | 11/10/2026 | QG-1 | PO/BA + kiến trúc sư | 52 UC + đặc tả 12 UC rủi ro cao; mô hình miền; máy trạng thái booking; 100% BR truy vết tới ≥ 1 UC |
+| **M1** | W1 | 27/09/2026 | QG-0 | PO/BA | Báo cáo khảo sát có số liệu **đo thật** ở GĐ-0, thay cho số liệu giả định khảo sát ở [00 §1](../00-tong-quan.md) trước khi dùng làm mốc so sánh; 139 BR soạn thảo; Q-01…Q-12 có câu trả lời hoặc mặc định được chủ đầu tư chấp thuận bằng văn bản |
+| **M2** | W3 | 11/10/2026 | QG-1 | PO/BA + kiến trúc sư | 53 UC + đặc tả 12 UC rủi ro cao; mô hình miền; máy trạng thái booking; 100% BR truy vết tới ≥ 1 UC |
 | **M3** | W5 | 25/10/2026 | QG-2 | Kiến trúc sư | OpenAPI đóng băng; DDL migrate sạch; ADR-001…ADR-013 xong; ca kiểm thử cho BR rủi ro cao |
 | **M4** | W7 | 08/11/2026 | QG-3 (sprint 1) | QA/DevOps + kiến trúc sư | API trong Docker; chứng minh bằng kịch bản 200 yêu cầu đồng thời chỉ 1 thành công trên cùng một phòng/đêm, 199 yêu cầu còn lại nhận `E_INV_ROOM_TAKEN` (HTTP 409, từ `23P01` của BR-INV-03); lịch tồn phòng hiển thị 55 phòng |
 | **M5** | W9 | 22/11/2026 | QG-3 (sprint 2) | PO/BA | Booking từ web khách và từ quầy khớp giá nhau và khớp bảng tính tay; hold hết hạn tự giải phóng |
@@ -29,8 +31,8 @@ Nhóm 5 người, không có vai nào trùng vai nào; mỗi người có **đú
 |--------|-------------------------------------------|-------------------|------------------|--------------------|
 | `PO/BA` | PO/BA (kiêm thư ký dự án) | Khảo sát, chốt BR, viết UC/FR, điều phối chủ đầu tư, kiểm thử chấp nhận, giữ nhật ký dự án | Chốt nội dung nghiệp vụ; phê duyệt phiếu đổi yêu cầu loại B/C | [00](../00-tong-quan.md), [01](../01-yeu-cau/yeu-cau-chuc-nang.md), [02](../02-nghiep-vu/quy-tac-nghiep-vu.md), nhật ký |
 | `ARCH` | Kiến trúc sư kiêm Backend | Kiến trúc, mô hình miền, CSDL, hợp đồng API, `packages/domain`, ADR | Quyết định kỹ thuật cuối cùng khi bất đồng (xem §11); chốt ADR | [03](../03-phan-tich/mo-hinh-mien.md), [04/kiến trúc](../04-thiet-ke/kien-truc.md), [04/csdl](../04-thiet-ke/csdl.md), [04/api](../04-thiet-ke/api.md) |
-| `BE` | Backend/Frontend web | Module NestJS, công việc nền, outbox, tích hợp PSP/OTA mô phỏng, back-office Next.js | Trong phạm vi module được giao; không tự đổi hợp đồng API | `apps/api`, lớp back-office của `apps/web` |
-| `FE` | Frontend web + Mobile | Website khách, hợp phần giao diện còn lại, ứng dụng Android cho lễ tân/quản lý/buồng phòng | Trong phạm vi màn hình được giao | `apps/web`, `apps/mobile` |
+| `BE` | Backend + worker | Module NestJS, công việc nền, outbox, tích hợp PSP/OTA mô phỏng | Trong phạm vi module được giao; không tự đổi hợp đồng API | `apps/api`, `apps/worker` |
+| `FE` | 4 frontend apps | Customer web/Android và operations web/Android | Trong phạm vi màn hình được giao | `apps/customer-*`, `apps/operations-*`, `packages/api-client`, `packages/ui-*` |
 | `QA` | QA/DevOps | Kế hoạch kiểm thử, ca kiểm thử trọng yếu, CI, Docker, kiểm thử tải, sao lưu & phục hồi | Chặn phát hành khi cổng chất lượng chưa xanh (§9) | [05/ke-hoach-kiem-thu](ke-hoach-kiem-thu.md), `.github/workflows/`, `infra/` |
 
 **Quy tắc cơ cấu:** (2.1) mỗi module có **đúng một** người chịu trách nhiệm (A) và **ít nhất một** người thực hiện (R) khác A khi có thể — tránh "ai cũng chịu trách nhiệm" thành không ai chịu; (2.2) người chịu trách nhiệm một tài liệu không đồng thời là người review duy nhất tài liệu đó, vì review chéo phải độc lập (§9); (2.3) `ARCH` không tự review mã do mình viết ở phần chạm BR-INV-03, BR-RATE-01, BR-CANCEL-01 — ba vùng rủi ro cao nhất của BT-1/2/3; (2.4) `QA` không là người duy nhất kiểm chứng việc do `QA` viết (CI, script tải) — cần người khác chạy lại để kết quả tái lập được; (2.5) không ai tự phê duyệt phiếu đổi yêu cầu do chính mình báo (đối chiếu tinh thần BR-CANCEL-15) — nguyên tắc "hai cặp mắt" áp cho cả quy trình tài liệu.
@@ -41,16 +43,16 @@ Nhóm 5 người, không có vai nào trùng vai nào; mỗi người có **đú
 
 Mã module theo [00 §5](../00-tong-quan.md).
 
-Cột `UC` là số use case của module theo danh mục **52 UC** tại [00 §8](../00-tong-quan.md); tổng cột này bằng 52.
+Cột `UC` là số use case của module theo danh mục **53 UC** tại [00 §8](../00-tong-quan.md); tổng cột này bằng 53.
 
 | Module | UC | PO/BA | ARCH | BE | FE | QA | Ghi chú rủi ro |
 |--------|----|-------|------|----|----|----|----------------|
 | AUTH — Định danh & phân quyền | 3 | C | **A** | R | C | C | BR-RBAC-01…06; phạm vi cơ sở (`propertyScope`) dễ sai |
 | PROP — Cơ sở & buồng phòng | 4 | C | C | **A/R** | R | C | BR-PROP-01…06; 3 cơ sở / 55 phòng phải nhập đúng |
 | INV — Tồn phòng | 3 | C | **A** | R | C | C | BR-INV-01…07; bất biến BR-INV-03 là điều kiện của BT-3 — ràng buộc loại trừ trả `23P01`, tầng ứng dụng phải đổi thành `E_INV_ROOM_TAKEN` (409), phân biệt với `E_INV_NO_AVAILABILITY` của BR-INV-07 |
-| RATE — Giá & mùa | 5 | **A** | C | R | R | C | BR-RATE-01…19; thứ tự hệ số là nguồn tranh chấp; BR-RATE-19: `LONGSTAY14` phải có giá riêng (`fixedNightlyPrice` hoặc dòng `RateCalendar` nguồn `RATE_PLAN`), nếu không thì phải cảnh báo trên màn hình cấu hình vì sẽ ra cùng giá với `FLEX7` |
-| BOOK — Đặt phòng | 8 | C | **A** | R | R | C | BR-BOOK-01…17; máy trạng thái booking (module nhiều UC nhất); BR-BOOK-17: xoá cứng `DRAFT`/`HELD` vẫn phải ghi `AuditLog` đầy đủ **trước khi** xoá; BR-CANCEL-19: booking `roomCount > 1` được huỷ một phần — `refundBase` phân bổ theo tỷ lệ giá phòng bị huỷ trên `totalAmount`, phòng còn lại giữ nguyên giá và `RoomAssignment`, lưu thêm `PriceSnapshot` điều chỉnh và giữ bản gốc |
-| PAY — Thanh toán & hoàn tiền | 5 | **A** | C | R | R | C | BR-PAY-01…10; BR-CANCEL-15 hai cấp duyệt, BR-CANCEL-18 huỷ yêu cầu hoàn khi khách rút; callback lặp khoá idempotency trả kết quả cũ kèm `E_PAY_CALLBACK_DUPLICATE`, không tạo `Payment` mới (BR-PAY-03) |
+| RATE — Giá & mùa | 6 | **A** | C | R | R | C | BR-RATE-01…20; thứ tự hệ số là nguồn tranh chấp; BR-RATE-19: `LONGSTAY14` phải có giá riêng (`fixedNightlyPrice` hoặc dòng `RateCalendar` nguồn `RATE_PLAN`), nếu không thì phải cảnh báo trên màn hình cấu hình vì sẽ ra cùng giá với `FLEX7` |
+| BOOK — Đặt phòng | 8 | C | **A** | R | R | C | BR-BOOK-01…18; máy trạng thái booking (module nhiều UC nhất); BR-BOOK-17: xoá cứng `DRAFT`/`HELD` vẫn phải ghi `AuditLog` đầy đủ **trước khi** xoá; BR-CANCEL-19: booking `roomCount > 1` được huỷ một phần — `refundBase` phân bổ theo tỷ lệ giá phòng bị huỷ trên `totalAmount`, phòng còn lại giữ nguyên giá và `RoomAssignment`, lưu thêm `PriceSnapshot` điều chỉnh và giữ bản gốc |
+| PAY — Thanh toán & hoàn tiền | 5 | **A** | C | R | R | C | BR-PAY-01…11; BR-CANCEL-15 người lập và người duyệt MANAGER/OWNER độc lập, BR-CANCEL-18 huỷ yêu cầu hoàn khi khách rút; callback hợp lệ lặp lại trả ACK đúng provider sau kiểm chữ ký và tra Inbox bền, không tạo `Payment` mới (BR-PAY-03) |
 | CHAN — Kênh bán | 3 | C | **A** | R | I | C | BR-CHAN-01…08; đồng bộ ≤ 5 phút; thất bại 3 lần liên tiếp → `E_CHAN_SYNC_FAILED` và `Channel.syncStatus = DEGRADED` (BR-CHAN-07) |
 | OVER — Quá tải & điều chuyển | 5 | **A** | C | R | R | C | BR-OVER-01…16; thang điều chuyển vận hành **1 → 2 → 4** (bậc 3 `*_CROSS_PROPERTY` chưa khả dụng: ba cơ sở cách nhau 160–300 km > bán kính 15 km), vượt trần bán vượt → `E_OVER_LIMIT_EXCEEDED` (BR-OVER-02); xếp điều chuyển tất định theo `keepScore` → `createdAt` → `Booking.seq` (BR-OVER-11); BR-OVER-16: case còn `OPEN`/`PROPOSED`/`ESCALATED` khi ngày thiếu phòng đã trôi qua phải chuyển `ESCALATED`, xử lý tại chỗ, **không** tự động đóng, ghi `delayReason`; ghép phòng thiếu đồng thuận → `E_OVER_NO_CONSENT`, khác giới chưa duyệt → `E_OVER_MERGE_GENDER` (BR-OVER-13/14) |
 | FO — Tiền sảnh | 4 | C | I | **A/R** | R | C | BR-FO-01…07; check-out muộn, buồng phòng |
@@ -58,7 +60,7 @@ Cột `UC` là số use case của module theo danh mục **52 UC** tại [00 §
 | NOTI — Thông báo | 2 | C | I | **A/R** | I | C | Không có nhóm BR riêng — nghĩa vụ đến từ BR-SYS-06 và các BR nghiệp vụ yêu cầu thông báo; gửi lại tối đa 3 lần |
 | REP — Báo cáo | 4 | **A** | C | R | R | C | BR-REP-01 là nguồn chân lý duy nhất của các chỉ số (ADR, RevPAR, công suất, tỷ lệ huỷ, chi phí xử lý quá tải) — cấm mỗi báo cáo tự định nghĩa lại; phòng DOR đếm theo đơn vị bán (giường); BR-RATE-08 (doanh thu gộp vs thuần); QG-4 không ô trống |
 | SYS — Nền tảng | 3 | I | C | R | I | **A/R** | BR-SYS-01…06; audit append-only, RPO ≤ 15 phút, RTO ≤ 4 giờ |
-| **Tổng** | **52** | | | | | | 13 module, 52 UC, 136 BR |
+| **Tổng** | **53** | | | | | | 13 module, 53 UC, 139 BR |
 
 **Phân vai cho các quy trình xuyên module** (cùng ký hiệu A/R/C/I): chốt quy tắc nghiệp vụ (BR) — `PO/BA` **A/R**, `ARCH`+`QA`+`BE` C; quyết định kiến trúc (ADR) — `ARCH` **A/R**, `PO/BA`+`BE`+`FE` C, `QA` I; phiếu đổi yêu cầu (CRF) — `PO/BA` **A/R**, bốn vai còn lại C; review mã (pull request) — mọi vai R cho PR của vai khác, `ARCH`+`QA` C; thiết kế và chạy ca kiểm thử — `QA` **A/R**, `BE`+`FE` R; phát hành bản dựng demo — `QA` **A/R**, `BE`+`FE` R; sao lưu và diễn tập phục hồi — `QA` **A/R**, `ARCH` C, biên bản theo BR-SYS-03; báo cáo cuối kỳ và [ma trận truy vết](../06-truy-vet/ma-tran-truy-vet.md) — `PO/BA` **A/R**, bốn vai còn lại R.
 
@@ -68,14 +70,14 @@ Bảng dưới đây là bản mở rộng của [lo-trinh §2](lo-trinh.md) —
 
 | GĐ | Tuần | Vai chủ trì (A) | Việc chính theo vai | Sản phẩm chốt ở mốc |
 |----|------|-----------------|---------------------|----------------------|
-| GĐ-0 | W1 | `PO/BA` | PO: phỏng vấn, quan sát 3 cơ sở, **đo lại số liệu hiện trạng** (số vụ bán quá phòng, thất thoát doanh thu, tranh chấp hoàn cọc) để thay giả định khảo sát ở [00 §1](../00-tong-quan.md), soạn 136 BR, chốt Q-01…Q-12. ARCH/BE/FE/QA: dựng khung repo, khảo sát công nghệ theo ADR-001…ADR-013 | M1 (QG-0) |
-| GĐ-1 | W2–W3 | `PO/BA` | PO: 52 UC + đặc tả 12 UC rủi ro cao. ARCH: mô hình miền, máy trạng thái booking. QA: bảng truy vết BR → UC đầu tiên. BE/FE: hỗ trợ đặc tả luồng | M2 (QG-1) |
+| GĐ-0 | W1 | `PO/BA` | PO: phỏng vấn, quan sát 3 cơ sở, **đo lại số liệu hiện trạng** (số vụ bán quá phòng, thất thoát doanh thu, tranh chấp hoàn cọc) để thay giả định khảo sát ở [00 §1](../00-tong-quan.md), soạn 139 BR, chốt Q-01…Q-12. ARCH/BE/FE/QA: dựng khung repo, khảo sát công nghệ theo ADR-001…ADR-013 | M1 (QG-0) |
+| GĐ-1 | W2–W3 | `PO/BA` | PO: 53 UC + đặc tả 12 UC rủi ro cao. ARCH: mô hình miền, máy trạng thái booking. QA: bảng truy vết BR → UC đầu tiên. BE/FE: hỗ trợ đặc tả luồng | M2 (QG-1) |
 | GĐ-2 | W4–W5 | `ARCH` | ARCH: kiến trúc, class diagram thiết kế, 6 sequence, ERD/DDL, hợp đồng API. BE: DDL + migration ràng buộc loại trừ. FE: thiết kế màn hình. QA: ca kiểm thử cho BR rủi ro cao, dựng CI. PO: review truy vết | M3 (QG-2) |
 | GĐ-3 | W6–W7 | `BE` | BE: AUTH/RBAC, PROP, INV. ARCH: ràng buộc chống trùng + kịch bản đồng thời. FE: back-office khung + lưới tồn phòng. QA: audit nền, kịch bản 200 yêu cầu. PO: kiểm thử chấp nhận US-AUTH-01, US-PROP-01 | M4 |
-| GĐ-4 | W8–W9 | `ARCH` + `BE` | ARCH: `PricingEngine` trong `packages/domain`. BE: lịch giá, BOOK, hold & hết hạn. FE: web khách tìm phòng + đặt phòng. QA: ca đối chiếu giá 3 nền tảng (BR-RATE-17). PO: kiểm thử chấp nhận giá khớp bảng tính tay | M5 |
+| GĐ-4 | W8–W9 | `ARCH` + `BE` | ARCH: `PricingEngine` trong `packages/domain`. BE: lịch giá, BOOK, hold & hết hạn. FE: customer web/Android tìm phòng + đặt phòng. QA: ca đối chiếu giá 5 nguồn (BR-RATE-17). PO: kiểm thử chấp nhận giá khớp bảng tính tay | M5 |
 | GĐ-5 | W10–W11 | `ARCH` + `BE` | ARCH: `CancellationPolicyEngine`. BE: huỷ, đổi ngày, PAY sandbox, duyệt hoàn hai cấp. QA: bảng quyết định + kiểm thử thuộc tính hoàn cọc. PO: chủ trì kiểm chứng BR-CANCEL-15. FE: màn huỷ/hoàn tiền | M6 |
 | GĐ-6 | W12–W13 | `BE` + `FE` | BE: CHAN, OTA mô phỏng, OVER, thang điều chuyển theo thứ tự khả dụng 1 → 2 → 4, ghép phòng, walk-out. FE: bảng điều khiển quá tải. QA: dữ liệu mô phỏng quá tải, ca `keepScore`. PO: quy trình xử lý ca quá tải | M7 |
-| GĐ-7 | W14–W15 | `FE` + `QA` | FE: app Android (check-in/out, tra cứu, đổi phòng, buồng phòng). QA: kiểm thử tải 200 đồng thời, diễn tập sao lưu. BE: 4 báo cáo REP, NOTI. PO: báo cáo cuối kỳ, ma trận truy vết, kịch bản demo | M8 (QG-4) |
+| GĐ-7 | W14–W15 | `FE` + `QA` | FE: operations web/Android, customer Android hardening. QA: kiểm thử tải 200 đồng thời, diễn tập sao lưu. BE: 4 báo cáo REP, NOTI. PO: báo cáo cuối kỳ, ma trận truy vết, kịch bản demo | M8 (QG-4) |
 
 **Phân bổ công sức (giờ) theo vai và giai đoạn** — tổng khớp **750 giờ** của [lo-trinh §3, §8](lo-trinh.md):
 

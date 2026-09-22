@@ -1,6 +1,6 @@
 # 04 — Thiết kế lớp
 
-> Bản thiết kế lớp mức chi tiết và ánh xạ mẫu thiết kế cho hệ thống đặt phòng Pine Hill: **13 module, 52 use case, 3 cơ sở, 55 phòng, 7 kênh bán**.
+> Bản thiết kế lớp mức chi tiết và ánh xạ mẫu thiết kế cho hệ thống đặt phòng Pine Hill: **13 module, 53 use case, 3 cơ sở, 55 phòng, 7 kênh bán**.
 > Nguồn chân lý nghiệp vụ là [02/quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — tài liệu này **chỉ tham chiếu mã BR**, không định nghĩa lại giá trị nào.
 > Nguồn chân lý định danh là [00 §7](../00-tong-quan.md#7-từ-điển-thực-thể-nguồn-chân-lý-về-định-danh). Tài liệu không mô tả luồng thời gian (xem [sequence-diagram](sequence-diagram.md)) và không mô tả bảng/cột (xem [csdl](csdl.md)).
 > **Cách đọc:** mỗi nhóm lớp có **một sơ đồ Mermaid** cho các lớp trung tâm và **một bảng** cho các lớp vệ tinh (kèm chữ ký chính và quyết định thiết kế) — nhờ vậy sơ đồ vẫn đọc được mà không thiếu lớp nào.
@@ -269,7 +269,7 @@ classDiagram
 | `RoomAssignmentRepository` | Repository | `findActiveByRoom(roomId, range) : RoomAssignment[]` · `releaseAll(bookingId, now) : number` | Truy vấn theo `(roomId, khoảng ngày)` phục vụ ràng buộc loại trừ; giải phóng hàng loạt trong một transaction | BR-INV-03, BR-BOOK-11 |
 | `HoldRepository` | Repository | `findExpired(now, limit) : Hold[]` · `save(h : Hold) : void` | Job nền lấy việc theo lô, không quét toàn bảng | BR-INV-04 |
 | `QuotePriceUseCase` | UseCase | `execute(q : QuotePriceQuery) : Promise~PriceQuote~` | Chỉ đọc: nạp `PricingFacts` rồi gọi `PricingEngine`, không mở transaction ghi | UC-RATE-05 |
-| `CancelBookingUseCase` | UseCase | `execute(cmd : CancelBookingCommand) : Promise~CancellationDecision~` | Tính hoàn bằng `CancellationPolicyEngine` trước, rồi mới đổi trạng thái và giải phóng phòng trong một transaction. **Huỷ một phần** (`roomCount > 1`): `refundBase` phân bổ theo tỷ lệ giá của các `BookingRoom` bị huỷ trên `totalAmount` rồi mới áp BR-CANCEL-05; các phòng còn lại giữ nguyên giá và `RoomAssignment`; `totalAmount` giảm; huỷ hết phòng → `CANCELLED` toàn phần | BR-BOOK-11, BR-CANCEL-19, UC-BOOK-08 |
+| `CancelBookingUseCase` | UseCase | `execute(cmd : CancelBookingCommand) : Promise~CancellationDecision~` | Khóa booking/tài nguyên/receipt theo ADR-014, đọc policy snapshot và phân bổ tiền; CancellationPolicyEngine thuần quyết định từ facts đã khóa. Huỷ, release, nghĩa vụ, refund reservation, audit/outbox cùng transaction. **Huỷ một phần** (`roomCount > 1`): `refundBase` theo phân bổ receipt bất biến của các BookingRoom bị huỷ, trừ phần đã quyết toán hoặc giữ cho hoàn rồi mới áp BR-CANCEL-05; các phòng còn lại giữ nguyên giá và `RoomAssignment`; `totalAmount` giảm; huỷ hết phòng → `CANCELLED` toàn phần | BR-BOOK-11, BR-CANCEL-19, UC-BOOK-08 |
 | `BookingService.reschedule` | ApplicationService | `reschedule(cmd : RescheduleCommand) : Booking` | Đổi ngày **không** tạo chuyển trạng thái, **giữ nguyên** `PriceSnapshot` cũ và chỉ ghi `AuditLog` + chênh lệch giá; lần thứ hai tính như huỷ + đặt mới | BR-BOOK-12, BR-CANCEL-08 |
 | `Booking.confirm` | AggregateRoot | `confirm(payment : Money, now : Date) : void` | Điều kiện xác nhận không cọc chỉ nhận diện bằng `PaymentMethod = OTA_COLLECT` (không theo tên kênh) hoặc có `MANAGER`+ cho phép ghi nợ | BR-BOOK-09 |
 | `RefundRequest` | Entity | `status : RefundStatus` — `PENDING → APPROVED/REJECTED`; `PENDING → CANCELLED` khi khách rút yêu cầu hoặc booking được khôi phục · `evidenceRefs : string[]` (minh chứng bất khả kháng) · `reason : CancelReason` (không phải chuỗi tự do) | Huỷ yêu cầu chỉ do người tạo hoặc `MANAGER`+ và phải ghi lý do; đã `APPROVED`/`PAID` thì **không** huỷ được; minh chứng gắn với ca bất khả kháng | BR-CANCEL-18, BR-CANCEL-16, BR-CANCEL-13 |
@@ -498,7 +498,7 @@ classDiagram
         +role : UserRole
         +propertyScope : string[]
         +canActOn(propertyId : string) boolean
-        +isManagerOrAbove() boolean
+        +hasPermission(permission) boolean
     }
     class UnitOfWork {
         <<Port>>
@@ -556,9 +556,9 @@ classDiagram
 | `AuditService` | ApplicationService | `record(entry : AuditEntry) : Promise~void~` | Ghi trong **cùng transaction** với thao tác nghiệp vụ; bảng append-only, ghi đủ ai/làm gì/trước-sau/lý do/IP; thời hạn lưu 5 năm, có diễn tập phục hồi | BR-GEN-07, BR-SYS-01, BR-SYS-03, BR-SYS-04, BR-SYS-05 |
 | `GuestService` | ApplicationService | `upsertByPhone(cmd) : Promise~Guest~` · `assertNotBlacklisted(guestId, actor)` · `awardPoints(bookingId)` | Nhận diện khách theo số điện thoại chuẩn hoá; chặn khách trong danh sách đen trừ khi `MANAGER`+ override có lý do; điểm chỉ ghi sau check-out; hồ sơ khách không xoá cứng | BR-CRM-01, BR-CRM-02, BR-CRM-03, BR-CRM-04, BR-CRM-05, BR-CRM-06, BR-BOOK-15, BR-BOOK-16 |
 | `ChannelSyncService` | ApplicationService | `pushAvailability/pushRates(keys)` · `ingest(cmd)` · `lockLowAvailability(keys)` | Đẩy thay đổi qua outbox và quét định kỳ 5 phút; tự đóng bán kênh OTA khi tồn ≤ 2 phòng và mở lại khi tồn > 2; giữ tối thiểu 20% tồn cho kênh trực tiếp | BR-CHAN-01, BR-CHAN-02, BR-CHAN-05, BR-CHAN-08 |
-| `PaymentService` / `RefundService` | ApplicationService | `recordDeposit` · `startOnlinePayment` · `handleCallback` · `request/approve/pay` | Mọi ngưỡng phê duyệt và báo cáo so trên `netRefund = refundAmount − refundFee` (không so trên `refundAmount`); Cọc làm tròn lên; số dư thu trước khi giao phòng; giao dịch quá 15 phút không callback → `FAILED` + giải phóng hold; hoàn về phương thức gốc, ghi bằng `Payment` loại `REFUND`, không sửa bản ghi gốc; chi trong 3–7 ngày làm việc | BR-PAY-01, BR-PAY-02, BR-PAY-05, BR-PAY-06, BR-PAY-08, BR-PAY-09, BR-PAY-10, BR-CANCEL-12 |
+| `PaymentService` / `RefundService` | ApplicationService | `recordDeposit` · `startOnlinePayment` · `handleCallback` · `request/approve/pay` | Mọi ngưỡng phê duyệt và báo cáo so trên `netRefund = max(0, (approvedAmount ?? requestedAmount) − refundFee)` (không so trên `refundAmount`); Cọc làm tròn lên; số dư thu trước khi giao phòng; timeout PSP chỉ đánh dấu thất bại cục bộ, expiry riêng theo holdExpiresAt; callback muộn ghi receipt và xử lý BR-PAY-11; hoàn về phương thức gốc, ghi bằng `Payment` loại `REFUND`, không sửa bản ghi gốc; chi trong 3–7 ngày làm việc | BR-PAY-01, BR-PAY-02, BR-PAY-05, BR-PAY-06, BR-PAY-08, BR-PAY-09, BR-PAY-10, BR-CANCEL-12 |
 | `FrontOfficeService` | ApplicationService | `checkIn` · `checkOut` · `markNoShow` · `assignHousekeeping(roomId, businessDate)` | Check-in chặn khi còn nợ (`balanceDue + penaltyAmount = 0`, hoặc `MANAGER`+ cho ghi nợ) và chỉ trong ngày nhận phòng; chốt nợ về 0 trước khi in hoá đơn; sau check-out tạo `HousekeepingTask`, phòng chỉ bán lại khi task `DONE`/`INSPECTED` | BR-FO-01, BR-FO-02, BR-FO-05, BR-FO-06, BR-FO-07 |
-| `ActorContext` | VO | `role : UserRole` · `propertyScope : string[]` · `canActOn(propertyId)` · `isManagerOrAbove()` · `isOwner()` | Hàm thuần kiểm phạm vi cơ sở theo 6 vai trò; service gọi lại chứ không tin tầng HTTP; thay đổi giá vượt ±20% cần `OWNER` xác nhận lại; trạng thái khoá đăng nhập nằm trên `User` (`failedLoginCount`, `lockedUntil`) và được `ActorContext` phản ánh khi dựng phiên | BR-RBAC-01, BR-RBAC-02, BR-RBAC-03, BR-RBAC-04, BR-RBAC-05, BR-RBAC-06 |
+| `ActorContext` | VO | `role : UserRole` · `propertyScope : string[]` · `canActOn(propertyId)` · `hasPermission(permission)` · `isOwner()` | Hàm thuần kiểm quyền tường minh và phạm vi cơ sở theo 7 vai trò độc lập, không suy thứ bậc; SYSADMIN không tự có quyền tài chính. Service kiểm lại quyền hiện tại, ownership và scope trước tác động hoặc replay; thay đổi giá vượt ±20% cần `OWNER` xác nhận lại; trạng thái khoá đăng nhập nằm trên `User` (`failedLoginCount`, `lockedUntil`) và được `ActorContext` phản ánh khi dựng phiên | BR-RBAC-01, BR-RBAC-02, BR-RBAC-03, BR-RBAC-04, BR-RBAC-05, BR-RBAC-06 |
 | `CommandBus` (tùy chọn) | Port | `dispatch(cmd : Command) : Promise~unknown~` | Chỉ dùng để gắn `Idempotency-Key` và nhật ký; không thay thế lời gọi use case tường minh trong mã | BR-GEN-08 |
 
 ### 2.5. Nhóm 5 — Adapter kênh bán & thanh toán
@@ -868,7 +868,7 @@ classDiagram
     RelocationOption ..> Money
 ```
 
-Thang được thử **theo thứ tự** `SAME_TYPE_SAME_PROPERTY → UPGRADE_SAME_PROPERTY → *_CROSS_PROPERTY → WALK_OUT`; bậc 3 chỉ khả dụng khi có cơ sở trong bán kính ≤ 15 km — với ba cơ sở hiện tại (cách nhau 160–300 km) thang **vận hành thực tế là 1 → 2 → 4**, bậc 3 là nhánh dự phòng cho tương lai. `RelocationSagaState` được ghi xuống CSDL sau mỗi bước nên `isStuck(now)` phát hiện được ca khách chưa phản hồi để leo thang trước T−24h (BR-OVER-04). Bước bù khi bậc 3 thất bại: huỷ `RoomMove` nháp, giải phóng phòng đã giữ, ghi `AuditLog`, rồi quay lại bậc 2 hoặc chuyển bậc 4.
+Thang được thử **theo thứ tự** `SAME_TYPE_SAME_PROPERTY → UPGRADE_SAME_PROPERTY → *_CROSS_PROPERTY → WALK_OUT`; bậc 3 chỉ khả dụng khi có cơ sở trong bán kính ≤ 15 km — với ba cơ sở hiện tại (cách nhau 160–300 km) thang **vận hành thực tế là 1 → 2 → 4**, bậc 3 là nhánh dự phòng cho tương lai. `RelocationSagaState` được ghi xuống CSDL sau mỗi bước nên `isStuck(now)` phát hiện được ca khách chưa phản hồi để leo thang trước T−24h (BR-OVER-04). Mỗi executeMove dùng một transaction cho release nguồn, gán đích, EXECUTED và audit/outbox; consent/version/tồn kiểm lại sau khóa. PROPOSED chưa giữ phòng; lỗi rollback giữ nguyên nguồn. Không tự đảo move đã commit vì lỗi thông báo; cần lệnh đảo mới kiểm quyền/tồn. Case chỉ RESOLVED khi đo lại hết shortage theo ADR-014.
 
 ---
 
@@ -1008,7 +1008,7 @@ Bất biến `refundAmount ≤ paidAmount` và `refundAmount` là bội số 1.0
 | `OutboxPort`, `EventPublisher`, `OutboxEvent` | `apps/api/src/infrastructure/outbox/*.ts` | Port + Adapter |
 | `HoldExpiryJob`, `OverbookingScanJob`, `ChannelSyncJob`, `NoShowMarkJob` | `apps/api/src/workers/{hold-expiry,overbooking-scan,channel-sync,no-show-mark}.worker.ts` | Worker |
 | `CreateBookingCommand`, `QuotePriceQuery`, `CancelBookingCommand`, `ResolveOverbookingCommand` và mọi DTO/`E_*` công khai | `packages/contracts/src/{booking,rate,overbooking,payment,inventory,common}/**.ts` | Contract (zod) |
-| Màn hình dùng chung động cơ giá (hiển thị giá từng đêm) | `apps/web/src/{app/(guest),app/(admin),lib}/**`, `apps/mobile/src/{screens,hooks,api}/**` | UI — **chỉ** import `packages/domain` và `packages/contracts` |
+| Màn hình dùng chung báo giá (hiển thị giá từng đêm) | `apps/customer-web`, `apps/customer-android`, `apps/operations-web`, `apps/operations-android` | UI — chỉ import `packages/api-client` và `packages/contracts`; không import `packages/domain` để tự tính |
 
 ---
 
@@ -1079,8 +1079,8 @@ Các mục **đã được xương sống bổ sung** nên không còn nằm tro
 
 | Tài liệu | Nội dung liên quan |
 |----------|--------------------|
-| [00 — Tổng quan](../00-tong-quan.md) | Từ điển thực thể (§7), enum canonical (§7.8), giá trị miền (§7.7), 13 module, 52 use case, cấu trúc repository (§10) |
-| [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) | Nguồn chân lý của 136 quy tắc BR được tham chiếu trong toàn bộ tài liệu này |
+| [00 — Tổng quan](../00-tong-quan.md) | Từ điển thực thể (§7), enum canonical (§7.8), giá trị miền (§7.7), 13 module, 53 use case, cấu trúc repository (§10) |
+| [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) | Nguồn chân lý của 139 quy tắc BR được tham chiếu trong toàn bộ tài liệu này |
 | [02 — Chính sách huỷ & hoàn cọc](../02-nghiep-vu/chinh-sach-huy-hoan-coc.md) | Thang mốc thời gian, bảng quyết định — kiểm chứng `CancellationPolicyEngine` |
 | [02 — Động giá](../02-nghiep-vu/dong-gia.md) | Công thức và ví dụ tính — kiểm chứng `PricingEngine` và `PricingRuleChain` |
 | [02 — Quá tải, ghép & đổi phòng](../02-nghiep-vu/qua-tai-ghep-doi-phong.md) | Thang 4 bậc, `keepScore` — kiểm chứng `OverbookingPlanner` và Saga |

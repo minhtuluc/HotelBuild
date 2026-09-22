@@ -24,8 +24,8 @@
 |-----|----------|-------------------|
 | PO/BA (kiêm thư ký dự án) | 1 | Khảo sát, chốt BR, viết UC, điều phối chủ đầu tư, kiểm thử chấp nhận |
 | Kiến trúc sư kiêm Backend | 1 | Kiến trúc, mô hình miền, CSDL, API, `packages/domain` |
-| Backend/Frontend web | 1 | NestJS module, Next.js back-office |
-| Frontend web + Mobile | 1 | Website khách, ứng dụng Android |
+| Backend + worker | 1 | NestJS API, worker/outbox/scheduler dùng chung |
+| Frontend apps | 1 | 4 frontend: customer web, customer Android, operations web, operations Android |
 | QA/DevOps | 1 | Kế hoạch kiểm thử, CI, kiểm thử tải, sao lưu |
 
 Phân vai chi tiết theo giai đoạn: [05/quy-tac-nhom](quy-tac-nhom.md) §4.
@@ -40,10 +40,10 @@ Phân vai chi tiết theo giai đoạn: [05/quy-tac-nhom](quy-tac-nhom.md) §4.
 | GĐ-1 | W2–W3 | Phân tích hướng đối tượng | Mô hình use case + đặc tả UC, mô hình miền, mô hình động | 100 h |
 | GĐ-2 | W4–W5 | Thiết kế hướng đối tượng | Kiến trúc, class diagram, sequence, ERD/DDL, API, thiết kế màn hình | 100 h |
 | GĐ-3 | W6–W7 | **Sprint 1** — Nền tảng & tồn phòng | Repo chạy được, đăng nhập + phân quyền, CRUD cơ sở/phòng, lịch tồn phòng, ràng buộc chống trùng | 100 h |
-| GĐ-4 | W8–W9 | **Sprint 2** — Đặt phòng & động giá | Đặt phòng tại quầy + web khách, động cơ giá đầy đủ, giữ chỗ & hết hạn | 100 h |
+| GĐ-4 | W8–W9 | **Sprint 2** — Đặt phòng & động giá | Đặt phòng tại quầy + customer web/Android, động cơ giá đầy đủ, giữ chỗ & hết hạn | 100 h |
 | GĐ-5 | W10–W11 | **Sprint 3** — Huỷ, hoàn cọc & thanh toán | Động cơ chính sách huỷ, thanh toán sandbox, duyệt hoàn tiền hai cấp, đổi ngày | 100 h |
 | GĐ-6 | W12–W13 | **Sprint 4** — Quá tải, ghép & đổi phòng | Phát hiện quá tải, thang điều chuyển (thứ tự khả dụng 1 → 2 → 4; bậc 3 chưa khả dụng), ghép phòng, walk-out, allotment kênh | 100 h |
-| GĐ-7 | W14–W15 | **Sprint 5** — Android, báo cáo, hoàn thiện | App Android cho lễ tân, báo cáo, thông báo, kiểm thử tải, báo cáo & demo | 100 h |
+| GĐ-7 | W14–W15 | **Sprint 5** — 4 frontend, báo cáo, hoàn thiện | Operations web/Android, customer Android hardening, báo cáo, thông báo, kiểm thử tải & demo | 100 h |
 
 **Cấu trúc một sprint (2 tuần):**
 
@@ -62,13 +62,13 @@ Phân vai chi tiết theo giai đoạn: [05/quy-tac-nhom](quy-tac-nhom.md) §4.
 
 | Mốc | Hết tuần | Điều kiện đạt (Definition of Milestone) |
 |-----|----------|------------------------------------------|
-| **M1** | W1 | Báo cáo khảo sát có số liệu overbooking/thất thoát doanh thu/tranh chấp; 136 BR đã soạn thảo; Q-01…Q-12 có câu trả lời hoặc mặc định được chủ đầu tư chấp thuận bằng văn bản |
-| **M2** | W3 | 52 UC có sơ đồ + đặc tả cho 12 UC rủi ro cao; mô hình miền không còn lớp mơ hồ; máy trạng thái booking đã vẽ; 100% BR truy vết được tới ít nhất một UC |
+| **M1** | W1 | Báo cáo khảo sát có số liệu overbooking/thất thoát doanh thu/tranh chấp; 139 BR đã soạn thảo; Q-01…Q-12 có câu trả lời hoặc mặc định được chủ đầu tư chấp thuận bằng văn bản |
+| **M2** | W3 | 53 UC có sơ đồ + đặc tả cho 12 UC rủi ro cao; mô hình miền không còn lớp mơ hồ; máy trạng thái booking đã vẽ; 100% BR truy vết được tới ít nhất một UC |
 | **M3** | W5 | **Đóng băng hợp đồng API** (OpenAPI sinh tự động); DDL migrate sạch từ CSDL trống; mọi ràng buộc chống trùng đã có; 100% BR rủi ro cao có ca kiểm thử tương ứng |
 | **M4** | W7 | API chạy trong Docker; chứng minh bằng kịch bản 200 yêu cầu đồng thời chỉ 1 thành công trên cùng một phòng/đêm; lịch tồn phòng hiển thị 55 phòng |
-| **M5** | W9 | Đặt được một booking từ web khách và một từ quầy, giá khớp nhau và khớp với bảng tính tay; hold hết hạn tự giải phóng |
+| **M5** | W9 | Đặt được booking từ customer web, customer Android và quầy; giá khớp nhau và khớp với bảng tính tay; hold hết hạn tự giải phóng |
 | **M6** | W11 | 100% ca kiểm thử bảng quyết định huỷ/hoàn cọc đạt; thao tác **tự duyệt bị chặn ở mọi mức tiền**, và khoản hoàn > 5 triệu bị chặn thêm nếu người duyệt không từ `MANAGER` trở lên |
-| **M7** | W13 | Quá tải phát hiện trước T−24h trên dữ liệu mô phỏng; thang điều chuyển chạy đúng thứ tự khả dụng **1 → 2 → 4** (bậc 3 chưa khả dụng vì ba cơ sở cách nhau 160–300 km); app Android cài được trên máy thật |
+| **M7** | W13 | Quá tải phát hiện trước T−24h trên dữ liệu mô phỏng; thang điều chuyển chạy đúng thứ tự khả dụng **1 → 2 → 4** (bậc 3 chưa khả dụng vì ba cơ sở cách nhau 160–300 km); operations Android cài được trên máy thật |
 | **M8** | W15 | Báo cáo hoàn chỉnh, ma trận truy vết đầy đủ, demo end-to-end 3 bài toán, mã nguồn bàn giao kèm README chạy được. **Hồ sơ bàn giao kèm theo:** biên bản UAT có chữ ký chủ đầu tư, biên bản diễn tập phục hồi sao lưu (`TC-SYS-07`), biên bản nghiệm thu 3 bài toán, và danh mục mục nợ kỹ thuật còn lại |
 
 ---
@@ -113,7 +113,7 @@ gantt
     Mốc M7                               :milestone, m7, 2026-12-20, 0d
 
     section GĐ-7 Sprint 5
-    Android, báo cáo, kiểm thử tải       :g7, 2026-12-21, 12d
+    4 frontend, báo cáo, kiểm thử tải    :g7, 2026-12-21, 12d
     Báo cáo & demo                       :g8, 2027-01-01, 2d
     Mốc M8                               :milestone, m8, 2027-01-02, 0d
 ```
@@ -128,11 +128,25 @@ Không được sang giai đoạn sau khi cổng hiện tại chưa xanh.
 
 | Cổng | Thời điểm | Điều kiện bắt buộc |
 |------|-----------|--------------------|
-| QG-0 | Cuối W1 | Ba bài toán có số liệu; danh sách câu hỏi mở được trả lời hoặc có mặc định được duyệt |
+| QG-0 | Cuối W1 | Ba bài toán có số liệu đo kèm nguồn; câu hỏi chặn có trả lời/chấp thuận tường minh, người xác nhận và biên bản; chưa trả lời giữ OPEN, không coi im lặng là duyệt |
 | QG-1 | Cuối W3 | 100% BR ở dạng kiểm thử được; 0 UC mồ côi (không gắn actor); mô hình miền review chéo bởi 2 người |
 | QG-2 | Cuối W5 | CSDL migrate sạch từ trống; OpenAPI sinh thành công; 100% BR rủi ro cao có ca kiểm thử; ADR-001…ADR-013 viết xong |
 | QG-3 | Cuối mỗi sprint | Tất cả kiểm thử xanh; độ phủ nhánh của `packages/domain` ≥ **90%**; 0 lỗi P0/P1 đang mở; demo chạy trên môi trường sạch; tài liệu đã cập nhật theo mã |
-| QG-4 | Cuối kỳ | Báo cáo khớp mã nguồn; ma trận truy vết không còn ô trống; kịch bản phục hồi sao lưu đã diễn tập |
+| QG-4 | Cuối kỳ | Báo cáo khớp mã nguồn; ma trận không còn liên kết bắt buộc bị thiếu không giải thích; ngoại lệ xuyên suốt có owner/review; kịch bản phục hồi sao lưu có log diễn tập và số đo |
+
+### 6.1. Evidence để mở cổng triển khai
+
+Các QG là **điều kiện phải chứng minh**, chưa có cổng nào được tuyên bố đạt bởi việc viết xong tài liệu. Hồ sơ theo [quy tắc kỹ thuật §9.3](quy-tac-ky-thuat.md); mỗi cổng có trạng thái `NOT_RUN/BLOCKED/FAIL/PASS`, người chịu trách nhiệm và revision.
+
+| Cổng | Bằng chứng cần review | Người quyết định / điều kiện chặn |
+|---|---|---|
+| QG-0 — quyền quyết định nghiệp vụ | Số liệu khảo sát có nguồn + sổ Q/OPEN, văn bản xác nhận và phạm vi hiệu lực | PO/BA + stakeholder có thẩm quyền; thiếu phản hồi chặn phạm vi phụ thuộc |
+| QG-1 — mô hình khả thi | Review 2 người; journey có actor, tiền điều kiện/hậu điều kiện, invariant và nhánh thất bại; BR→UC→TC không mồ côi | PO/BA + ARCH; mâu thuẫn nguồn chưa giải quyết thì BLOCKED |
+| QG-2 — đủ để lập trình | Hợp đồng request/response/error/version/idempotency; log migration từ DB trống; chứng cứ constraint + ca SQL âm; đường phục hồi dữ liệu; UI states và fixture/oracle | ARCH + QA; schema ví dụ/OpenAPI chưa sinh hoặc test chưa chạy thì NOT_RUN; unknown tiền/quyền/tồn chặn story tương ứng |
+| QG-3 — hoàn tất lát cắt | CI gắn build + báo cáo TC liên quan §4.6 kế hoạch kiểm thử; SQL invariant trước/sau lỗi; trace audit/outbox; demo và accessibility theo UI §8–9 | QA + PO/BA; PASS tài liệu không thay PASS ứng dụng; 0 P0/P1, không bỏ test rủi ro cao |
+| QG-4 — bàn giao | UAT có người chạy/ký, log restore và RPO/RTO, đối soát tiền/tồn sau phục hồi, danh mục giới hạn/unknown còn mở, README tái lập | PO/BA + stakeholder; không nghiệm thu toàn bộ khi còn phạm vi bị BLOCKED; sandbox chỉ chứng minh sandbox |
+
+Phụ thuộc bắt buộc: chốt invariant tồn → migration/constraint + test tranh chấp → API giữ chỗ/đặt phòng; chốt oracle giá/policy → cấu hình có phiên bản → báo giá/snapshot → huỷ/hoàn; chốt idempotency + đối soát → thanh toán/chi hoàn; chốt phân quyền + quy tắc replay → mobile offline. Không dồn các hợp đồng này tới cuối sprint mới xác minh.
 
 ---
 
@@ -162,7 +176,7 @@ Cắt từ trên xuống, dừng ngay khi kịp tiến độ. **Không bao giờ
 | 1.3 | Lượng hoá 3 bài toán, xây bảng quy tắc BR | | 18 |
 | 1.4 | Chốt Q-01…Q-12 bằng văn bản | | 10 |
 | 2 | **Phân tích** | GĐ-1 | **100** |
-| 2.1 | Sơ đồ use case + danh mục 52 UC | | 14 |
+| 2.1 | Sơ đồ use case + danh mục 53 UC | | 14 |
 | 2.2 | Đặc tả 12 UC rủi ro cao | | 26 |
 | 2.3 | Mô hình miền + class diagram mức phân tích | | 20 |
 | 2.4 | Máy trạng thái + activity diagram | | 20 |
@@ -173,7 +187,7 @@ Cắt từ trên xuống, dừng ngay khi kịp tiến độ. **Không bao giờ
 | 3.3 | Sequence diagram chi tiết (8 luồng) | | 20 |
 | 3.4 | ERD, DDL, ràng buộc chống trùng | | 20 |
 | 3.5 | Hợp đồng API + mã lỗi | | 14 |
-| 3.6 | Thiết kế màn hình + luồng Android | | 10 |
+| 3.6 | Thiết kế màn hình + 4 frontend | | 10 |
 | 4 | **Sprint 1 — Nền tảng & tồn phòng** | GĐ-3 | **100** |
 | 4.1 | Dựng monorepo, CI, Docker, migrate | | 16 |
 | 4.2 | AUTH + RBAC + phạm vi cơ sở | | 18 |
@@ -186,7 +200,7 @@ Cắt từ trên xuống, dừng ngay khi kịp tiến độ. **Không bao giờ
 | 5.2 | Lịch giá, mùa, cấu hình kênh | | 18 |
 | 5.3 | BOOK: tạo/sửa booking, chống trùng, snapshot giá | | 22 |
 | 5.4 | Hold & hết hạn tự động | | 12 |
-| 5.5 | Web khách: tìm phòng + đặt phòng | | 22 |
+| 5.5 | Customer web + customer Android: tìm phòng + đặt phòng | | 22 |
 | 6 | **Sprint 3 — Huỷ, hoàn cọc & thanh toán** | GĐ-5 | **100** |
 | 6.1 | `packages/domain`: động cơ chính sách huỷ | | 24 |
 | 6.2 | BOOK: huỷ, giải phóng phòng, đổi ngày | | 16 |
@@ -199,13 +213,14 @@ Cắt từ trên xuống, dừng ngay khi kịp tiến độ. **Không bao giờ
 | 7.3 | OVER: thang điều chuyển (1 → 2 → 4) + `keepScore` | | 26 |
 | 7.4 | OVER: ghép phòng (share & connecting) | | 18 |
 | 7.5 | OVER: walk-out & bồi thường | | 12 |
-| 8 | **Sprint 5 — Android, báo cáo, hoàn thiện** | GĐ-7 | **100** |
-| 8.1 | App Android: check-in/out, tra cứu, đổi phòng | | 30 |
-| 8.2 | App Android: buồng phòng | | 10 |
-| 8.3 | REP: 4 báo cáo | | 18 |
-| 8.4 | NOTI: email + hàng đợi | | 10 |
-| 8.5 | Kiểm thử tải 200 đồng thời + diễn tập sao lưu | | 12 |
-| 8.6 | Báo cáo, ma trận truy vết, demo | | 20 |
+| 8 | **Sprint 5 — 4 frontend, báo cáo, hoàn thiện** | GĐ-7 | **100** |
+| 8.1 | Operations web: dashboard, báo cáo, duyệt và điều phối | | 18 |
+| 8.2 | Operations Android: check-in/out, tra cứu, đổi phòng, buồng phòng | | 22 |
+| 8.3 | Customer Android: hardening payment, booking, offline đọc | | 12 |
+| 8.4 | REP: 4 báo cáo | | 14 |
+| 8.5 | NOTI: email + hàng đợi | | 8 |
+| 8.6 | Kiểm thử tải 200 đồng thời + diễn tập sao lưu | | 12 |
+| 8.7 | Báo cáo, ma trận truy vết, demo | | 14 |
 | | **Tổng** | | **750** |
 
 ---
@@ -244,4 +259,4 @@ Q-01…Q-12 được trả lời (W1)
 | Ràng buộc chống trùng ở CSDL | Mọi module đặt phòng | Kiến trúc sư + DevOps | W6 | Toàn bộ BT-3 không thể chứng minh |
 | Kênh OTA giả lập | OVER, CHAN | Backend | W12 | Bỏ kịch bản OTA, chỉ demo quầy |
 | Tài khoản sandbox VNPay/MoMo | PAY | Chủ đầu tư đăng ký | W9 | Chuyển sang mô phỏng cổng thanh toán nội bộ |
-| App Android trên máy thật | FO, OVER | Cả nhóm | W12 | Demo bằng trình giả lập; chấp nhận được cho môn học |
+| Operations Android trên máy thật | FO, OVER | Cả nhóm | W12 | Demo bằng trình giả lập; customer Android có smoke test riêng |

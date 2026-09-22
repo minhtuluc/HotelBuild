@@ -1,30 +1,32 @@
 # 04 — Thiết kế màn hình
 
-> Tài liệu chốt **cấu trúc điều hướng, danh mục màn hình, wireframe trọng yếu, luồng Android cho lễ tân, nguyên
-> tắc giao diện, token thiết kế, trạng thái rỗng – đang tải – lỗi và yêu cầu truy cập** cho ba bề mặt giao tiếp.
+> Tài liệu chốt **cấu trúc điều hướng, danh mục màn hình, wireframe trọng yếu, luồng Android cho khách và vận hành,
+> nguyên tắc giao diện, token thiết kế, trạng thái rỗng – đang tải – lỗi và yêu cầu truy cập** cho năm surface giao tiếp.
 > Mọi giá trị nghiệp vụ hiển thị trên giao diện **tham chiếu mã BR**, không định nghĩa lại.
 
 | Hạng mục | Số lượng |
 |----------|----------|
-| Bề mặt giao diện | 3 (web khách, web back-office, app Android) |
+| Bề mặt giao diện | 5 (customer web, customer Android, operations web, operations Android và API surface) |
 | Module nghiệp vụ phủ | 13 (AUTH · PROP · INV · RATE · BOOK · PAY · CHAN · OVER · FO · CRM · NOTI · REP · SYS) |
 | Use case được phủ | 52 / 52 |
-| Quy tắc nghiệp vụ tham chiếu | 136 (`BR-*`, nguồn chân lý tại [02](../02-nghiep-vu/quy-tac-nghiep-vu.md)) |
-| Màn hình đặc tả | 69 (SCR-01 … SCR-69) |
+| Quy tắc nghiệp vụ tham chiếu | 139 (`BR-*`, nguồn chân lý tại [02](../02-nghiep-vu/quy-tac-nghiep-vu.md)) |
+| Màn hình đặc tả | 83 (SCR-01 … SCR-83) |
 | Wireframe ASCII | 8 màn hình trọng yếu |
-| Luồng Android | 4 (check-in · check-out muộn · đổi phòng · no-show) |
+| Luồng Android | 8 (4 luồng khách + 4 luồng vận hành) |
 
 ---
-## 1. Ba bề mặt giao diện
+## 1. Bốn frontend giao diện
 
 | Bề mặt | Mã nền tảng | Công nghệ | Actor chính | Số màn hình | Điểm khác biệt thiết kế |
 |--------|-------------|-----------|-------------|-------------|--------------------------|
-| Web khách | `WEB-GUEST` | Next.js 15 App Router, route group `(guest)`, Tailwind + shadcn/ui (ADR-005) | ACT-01 | 13 | Luồng tuyến tính tìm → đặt → trả tiền; không lộ dữ liệu nội bộ |
-| Web back-office | `WEB-ADMIN` | Next.js 15, route group `(admin)` (ADR-005) | ACT-02 … ACT-06, ACT-12 | 43 | Bảng dữ liệu dày, bộ lọc, thao tác hàng loạt; mọi thao tác ghi có nhật ký |
-| App Android | `ANDROID` | Expo (React Native) + Expo Router, phát hành APK/EAS (ADR-006) | ACT-02, ACT-04, ACT-07 | 13 | Thao tác một tay tại quầy; hành động chính ở 1/3 dưới màn hình; PIN 6 số cho thao tác tài chính |
+| Customer Web | `WEB-GUEST` | Next.js 15 App Router, Tailwind + shadcn/ui (ADR-005) | ACT-01 | 13 | Luồng tuyến tính tìm → đặt → trả tiền; không lộ dữ liệu nội bộ |
+| Customer Android | `ANDROID-GUEST` | Expo (React Native) + Expo Router, phát hành APK/EAS (ADR-006) | ACT-01 | 13 | Native flow tìm → đặt → thanh toán; secure storage, deep link callback, không lộ dữ liệu nội bộ |
+| Operations Web | `WEB-OPS` | Next.js 15 App Router, Tailwind + shadcn/ui (ADR-005) | ACT-02 … ACT-06, ACT-12 | 44 | Bảng dữ liệu dày, bộ lọc, thao tác hàng loạt; mọi thao tác ghi có nhật ký |
+| Operations Android | `ANDROID-OPS` | Expo (React Native) + Expo Router, phát hành APK/EAS (ADR-006) | ACT-02, ACT-04, ACT-07 | 13 | Thao tác một tay tại quầy/hiện trường; PIN 6 số cho thao tác tài chính |
 
-Cả ba bề mặt dùng chung động cơ miền (`packages/domain`) và chung hợp đồng REST `/api/v1`; cùng một đầu vào báo giá
-PHẢI cho cùng một kết quả (BR-RATE-17, NFR-MAIN-04). Thời gian hiển thị theo giờ VN; tiền là số nguyên VND (BR-GEN-01…03).
+Cả bốn frontend dùng chung hợp đồng REST `/api/v1`, `packages/api-client` và design token phù hợp nền tảng;
+`packages/domain` chỉ chạy authoritative ở backend/worker. Cùng một đầu vào báo giá PHẢI cho cùng một kết quả trên
+API và cả bốn frontend (BR-RATE-17, NFR-MAIN-04). Thời gian hiển thị theo giờ VN; tiền là số nguyên VND (BR-GEN-01…03).
 
 ---
 ## 2. Sơ đồ điều hướng (sitemap)
@@ -45,7 +47,26 @@ flowchart TD
     ODETAIL --> RESCHED["[BOOK] Đổi ngày lưu trú<br/>SCR-12"]
     AUTH --> PROFILE["[CRM] Hồ sơ + điểm thưởng<br/>SCR-13"]
 ```
-### 2.2. Web back-office (`(admin)`)
+### 2.2. Customer Android
+```mermaid
+flowchart TD
+    CA["[AUTH] Đăng nhập / đăng ký khách<br/>SCR-71"] --> CH["[INV] Trang chủ + tìm phòng<br/>SCR-72"]
+    CH --> CS["[INV] Kết quả tìm phòng<br/>SCR-73"]
+    CS --> CD["[INV · RATE] Chi tiết phòng + giá từng đêm<br/>SCR-74"]
+    CD --> CR["[RATE] Chọn gói giá + chính sách huỷ<br/>SCR-75"]
+    CR --> CB["[BOOK] Thông tin khách + xác nhận<br/>SCR-76"]
+    CB --> CP["[PAY] Thanh toán VNPay/MoMo<br/>SCR-77"]
+    CP --> CC["[BOOK · NOTI] Kết quả đặt phòng<br/>SCR-78"]
+    CA --> CO["[BOOK] Đơn của tôi<br/>SCR-79"]
+    CO --> COD["[BOOK] Chi tiết booking<br/>SCR-80"]
+    COD --> CX["[BOOK] Huỷ + số tiền hoàn<br/>SCR-81"]
+    COD --> CY["[BOOK] Đổi ngày lưu trú<br/>SCR-82"]
+    CA --> CPF["[CRM] Hồ sơ + điểm thưởng<br/>SCR-83"]
+```
+Customer Android giữ cùng journey và contract với Customer Web nhưng có navigation, trạng thái offline đọc,
+secure storage và deep-link payment riêng; không chia sẻ component web.
+
+### 2.3. Operations Web (`(ops)`)
 ```mermaid
 flowchart LR
     LOGIN["[AUTH] Đăng nhập nội bộ<br/>SCR-14"] --> DASH["[INV] Bảng điều khiển ngày<br/>SCR-23"]
@@ -123,7 +144,7 @@ flowchart LR
 Ghi chú điều hướng: trong mỗi nhóm, màn hình liên kết theo luồng nghiệp vụ — danh sách booking → chi tiết → huỷ/đổi
 ngày → duyệt hoàn tiền; bảng quá tải → điều chuyển/ghép phòng/walk-out → duyệt ngoại lệ; cấu hình kênh → giám sát
 đồng bộ → hàng đợi booking OTA.
-### 2.3. App Android (lễ tân / quản lý / buồng phòng)
+### 2.4. Operations Android (lễ tân / quản lý / buồng phòng)
 ```mermaid
 flowchart TD
     L["[AUTH] Đăng nhập + chọn cơ sở<br/>SCR-56"] --> T1["Tab Hôm nay — ĐẾN<br/>[FO] SCR-57"]
@@ -139,27 +160,27 @@ flowchart TD
     T4 --> MV["[OVER] Đổi phòng<br/>SCR-63"]
     T4 --> WI["[BOOK] Tạo booking vãng lai<br/>SCR-65"]
 ```
-### 2.4. Ma trận module × bề mặt (13 module)
-| Module | Web khách | Web back-office | App Android |
-|--------|-----------|-----------------|-------------|
-| AUTH | SCR-08 | SCR-14, SCR-15 | SCR-56 |
-| PROP | — | SCR-19, SCR-20, SCR-21, SCR-22 | SCR-66 (chỉ trạng thái buồng) |
-| INV | SCR-01, SCR-02, SCR-03 | SCR-23, SCR-24, SCR-25 | SCR-57, SCR-62 |
-| RATE | SCR-04 (chỉ xem) | SCR-26 … SCR-30 | — |
-| BOOK | SCR-05, SCR-07, SCR-09 … SCR-12 | SCR-31 … SCR-36, SCR-69 | SCR-62, SCR-65 |
-| PAY | SCR-06 | SCR-37, SCR-38, SCR-39 | SCR-59, SCR-68 |
-| CHAN | — | SCR-40, SCR-41, SCR-42 | — |
-| OVER | — | SCR-43 … SCR-47 | SCR-63, SCR-67 |
-| FO | — | SCR-48, SCR-69 | SCR-57 … SCR-61, SCR-64, SCR-66 |
-| CRM | SCR-13 | SCR-49, SCR-50 | SCR-62 |
-| NOTI | nhận email/SMS/Zalo (không có màn hình riêng) | SCR-51 | thông báo đẩy trong app |
-| REP | — | SCR-52, SCR-53, SCR-54, SCR-55 | — |
-| SYS | — | SCR-16, SCR-17, SCR-18 | — |
+### 2.5. Ma trận module × bề mặt (13 module)
+| Module | Customer Web | Customer Android | Operations Web | Operations Android |
+|--------|--------------|------------------|-----------------|-------------------|
+| AUTH | SCR-08 | SCR-71 | SCR-14, SCR-15 | SCR-56 |
+| PROP | — | — | SCR-19, SCR-20, SCR-21, SCR-22 | SCR-66 (chỉ trạng thái buồng) |
+| INV | SCR-01, SCR-02, SCR-03 | SCR-72, SCR-73, SCR-74 | SCR-23, SCR-24, SCR-25 | SCR-57, SCR-62 |
+| RATE | SCR-04 (chỉ xem) | SCR-75 (chỉ xem) | SCR-26 … SCR-30, SCR-70 | — |
+| BOOK | SCR-05, SCR-07, SCR-09 … SCR-12 | SCR-76, SCR-78 … SCR-82 | SCR-31 … SCR-36, SCR-69 | SCR-62, SCR-65 |
+| PAY | SCR-06 | SCR-77 | SCR-37, SCR-38, SCR-39 | SCR-59, SCR-68 |
+| CHAN | — | — | SCR-40, SCR-41, SCR-42 | — |
+| OVER | — | — | SCR-43 … SCR-47 | SCR-63, SCR-67 |
+| FO | — | — | SCR-48, SCR-69 | SCR-57 … SCR-61, SCR-64, SCR-66 |
+| CRM | SCR-13 | SCR-83 | SCR-49, SCR-50 | SCR-62 |
+| NOTI | nhận email/SMS/Zalo | thông báo đẩy | SCR-51 | thông báo đẩy trong app |
+| REP | — | — | SCR-52, SCR-53, SCR-54, SCR-55 | — |
+| SYS | — | — | SCR-16, SCR-17, SCR-18 | — |
 
 ---
-## 3. Danh mục màn hình (69 màn hình)
+## 3. Danh mục màn hình (83 màn hình)
 Mã `SCR-<NN>` là định danh duy nhất của màn hình, dùng trong ma trận truy vết và trong mã nguồn
-(`apps/web/src/app/(guest)|(admin)/**`, `apps/mobile/src/app/**`). Cột **UC** chỉ liệt kê use case có thật trong
+(`apps/customer-web/**`, `apps/customer-android/**`, `apps/operations-web/**`, `apps/operations-android/**`). Cột **UC** chỉ liệt kê use case có thật trong
 [00 §8](../00-tong-quan.md#8-danh-mục-use-case).
 ### 3.1. Web khách (13 màn hình)
 | Mã | Màn hình | Bề mặt | Vai trò dùng | UC | Dữ liệu chính | Hành động chính |
@@ -177,10 +198,10 @@ Mã `SCR-<NN>` là định danh duy nhất của màn hình, dùng trong ma tr�
 | SCR-11 | Huỷ đặt phòng & số tiền hoàn theo bậc | WEB-GUEST | ACT-01 | UC-BOOK-08 | CancellationTier áp dụng, hoursBeforeCheckIn, refundAmount, penaltyAmount | Xem số hoàn, chọn lý do, xác nhận huỷ |
 | SCR-12 | Đổi ngày lưu trú | WEB-GUEST | ACT-01 | UC-BOOK-06 | Ngày mới, chênh lệch giá, Booking.rescheduleCount | Chọn ngày mới, xem chênh lệch, xác nhận |
 | SCR-13 | Hồ sơ khách & điểm thưởng | WEB-GUEST | ACT-01 | UC-CRM-01, UC-CRM-02 | Guest, loyaltyTier, loyaltyPoints, LoyaltyTransaction, consentAt | Cập nhật hồ sơ, xem điểm/hạng, yêu cầu ẩn danh hoá |
-### 3.2. Web back-office (43 màn hình)
+### 3.2. Operations Web (44 màn hình)
 | Mã | Màn hình | Bề mặt | Vai trò dùng | UC | Dữ liệu chính | Hành động chính |
 |----|----------|--------|--------------|----|----------------|-----------------|
-| SCR-14 | Đăng nhập nội bộ & chọn cơ sở | WEB-ADMIN | ACT-02 … ACT-06, ACT-12 | UC-AUTH-01 | User, role, propertyScope[], phiên 15 phút | Đăng nhập, chọn phạm vi cơ sở |
+| SCR-14 | Đăng nhập nội bộ & chọn cơ sở | WEB-OPS | ACT-02 … ACT-06, ACT-12 | UC-AUTH-01 | User, role, propertyScope[], phiên 15 phút | Đăng nhập, chọn phạm vi cơ sở |
 | SCR-15 | Người dùng, vai trò & phạm vi cơ sở | WEB-ADMIN | ACT-05, ACT-12 | UC-AUTH-02 | User, UserRole, propertyScope, failedLoginCount, lockedUntil | Tạo/sửa người dùng, gán vai trò, khoá tài khoản |
 | SCR-16 | Nhật ký kiểm toán | WEB-ADMIN | ACT-05, ACT-12 | UC-SYS-01 | AuditLog (actorRole, action, beforeJson/afterJson, reason, ipAddress) | Lọc theo đối tượng/thời gian, mở chi tiết, xuất CSV |
 | SCR-17 | Tham số hệ thống | WEB-ADMIN | ACT-12, ACT-05 | UC-SYS-02 | SystemSetting (deal.threshold.minor, job.hold.releaseIntervalSeconds, job.holdReconcile.intervalSeconds, …), updatedBy | Sửa tham số, xem lịch sử thay đổi |
@@ -197,6 +218,7 @@ Mã `SCR-<NN>` là định danh duy nhất của màn hình, dùng trong ma tr�
 | SCR-28 | Kênh bán: hệ số & hoa hồng | WEB-ADMIN | ACT-05 | UC-RATE-03 | Channel (mặc định toàn chuỗi), ChannelPropertySetting (commissionPct, multiplierOverride theo cặp kênh–cơ sở), syncStatus | Sửa hệ số/hoa hồng theo kênh và theo cơ sở, xem cảnh báo sàn hệ số (BR-RATE-18) |
 | SCR-29 | Khuyến mãi | WEB-ADMIN | ACT-05, ACT-04 | UC-RATE-04 | Promotion (type, value, minNights, scope, maxUses, stackable), AMOUNT trước PERCENT | Tạo/sửa khuyến mãi, kiểm tra trần giảm 30% |
 | SCR-30 | Xem trước báo giá đa kênh | WEB-ADMIN | ACT-04, ACT-05 | UC-RATE-05 | PriceQuote đối chiếu 7 kênh (so sau kẹp sàn/trần), hoa hồng, doanh thu thuần | Đổi đầu vào, so sánh 7 kênh, xuất CSV |
+| SCR-70 | Gói giá & chính sách huỷ | WEB-ADMIN | ACT-05 | UC-RATE-06 | RatePlan, CancellationPolicy/tier, version, điều kiện đổi ngày, trạng thái bán; BR-RATE-20 | Tạo/sửa/ngừng bán; validate bậc; xem thay đổi trước lưu; xử lý conflict; booking cũ dùng snapshot |
 | SCR-31 | Danh sách & tra cứu booking | WEB-ADMIN | ACT-02, ACT-03, ACT-04 | UC-BOOK-07 | Booking (code, channelId, status, checkIn, paidAmount, balanceDue) | Lọc nâng cao, tra theo mã/SĐT, xoá cứng DRAFT/HELD (BR-BOOK-17) |
 | SCR-32 | Chi tiết booking & nút huỷ | WEB-ADMIN | ACT-02, ACT-03, ACT-04 | UC-BOOK-07, UC-BOOK-08 | Booking, PriceSnapshot (seq, kind ORIGINAL/RESCHEDULE/PARTIAL_CANCEL), Payment, RoomAssignment | Xem, huỷ (xem trước tiền hoàn), đổi ngày, huỷ một phần, đổi phòng |
 | SCR-33 | Tạo booking tại quầy (khách vãng lai) | WEB-ADMIN | ACT-02 | UC-BOOK-02 | Guest vãng lai, phòng bán ngay, kênh WALKIN, tiền cọc | Nhập nhanh ≤ 5 bước, thu cọc, in xác nhận |
@@ -223,25 +245,42 @@ Mã `SCR-<NN>` là định danh duy nhất của màn hình, dùng trong ma tr�
 | SCR-54 | Báo cáo huỷ phòng & hoàn cọc | WEB-ADMIN | ACT-05, ACT-06 | UC-REP-03 | Tỷ lệ huỷ (CANCELLED ÷ tổng booking tạo trong kỳ — BR-REP-01), tổng refundAmount, tổng penaltyAmount | Lọc kỳ/gói giá, xem công thức chỉ số, xuất CSV |
 | SCR-55 | Báo cáo quá tải & điều chuyển | WEB-ADMIN | ACT-04, ACT-05 | UC-REP-04 | OverbookingCase trễ ngày, RoomMove, chi phí xử lý quá tải = Σ chiết khấu ghép + Σ bồi thường + Σ đưa đón (BR-REP-01) | Lọc kỳ/cơ sở, xem chi phí xử lý, xuất CSV |
 | SCR-69 | Xử lý trả phòng sớm | WEB-ADMIN | ACT-02, ACT-04 | UC-FO-02, UC-BOOK-08 | Đêm chưa ở theo PriceSnapshot, min(paidAmount, giá các đêm chưa ở) theo earlyCheckoutFreeHours/earlyCheckoutRefundPct (BR-CANCEL-09) | Xem số hoàn 50%, xác nhận trả phòng sớm, giải phóng các đêm còn lại |
-### 3.3. App Android (13 màn hình)
+### 3.3. Customer Android (13 màn hình)
 | Mã | Màn hình | Bề mặt | Vai trò dùng | UC | Dữ liệu chính | Hành động chính |
 |----|----------|--------|--------------|----|----------------|-----------------|
-| SCR-56 | Đăng nhập & chọn cơ sở (PIN) | ANDROID | ACT-02, ACT-04, ACT-07 | UC-AUTH-01 | refresh token 7 ngày, propertyScope, PIN 6 số | Đăng nhập, mở khoá phiên bằng PIN |
-| SCR-57 | Danh sách khách đến hôm nay | ANDROID | ACT-02 | UC-FO-01 | Booking đến hôm nay, depositAmount/paidAmount, RoomAssignment | Chạm thẻ khách, mở check-in, quét mã QR |
-| SCR-58 | Chi tiết check-in | ANDROID | ACT-02 | UC-FO-01 | Điều kiện check-in (ngưỡng nợ BR-FO-01), phòng đã gán, giấy tờ tuỳ thân | Xác nhận check-in, ghi chú, chuyển thu số dư |
-| SCR-59 | Thu số dư khi check-in | ANDROID | ACT-02 | UC-PAY-03 | balanceDue, penaltyAmount, PaymentMethod (CASH/BANK_TRANSFER/VNPAY/MOMO) | Nhập số tiền, chọn phương thức, nhập PIN, in biên lai |
-| SCR-60 | Danh sách khách đi hôm nay | ANDROID | ACT-02 | UC-FO-02 | Booking CHECKED_IN trong ngày, phụ thu chưa chốt | Chạm thẻ khách, mở check-out |
-| SCR-61 | Check-out muộn & phụ thu | ANDROID | ACT-02 | UC-FO-02 | Giờ hiện tại, phụ thu 0%/50%/100% giá đêm cuối, Payment EXTRA_SERVICE | Xác nhận check-out, thêm phụ thu, in hoá đơn |
-| SCR-62 | Tra cứu booking & khách | ANDROID | ACT-02 | UC-BOOK-07, UC-CRM-01 | Tìm theo mã/SĐT/tên, lịch sử lưu trú, cờ blacklisted | Tra cứu, gọi khách, mở hành động nhanh |
-| SCR-63 | Đổi phòng trên Android | ANDROID | ACT-02, ACT-04 | UC-OVER-02 | Đề xuất theo thang 4 bậc, keepScore, cảnh báo mất quyền lợi, priceLocked | Chọn phòng, xem ảnh hưởng, xác nhận đổi |
-| SCR-64 | Ghi no-show | ANDROID | ACT-02 | UC-FO-04 | Booking CONFIRMED chưa check-in, bậc cuối chính sách, phụ thu đêm đầu | Xem số tiền bị tính, xác nhận no-show |
-| SCR-65 | Tạo booking khách vãng lai | ANDROID | ACT-02 | UC-BOOK-02 | Phòng bán ngay, kênh WALKIN, tiền cọc | Tạo nhanh, thu cọc, gửi xác nhận |
-| SCR-66 | Buồng phòng: danh sách việc dọn | ANDROID | ACT-07, ACT-02 | UC-FO-03 | HousekeepingTask (PENDING/IN_PROGRESS/DONE/INSPECTED), Room.status | Nhận việc, chụp ảnh, đánh dấu dọn xong |
-| SCR-67 | Cảnh báo quá tải & việc gấp | ANDROID | ACT-04, ACT-02 | UC-OVER-01 | Ca quá tải theo cơ sở, hạn T−24h, hold sắp hết hạn | Mở ca, gọi khách, chuyển tiếp sang web back-office |
-| SCR-68 | Đối soát nhanh trong ca | ANDROID | ACT-02, ACT-06 | UC-PAY-05 | Tiền mặt theo (người thu, ngày VN), số giao dịch, chênh lệch quỹ | Xem tổng thu trong ca, báo chênh lệch, gửi MANAGER |
+| SCR-71 | Đăng ký / đăng nhập khách | ANDROID-GUEST | ACT-01 | UC-AUTH-03 | PhoneNumber, OTP/mật khẩu, consentMarketing | Đăng nhập, đăng ký, khôi phục phiên |
+| SCR-72 | Trang chủ & tìm phòng | ANDROID-GUEST | ACT-01 | UC-INV-02 | Cơ sở, ngày nhận/trả, số khách, promo | Chọn bộ lọc và tìm phòng |
+| SCR-73 | Kết quả tìm phòng | ANDROID-GUEST | ACT-01 | UC-INV-02 | Availability, loại phòng, giá từ/đêm | Lọc, sắp xếp, mở chi tiết |
+| SCR-74 | Chi tiết phòng & bảng giá | ANDROID-GUEST | ACT-01 | UC-INV-02 | PriceQuote.nights[], sức chứa, ảnh | Xem giá từng đêm, chọn phòng |
+| SCR-75 | Gói giá & chính sách huỷ | ANDROID-GUEST | ACT-01 | UC-INV-02 | RatePlan, CancellationPolicy snapshot | So sánh và chọn gói giá |
+| SCR-76 | Thông tin khách & xác nhận | ANDROID-GUEST | ACT-01 | UC-BOOK-01 | Guest, specialRequest, promo, tổng tiền | Nhập thông tin, tạo booking |
+| SCR-77 | Thanh toán trực tuyến | ANDROID-GUEST | ACT-01, ACT-08 | UC-PAY-02 | Payment, holdExpiresAt, PSP redirect/deep link | Thanh toán, xử lý callback lặp |
+| SCR-78 | Kết quả đặt phòng | ANDROID-GUEST | ACT-01 | UC-BOOK-01, UC-BOOK-04 | Booking.code, holdExpiresAt, notification | Xem mã, tải xác nhận, tiếp tục trả tiền |
+| SCR-79 | Đơn của tôi | ANDROID-GUEST | ACT-01 | UC-BOOK-07 | Booking list, status, số tiền | Tra cứu và mở chi tiết |
+| SCR-80 | Chi tiết booking | ANDROID-GUEST | ACT-01 | UC-BOOK-07 | Booking, PriceSnapshot, Payment | Xem, tải xác nhận, mở hành động |
+| SCR-81 | Huỷ booking & số tiền hoàn | ANDROID-GUEST | ACT-01 | UC-BOOK-08 | CancellationTier, refundAmount, penaltyAmount | Xem trước và xác nhận huỷ |
+| SCR-82 | Đổi ngày lưu trú | ANDROID-GUEST | ACT-01 | UC-BOOK-06 | Ngày mới, chênh lệch giá, rescheduleCount | Chọn ngày và xác nhận đổi |
+| SCR-83 | Hồ sơ khách & điểm thưởng | ANDROID-GUEST | ACT-01 | UC-CRM-01, UC-CRM-02 | Guest, loyaltyTier, points, consentAt | Cập nhật hồ sơ, xem điểm/hạng |
 
-**Tổng: 69 màn hình** — web khách 13 · web back-office 43 · app Android 13. Cột UC chỉ chứa mã có thật trong danh
-mục 52 use case; các màn hình thuần điều hướng (SCR-23, SCR-48, SCR-67) vẫn phục vụ các UC đã nêu.
+### 3.4. Operations Android (13 màn hình)
+| Mã | Màn hình | Bề mặt | Vai trò dùng | UC | Dữ liệu chính | Hành động chính |
+|----|----------|--------|--------------|----|----------------|-----------------|
+| SCR-56 | Đăng nhập & chọn cơ sở (PIN) | ANDROID-OPS | ACT-02, ACT-04, ACT-07 | UC-AUTH-01 | refresh token 7 ngày, propertyScope, PIN 6 số | Đăng nhập, mở khoá phiên bằng PIN |
+| SCR-57 | Danh sách khách đến hôm nay | ANDROID-OPS | ACT-02 | UC-FO-01 | Booking đến hôm nay, depositAmount/paidAmount, RoomAssignment | Chạm thẻ khách, mở check-in, quét mã QR |
+| SCR-58 | Chi tiết check-in | ANDROID-OPS | ACT-02 | UC-FO-01 | Điều kiện check-in (ngưỡng nợ BR-FO-01), phòng đã gán, giấy tờ tuỳ thân | Xác nhận check-in, ghi chú, chuyển thu số dư |
+| SCR-59 | Thu số dư khi check-in | ANDROID-OPS | ACT-02 | UC-PAY-03 | balanceDue, penaltyAmount, PaymentMethod (CASH/BANK_TRANSFER/VNPAY/MOMO) | Nhập số tiền, chọn phương thức, nhập PIN, in biên lai |
+| SCR-60 | Danh sách khách đi hôm nay | ANDROID-OPS | ACT-02 | UC-FO-02 | Booking CHECKED_IN trong ngày, phụ thu chưa chốt | Chạm thẻ khách, mở check-out |
+| SCR-61 | Check-out muộn & phụ thu | ANDROID-OPS | ACT-02 | UC-FO-02 | Giờ hiện tại, phụ thu 0%/50%/100% giá đêm cuối, Payment EXTRA_SERVICE | Xác nhận check-out, thêm phụ thu, in hoá đơn |
+| SCR-62 | Tra cứu booking & khách | ANDROID-OPS | ACT-02 | UC-BOOK-07, UC-CRM-01 | Tìm theo mã/SĐT/tên, lịch sử lưu trú, cờ blacklisted | Tra cứu, gọi khách, mở hành động nhanh |
+| SCR-63 | Đổi phòng trên Android | ANDROID-OPS | ACT-02, ACT-04 | UC-OVER-02 | Đề xuất theo thang 4 bậc, keepScore, cảnh báo mất quyền lợi, priceLocked | Chọn phòng, xem ảnh hưởng, xác nhận đổi |
+| SCR-64 | Ghi no-show | ANDROID-OPS | ACT-02 | UC-FO-04 | Booking CONFIRMED chưa check-in, bậc cuối chính sách, phụ thu đêm đầu | Xem số tiền bị tính, xác nhận no-show |
+| SCR-65 | Tạo booking khách vãng lai | ANDROID-OPS | ACT-02 | UC-BOOK-02 | Phòng bán ngay, kênh WALKIN, tiền cọc | Tạo nhanh, thu cọc, gửi xác nhận |
+| SCR-66 | Buồng phòng: danh sách việc dọn | ANDROID-OPS | ACT-07, ACT-02 | UC-FO-03 | HousekeepingTask (PENDING/IN_PROGRESS/DONE/INSPECTED), Room.status | Nhận việc, chụp ảnh, đánh dấu dọn xong |
+| SCR-67 | Cảnh báo quá tải & việc gấp | ANDROID-OPS | ACT-04, ACT-02 | UC-OVER-01 | Ca quá tải theo cơ sở, hạn T−24h, hold sắp hết hạn | Mở ca, gọi khách, chuyển tiếp sang operations web |
+| SCR-68 | Đối soát nhanh theo ngày | ANDROID-OPS | ACT-02, ACT-06 | UC-PAY-05 | Tiền mặt theo (người thu, ngày VN), số giao dịch, chênh lệch quỹ | Xem tổng thu theo ngày VN, báo chênh lệch, gửi MANAGER; không có khái niệm ca làm |
+
+**Tổng: 83 màn hình** — customer web 13 · customer Android 13 · operations web 44 · operations Android 13. Cột UC chỉ chứa mã có thật trong danh
+mục 53 use case; các màn hình thuần điều hướng (SCR-23, SCR-48, SCR-67) vẫn phục vụ các UC đã nêu.
 
 ---
 ## 4. Wireframe 8 màn hình trọng yếu
@@ -585,7 +624,7 @@ Mỗi quy tắc dưới đây phải kiểm chứng được: chỉ ra màn hìn
 | UI-04 | **Hỗ trợ một tay trên Android**: hành động chính trong 1/3 dưới màn hình, sheet trượt từ đáy, không đặt tác vụ chính trên thanh trên cùng | NFR-USE-03, NFR-USE-05 | Đo toạ độ nút chính trong ảnh Maestro |
 | UI-05 | **Vùng chạm tối thiểu 44 pt** (web) và **48 dp** (Android); khoảng cách giữa hai vùng chạm ≥ 8 pt | NFR-USE-05 | Kiểm tra tự động kích thước phần tử bằng Playwright / Maestro |
 | UI-06 | **Chuẩn màu trạng thái cho lưới phòng** (§7.2) và mỗi màu phải kèm ký hiệu chữ; cấm truyền đạt trạng thái chỉ bằng màu | BR-INV-01, BR-CHAN-05 | Ảnh lưới ở chế độ thang xám vẫn phân biệt được trạng thái |
-| UI-07 | Mọi thao tác ghi mang `Idempotency-Key`; nút gửi tự khoá khi đang xử lý để tránh gửi lặp | BR-GEN-08 | Gửi lặp 10 lần ⇒ 1 bản ghi |
+| UI-07 | Mọi lệnh ghi của UI mang `Idempotency-Key`; một ý định giữ cùng key/payload khi retry. Sửa tài nguyên gửi `If-Match` theo API; nút gửi khoá khi đang xử lý, timeout chuyển “Chưa xác định kết quả” để đối soát | BR-GEN-08, BR-RATE-20 | Replay không tạo tác dụng lần hai; version cũ 412, thiếu version 428; không tự tạo key mới khi chưa rõ kết quả |
 | UI-08 | Tiền hiển thị **số nguyên VND**, phân cách nghìn bằng dấu chấm, hậu tố `₫`, dùng chữ số đều (`tabular-nums`) để so cột | BR-GEN-01, BR-GEN-03 | Ảnh bảng giá: các cột số thẳng hàng |
 | UI-09 | Mọi mốc thời gian hiển thị **giờ VN** kèm nhãn `(giờ VN)`; dữ liệu lưu UTC | BR-GEN-02, NFR-LOC-02 | Đổi múi giờ máy chủ ⇒ hiển thị không đổi |
 | UI-10 | Hiển thị **bậc chính sách và cách tính** (không chỉ con số cuối) cho huỷ, phụ thu, hoàn tiền | BR-CANCEL-01, BR-CANCEL-05, BR-FO-03 | Ảnh SCR-36 có dòng công thức và dòng làm tròn |
@@ -600,7 +639,7 @@ Mỗi quy tắc dưới đây phải kiểm chứng được: chỉ ra màn hìn
 
 ---
 ## 7. Hệ thống thiết kế tối thiểu (design token)
-Token dùng chung cho web (`apps/web/src/styles/tokens.css`) và Android (`apps/mobile/src/theme/tokens.ts`); chỉ phát
+Token dùng chung cho hai web (`packages/ui-web` / `apps/*-web`) và hai Android (`packages/ui-native` / `apps/*-android`); chỉ phát
 hành chế độ sáng, tên token đặt theo **vai trò** để bổ sung chế độ tối sau mà không phải đổi tên.
 ### 7.1. Token màu nền tảng
 | Token | Giá trị | Dùng cho | Tương phản chữ/nền |
@@ -653,7 +692,7 @@ nhận thang chữ hệ thống tới 200% mà không mất nội dung.
 | `radius-sm` / `radius-md` | 4 px / 8 px | ô nhập, nhãn trạng thái / thẻ, nút, ô lưới |
 | `radius-lg` / `radius-full` | 12 px / 999 px | hộp thoại, bottom sheet Android / chip trạng thái |
 | `touch-target` | 44 pt (web) · 48 dp (Android) | mọi phần tử tương tác (UI-05) |
-Lưới tồn phòng theo lưới 8 pt: rộng ô tối thiểu 44 px, cao hàng 32 px trên web và 44 dp trên Android.
+Lưới tồn phòng theo lưới 8 pt: vùng tương tác tối thiểu 44 × 44 CSS px trên web và 48 × 48 dp trên Android; không dùng hàng 32 px/44 dp làm vùng chạm. Nội dung có thể gọn hơn nhưng hit target không được chồng nhau.
 | Loại dữ liệu | Định dạng hiển thị | Quy tắc |
 |--------------|--------------------|---------|
 | Tiền | `1.222.000 ₫` | số nguyên VND, phân cách nghìn bằng dấu chấm, làm tròn theo BR-GEN-03 |
@@ -662,7 +701,7 @@ Lưới tồn phòng theo lưới 8 pt: rộng ô tối thiểu 44 px, cao hàng
 | Thời lượng còn lại | `còn 6 giờ 12 phút` · dưới 1 giờ: `còn 47 phút` | dùng cho hold, báo giá, giao dịch và hạn T−24h (UI-11) |
 | Mã booking | `PH-261112-A7K2M` | sinh theo BR-GEN-06, hiển thị monospace |
 | Trạng thái | `Đã xác nhận (CONFIRMED)` | nhãn tiếng Việt kèm mã enum cho người dùng nội bộ |
-| Hệ số giá | `0,85 · 1,20` | hai chữ số thập phân, dấu phẩy; cùng đầu vào ⇒ cùng kết quả ba bề mặt (BR-RATE-17) |
+| Hệ số giá | `0,85 · 1,20` | hai chữ số thập phân, dấu phẩy; cùng đầu vào ⇒ cùng kết quả trên API và bốn frontend (BR-RATE-17) |
 
 ---
 ## 8. Trạng thái rỗng – đang tải – lỗi cho 5 màn hình chính
@@ -672,17 +711,60 @@ Bắt buộc với mọi màn hình có tải dữ liệu; 5 màn hình trọng 
 | SCR-02 Kết quả tìm phòng | “Không còn phòng cho 12/11 → 15/11” + gợi ý đổi ngày (nêu đích danh đêm gây hết phòng), gợi ý loại phòng khác cùng cơ sở | Khung xương 3 thẻ kết quả; giữ nguyên giá trị bộ lọc đã chọn | `E_INV_NO_AVAILABILITY` (409) khi hết phòng ở bất kỳ đêm nào (BR-INV-07); `E_BOOK_OVER_CAPACITY` khi số khách vượt sức chứa (BR-BOOK-04) | Nút “Đổi ngày”, “Xem cơ sở khác”, giữ bộ lọc; nút thử lại khi lỗi mạng |
 | SCR-24 Lưới tồn phòng | Bộ lọc không khớp: “Không có phòng nào khớp bộ lọc” + nút “Bỏ bộ lọc”; cơ sở chưa có phòng ACTIVE: liên kết tới SCR-21 | Khung xương lưới đúng số hàng loại phòng; cột ngày hiện trước, số liệu điền sau (NFR-PERF-01) | Mất kết nối: banner “Số liệu có thể đã cũ” + mốc cập nhật cuối; khoảng xem > 30 ngày bị chặn kèm hướng dẫn chia nhỏ; `E_INV_ROOM_TAKEN` (409) khi ràng buộc loại trừ ở CSDL từ chối vì đã có người gán trùng phòng (BR-INV-03) | Nút “Tải lại”, tự làm mới 60 s; giữ vị trí cuộn và ô đang chọn |
 | SCR-32 Chi tiết booking | Mã không tồn tại: “Không tìm thấy booking PH-…” + ô tra cứu lại; booking vừa bị xoá cứng (`DRAFT`/`HELD` chưa phát sinh thanh toán — BR-BOOK-14) | Khung xương phần bảng giá đêm và danh sách thanh toán | `E_BOOK_MISSING_FIELD` khi thiếu trường bắt buộc (BR-BOOK-01); ngoài phạm vi cơ sở: “Booking thuộc cơ sở ngoài phạm vi của bạn” (BR-RBAC-02) | Nút “Tra cứu lại”, “Về danh sách”; hiện mã lỗi và mã booking để đọc cho hỗ trợ |
-| SCR-43 Bảng điều khiển quá tải | Không có ca nào: trạng thái tích cực “Không có ca quá tải trong 30 ngày tới” + mốc quét gần nhất (BR-OVER-05) | Khung xương 3 dòng ca; đồng hồ đếm hạn T−24h hiện sau khi có dữ liệu | Không tính được đề xuất (hết phương án bậc 1–2) ⇒ banner “Cần xử lý walk-out” kèm lối tắt; ca `ESCALATED` luôn hiện trên cùng, không bị ẩn bởi lỗi (BR-OVER-16) | Nút “Tính lại đề xuất”, “Mở lưới tồn phòng”, gọi khách thủ công |
-| SCR-57 Danh sách đến hôm nay (Android) | “Hôm nay không có khách đến” + nút “Tạo booking vãng lai”; mất mạng: dữ liệu đã đồng bộ gần nhất kèm nhãn “Ngoại tuyến” | Khung xương 3 thẻ khách; hành động chính mờ cho tới khi có dữ liệu | `E_OVER_NO_CONSENT` (thiếu đồng thuận ghép phòng — BR-OVER-13) và `E_OVER_MERGE_GENDER` (khác giới chưa duyệt — BR-OVER-14) hiện trong sheet, không đóng sheet; sai PIN hiện tại chỗ; mất mạng ⇒ xếp thao tác vào hàng đợi cục bộ (NFR-USE-03) | Nút “Thử lại”, “Làm mới”; thao tác đã xếp hàng tự gửi lại khi có mạng, kèm `Idempotency-Key` (BR-GEN-08) |
+| SCR-43 Bảng điều khiển quá tải | Chỉ hiện “Không có ca quá tải trong 30 ngày tới” khi lần quét thành công có mốc thời gian; chưa quét/lỗi không được suy là 0 ca | Giữ dữ liệu cũ kèm mốc quét và nhãn đang tải | Phân biệt lỗi tính đề xuất với kết quả không còn phương án: lỗi cho thử lại; thực sự hết bậc khả dụng mới gợi ý walk-out. Ca ESCALATED còn trong dữ liệu không bị ẩn bởi lỗi | Tính lại, mở lưới, gọi khách; execute phải kiểm lại tồn/đồng thuận/version |
+| SCR-57 Danh sách đến hôm nay (Android) | “Hôm nay không có khách đến” chỉ sau tải thành công; offline có cache hiện mốc đồng bộ, không cache hiện “Chưa có dữ liệu ngoại tuyến” | Khung xương, nhãn đang tải; giữ bộ lọc | Sai PIN/lỗi nghiệp vụ giữ sheet và dữ liệu; mất mạng áp §8.3, không báo check-in thành công hoặc xếp hàng mọi thao tác vô điều kiện | Làm mới, xem queue; chỉ replay thao tác được phép, kiểm quyền/PIN/version và giữ key; conflict chuyển cần xử lý |
 Nguyên tắc chung: không bao giờ để màn hình trắng không thông điệp; mọi thông điệp lỗi nêu **việc cần làm tiếp**; vùng thông
 báo dùng `role="alert"` / `accessibilityLiveRegion` để trình đọc màn hình đọc được.
+
+### 8.1. Hợp đồng trạng thái dùng chung cho mọi màn hình
+
+| Trạng thái | Hiển thị / hành động | Điều kiện rời trạng thái |
+|---|---|---|
+| Loading lần đầu | Skeleton có tên vùng + aria-busy; giữ bộ lọc; không hiển thị số 0 hoặc thành công giả | Chỉ response hợp lệ của yêu cầu mới nhất được ghi UI; bỏ response tìm kiếm cũ đến muộn |
+| Refresh / stale | Giữ dữ liệu, mốc “Cập nhật lúc … giờ VN”; lỗi tải lại không xoá dữ liệu cũ | Tải được version mới; hành động tài chính/tồn phải xác minh lại dữ liệu ở server |
+| Empty | Phân biệt chưa có dữ liệu, không khớp bộ lọc và hết phòng; CTA tạo mới chỉ cho vai trò có quyền | Đổi bộ lọc/tạo hợp lệ; 403 hoặc lỗi mạng không chuyển empty |
+| Validation 400/422 | Lỗi tại trường qua details của API + tổng lỗi đầu form, giữ nhập, focus lỗi đầu tiên; không hiện stack trace | Người dùng sửa; gửi lại là ý định mới sau khi yêu cầu trước đã bị từ chối rõ ràng |
+| Auth 401 / quyền 403 | 401 mở đăng nhập/PIN phù hợp; 403 giữ thông điệp không có quyền, không lộ chi tiết đối tượng ngoài scope | Server xác nhận lại quyền; không tự replay lệnh tiền khi chưa có xác nhận người dùng |
+| Conflict 409 / 412 / 428 | Hiện trạng thái/version server, giữ bản nhập và đánh dấu phần khác biệt; 428 yêu cầu tải bản hiện tại | Tải lại, xem khác biệt, xác nhận lại; không last-write-wins, không retry vô hạn |
+| Quote/hold hết hạn | Khoá xác nhận, nêu hạn và giá/tồn cần tính lại; đồng hồ dùng expiresAt server | Báo giá/hold mới do server cấp và khách đồng ý giá mới; không gia hạn bằng giờ máy |
+| Timeout / mất phản hồi ghi | “Chưa xác định kết quả”, mã tham chiếu, xem trạng thái/đối soát; không gọi là thất bại chắc chắn | Đọc trạng thái hoặc replay cùng key/payload theo hợp đồng; không hướng dẫn trả tiền lần hai trước đối soát |
+| Success | Chỉ khi server xác nhận; cập nhật mã, trạng thái, version, thời điểm | Tải lại vẫn thấy kết quả; success PSP redirect không thay callback đã xác minh |
+
+Mã lỗi lấy từ [API §4](api.md); UI không cấp thêm mã lỗi riêng. Cần có HTTP status, code, chi tiết trường, requestId và version theo hợp đồng. Trường nào API chưa đặc tả thì chặn DoR của trạng thái tương ứng, main phải bổ sung hợp đồng trước triển khai.
+
+### 8.2. Các màn hình rủi ro cao và cách phục hồi
+
+| Màn hình / nguồn | Empty & loading | Error/conflict/offline | Tiêu chí nghiệm thu |
+|---|---|---|---|
+| SCR-06 thanh toán; BR-PAY-11, BR-BOOK-18 | Chưa có giao dịch: CTA khởi tạo nếu hold hợp lệ; đang xử lý: mã giao dịch, số tiền và trạng thái server | Timeout hiển thị chưa rõ; callback muộn hiển thị tiền đã nhận và yêu cầu hoàn tương ứng, booking hết hạn không chuyển xác nhận; không đề nghị trả lại ngay | TC-BOOK-28, TC-PAY-22; polling có điểm dừng, người dùng quay lại vẫn đọc được kết quả |
+| SCR-11/36/69 huỷ/huỷ phần/trả sớm | Đang tính giữ lựa chọn nhưng khoá xác nhận; không còn phần được huỷ nêu rõ lý do | Hiển thị policy snapshot, cơ sở hoàn, khoản đã hoàn/đang giữ, phí và netRefund; qua mốc thời gian/version phải tính lại và xác nhận số mới; offline chỉ nháp | TC-BOOK-27; không huỷ phần phòng hai lần, không hoàn trên tổng chưa thu |
+| SCR-38 duyệt/chi hoàn | Chưa có yêu cầu khác với bộ lọc rỗng; tải tiền và quyền trước mở nút duyệt | Người tạo không tự duyệt; timeout chi là đang xác minh, giữ một khoá chi, không hiện nút “Chi lại” tạo lệnh mới; nhiều phương thức hiển thị từng khoản gốc và tổng sự kiện | TC-PAY-23; PAID chỉ sau bằng chứng thành công |
+| SCR-35/44/45/63 đổi ngày/đổi phòng/ghép | Chưa có phương án khác với tính phương án lỗi; giữ phòng nguồn hiển thị | Phòng đích bị lấy: tải đề xuất mới, nguồn giữ nguyên; đồng thuận hai bên và duyệt ngoại lệ kiểm lại tại execute; offline không xác nhận giao phòng | TC-BOOK-27, TC-OVER-18; không đánh RESOLVED từ thao tác cục bộ |
+| SCR-70 cấu hình gói/policy; UC-RATE-06 | Chưa có gói: OWNER có CTA tạo; tải gói và toàn bộ tier trước sửa | Lỗi tier hiện tại hàng và tổng lỗi; policy thiếu catch-all/trùng mốc bị chặn; 412 giữ bản nhập so với bản mới; ngừng bán có xác nhận, ghi rõ chỉ ảnh hưởng booking mới | TC-RATE-27, TC-SYS-11; snapshot booking cũ không đổi, OWNER mới ghi được |
+
+### 8.3. Ngoại tuyến và hàng đợi Android
+
+Trạng thái queue là **trạng thái giao diện cục bộ**, không thêm vào enum Booking/Payment: `Bản nháp → Chờ đồng bộ → Đang gửi → Đã xác nhận` hoặc `Cần xử lý`. Sau khởi động lại, lệnh đang gửi phải đối soát vì có thể đã commit; không tự chuyển về bản nháp rồi gửi bằng key mới.
+
+- Cache chỉ đọc ghi rõ cơ sở, chủ phiên, mốc đồng bộ; logout/chuyển tài khoản/thu hồi scope không được để lộ PII từ cache cũ. Lưu trữ nhạy cảm, TTL và thao tác được queue phải có quyết định OPEN-02 trong [sổ rủi ro](../05-ke-hoach/quan-ly-rui-ro.md).
+- Mặc định thiết kế an toàn khi OPEN-02 chưa chốt: cho nhập nháp, không coi thu/hoàn tiền, xác nhận booking, giao/đổi phòng hay đồng thuận là đã thực hiện khi offline. Chỉ bật tự đồng bộ các thao tác đã được duyệt; server luôn kiểm lại quyền, PIN, trạng thái, version và tồn.
+- Mỗi lệnh giữ key, payload bất biến, version đã đọc và mã tham chiếu; không lưu PIN/pinToken để phát lại tự động. Khi cần xác thực lại, dừng ở “Cần xử lý”. Không đổi payload dưới cùng key.
+- Lệnh quá cửa sổ idempotency 24 giờ phải tra kết quả trước quyết định gửi ý định mới. Conflict hiển thị dữ liệu mới + bản nháp; người dùng xác nhận lại. Huỷ bản nháp chỉ xoá cục bộ trước khi gửi; khi đã gửi không được hứa “đã huỷ giao dịch”.
+
+Kiểm chứng bằng TC-FO-08 và TC-AUTH-10, gồm restart app, mất mạng trước/sau commit, thay quyền và version trong lúc offline. Hành vi chưa có API để đối soát phải ghi BLOCKED, không mô tả như tính năng đã có.
+
+### 8.4. Bố cục và điều hướng SCR-70
+
+Back-office → Giá → **Gói giá & chính sách huỷ** (bổ sung cùng nhóm SCR-26…30 trong sitemap). Danh sách bên trái: mã/tên/trạng thái; form chính: điều kiện số đêm, cọc, điều kiện/phí đổi ngày, chính sách và bảng tier; phần xem trước: ví dụ hoàn ở các mốc biên và ghi chú phạm vi hiệu lực. Chân form có “Xem thay đổi”, “Lưu”, “Ngừng bán”; hành động chỉ cho OWNER. Tạo mới dùng hợp đồng create của API; nếu chưa được đặc tả thì chặn phần tạo, không tự suy rằng PUT cập nhật là upsert.
+
+Trước lưu hiển thị diff, version và lý do; validate theo BR-RATE-20. Không cho xoá cấu hình đang được tham chiếu. Sau lưu đọc lại phiên bản, ghi rõ báo giá mới dùng cấu hình mới, booking cũ dùng snapshot đã chốt. Ca kiểm: TC-RATE-27 và TC-SYS-11.
 
 ---
 ## 9. Khả năng truy cập (WCAG 2.1 AA)
 ### 9.1. Tương phản
 | Hạng mục | Ngưỡng bắt buộc | Ghi chú kiểm chứng |
 |----------|-----------------|--------------------|
-| Chữ thường (< 18,66 px hoặc < 24 px không đậm) | ≥ 4,5:1 | Mọi cặp ở §7.1 và §7.2 đã đạt; kiểm lại khi thêm token mới |
+| Chữ thường (< 18,66 px hoặc < 24 px không đậm) | ≥ 4,5:1 | Giá trị §7 là thiết kế dự kiến; cần kết quả đo trên bản render thật, cả hover/disabled/error/focus |
 | Chữ lớn (≥ 24 px, hoặc ≥ 18,66 px đậm) | ≥ 3:1 | `text-h1`, `text-display` |
 | Thành phần điều khiển và ranh giới | ≥ 3:1 so với nền kề | Dùng `color-border-strong`, không dùng `color-border` cho viền ô nhập |
 | Chỉ báo tiêu điểm bàn phím | ≥ 3:1 | `color-focus` 2 px + offset 2 px; không bao giờ `outline: none` |
@@ -708,10 +790,12 @@ báo dùng `role="alert"` / `accessibilityLiveRegion` để trình đọc màn h
 | Nút chỉ có biểu tượng | Bắt buộc `aria-label` (web) / `accessibilityLabel` (Android), ví dụ “Làm mới lưới tồn phòng” |
 | Số tiền | Đọc dạng lời: nhãn “ba triệu không trăm hai mươi mốt nghìn đồng” cho `3.021.000 ₫` |
 | Ô lưới tồn phòng | Nhãn đầy đủ: “CS01-201, Thứ Sáu 13/11/2026, đang ở, booking PH-261112-A7K2M” |
-| Vùng thay đổi động | Tổng tiền, số tiền hoàn, đếm ngược dùng `aria-live="polite"`; lỗi dùng `role="alert"` |
+| Vùng thay đổi động | Tổng tiền/số hoàn dùng aria-live polite; đếm ngược chỉ thông báo tại mốc cần hành động và lúc hết hạn, không đọc mỗi giây; lỗi chặn dùng role alert |
 | Thông báo lỗi và ngôn ngữ | Nêu trường, nguyên nhân, cách sửa, mã lỗi nội bộ (UI-16); `lang="vi"` trên web, locale tiếng Việt trên Android |
 Kiểm chứng: `axe-core` trong Playwright cho web (0 lỗi mức `serious`/`critical`), TalkBack cho Android, và một lượt chạy
 luồng check-in chỉ bằng bàn phím/trình đọc màn hình trước khi phát hành.
+
+Evidence TC-SYS-10 cần ghi build, viewport/font scale, trình duyệt/thiết bị, công cụ đọc màn hình, người chạy, lỗi và video/trace. Axe không chứng minh toàn bộ WCAG; kiểm thủ công focus sau validation/conflict, hộp thoại đóng trả focus, bảng có header, toast không phải nơi duy nhất giữ lỗi. Zoom/reflow áp cả màn cấu hình tier và số tiền dài; lưới hai chiều có thể cuộn trong vùng có nhãn và có chế độ danh sách tương đương. Chưa có báo cáo đo thì chưa tuyên bố đạt accessibility.
 
 ---
 ## 10. Đề xuất bổ sung
@@ -721,9 +805,9 @@ chấp thuận; tài liệu này dùng chúng như định danh cục bộ của
 |---------|----------|-------------------|
 | `SCR-<nn>` | Mã màn hình, duy nhất theo bảng §3 (SCR-01 … SCR-69) | Ma trận truy vết 06, kịch bản kiểm thử Playwright/Maestro, đặt tên tuyến Next.js/Expo Router |
 | `UI-<nn>` | Mã nguyên tắc giao diện bắt buộc (§6) | Tiêu chí chấp nhận của US-* liên quan, danh sách kiểm review UI |
-| `color-*`, `text-*`, `space-*`, `radius-*`, `touch-target` | Tên token thiết kế (§7) — không phải mã nghiệp vụ | `apps/web/src/styles/tokens.css`, `apps/mobile/src/theme/tokens.ts` |
+| `color-*`, `text-*`, `space-*`, `radius-*`, `touch-target` | Tên token thiết kế (§7) — không phải mã nghiệp vụ | `packages/ui-web`, `packages/ui-native`, `apps/*` |
 Không đề xuất thêm mã `BR-*`, `UC-*`, `FR-*` hay `NFR-*` nào: mọi quy tắc hiển thị trong tài liệu này đều đã có nguồn
-tương ứng trong xương sống (136 BR · 52 UC · 40 NFR).
+tương ứng trong xương sống (139 BR · 53 UC · 40 NFR).
 
 ## Tham chiếu
 - [00 — Tổng quan dự án](../00-tong-quan.md) — actor, quy ước định danh, từ điển thực thể, enum, danh mục use case, stack

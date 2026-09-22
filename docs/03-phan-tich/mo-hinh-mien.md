@@ -1,6 +1,6 @@
 # 03 — Mô hình miền
 
-> Mức **phân tích**: lớp, trách nhiệm, quan hệ, bất biến nghiệp vụ. KHÔNG đi vào chi tiết kỹ thuật (kiểu vật lý, chỉ mục, ORM, hợp đồng API) — phần đó thuộc [04/thiết kế lớp](../04-thiet-ke/thiet-ke-lop.md) và [04/cơ sở dữ liệu](../04-thiet-ke/csdl.md). Mọi quy tắc trong [02/quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) phải "cư trú" ở đúng một lớp chịu trách nhiệm. Định danh lớp/thực thể/VO lấy nguyên văn từ [00 §7](../00-tong-quan.md#7-từ-điển-thực-thể-nguồn-chân-lý-về-định-danh); hệ thống có **13 module** và **52 use case**.
+> Mức **phân tích**: lớp, trách nhiệm, quan hệ, bất biến nghiệp vụ. KHÔNG đi vào chi tiết kỹ thuật (kiểu vật lý, chỉ mục, ORM, hợp đồng API) — phần đó thuộc [04/thiết kế lớp](../04-thiet-ke/thiet-ke-lop.md) và [04/cơ sở dữ liệu](../04-thiet-ke/csdl.md). Mọi quy tắc trong [02/quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) phải "cư trú" ở đúng một lớp chịu trách nhiệm. Định danh lớp/thực thể/VO lấy nguyên văn từ [00 §7](../00-tong-quan.md#7-từ-điển-thực-thể-nguồn-chân-lý-về-định-danh); hệ thống có **13 module** và **53 use case**.
 
 ---
 
@@ -581,9 +581,9 @@ Phát hiện trong quá trình dựng mô hình miền; cần chủ trì tài li
 | # | Hạng mục | Loại | Đề xuất | Ảnh hưởng |
 |---|---|---|---|---|
 | 1 | `Booking.roomTypeId` đơn trị so với nhiều `BookingRoom` | Mâu thuẫn | Nêu rõ `Booking.roomTypeId` chỉ là loại phòng chủ đạo cho tra cứu nhanh, hoặc bỏ khỏi `Booking` | BR-BOOK-10 |
-| 2 | Tồn phòng và trạng thái buồng phòng | Mâu thuẫn | BR-INV-01 không xét trạng thái buồng phòng trong khi BR-FO-06/BR-FO-07 buộc dọn xong mới bán lại; cần bổ sung số hạng "phòng chưa `DONE`/`INSPECTED`" hoặc nêu rõ BR-FO-06 chỉ áp cho cùng ngày | BR-INV-01, BR-FO-06, BR-FO-07 |
-| 3 | Thiếu UC cấu hình chính sách huỷ và gói giá | Thiếu sót | Bổ sung một UC cho `CancellationPolicy`, `CancellationTier`, `RatePlan` — BR-CANCEL-01/02 yêu cầu dữ liệu hoá nhưng 52 UC chưa có ca cấu hình tương ứng | BR-CANCEL-01, BR-CANCEL-02, BR-RBAC-03 |
-| 4 | Module NOTI không có nhóm BR riêng | Thiếu sót | Trong 136 quy tắc không có mã `BR-NOTI` (module REP đã có `BR-REP-01`); đề xuất bổ sung quy tắc cho thử lại, mẫu và kênh thông báo | BR-SYS-06, BR-REP-01 |
+| 2 | Tồn phòng và trạng thái buồng phòng | Đã giải quyết trong thiết kế | BR-FO-06/07 kiểm readiness khi giao phòng/check-in; không trừ phòng chưa dọn khỏi tồn mọi đêm tương lai. Tồn thương mại theo BR-INV-01, block bảo trì xử lý riêng | BR-INV-01, BR-FO-06, BR-FO-07 |
+| 3 | Cấu hình chính sách huỷ và gói giá | Đã bổ sung | UC-RATE-06, FR-RATE-19 và BR-RATE-20 bao phủ `CancellationPolicy`, `CancellationTier`, `RatePlan`; snapshot bất biến theo ADR-015 giữ điều khoản booking cũ khi cấu hình đổi | BR-RATE-20, BR-CANCEL-01, BR-CANCEL-02, BR-RBAC-03 |
+| 4 | Module NOTI không có nhóm BR riêng | Thiếu sót | Trong 139 quy tắc không có mã `BR-NOTI` (module REP đã có `BR-REP-01`); đề xuất bổ sung quy tắc cho thử lại, mẫu và kênh thông báo | BR-SYS-06, BR-REP-01 |
 | 5 | Tên lớp trạng thái booking | Bổ sung suy diễn | `DraftState` … `ExpiredState` suy ra trực tiếp từ enum `BookingStatus` (00 §7.8), không phải khái niệm mới; đề nghị ghi nhận để dùng thống nhất ở 04/thiết kế lớp | BR-BOOK-06, BR-BOOK-14 |
 | 6 | Mã cơ sở `CS-01` so với mã phòng `CS01-201` | Mâu thuẫn nhỏ | BR-PROP-02 dùng `CS-01` còn BR-PROP-05 dùng `CS01`; cần chốt một dạng mã cơ sở duy nhất | BR-PROP-02, BR-PROP-05 |
 
@@ -591,9 +591,9 @@ Phát hiện trong quá trình dựng mô hình miền; cần chủ trì tài li
 
 ## Tham chiếu
 
-- [00 — Tổng quan dự án](../00-tong-quan.md) — từ điển thực thể §7, enum §7.8, actor, 13 module, danh mục 52 UC
+- [00 — Tổng quan dự án](../00-tong-quan.md) — từ điển thực thể §7, enum §7.8, actor, 13 module, danh mục 53 UC
 - [01 — Yêu cầu chức năng](../01-yeu-cau/yeu-cau-chuc-nang.md) · [01 — Yêu cầu phi chức năng](../01-yeu-cau/yeu-cau-phi-chuc-nang.md) · [01 — Mô hình Use Case](../01-yeu-cau/mo-hinh-use-case.md)
-- [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — nguồn chân lý 136 quy tắc BR
+- [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — nguồn chân lý 139 quy tắc BR
 - [02 — Chính sách huỷ & hoàn cọc](../02-nghiep-vu/chinh-sach-huy-hoan-coc.md) · [02 — Động giá](../02-nghiep-vu/dong-gia.md) · [02 — Quá tải, ghép & đổi phòng](../02-nghiep-vu/qua-tai-ghep-doi-phong.md)
 - [03 — Mô hình động](mo-hinh-dong.md) — máy trạng thái `Booking`, activity và sequence mức phân tích
 - [04 — Thiết kế lớp](../04-thiet-ke/thiet-ke-lop.md) · [04 — Cơ sở dữ liệu](../04-thiet-ke/csdl.md) · [04 — Kiến trúc](../04-thiet-ke/kien-truc.md)

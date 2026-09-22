@@ -27,9 +27,9 @@ Mỗi FR gồm 7 cột:
 | Mã | Tên | Mô tả | Actor chính | Use case | BR áp dụng | Ưu tiên |
 |----|-----|-------|-------------|----------|-----------|---------|
 | FR-AUTH-01 | Đăng nhập & phiên làm việc | Cấp JWT access/refresh và áp chính sách hết hạn phiên, xác thực lại tài chính bằng mã PIN theo BR-RBAC-05. | ACT-01..07, ACT-12 | UC-AUTH-01 | BR-RBAC-05 | M |
-| FR-AUTH-02 | Quản lý người dùng & vai trò | Tạo/sửa/ngừng người dùng nội bộ gắn đúng một trong sáu vai trò theo BR-RBAC-01. | ACT-05, ACT-12 | UC-AUTH-02 | BR-RBAC-01 | M |
+| FR-AUTH-02 | Quản lý người dùng & vai trò | Tạo/sửa/ngừng người dùng nội bộ gắn đúng một trong bảy vai trò độc lập theo BR-RBAC-01. | ACT-05, ACT-12 | UC-AUTH-02 | BR-RBAC-01 | M |
 | FR-AUTH-03 | Phạm vi cơ sở (propertyScope) | Áp `propertyScope` để mọi vai trò (trừ OWNER) chỉ thấy/thao tác dữ liệu thuộc cơ sở được giao theo BR-RBAC-02. | ACT-05, ACT-12 | UC-AUTH-02 | BR-RBAC-02 | M |
-| FR-AUTH-04 | Ma trận quyền tối thiểu | Thực thi bảng quyền tối thiểu theo thao tác (tra cứu, tạo booking, duyệt hoàn, cấu hình giá…) theo BR-RBAC-03. | ACT-12 | UC-AUTH-02 | BR-RBAC-03 | M |
+| FR-AUTH-04 | Quyền tường minh và sở hữu | Kiểm tập vai trò, propertyScope và sở hữu guestId/ID con từ principal xác thực; deny mặc định, không kế thừa vai trò, HOUSEKEEPING không xem tài chính/hồ sơ khách theo BR-RBAC-03. | ACT-12 | UC-AUTH-02 | BR-RBAC-03 | M |
 | FR-AUTH-05 | Xác nhận lại thay đổi giá | Yêu cầu OWNER xác nhận bằng hộp thoại khi thay đổi giá vượt ngưỡng theo BR-RBAC-04. | ACT-05 | UC-RATE-01 | BR-RBAC-04 | C |
 | FR-AUTH-06 | Khoá tài khoản đăng nhập sai | Khoá tài khoản tạm thời sau số lần đăng nhập thất bại liên tiếp theo BR-RBAC-06. | ACT-12 | UC-AUTH-01 | BR-RBAC-06 | M |
 | FR-AUTH-07 | Đăng ký & đăng nhập khách hàng | Cho phép khách tự đăng ký/đăng nhập và nhận diện duy nhất theo số điện thoại chuẩn hoá theo BR-CRM-01. | ACT-01 | UC-AUTH-03 | BR-CRM-01 | M |
@@ -59,7 +59,7 @@ Mỗi FR gồm 7 cột:
 | FR-INV-03 | Khoá bi quan khi kiểm tồn & giữ chỗ | Thực hiện kiểm tra tồn và giữ chỗ trong một transaction có khoá bi quan theo `(roomTypeId, date)` theo BR-INV-02. | ACT-01, ACT-03 | UC-INV-02 | BR-INV-02 | M |
 | FR-INV-04 | Ràng buộc loại trừ chống trùng phòng | Ép bất biến "mỗi `(room_id, bed_no, đêm)` ≤ 1 `RoomAssignment` hoạt động" ở tầng CSDL bằng khoá loại trừ 3 cột theo đơn vị bán (giường/phòng); bắt lỗi `23P01` và trả `E_INV_ROOM_TAKEN` (HTTP 409) theo BR-INV-03. | ACT-11 | UC-BOOK-01 | BR-INV-03 | M |
 | FR-INV-05 | Giải phóng hold hết hạn đúng hạn | Giải phóng hold hết hạn trong vòng 60 giây kể từ `holdExpiresAt` và trả phòng về tồn khả dụng ngay theo BR-INV-04. | ACT-11 | UC-BOOK-04 | BR-INV-04 | M |
-| FR-INV-06 | Quản lý allotment theo kênh | Cấu hình allotment từng ngày và chặn allotment vượt số phòng `ACTIVE` theo BR-INV-05. | ACT-05, ACT-04 | UC-INV-03 | BR-INV-05 | M |
+| FR-INV-06 | Quản lý allotment theo kênh | Cấu hình allotment từng ngày và chặn allotment vượt số đơn vị bán `ACTIVE` theo BR-INV-05. | ACT-05, ACT-04 | UC-INV-03 | BR-INV-05 | M |
 | FR-INV-07 | Từ chối RoomBlock chồng lấn assignment | Từ chối `RoomBlock` chồng lấn `RoomAssignment` đang hoạt động; ngoại lệ mở `OverbookingCase` theo BR-INV-06. | ACT-04 | UC-PROP-04 | BR-INV-06 | M |
 
 ---
@@ -86,6 +86,7 @@ Mỗi FR gồm 7 cột:
 | FR-RATE-16 | Nhất quán giá đa nền tảng | Đảm bảo cùng đầu vào cho cùng kết quả trên web khách, Android và API theo BR-RATE-17. | ACT-01, ACT-04 | UC-RATE-05 | BR-RATE-17 | M |
 | FR-RATE-17 | Cấu hình hoa hồng mặc định theo kênh | Cấu hình hoa hồng/hệ số theo cặp (kênh, cơ sở) qua `ChannelPropertySetting`, ghi `AuditLog` và áp cho báo cáo doanh thu thuần từ ngày hiệu lực theo BR-RATE-18. | ACT-05 | UC-RATE-03 | BR-RATE-18 | M |
 | FR-RATE-18 | Ưu đãi dài ngày LONGSTAY14 | Đảm bảo `LONGSTAY14` có giá riêng (`fixedNightlyPrice` hoặc dòng `RateCalendar` nguồn `RATE_PLAN`) và cảnh báo khi trùng giá `FLEX7` theo BR-RATE-19. | ACT-05 | UC-RATE-01 | BR-RATE-19 | M |
+| FR-RATE-19 | Cấu hình gói giá & chính sách huỷ | OWNER sửa các gói/policy đang có, xác thực toàn bộ tier, cọc/LOS/đổi ngày, lưu nguyên tử với kiểm phiên bản; booking giữ snapshot bất biến theo BR-RATE-20. | ACT-05 | UC-RATE-06 | BR-RATE-20, BR-CANCEL-01, BR-CANCEL-02, BR-CANCEL-09, BR-BOOK-12, BR-RBAC-03 | M |
 
 ---
 
@@ -101,13 +102,13 @@ Mỗi FR gồm 7 cột:
 | FR-BOOK-06 | Phụ thu trẻ em | Tính phụ thu trẻ em theo độ tuổi theo BR-BOOK-05. | ACT-01 | UC-BOOK-01 | BR-BOOK-05 | C |
 | FR-BOOK-07 | Máy trạng thái booking | Tuân thủ máy trạng thái booking và ghi `BookingStatusHistory` cho mọi chuyển trạng thái theo BR-BOOK-06. | ACT-11 | UC-BOOK-07 | BR-BOOK-06 | M |
 | FR-BOOK-08 | Giữ chỗ tạm thời | Đặt `holdExpiresAt` theo `channel.holdMinutes` khi giữ chỗ theo BR-BOOK-07. | ACT-01, ACT-11 | UC-BOOK-04 | BR-BOOK-07 | M |
-| FR-BOOK-09 | Hết hạn hold → EXPIRED | Chuyển booking sang `EXPIRED` và giải phóng toàn bộ `RoomAssignment` trong cùng transaction theo BR-BOOK-08. | ACT-11 | UC-BOOK-04 | BR-BOOK-08 | M |
+| FR-BOOK-09 | Hết hạn hold → EXPIRED | Chuyển booking sang `EXPIRED` và giải phóng toàn bộ `RoomAssignment` trong cùng transaction theo BR-BOOK-08/18; xử lý cả PENDING_PAYMENT, không xác nhận từ callback sau hạn. | ACT-11 | UC-BOOK-04 | BR-BOOK-08, BR-BOOK-18 | M |
 | FR-BOOK-10 | Xác nhận khi đủ cọc | Chỉ chuyển `CONFIRMED` khi `paidAmount ≥ depositAmount`, trừ `PaymentMethod = OTA_COLLECT` hoặc MANAGER+ cho phép ghi nợ theo BR-BOOK-09. | ACT-11 | UC-BOOK-01 | BR-BOOK-09 | M |
-| FR-BOOK-11 | Booking nhiều phòng | Hỗ trợ `roomCount > 1` với mỗi phòng là `BookingRoom` và mỗi đêm là `RoomAssignment` theo BR-BOOK-10. | ACT-01 | UC-BOOK-01 | BR-BOOK-10 | M |
+| FR-BOOK-11 | Booking nhiều phòng | Hỗ trợ `roomCount > 1` với mỗi đơn vị bán là BookingRoom và mỗi RoomAssignment là khoảng nửa mở liên tục, có thể nhiều đêm theo BR-BOOK-10. | ACT-01 | UC-BOOK-01 | BR-BOOK-10 | M |
 | FR-BOOK-12 | Huỷ giải phóng phòng | Giải phóng mọi `RoomAssignment` trong cùng transaction khi huỷ booking theo BR-BOOK-11. | ACT-01..04 | UC-BOOK-08 | BR-BOOK-11 | M |
 | FR-BOOK-13 | Đổi ngày lưu trú | Đổi ngày với quy tắc miễn phí/phí, tính chênh lệch giá mới, giữ nguyên trạng thái và `PriceSnapshot` cũ, ghi `AuditLog` theo BR-BOOK-12, BR-CANCEL-08. | ACT-01, ACT-03 | UC-BOOK-06 | BR-BOOK-12, BR-CANCEL-08 | M |
 | FR-BOOK-14 | Cấm sửa ngày khi đã check-in | Chặn sửa ngày của booking `CHECKED_IN` theo BR-BOOK-13. | ACT-02, ACT-03, ACT-04 | UC-BOOK-05 | BR-BOOK-13 | C |
-| FR-BOOK-15 | Xoá booking theo trạng thái & thanh toán | Chỉ xoá cứng `DRAFT`/`HELD` chưa phát sinh thanh toán; đã thanh toán thì chuyển `CANCELLED` kèm `RefundRequest` theo BR-BOOK-14. | ACT-02, ACT-03, ACT-04 | UC-BOOK-05 | BR-BOOK-14 | M |
+| FR-BOOK-15 | Xoá booking theo trạng thái & thanh toán | Chỉ xoá cứng `DRAFT`/`HELD` không có lần thanh toán nào kể cả PENDING/FAILED; huỷ giữ CANCELLED, chỉ tạo RefundRequest khi netRefund > 0 theo BR-BOOK-14. | ACT-02, ACT-03, ACT-04 | UC-BOOK-05 | BR-BOOK-14 | M |
 | FR-BOOK-16 | Chặn khách danh sách đen | Chặn tạo booking mới cho khách trong danh sách đen, cho phép MANAGER+ override có lý do theo BR-BOOK-15. | ACT-02, ACT-03 | UC-BOOK-01 | BR-BOOK-15 | M |
 | FR-BOOK-17 | Chống đặt trùng | Phát hiện đặt trùng theo kênh/số điện thoại/loại phòng/ngày nhận và trả cờ `duplicateSuspected` theo BR-BOOK-16. | ACT-01 | UC-BOOK-01 | BR-BOOK-16 | M |
 | FR-BOOK-18 | Sinh mã booking | Sinh mã booking `PH-…` duy nhất toàn hệ thống theo BR-GEN-06. | ACT-11 | UC-BOOK-01 | BR-GEN-06 | M |
@@ -124,7 +125,7 @@ Mỗi FR gồm 7 cột:
 | FR-PAY-01 | Ghi nhận cọc & tính depositAmount | Tính cọc theo tỷ lệ gói giá và làm tròn lên bội 1.000 VND theo BR-PAY-01, BR-CANCEL-02, BR-GEN-03. | ACT-02, ACT-03, ACT-06 | UC-PAY-01 | BR-PAY-01, BR-CANCEL-02, BR-GEN-03 | M |
 | FR-PAY-02 | Thanh toán trực tuyến | Tạo giao dịch qua VNPay/MoMo và không lưu dữ liệu thẻ theo BR-PAY-04. | ACT-01, ACT-08 | UC-PAY-02 | BR-PAY-04 | M |
 | FR-PAY-03 | Callback idempotent | Xử lý callback cổng thanh toán idempotent theo `idempotencyKey`; khoá đã xử lý trả kết quả cũ kèm `E_PAY_CALLBACK_DUPLICATE`, không tạo `Payment` mới theo BR-PAY-03, BR-GEN-08. | ACT-08 | UC-PAY-02 | BR-PAY-03, BR-GEN-08 | M |
-| FR-PAY-04 | Hết hạn giao dịch | Chuyển giao dịch không có callback quá 15 phút sang `FAILED` và giải phóng hold theo BR-PAY-05. | ACT-11 | UC-PAY-02 | BR-PAY-05 | M |
+| FR-PAY-04 | Hết hạn giao dịch | Chuyển giao dịch không có callback quá 15 phút sang `FAILED` ; giữ hold tới hạn riêng, thành công muộn ghi thu một lần và hoàn theo BR-PAY-11 theo BR-PAY-05. | ACT-11 | UC-PAY-02 | BR-PAY-05, BR-PAY-11 | M |
 | FR-PAY-05 | Thu số dư khi check-in | Tính `balanceDue` và thu trước khi giao phòng theo BR-PAY-02. | ACT-02 | UC-PAY-03 | BR-PAY-02 | M |
 | FR-PAY-06 | Ghi nhận tiền mặt | Ghi `createdBy` và `paidAt` cho mọi thanh toán tiền mặt theo BR-PAY-06. | ACT-02 | UC-PAY-01 | BR-PAY-06 | M |
 | FR-PAY-07 | Duyệt & chi hoàn tiền | Duyệt hoàn tiền theo phê duyệt hai cấp và chỉ chi khi `APPROVED` theo BR-CANCEL-15, BR-CANCEL-16. | ACT-04, ACT-06 | UC-PAY-04 | BR-CANCEL-15, BR-CANCEL-16 | M |
@@ -136,7 +137,7 @@ Mỗi FR gồm 7 cột:
 | FR-PAY-13 | Hoàn về phương thức gốc | Hoàn tiền về phương thức thanh toán gốc theo BR-PAY-08. | ACT-06 | UC-PAY-04 | BR-PAY-08 | M |
 | FR-PAY-14 | Bút toán hoàn không sửa gốc | Ghi hoàn bằng `Payment` loại `REFUND`, không sửa/xoá `Payment` gốc theo BR-PAY-09. | ACT-06 | UC-PAY-04 | BR-PAY-09 | M |
 | FR-PAY-15 | Đối soát cuối ngày | Đối soát tiền mặt theo cặp (người thu, ngày VN) và cảnh báo MANAGER khi chênh lệch theo BR-PAY-10. | ACT-06 | UC-PAY-05 | BR-PAY-10 | M |
-| FR-PAY-16 | Rút / huỷ yêu cầu hoàn tiền | Chuyển `RefundRequest` `PENDING` sang `CANCELLED` khi khách rút hoặc booking khôi phục, chỉ người tạo/MANAGER+, cấm khi `APPROVED`/`PAID` theo BR-CANCEL-18. | ACT-01, ACT-06 | UC-PAY-04 | BR-CANCEL-18 | M |
+| FR-PAY-16 | Rút / huỷ yêu cầu hoàn tiền | Chuyển `RefundRequest` `PENDING` sang `CANCELLED` khi người tạo rút yêu cầu; không khôi phục booking, chỉ người tạo/MANAGER+, cấm khi `APPROVED`/`PAID` theo BR-CANCEL-18. | ACT-01, ACT-06 | UC-PAY-04 | BR-CANCEL-18 | M |
 
 ---
 
@@ -145,13 +146,13 @@ Mỗi FR gồm 7 cột:
 | Mã | Tên | Mô tả | Actor chính | Use case | BR áp dụng | Ưu tiên |
 |----|-----|-------|-------------|----------|-----------|---------|
 | FR-CHAN-01 | Cấu hình kênh bán | Cấu hình kênh (hệ số, hoa hồng, hold, cho phép oversell) theo bảng kênh tại [02 §4.5](../02-nghiep-vu/quy-tac-nghiep-vu.md#45-hệ-số-kênh--hoa-hồng). | ACT-05 | UC-CHAN-01 | BR-RATE-07 | M |
-| FR-CHAN-02 | Phân bổ allotment OTA mặc định | Phân bổ mặc định cho OTA và giữ tối thiểu cho kênh trực tiếp theo BR-CHAN-01. | ACT-05 | UC-CHAN-01 | BR-CHAN-01 | M |
+| FR-CHAN-02 | Phân bổ allotment OTA mặc định | Phân bổ mặc định cho OTA dưới dạng hạn mức bán, không khoá riêng tồn khỏi kênh trực tiếp theo BR-CHAN-01. | ACT-05 | UC-CHAN-01 | BR-CHAN-01 | M |
 | FR-CHAN-03 | Đồng bộ tồn/giá lên OTA | Đẩy tồn & giá lên OTA ngay khi thay đổi qua outbox, chậm nhất 5 phút theo BR-CHAN-02, BR-CHAN-06. | ACT-11 | UC-CHAN-02 | BR-CHAN-02, BR-CHAN-06 | M |
 | FR-CHAN-04 | Nhận booking từ OTA | Ghi nhận booking OTA `CONFIRMED` khi `PaymentMethod = OTA_COLLECT` (kể cả hết phòng, miễn trừ `overbookLimitPct`), đặt `oversold = true` và mở `OverbookingCase` theo BR-CHAN-03. | ACT-09 | UC-CHAN-03 | BR-CHAN-03 | M |
 | FR-CHAN-05 | Huỷ booking theo chính sách OTA | Ghi nhận huỷ OTA theo chính sách kênh, không áp thang BR-CANCEL theo BR-CHAN-04. | ACT-09 | UC-CHAN-03 | BR-CHAN-04 | M |
 | FR-CHAN-06 | Tự đóng bán OTA khi còn ít phòng | Đóng bán loại phòng trên OTA khi tồn ≤ 2 và mở lại khi > 2 theo BR-CHAN-05. | ACT-11 | UC-CHAN-02 | BR-CHAN-05 | M |
 | FR-CHAN-07 | Cảnh báo đồng bộ thất bại | Phát cảnh báo MANAGER, đánh dấu kênh `DEGRADED` và báo lỗi `E_CHAN_SYNC_FAILED` sau thất bại liên tiếp theo BR-CHAN-07. | ACT-11 | UC-CHAN-02 | BR-CHAN-07 | C |
-| FR-CHAN-08 | Giới hạn bán OTA theo allotment | Không bán vượt allotment còn lại của kênh từng ngày theo BR-CHAN-08. | ACT-09 | UC-CHAN-03 | BR-CHAN-08 | M |
+| FR-CHAN-08 | Giới hạn bán OTA theo allotment | Bán chủ động không vượt allotment; tiếp nhận cam kết OTA đã xác nhận kể cả vượt hạn mức/đóng bán, tăng used thực tế và cảnh báo theo BR-CHAN-08. | ACT-09 | UC-CHAN-03 | BR-CHAN-08 | M |
 
 ---
 
@@ -187,7 +188,7 @@ Mỗi FR gồm 7 cột:
 | FR-FO-02 | Check-out & thu phát sinh | Chốt `balanceDue` về 0 trước khi in hoá đơn và giải phóng phòng theo BR-FO-05. | ACT-02 | UC-FO-02 | BR-FO-05 | M |
 | FR-FO-03 | Phụ thu check-out muộn | Tính phụ thu check-out muộn theo mốc thời gian theo BR-FO-03. | ACT-02 | UC-FO-02 | BR-FO-03 | C |
 | FR-FO-04 | Phụ thu check-in sớm | Tính phụ thu check-in sớm theo mốc thời gian theo BR-FO-04. | ACT-02 | UC-FO-01 | BR-FO-04 | C |
-| FR-FO-05 | Cập nhật trạng thái buồng phòng | Tạo `HousekeepingTask` sau check-out và chỉ trả phòng về tồn khi dọn xong theo BR-FO-06, BR-FO-07. | ACT-07, ACT-02 | UC-FO-03 | BR-FO-06, BR-FO-07 | M |
+| FR-FO-05 | Cập nhật trạng thái buồng phòng | Tạo `HousekeepingTask` sau check-out và nhả tồn theo ngày ngay khi giải phóng assignment; task dọn chỉ chặn giao phòng tại thời điểm check-in theo BR-FO-06, BR-FO-07. | ACT-07, ACT-02 | UC-FO-03 | BR-FO-06, BR-FO-07 | M |
 | FR-FO-06 | No-show tự động | Tự đánh dấu no-show lúc 23:59 ngày nhận và áp bậc cuối của chính sách theo BR-CANCEL-10. | ACT-02, ACT-11 | UC-FO-04 | BR-CANCEL-10 | M |
 | FR-FO-07 | Trả phòng sớm | Hoàn theo quy tắc trả phòng sớm của từng gói giá theo BR-CANCEL-09. | ACT-02 | UC-FO-02 | BR-CANCEL-09 | C |
 | FR-FO-08 | Ghi nợ khi check-in | Cho phép MANAGER+ ghi nợ `balanceDue` có lý do khi check-in theo BR-FO-01. | ACT-02 | UC-FO-01 | BR-FO-01 | C |
@@ -249,11 +250,11 @@ Mỗi FR gồm 7 cột:
 
 ## 15. Ma trận MoSCoW
 
-Tổng **134 FR** trên **13 module**.
+Tổng **135 FR** trên **13 module**.
 
 | Mức | Số FR | Ý nghĩa | Cơ sở xếp hạng |
 |-----|-------|---------|----------------|
-| M (Must) | **100** | Bắt buộc, thiếu là hệ thống không vận hành được | Ba bài toán trọng tâm BT-1/BT-2/BT-3 và các nghiệp vụ nền tảng: chống bán trùng (INV), động cơ giá (RATE), vòng đời booking & huỷ (BOOK), hoàn cọc (PAY), đồng bộ kênh (CHAN), phát hiện quá tải (OVER), check-in/out (FO), phân quyền (AUTH), kiểm toán (SYS). |
+| M (Must) | **101** | Bắt buộc, thiếu là hệ thống không vận hành được | Ba bài toán trọng tâm BT-1/BT-2/BT-3 và các nghiệp vụ nền tảng: chống bán trùng (INV), động cơ giá (RATE), vòng đời booking & huỷ (BOOK), hoàn cọc (PAY), đồng bộ kênh (CHAN), phát hiện quá tải (OVER), check-in/out (FO), phân quyền (AUTH), kiểm toán (SYS). |
 | S (Should) | **9** | Quan trọng nhưng có thể lùi sau vòng M | Các FR tăng chất lượng/độ tinh nhưng không chặn dòng chính: hệ số công suất/LOS (đã nằm trong công thức nhưng có thể cấu hình đơn giản giai đoạn đầu), báo cáo ADR/RevPAR, keepScore, tích điểm, bán vượt có kiểm soát. |
 | C (Could) | **25** | Nên có nếu còn dư địa thời gian | Tiện ích phụ trợ: phụ thu trẻ em, check-in sớm/muộn, trả phòng sớm, ghép phòng, phòng thông nhau, báo cáo bất khả kháng, phí xử lý hoàn, sao lưu/lưu trữ, xác nhận lại thay đổi giá, điều chuyển khác cơ sở (bậc 3 không khả dụng vận hành). |
 | W (Won't) | **0** | Loại khỏi bản phát hành này | Không có FR nào bị loại; các hạng mục ngoài phạm vi đã được loại sẵn tại [00 §3.2](../00-tong-quan.md#32-ngoài-phạm-vi) và không phát sinh FR. |
@@ -265,7 +266,7 @@ Tổng **134 FR** trên **13 module**.
 | # | Hạng mục then chốt | Tiêu chí chấp nhận | Cách đo | FR/BR liên quan |
 |---|--------------------|--------------------|---------|-----------------|
 | 1 | Chống bán trùng phòng | Không có bộ `(room_id, bed_no, đêm)` nào có quá 1 `RoomAssignment` hoạt động (đơn vị bán = giường hoặc phòng); CSDL tự từ chối mọi vi phạm | Kiểm thử tải 200 yêu cầu đồng thời → 0 vụ trùng; ràng buộc loại trừ 3 cột từ chối mọi trường hợp | FR-INV-03, FR-INV-04 · BR-INV-02, BR-INV-03 |
-| 2 | Giá đúng 7 kênh | Giá báo trên web khách, Android và quầy luôn khớp nhau trên cùng đầu vào | Kiểm thử đối chiếu 3 nền tảng cùng đầu vào; snapshot từng đêm | FR-RATE-03, FR-RATE-16 · BR-RATE-01, BR-RATE-17 |
+| 2 | Giá đúng 7 kênh | Giá báo trên customer web/Android, operations web/Android và quầy luôn khớp nhau trên cùng đầu vào | Kiểm thử đối chiếu API + 4 frontend cùng đầu vào; snapshot từng đêm | FR-RATE-03, FR-RATE-16 · BR-RATE-01, BR-RATE-17 |
 | 3 | Huỷ/hoàn cọc đúng thang | Mức hoàn tính đúng theo bậc mốc thời gian và dựa trên `paidAmount` | 100% ca bảng quyết định tại [02/chính sách huỷ](../02-nghiep-vu/chinh-sach-huy-hoan-coc.md) §6 đạt | FR-BOOK-19, FR-PAY-08 · BR-CANCEL-01..06 |
 | 4 | Giữ chỗ hết hạn | Hold hết hạn được giải phóng và trả về tồn khả dụng đúng hạn | Đo thời gian giải phóng ≤ 60 giây kể từ `holdExpiresAt` | FR-INV-05, FR-BOOK-09 · BR-INV-04, BR-BOOK-08 |
 | 5 | Quá tải phát hiện trước T−24h | Mọi ca quá tải có `OverbookingCase` được ghi nhận trước T−24h | 100% ca quá tải có bản ghi `OverbookingCase` trước T−24h | FR-OVER-03, FR-OVER-04 · BR-OVER-04, BR-OVER-05 |
@@ -275,6 +276,8 @@ Tổng **134 FR** trên **13 module**.
 
 ## 17. Truy vết BR → FR
 
+Bổ sung trong đợt rà soát: BR-RATE-20 → FR-RATE-19 → UC-RATE-06; BR-BOOK-18 → FR-BOOK-08/09/10 → UC-BOOK-04, UC-PAY-02; BR-PAY-11 → FR-PAY-03/04/12 → UC-PAY-02/04. Không đổi mã cũ.
+
 Bảng dưới liệt kê **BR chưa được FR nào phủ** — mục tiêu rỗng.
 
 | Nhóm BR | Số BR | Trạng thái phủ | BR còn thiếu |
@@ -282,10 +285,10 @@ Bảng dưới liệt kê **BR chưa được FR nào phủ** — mục tiêu r�
 | BR-GEN (01–08) | 8 | Đã phủ | — |
 | BR-PROP (01–06) | 6 | Đã phủ | — |
 | BR-INV (01–07) | 7 | Đã phủ | — |
-| BR-RATE (01–19) | 19 | Đã phủ | — |
-| BR-BOOK (01–17) | 17 | Đã phủ | — |
+| BR-RATE (01–20) | 20 | Đã phủ | — |
+| BR-BOOK (01–18) | 18 | Đã phủ | — |
 | BR-CANCEL (01–19) | 19 | Đã phủ | — |
-| BR-PAY (01–10) | 10 | Đã phủ | — |
+| BR-PAY (01–11) | 11 | Đã phủ | — |
 | BR-CHAN (01–08) | 8 | Đã phủ | — |
 | BR-OVER (01–16) | 16 | Đã phủ | — |
 | BR-FO (01–07) | 7 | Đã phủ | — |
@@ -293,7 +296,7 @@ Bảng dưới liệt kê **BR chưa được FR nào phủ** — mục tiêu r�
 | BR-RBAC (01–06) | 6 | Đã phủ | — |
 | BR-SYS (01–06) | 6 | Đã phủ | — |
 | BR-REP (01) | 1 | Đã phủ | — |
-| **Tổng** | **136** | **136/136 phủ** | **∅ (không có)** |
+| **Tổng** | **139** | **139/139 phủ** | **∅ (không có)** |
 
 Ánh xạ nhóm BR → nhóm FR phủ:
 
@@ -458,6 +461,12 @@ Bảng dưới liệt kê **BR chưa được FR nào phủ** — mục tiêu r�
 | BR-REP-01 | FR-REP-01, FR-REP-07 |
 
 ## Tham chiếu
+
+| BR bổ sung | FR phủ | UC |
+|---|---|---|
+| BR-RATE-20 | FR-RATE-19 | UC-RATE-06 |
+| BR-BOOK-18 | FR-BOOK-08, FR-BOOK-09, FR-BOOK-10 | UC-BOOK-04, UC-PAY-02 |
+| BR-PAY-11 | FR-PAY-03, FR-PAY-04, FR-PAY-12 | UC-PAY-02, UC-PAY-04 |
 
 - [00 — Tổng quan dự án](../00-tong-quan.md)
 - [02 — Quy tắc nghiệp vụ (nguồn chân lý)](../02-nghiep-vu/quy-tac-nghiep-vu.md)

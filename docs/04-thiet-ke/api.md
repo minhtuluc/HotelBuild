@@ -1,8 +1,8 @@
 # 04 — Hợp đồng API
 
-> Hợp đồng REST/JSON giữa các giao diện (web khách, web back-office, Android) và tầng ứng dụng, cùng hai nhóm tích hợp vào (OTA, cổng thanh toán).
+> Hợp đồng REST/JSON giữa backend chung và bốn giao diện (customer web, customer Android, operations web, operations Android), cùng hai nhóm tích hợp vào (OTA, cổng thanh toán).
 > Định danh, tên trường, enum lấy từ [00/từ điển thực thể](../00-tong-quan.md#7-từ-điển-thực-thể-nguồn-chân-lý-về-định-danh); mọi giá trị nghiệp vụ **tham chiếu mã BR** tại [02/quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md), không chép lại số.
-> Phạm vi: **13 module** · **52 use case** · **136 quy tắc BR**. Đóng băng hợp đồng tại mốc **M3** ([05/lộ trình](../05-ke-hoach/lo-trinh.md)).
+> Phạm vi: các module và use case trong danh mục [00](../00-tong-quan.md). Đây là hợp đồng thiết kế; chỉ đóng băng tại **M3** khi đạt cổng nghiệm thu, không đồng nghĩa API đã được hiện thực.
 
 ---
 
@@ -18,7 +18,7 @@
 | 4 | Mọi thao tác ghi **PHẢI** mang `Idempotency-Key`; hiệu lực 24 giờ | BR-GEN-08 |
 | 5 | Thay đổi `Booking`, `Payment`, `RefundRequest`, `RoomMove`, `SystemSetting` ghi `AuditLog` **trong cùng transaction**; miền thuần nhận thời gian/mã/sự kiện qua cổng ra `Clock`, `IdGenerator`, `OutboxPort`, `UnitOfWork` ([04/kiến trúc](kien-truc.md)) | BR-GEN-07, BR-SYS-05 |
 | 6 | Không endpoint nào sửa/xoá bản ghi bất biến (`Payment` gốc, `AuditLog`, hồ sơ khách) | BR-PAY-09, BR-SYS-01, BR-CRM-05 |
-| 7 | Cùng đầu vào **PHẢI** cho cùng kết quả giá trên web khách, Android và API | BR-RATE-17 |
+| 7 | Cùng đầu vào **PHẢI** cho cùng kết quả giá trên customer web, customer Android, operations web, operations Android và API | BR-RATE-17 |
 | 8 | Tên tài nguyên `kebab-case` số nhiều, khớp `snake_case` số nhiều của bảng | 00 §7 |
 
 ### 1.2. Xác thực & phân quyền
@@ -26,11 +26,15 @@
 | Hạng mục | Quy định | Căn cứ |
 |----------|----------|--------|
 | Cơ chế | `Authorization: Bearer <accessToken>` — JWT HS256; access **15 phút**, refresh **7 ngày**, xoay vòng khi dùng | ADR-010, BR-RBAC-05 |
-| Vai trò | `OWNER` · `MANAGER` · `FRONT_DESK` · `RESERVATION_AGENT` · `ACCOUNTANT` · `HOUSEKEEPING`; khách dùng phiên riêng qua `/guest-auth` | BR-RBAC-01 |
+| Vai trò | Tập vai trò độc lập ở BR-RBAC-01, gồm SYSADMIN cho ACT-12; khách dùng phiên riêng qua `/guest-auth` | BR-RBAC-01 |
 | Phạm vi cơ sở | Trừ `OWNER`, mọi vai trò chỉ truy cập dữ liệu thuộc `User.propertyScope`; ngoài phạm vi trả `403 E_AUTH_OUT_OF_SCOPE` kể cả khi đối tượng tồn tại | BR-RBAC-02, NFR-SEC-01 |
 | Thao tác tài chính | Endpoint đánh dấu 🔒 **PHẢI** kèm `pinToken` từ `POST /auth/pin/verify` (hiệu lực 5 phút, dùng một lần) | BR-RBAC-05 |
 | Khoá tài khoản | 5 lần đăng nhập sai liên tiếp → khoá 15 phút | BR-RBAC-06, NFR-SEC-05 |
-| ⚠️ Ngoại lệ | Mọi endpoint `/integrations/**` xác thực bằng **chữ ký HMAC**, không dùng Bearer (§5) | BR-CHAN-06, BR-PAY-03 |
+| Ngoại lệ tích hợp | `/integrations/**` xác thực theo adapter nhà cung cấp, không dùng Bearer; chữ ký, canonicalization và ACK theo §5 | BR-CHAN-06, BR-PAY-03 |
+
+Khách chỉ được đọc/sửa booking gắn với `guestId` của phiên đã xác thực; biết mã booking hoặc số điện thoại **không** chứng minh sở hữu. Mọi ID con (`paymentId`, `bookingRoomIds`, `refundRequestId`, `holdId`, `evidenceRefs`) phải được tra từ aggregate đã kiểm tra quyền, không nhận ID tùy ý. Khách truy cập đối tượng người khác nhận `404 E_GEN_NOT_FOUND`; nhân viên ngoài phạm vi nhận 403 theo BR-RBAC-02. Cả danh sách, báo cáo, tệp xuất, tác vụ nền do người dùng khởi tạo và kết quả phát lại idempotency đều kiểm tra quyền hiện tại.
+
+Các trường `paidAmount`, `status`, `approvedBy`, `guestId` sở hữu, giá và quyền không được mass-assign từ JSON. Khách/công khai chỉ dùng kênh `WEB`; kênh quầy/điện thoại cần quyền nhân viên, OTA chỉ qua adapter đã xác thực. `returnUrl` phải thuộc allowlist cấu hình của máy chủ, không nhận URL bất kỳ. Tệp minh chứng dùng ID đối tượng trong kho riêng và URL ký ngắn hạn; máy chủ không tải `evidenceUrl` tùy ý từ Internet.
 
 ### 1.3. Header & định dạng trao đổi
 
@@ -40,6 +44,8 @@
 | `Idempotency-Key` | → | Mọi thao tác ghi | UUID v4 do client sinh (BR-GEN-08) |
 | `X-Trace-Id` | ← | Luôn | Mã tương quan, trùng `traceId` trong body lỗi |
 | `Idempotency-Replayed` | ← | Khi phát lại | `true` — trả bản ghi của lần gọi trước, không tạo bản ghi mới |
+| `ETag` | ← | Chi tiết aggregate có thể sửa | Phiên bản số của đối tượng, ví dụ `"7"` |
+| `If-Match` | → | Thay đổi booking, refund, điều chuyển, cấu hình đã tồn tại | Phiên bản đọc gần nhất; thiếu trả 428, cũ trả 412; create và webhook không yêu cầu |
 
 ### 1.4. Bao hình phản hồi
 
@@ -65,13 +71,17 @@ Chọn con trỏ thay vì `offset` vì lịch tồn phòng và nhật ký kiểm
 
 ### 1.6. Idempotency
 
-Khoá lưu 24 giờ (BR-GEN-08). Cùng khoá + cùng payload → phát lại kết quả gốc kèm `Idempotency-Replayed: true`; cùng khoá + payload khác → `409 E_SYS_IDEMPOTENCY_KEY_REUSED`. Gửi lặp 10 lần **PHẢI** tạo đúng **1** bản ghi (NFR-REL-06). Webhook dùng cùng cơ chế với khoá tự nhiên của nhà cung cấp (§5).
+Khoá lưu 24 giờ (BR-GEN-08), theo bộ `(principal, operation, key)`: principal lấy từ phiên đã xác thực; operation gồm HTTP method và đường dẫn chuẩn hoá **kèm ID tài nguyên**. Hash gồm JSON canonical và phiên bản `If-Match`, bỏ token/trace; không tin actor do client truyền. Cùng bộ khoá + cùng hash → phát lại status/body/Location gốc; khác hash → `409 E_SYS_IDEMPOTENCY_KEY_REUSED`. Kiểm tra quyền hiện tại trước phát lại; không để người thứ hai nhận body của người thứ nhất.
+
+PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/outbox và kết quả idempotency commit cùng transaction cho lệnh nội bộ. Yêu cầu đồng thời chờ kết quả hoặc nhận `409 E_SYS_REQUEST_IN_PROGRESS` + `Retry-After`; không cùng chạy nghiệp vụ. Rollback không để khoá treo. Lệnh gọi PSP tạo chứng từ bền trước, gọi ngoài transaction bằng cùng provider request ID; mất phản hồi thì query/reconcile chứng từ đó, không tạo giao dịch khác. Redis chỉ tăng tốc. Hết TTL idempotency không xoá các UNIQUE nghiệp vụ trên giao dịch PSP, booking OTA, refund payout.
+
+Đăng nhập/đăng ký dùng định danh phiên ẩn danh ngẫu nhiên do server cấp, có rate limit; không cache mật khẩu hoặc refresh token dạng rõ. Webhook dùng khóa tự nhiên bền ở Inbox (§5), không yêu cầu bên ngoài gửi `Idempotency-Key`. Khi retry lệnh đã thành công với `If-Match` cũ, phát lại kết quả trước kiểm tra version, nhưng sau kiểm tra quyền.
 
 ---
 
 ## 2. Danh mục endpoint theo module
 
-**Vai trò tối thiểu:** `—` = công khai · `GUEST` = khách đã đăng nhập · 🔒 = yêu cầu PIN tài chính. `{id}` là UUID, `{code}` là mã nghiệp vụ.
+**Đọc cột vai trò:** đây là hồ sơ quyền theo thao tác, **không phải thứ bậc kế thừa**. Tập quyền có hiệu lực được xác định tường minh ở §6.3; `ACCOUNTANT` không kế thừa quyền tạo booking và `HOUSEKEEPING` không được xem tài chính. `—` = công khai với response đã lọc · `GUEST` = chỉ dữ liệu của chính khách · 🔒 = PIN tài chính. `{id}` là UUID, `{code}` là mã nghiệp vụ.
 
 ### 2.1. AUTH — Định danh & phân quyền (3 UC)
 
@@ -80,9 +90,11 @@ Khoá lưu 24 giờ (BR-GEN-08). Cùng khoá + cùng payload → phát lại k�
 | POST | `/api/v1/auth/login` | Đăng nhập nội bộ, trả cặp access/refresh | — | `username`, `password` | UC-AUTH-01 | BR-RBAC-06 |
 | POST | `/api/v1/auth/refresh` | Xoay refresh token | — | `refreshToken` | UC-AUTH-01 | BR-RBAC-05 |
 | POST | `/api/v1/auth/pin/verify` | Xác thực PIN 6 số, trả `pinToken` | FRONT_DESK | `pin` | UC-AUTH-01 | BR-RBAC-05 |
-| PUT | `/api/v1/users/{userId}/access` | Gán vai trò, phạm vi cơ sở, trạng thái | OWNER | `role`, `propertyScope[]`, `isActive` | UC-AUTH-02 | BR-RBAC-01,02 |
+| PUT | `/api/v1/users/{userId}/access` | Gán vai trò, phạm vi cơ sở, trạng thái; chống tự nâng quyền và không vô hiệu OWNER cuối | OWNER/SYSADMIN | `role`, `propertyScope[]`, `isActive` | UC-AUTH-02 | BR-RBAC-01,02 |
 | POST | `/api/v1/guest-auth/register` | Khách đăng ký tài khoản | — | `fullName`, `phone`, `email`, `password`, `consentMarketing` | UC-AUTH-03 | BR-CRM-01 |
 | POST | `/api/v1/guest-auth/login` | Khách đăng nhập | — | `phone`, `password` | UC-AUTH-03 | BR-CRM-01 |
+| POST | `/api/v1/auth/logout` | Thu hồi phiên và refresh family, hết quyền trên mọi client của phiên | Đã đăng nhập | — | UC-AUTH-01, UC-AUTH-03 | BR-RBAC-05 |
+| POST | `/api/v1/guest-auth/refresh` | Xoay refresh của khách; phát hiện reuse thì thu hồi cả family | GUEST session | `refreshToken` | UC-AUTH-03 | BR-RBAC-05 |
 
 ### 2.2. PROP — Cơ sở & buồng phòng (4 UC)
 
@@ -105,7 +117,7 @@ Khoá lưu 24 giờ (BR-GEN-08). Cùng khoá + cùng payload → phát lại k�
 | GET | `/api/v1/channel-allotments` | Allotment theo kênh × loại phòng × ngày | MANAGER | `channelId`, `roomTypeId`, `from`, `to` | UC-INV-03 | BR-INV-05, BR-CHAN-01,08 |
 | PUT | `/api/v1/channel-allotments` | Đặt lại allotment theo lô trong một transaction | MANAGER | `channelId`, `roomTypeId`, `date`, `allotment` | UC-INV-03 | BR-INV-05, BR-CHAN-01,06 |
 
-### 2.4. RATE — Giá, mùa, kênh (5 UC)
+### 2.4. RATE — Giá, mùa, kênh và chính sách
 
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |
 |--------|-----------|-------|-------------------|---------------|----|----|
@@ -116,13 +128,18 @@ Khoá lưu 24 giờ (BR-GEN-08). Cùng khoá + cùng payload → phát lại k�
 | POST | `/api/v1/promotions` | Tạo khuyến mãi | OWNER | `code`, `type`, `value`, `minNights`, `channelScope`, `roomTypeScope`, `validFrom`, `validTo`, `maxUses`, `stackable` | UC-RATE-04 | BR-RATE-10,11,13 |
 | POST | `/api/v1/quotes` | **Báo giá** kỳ lưu trú (§3.1) | — | `propertyId`, `roomTypeId`, `channelCode`, `ratePlanCode`, `checkIn`, `checkOut`, `adults`, `children`, `roomCount`, `promotionCodes[]` | UC-INV-02, UC-RATE-05 | BR-RATE-01…17 |
 | POST | `/api/v1/quotes/multi-channel` | So sánh giá đồng thời nhiều kênh | MANAGER | `roomTypeId`, `checkIn`, `checkOut`, `channelCodes[]` | UC-RATE-05 | BR-RATE-07,08,09 |
+| GET | `/api/v1/rate-plans` | Gói giá đang bán và điều khoản dành cho khách; không lộ cấu hình nội bộ | — | `propertyId`, `checkIn`, `checkOut` | UC-RATE-06 | BR-CANCEL-01, BR-BOOK-03 |
+| PUT | `/api/v1/rate-plans/{ratePlanId}` | Cập nhật cấu hình gói giá cho báo giá mới, giữ nguyên snapshot đã bán | OWNER | `depositPercent`, `minNights`, `maxNights`, `cancellationPolicyId`, `status`, `reason` | UC-RATE-06 | BR-CANCEL-01, BR-RATE-16 |
+| GET | `/api/v1/cancellation-policies` | Chính sách và toàn bộ bậc cùng version | OWNER | `status` | UC-RATE-06 | BR-CANCEL-01,02 |
+| PUT | `/api/v1/cancellation-policies/{policyId}` | Thay toàn bộ bậc trong một transaction; validate mốc, phần trăm, bậc bắt tất | OWNER | `tiers[]`, `earlyCheckoutFreeHours`, `earlyCheckoutRefundPct`, `reason` | UC-RATE-06 | BR-CANCEL-01,02,09 |
 
 ### 2.5. BOOK — Đặt phòng (8 UC)
 
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |
 |--------|-----------|-------|-------------------|---------------|----|----|
 | POST | `/api/v1/bookings` | **Tạo booking** (web/quầy/điện thoại) — §3.2 | GUEST | `propertyId`, `roomTypeId`, `ratePlanCode`, `channelCode`, `quoteId`, `guest`, `checkIn`, `checkOut`, `adults`, `children`, `roomCount`, `promotionCodes[]` | UC-BOOK-01, UC-BOOK-02, UC-BOOK-03 | BR-BOOK-01…16 |
-| GET | `/api/v1/bookings` | Tra cứu booking (lọc + phân trang con trỏ) | HOUSEKEEPING | `propertyId`, `status`, `channelCode`, `from`, `to`, `q` | UC-BOOK-07 | BR-RBAC-02 |
+| GET | `/api/v1/bookings` | Tra cứu booking (khách chỉ booking của mình), lọc/phân trang tại DB | GUEST hoặc tập quyền §6.3 | `propertyId`, `status`, `channelCode`, `from`, `to`, `q` | UC-BOOK-07 | BR-RBAC-02 |
+| GET | `/api/v1/bookings/{bookingId}` | Chi tiết theo quyền, snapshot điều khoản và version; không cấp HOUSEKEEPING | GUEST hoặc tập quyền §6.3 | — | UC-BOOK-07 | BR-RBAC-02,03 |
 | DELETE | `/api/v1/bookings/{bookingId}` | Xoá cứng **chỉ** `DRAFT`/`HELD` chưa phát sinh thanh toán; **PHẢI** ghi `AuditLog.beforeJson` trước khi xoá (204) | FRONT_DESK | `reason` | UC-BOOK-05 | BR-BOOK-14, BR-BOOK-17 |
 | POST | `/api/v1/bookings/{bookingId}/confirm` | Xác nhận booking | FRONT_DESK | `paymentId` | UC-BOOK-01, UC-BOOK-02, UC-BOOK-03 | BR-BOOK-09 |
 | POST | `/api/v1/bookings/{bookingId}/reschedule` | Đổi ngày: **không đổi trạng thái**, lưu `PriceSnapshot` mới (`kind = RESCHEDULE`) và **giữ bản cũ**, tăng `rescheduleCount`, ghi `AuditLog` | GUEST | `checkIn`, `checkOut`, `reason` | UC-BOOK-06 | BR-BOOK-12,13, BR-CANCEL-08 |
@@ -138,10 +155,12 @@ Khoá lưu 24 giờ (BR-GEN-08). Cùng khoá + cùng payload → phát lại k�
 | POST | `/api/v1/payments` | Ghi nhận tiền cọc/số dư/hoàn tất toán (`type` ∈ `DEPOSIT`/`BALANCE`/`PENALTY`/`EXTRA_SERVICE`/`COMPENSATION`/`RESCHEDULE_FEE`) | FRONT_DESK | `bookingId`, `type`, `method`, `amount`, `note`, `pinToken` 🔒 | UC-PAY-01, UC-PAY-03 | BR-PAY-01,02,06,07 |
 | POST | `/api/v1/payments/online` | **Khởi tạo thanh toán trực tuyến** — §3.5 | GUEST | `bookingId`, `type`, `method`, `amount`, `returnUrl` | UC-PAY-02 | BR-PAY-03,04,05 |
 | GET | `/api/v1/payments/{paymentId}/status` | Trạng thái giao dịch (poll sau khi PSP chuyển hướng) | GUEST | — | UC-PAY-02 | BR-PAY-05 |
-| GET | `/api/v1/bookings/{bookingId}/balance` | `balanceDue`, `penaltyAmount`, `refundedAmount`; booking `CANCELLED`/`NO_SHOW`/`EXPIRED` **không** tạo công nợ phần chưa trả, `balanceDue = penaltyAmount` | HOUSEKEEPING | — | UC-PAY-03 | BR-PAY-02 |
+| GET | `/api/v1/bookings/{bookingId}/balance` | Số dư và khoản hoàn; tách khoản đã thu, khoản nợ, khoản hoàn đang giữ hạn mức; không cấp HOUSEKEEPING | GUEST hoặc nhân viên tài chính (§6.3) | — | UC-PAY-03 | BR-PAY-02 |
 | POST | `/api/v1/refund-requests` | **Yêu cầu hoàn tiền** — §3.6 | FRONT_DESK | `bookingId`, `paymentId`, `reason`, `isForceMajeure`, `evidenceRefs[]` | UC-PAY-04, UC-BOOK-08 | BR-CANCEL-01…07,13 |
 | POST | `/api/v1/refund-requests/{refundRequestId}/approve` | **Duyệt hoàn tiền** — §3.7 | MANAGER | `approvedAmount`, `note`, `pinToken` 🔒 | UC-PAY-04 | BR-CANCEL-15 |
-| POST | `/api/v1/refund-requests/{refundRequestId}/cancel` | Khách rút yêu cầu / booking được khôi phục → `CANCELLED` | FRONT_DESK | `reason` | UC-PAY-04 | BR-CANCEL-18 |
+| GET | `/api/v1/refund-requests` | Danh sách hồ sơ, số tiền đã giữ/chi, tuổi hồ sơ, version | Tập quyền §6.3 | `bookingId`, `status`, `propertyId` | UC-PAY-04 | BR-CANCEL-16 |
+| POST | `/api/v1/refund-requests/{refundRequestId}/reject` | Từ chối PENDING, ghi lý do và trả hạn mức hoàn | MANAGER/OWNER | `note`, `pinToken` 🔒 | UC-PAY-04 | BR-CANCEL-15,17 |
+| POST | `/api/v1/refund-requests/{refundRequestId}/cancel` | Rút yêu cầu còn PENDING; không khôi phục booking hay assignment | Người tạo hoặc MANAGER/OWNER | `reason` | UC-PAY-04 | BR-CANCEL-18 |
 | POST | `/api/v1/refund-requests/{refundRequestId}/pay` | Chi tiền hoàn về phương thức gốc | ACCOUNTANT | `method`, `bankNote`, `pinToken` 🔒 | UC-PAY-04 | BR-CANCEL-12,16, BR-PAY-08,09 |
 | POST | `/api/v1/reconciliation/daily/close` | Chốt ca/ngày, ghi nhận chênh lệch | ACCOUNTANT | `propertyId`, `businessDate`, `countedCash`, `note` | UC-PAY-05 | BR-PAY-06,10 |
 
@@ -168,6 +187,7 @@ Khoá lưu 24 giờ (BR-GEN-08). Cùng khoá + cùng payload → phát lại k�
 | POST | `/api/v1/room-merges` | Tạo phương án ghép phòng (`MERGE_SHARE`/`MERGE_CONNECTING`) | FRONT_DESK | `primaryBookingId`, `secondaryBookingId`, `roomId`, `discountPct` | UC-OVER-03 | BR-OVER-13,14,15 |
 | POST | `/api/v1/room-merges/{roomMergeId}/consent` | Ghi nhận đồng thuận của từng bên | FRONT_DESK | `side` (`PRIMARY`/`SECONDARY`), `consented`, `evidenceUrl` | UC-OVER-03 | BR-OVER-13 |
 | POST | `/api/v1/room-merges/{roomMergeId}/approve` | Duyệt ghép phòng (bắt buộc khi khác giới tính) | MANAGER | `reason` | UC-OVER-03 | BR-OVER-14 |
+| POST | `/api/v1/room-merges/{roomMergeId}/execute` | Kiểm tra lại consent, sức chứa, version và gán tất cả đơn vị trong một TX | FRONT_DESK | — | UC-OVER-03 | BR-OVER-13,14,15 |
 
 ### 2.9. FO — Tiền sảnh & buồng phòng (4 UC)
 
@@ -177,7 +197,7 @@ Khoá lưu 24 giờ (BR-GEN-08). Cùng khoá + cùng payload → phát lại k�
 | POST | `/api/v1/front-office/check-out` | Check-out, thu phát sinh, ghi nhận trả phòng sớm với `cancelReason = EARLY_CHECKOUT`; ngưỡng đọc từ `CancellationPolicy.earlyCheckoutFreeHours`/`earlyCheckoutRefundPct` | FRONT_DESK | `bookingId`, `extras[]`, `lateCheckOut`, `earlyCheckOut`, `pinToken` 🔒 | UC-FO-02 | BR-FO-03,05,06, BR-CANCEL-09 |
 | POST | `/api/v1/front-office/no-show` | Ghi nhận khách không đến | FRONT_DESK | `bookingId`, `reason` | UC-FO-04 | BR-CANCEL-10 |
 | GET | `/api/v1/housekeeping/tasks` | Danh sách việc dọn phòng | HOUSEKEEPING | `propertyId`, `businessDate`, `status`, `assignedTo` | UC-FO-03 | BR-FO-06 |
-| PATCH | `/api/v1/housekeeping/tasks/{taskId}` | Cập nhật trạng thái/nhận việc; `DONE`/`INSPECTED` trả phòng về tồn khả dụng | HOUSEKEEPING | `status`, `assignedTo`, `note` | UC-FO-03 | BR-FO-06,07 |
+| PATCH | `/api/v1/housekeeping/tasks/{taskId}` | Cập nhật việc được giao; `DONE`/`INSPECTED` làm phòng đủ điều kiện giao ngay, không tự tăng tồn tương lai | HOUSEKEEPING | `status`, `note`; `assignedTo` chỉ MANAGER/OWNER | UC-FO-03 | BR-FO-06,07 |
 
 ### 2.10. CRM — Khách hàng (3 UC)
 
@@ -215,9 +235,9 @@ Khoá lưu 24 giờ (BR-GEN-08). Cùng khoá + cùng payload → phát lại k�
 |--------|-----------|-------|-------------------|---------------|----|----|
 | GET | `/api/v1/audit-logs` | Nhật ký kiểm toán (chỉ đọc) | MANAGER | `actorId`, `entityType`, `entityId`, `action`, `from`, `to` | UC-SYS-01 | BR-SYS-01,05 |
 | PUT | `/api/v1/system-settings/{key}` | Sửa tham số (ghi `AuditLog` cùng transaction) | OWNER | `value`, `reason` | UC-SYS-02 | BR-SYS-02, BR-GEN-07 |
-| POST | `/api/v1/system/backups` | Yêu cầu sao lưu (202) | OWNER | `mode` (`PITR`/`FULL`) | UC-SYS-03 | BR-SYS-03 |
-| POST | `/api/v1/system/backups/{backupId}/restore` | Diễn tập phục hồi vào môi trường tạm (202) | OWNER | `targetTimestamp`, `reason` | UC-SYS-03 | BR-SYS-03 |
-| GET | `/api/v1/system/health` | Kiểm tra sống/chết, phiên bản, trạng thái phụ thuộc | — | — | UC-SYS-03 | NFR-USE-01, NFR-USE-02 |
+| POST | `/api/v1/system/backups` | Yêu cầu sao lưu (202) | SYSADMIN | `mode` (`PITR`/`FULL`) | UC-SYS-03 | BR-SYS-03 |
+| POST | `/api/v1/system/backups/{backupId}/restore` | Diễn tập phục hồi vào môi trường tạm do server chọn (202); không nhận đường dẫn/DB URL của client | SYSADMIN | `targetTimestamp`, `reason` | UC-SYS-03 | BR-SYS-03 |
+| GET | `/api/v1/system/health` | Công khai chỉ `{status: "ok"}`; không lộ version, hostname, topology hay lỗi phụ thuộc | — | — | UC-SYS-03 | NFR-USE-01, NFR-USE-02 |
 
 ### 2.14. Ràng buộc âm — endpoint KHÔNG được phép tồn tại
 
@@ -238,7 +258,7 @@ Khoá lưu 24 giờ (BR-GEN-08). Cùng khoá + cùng payload → phát lại k�
 
 ## 3. Đặc tả chi tiết 10 endpoint trọng yếu
 
-Chung cho mọi ví dụ: thao tác ghi mang `Idempotency-Key`; tiền là số nguyên VND; thời điểm UTC; nhãn `…` là UUID rút gọn cho dễ đọc.
+Chung cho mọi ví dụ: thao tác ghi mang `Idempotency-Key`; tiền là số nguyên VND; thời điểm UTC; nhãn `…` là UUID rút gọn cho dễ đọc. Mỗi ví dụ độc lập, dữ liệu minh hoạ không phải seed sản xuất; hệ số trong §3.1 là đầu vào fixture để kiểm số học, không khẳng định cấu hình mùa thực tế của ngày đó.
 
 ### 3.1. `POST /api/v1/quotes` — Báo giá
 
@@ -261,7 +281,7 @@ Response 201:
     { "date": "2026-12-25", "basePrice": 650000, "seasonMultiplier": 2.00, "weekendMultiplier": 1.20, "occupancyMultiplier": 1.15, "losMultiplier": 0.95, "channelMultiplier": 1.00, "clamped": false, "nightlyPrice": 1705000 },
     { "date": "2026-12-26", "basePrice": 650000, "seasonMultiplier": 2.00, "weekendMultiplier": 1.20, "occupancyMultiplier": 1.15, "losMultiplier": 0.95, "channelMultiplier": 1.00, "clamped": false, "nightlyPrice": 1705000 }
   ],
-  "subtotal": 4831000, "discountAmount": 483100, "total": 4347000, "currency": "VND", "warnings": [],
+  "subtotal": 4831000, "discountAmount": 483100, "total": 4348000, "currency": "VND", "warnings": [],
   "depositPercent": 30, "depositAmount": 1305000, "engineVersion": "pricing-1.0.0",
   "quotedAt": "2026-09-19T03:12:44Z", "expiresAt": "2026-09-19T03:27:44Z"
 }
@@ -273,13 +293,15 @@ Response 201:
 - `expiresAt` theo BR-RATE-15; quá hạn phải tính lại. Cùng đầu vào **PHẢI** cùng kết quả, chỉ `quotedAt` được khác (BR-RATE-17). `warnings[]` còn chứa cảnh báo cân bằng giá khi giá niêm yết **sau kẹp** của kênh OTA thấp hơn `WEB`; `AGENCY` ngoài phạm vi, không chặn lưu (BR-RATE-09).
 - Mã lỗi: `400 E_BOOK_MISSING_FIELD`, `422 E_BOOK_OVER_CAPACITY`, `422 E_BOOK_MIN_NIGHTS`, `409 E_INV_NO_AVAILABILITY`. Giá trị mặc định gói giá (`minNights`, `losDiscountEnabled`) theo 02 §4.4.
 
+`quoteId` phải gắn principal/phiên báo giá cùng fingerprint `{propertyId, roomTypeId, ratePlanCode, channelCode, checkIn, checkOut, adults, children, roomCount, promotionCodes}` và snapshot cấu hình đã dùng. Đổi bất cứ trường nào → `409 E_RATE_QUOTE_MISMATCH`. Giá/hệ số client gửi không có thẩm quyền. Hết TTL hoặc mất cache → trả 410 và báo giá mới để khách xác nhận, không âm thầm tăng tiền. Báo giá chưa giữ tồn; khi chuyển sang hold phải kiểm tra tồn và hạn mức khuyến mãi trong transaction. Giá đã chốt trong hold hợp lệ không tăng do quote hết TTL trong lúc chờ PSP.
+
 ### 3.2. `POST /api/v1/bookings` — Tạo booking
 
 Lớp xử lý: `CreateBookingUseCase` → `BookingService` → `BookingFactory` → `InventoryService` (khoá bi quan theo `(roomTypeId, date)`) → `PaymentService` khi thu cọc.
 
 ```json
 {
-  "propertyId": "8f2a1c40-…", "roomTypeId": "b1d9c7e2-…", "ratePlanCode": "FLEX7", "channelCode": "PHONE",
+  "propertyId": "8f2a1c40-…", "roomTypeId": "b1d9c7e2-…", "ratePlanCode": "FLEX7", "channelCode": "WEB",
   "quoteId": "3c7f9b21-…", "checkIn": "2026-12-24", "checkOut": "2026-12-27", "adults": 2,
   "children": 0, "roomCount": 1, "promotionCodes": ["EARLY10"],
   "guest": { "fullName": "Nguyễn Văn A", "phone": "0901234567" }, "note": "Khách đến muộn sau 22:00"
@@ -290,18 +312,18 @@ Response 201 (`Location: /api/v1/bookings/a71c0d34-…`):
 
 ```json
 {
-  "id": "a71c0d34-…", "code": "PH-261224-K7M2Q", "seq": 1042, "status": "CONFIRMED", "guestId": "4e8b1f77-…",
+  "id": "a71c0d34-…", "code": "PH-260919-K7M2Q", "seq": 1042, "status": "HELD", "guestId": "4e8b1f77-…",
   "propertyId": "8f2a1c40-…", "roomTypeId": "b1d9c7e2-…", "ratePlanId": "d5a7e9b3-…", "channelId": "c34a9e51-…",
   "checkIn": "2026-12-24", "checkOut": "2026-12-27", "nights": 3, "adults": 2, "children": 0, "roomCount": 1,
-  "totalAmount": 4347000, "depositPercent": 30, "depositAmount": 1305000, "paidAmount": 1305000,
-  "refundedAmount": 0, "balanceDue": 3042000, "penaltyAmount": 0, "currency": "VND", "rescheduleCount": 0,
-  "holdExpiresAt": null, "oversold": false, "priceLocked": false, "duplicateSuspected": false,
+  "totalAmount": 4348000, "depositPercent": 30, "depositAmount": 1305000, "paidAmount": 0,
+  "refundedAmount": 0, "balanceDue": 4348000, "penaltyAmount": 0, "currency": "VND", "rescheduleCount": 0,
+  "holdExpiresAt": "2026-09-19T03:34:02Z", "oversold": false, "priceLocked": false, "duplicateSuspected": false,
   "channelPolicyCode": null, "note": "Khách đến muộn sau 22:00", "createdBy": "7f1d5b90-…", "createdAt": "2026-09-19T03:14:02Z"
 }
 ```
 
 - Kiểm tra tồn và giữ chỗ nằm trong **một** transaction có khoá bi quan; không có khe hở kiểm tra rồi ghi sau (BR-INV-02). `PriceSnapshot` **PHẢI** được lưu ngay khi booking rời `DRAFT` (`HELD`/`PENDING_PAYMENT`/`CONFIRMED`) để `firstNightPrice` luôn có cho BR-CANCEL-06 (BR-RATE-16). Ràng buộc loại trừ ở CSDL trên `(room_id, bed_no, valid_range)` từ chối (`23P01`) **PHẢI** được bắt và chuyển thành `409 E_INV_ROOM_TAKEN` — cấm nuốt lỗi rồi báo thành công (BR-INV-03).
-- Xác nhận không cọc nhận diện bằng `PaymentMethod = OTA_COLLECT` (không theo tên kênh) hoặc `MANAGER`+ cho phép ghi nợ có lý do; ngoài hai trường hợp đó booking ở `PENDING_PAYMENT` tới khi `paidAmount ≥ depositAmount` (BR-BOOK-09).
+- Request trên chưa có chứng từ thu nên chỉ tạo `HELD`, tuyệt đối không tự ghi `paidAmount` hoặc trả `CONFIRMED`. Bắt đầu PSP chuyển sang `PENDING_PAYMENT`; xác nhận theo BR-BOOK-09. Ngoại lệ miễn cọc chỉ từ chứng từ OTA thu hộ đã xác thực hoặc WALKIN được duyệt nợ theo BR-FO-01, không từ trường `method` khách tự khai.
 - Hết phòng vật lý → `oversold = true` và mở `OverbookingCase`. Vượt trần bán vượt → `409 E_OVER_LIMIT_EXCEEDED` (BR-OVER-02). Miễn trừ: `overbookLimitPct` **chỉ** áp cho quyết định bán vượt do hệ thống chủ động; booking do kênh ngoài đẩy vào (OTA) vẫn **PHẢI** ghi `CONFIRMED` + `oversold = true` + mở ca quá tải, không bị chặn (BR-CHAN-03, BR-OVER-02,03).
 - Trùng lặp nghi ngờ (cùng kênh + SĐT + loại phòng + ngày nhận phòng trong 24 giờ) → **không** tạo mới, trả booking cũ kèm `duplicateSuspected = true` (BR-BOOK-16); `code` sinh theo `PH-<YYMMDD>-<5 ký tự>` (BR-GEN-06).
 - Mã lỗi: `400 E_BOOK_MISSING_FIELD`, `422 E_BOOK_OVER_CAPACITY`, `422 E_BOOK_MIN_NIGHTS`, `409 E_INV_NO_AVAILABILITY`, `409 E_INV_ROOM_TAKEN`, `403 E_BOOK_BLACKLISTED`, `410 E_RATE_QUOTE_EXPIRED`.
@@ -331,7 +353,7 @@ Response 200:
 
 - `hoursBeforeCheckIn` tính từ thời điểm nhận phòng danh nghĩa (BR-GEN-04), đơn vị **giờ có phần thập phân**; bậc là mốc có `offsetHours` lớn nhất mà `hoursBeforeCheckIn ≥ offsetHours` (BR-CANCEL-01,03).
 - Cơ sở tính hoàn là `paidAmount`, không phải `totalAmount`; hoàn làm tròn **xuống** 1.000 VND; `refundFee` đọc từ `SystemSetting.refund.feeAmount` (BR-CANCEL-04,05,11). **Huỷ một phần** (`bookingRoomIds[]` không rỗng, `roomCount > 1`): `refundBase` phân bổ theo tỷ lệ giá các phòng bị huỷ trên `totalAmount` rồi mới áp BR-CANCEL-05; phòng còn lại giữ nguyên giá và `RoomAssignment`; `totalAmount` giảm; lưu thêm một `PriceSnapshot` điều chỉnh (`kind = PARTIAL_CANCEL`, `seq` tăng) và **giữ bản gốc**; huỷ hết phòng → `CANCELLED` toàn phần (BR-CANCEL-19, BR-RATE-16). Bậc cuối `offsetHours = −1` là **bậc bắt tất** cho mọi `hoursBeforeCheckIn < 24` kể cả âm (BR-CANCEL-01). Bậc có `chargeFirstNight = true` sinh `Payment` loại `PENALTY` trạng thái `PENDING` — ghi công nợ, không tự thu (BR-CANCEL-06).
-- Giải phóng **toàn bộ** `RoomAssignment` trong **cùng transaction** với đổi trạng thái (BR-BOOK-11). Bất khả kháng: chỉ `MANAGER`+, `reason` ≥ 20 ký tự, minh chứng trong `evidenceRefs[]`, hoàn 100%, miễn phụ thu và phí (BR-CANCEL-13); `NONREF` hoàn 0% mọi mốc (BR-CANCEL-07).
+- Giải phóng assignment của **các BookingRoom bị huỷ**, chỉ toàn bộ khi huỷ toàn phần, trong cùng transaction với snapshot, trạng thái và yêu cầu hoàn (BR-BOOK-11). Bất khả kháng: chỉ `MANAGER`/`OWNER`, `reason = FORCE_MAJEURE`, **`note`** ≥ 20 ký tự và minh chứng trong `evidenceRefs[]`; hoàn theo BR-CANCEL-13. `NONREF` không hoàn ở luồng huỷ thông thường; ngoại lệ bất khả kháng/walk-out theo quy tắc riêng.
 - Mã lỗi: `409 E_CANCEL_NOT_ALLOWED`, `400 E_PAY_REASON_TOO_SHORT`, `403 E_PAY_REFUND_FORCE_MAJEURE_FORBIDDEN`, `422 E_PAY_REFUND_EXCEEDS_PAID`.
 
 ### 3.4. `POST /api/v1/holds` — Giữ chỗ có thời hạn
@@ -351,7 +373,7 @@ Response 201:
 ```json
 {
   "holdId": "e07b3c55-…", "bookingId": "f13a8d6c-…", "bookingCode": "PH-260919-R4T8X",
-  "bookingStatus": "HELD", "status": "ACTIVE", "channelId": "1a2b3c4d-…", "releasedAt": null, "expiresAt": "2026-09-19T03:34:02Z", "holdExpiresAt": "2026-09-19T03:34:02Z", "quotedTotal": 4347000, "createdAt": "2026-09-19T03:14:02Z"
+  "bookingStatus": "HELD", "status": "ACTIVE", "channelId": "1a2b3c4d-…", "releasedAt": null, "expiresAt": "2026-09-19T03:34:02Z", "holdExpiresAt": "2026-09-19T03:34:02Z", "quotedTotal": 4348000, "createdAt": "2026-09-19T03:14:02Z"
 }
 ```
 
@@ -383,9 +405,9 @@ Response 201:
 ```
 
 - `amount` **PHẢI** khớp `depositAmount` (hoặc `balanceDue` khi `type = BALANCE`) → lệch trả `422 E_PAY_AMOUNT_MISMATCH` (BR-PAY-01,02).
-- Không có trường thẻ/CVV trong hợp đồng; chỉ lưu `providerTxnId`, `amount`, `status` (BR-PAY-04). Quá hạn chờ callback → `FAILED` và giải phóng hold theo BR-PAY-05.
+- Không có trường thẻ/CVV trong hợp đồng; lưu mã đối chiếu và kết quả (BR-PAY-04). Quá hạn là thất bại **cục bộ**, không chứng minh PSP chưa thu tiền. Job timeout và callback khoá cùng booking/payment; không giải phóng booking đã xác nhận bởi callback hoặc giao dịch khác. Callback thành công muộn phải hạch toán và đối soát theo BR-PAY-11; không tự hồi sinh booking kết thúc hoặc bán lại phòng của khách khác.
 - Kết quả cuối do PSP xác nhận qua webhook (§5.2); client **KHÔNG** tự đánh dấu đã trả, đọc lại bằng `GET /payments/{paymentId}/status`. Callback trùng khoá **PHẢI** không tạo `Payment` thứ hai và không cộng dồn `paidAmount` (BR-PAY-03).
-- Mã lỗi: `409 E_PAY_CALLBACK_DUPLICATE`, `502 E_PAY_GATEWAY_ERROR`, `504 E_PAY_GATEWAY_TIMEOUT`.
+- Mã lỗi: `502 E_PAY_GATEWAY_ERROR`, `504 E_PAY_GATEWAY_TIMEOUT`. Callback trùng hợp lệ được ACK theo PSP, không trả 409 để yêu cầu khách trả lần nữa.
 
 ### 3.6. `POST /api/v1/refund-requests` — Yêu cầu hoàn tiền
 
@@ -411,8 +433,9 @@ Response 201:
 ```
 
 - `requestedAmount` tính trên `paidAmount` rồi làm tròn **xuống** 1.000 VND; `refundFee` đọc từ `SystemSetting.refund.feeAmount` (BR-CANCEL-04,05,11). Tổng hoàn luỹ kế **KHÔNG ĐƯỢC** vượt `paidAmount` → `422 E_PAY_REFUND_EXCEEDS_PAID` (BR-CANCEL-17, BR-PAY-07).
-- Bất khả kháng: chỉ `MANAGER`+ tạo, `reason` ≥ 20 ký tự, `evidenceRefs[]` lưu minh chứng, hoàn 100%, miễn phụ thu và phí; ca này vào báo cáo riêng (BR-CANCEL-13, NFR-COMP-05). Đổi ngày **KHÔNG** tạo `RefundRequest` (BR-CANCEL-08).
-- `PENDING` → `CANCELLED` khi khách rút yêu cầu hoặc booking được khôi phục: chỉ người tạo hoặc `MANAGER`+, phải ghi lý do; đã `APPROVED`/`PAID` thì **KHÔNG** huỷ được (BR-CANCEL-18).
+- Bất khả kháng: chỉ `MANAGER`/`OWNER` tạo, `reason = FORCE_MAJEURE`, **`note`** ≥ 20 ký tự, `evidenceRefs[]` lưu minh chứng, hoàn theo BR-CANCEL-13. Đổi ngày **KHÔNG** tạo `RefundRequest` (BR-CANCEL-08).
+- `PENDING` → `CANCELLED` khi rút yêu cầu: chỉ người tạo hoặc `MANAGER`/`OWNER`, có lý do, giải phóng phần hạn mức hoàn đã giữ. Thao tác này không khôi phục booking kết thúc; đã `APPROVED`/`PAID` không huỷ (BR-CANCEL-18).
+- Mỗi yêu cầu có `refundBase`, snapshot chính sách, phạm vi BookingRoom và danh sách phân bổ về giao dịch gốc. Khoá booking và các payment nguồn theo ID tăng dần khi đặt hạn mức; tổng đã hoàn **cộng** phần đã giữ cho các yêu cầu chưa kết thúc không vượt tiền thu đủ điều kiện. Chi hai yêu cầu đồng thời không được dùng lại một đồng tiền. Worker payout dùng một mã PSP ổn định trên mỗi allocation; timeout thì đối soát trước retry, không đánh dấu PAID trước xác nhận chi.
 - Mã lỗi: `403 E_PAY_REFUND_FORCE_MAJEURE_FORBIDDEN`, `400 E_PAY_REASON_TOO_SHORT`, `409 E_PAY_REFUND_NOT_PENDING`.
 
 ### 3.7. `POST /api/v1/refund-requests/{refundRequestId}/approve` — Duyệt hoàn tiền
@@ -436,7 +459,7 @@ Response 200:
 }
 ```
 
-- Ngưỡng hai cấp so trên `netRefund = refundAmount − refundFee` theo `SystemSetting.deal.threshold.minor`: vượt ngưỡng **PHẢI** do người **khác** người tạo duyệt; người tạo không bao giờ tự duyệt được ở mọi mức tiền → `403 E_PAY_SELF_APPROVAL` (BR-CANCEL-15, BR-SYS-02).
+- Hai cấp ở BR-CANCEL-15 là **người lập và người duyệt độc lập**, không tự suy thành chuỗi MANAGER rồi OWNER. Tất cả mức tiền đều cấm tự duyệt; người duyệt là MANAGER/OWNER đúng phạm vi, ngưỡng so trên `netRefund`. Lưu danh tính người tạo kể cả GUEST/SYSTEM, người duyệt, thời điểm, số tiền và note; không dùng việc thiếu `requestedBy` nhân viên để bỏ guard.
 - `approvedAmount ≤ requestedAmount`; lớn hơn trả `422 E_PAY_AMOUNT_MISMATCH`. `MANAGER` có thể duyệt thấp hơn khi có lý do. Thời hạn chi theo BR-CANCEL-12.
 - Ghi `AuditLog` **trong cùng transaction** kèm lý do (BR-GEN-07, BR-CANCEL-16, BR-SYS-05). Tiền chỉ được chi ở `POST /refund-requests/{id}/pay`; trạng thái cuối là `PAID` (BR-CANCEL-16).
 - Mã lỗi: `403 E_RBAC_FORBIDDEN`, `401 E_AUTH_PIN_REQUIRED`, `409 E_PAY_REFUND_NOT_APPROVED`.
@@ -502,7 +525,7 @@ Response 200:
 - `ladderPreview` **PHẢI** theo đúng thứ tự 4 bậc; `feasible = true` nghĩa là bậc đó thực hiện được. Bậc 3 (khác cơ sở, ≤ 15 km) **hiện không khả dụng** vì ba cơ sở cách nhau 160–300 km, nên thang vận hành thực tế là **1 → 2 → 4**; hệ thống vẫn trả đủ 4 bậc kèm lý do (BR-OVER-06). Xếp hạng ứng viên: `keepScore` **tăng dần** → `createdAt` **giảm dần** → `Booking.seq` **tăng dần**; booking `WALKIN` chưa trả tiền và `HELD` không bao giờ được ưu tiên hơn booking đã cọc (BR-OVER-11,12).
 - Chỉ `MANAGER`+ xem, dữ liệu giới hạn theo `propertyScope` (BR-RBAC-02,03). Thứ tự ứng viên chi tiết ở `GET /overbooking-cases/{caseId}?includeCandidates=true`.
 
-### 3.10. `POST /api/v1/room-moves` — Thực hiện điều chuyển phòng
+### 3.10. `POST /api/v1/room-moves` — Lập phương án điều chuyển phòng
 
 Lớp xử lý: `ResolveOverbookingUseCase` → `OverbookingRelocationSaga` (Process Manager) → `FrontOfficeService` → `GuestService`.
 
@@ -523,11 +546,12 @@ Response 201:
   "moveType": "UPGRADE_SAME_PROPERTY", "fromRoomId": "2f6b9d43-…", "toRoomId": "d90e4c17-…",
   "fromPropertyId": "8f2a1c40-…", "toPropertyId": "8f2a1c40-…",
   "keepScore": 45, "priceLocked": true, "compensationAmount": 0, "transportCost": 0, "approvedBy": null,
-  "status": "PROPOSED", "createdAt": "2026-09-19T04:30:12Z", "assignmentIds": ["c50a3e87-…"]
+  "status": "PROPOSED", "createdAt": "2026-09-19T04:30:12Z", "assignmentIds": []
 }
 ```
 
 - Mọi `RoomMove` **PHẢI** đặt `priceLocked = true` — khách giữ nguyên đơn giá đã chốt cho toàn kỳ (BR-OVER-08).
+- Tạo phương án không đổi assignment. `/execute` kiểm tra version, phê duyệt/đồng thuận và tồn **lại**; khoá cả nguồn/đích theo thứ tự ổn định. Giải phóng nguồn + gán đích + audit + outbox commit nguyên tử; lỗi bất kỳ rollback giữ nguyên nguồn. Không gọi PSP hoặc gửi thông báo trong transaction này.
 - Bậc 3 (khác cơ sở) **hiện không khả dụng** vì ba cơ sở cách nhau 160–300 km; nếu tương lai dùng cơ sở khác thì giới hạn bán kính, hỗ trợ đưa đón theo `overbooking.transportSupportCap`, và khác thành phố cần khách đồng ý bằng văn bản **và** `MANAGER`+ duyệt → `409 E_OVER_CROSS_CITY_NO_CONSENT` (BR-OVER-06,07). Bậc 4 `WALK_OUT`: hoàn 100% `paidAmount` + bồi thường 1 × giá đêm đầu theo giá gốc, kèm chứng từ `walkOutDocNo`, `guestSignatureRef`, `staffSignatureRef` (BR-OVER-06, BR-CANCEL-14).
 - Chi phí bồi thường/đưa đón phải được `MANAGER`+ duyệt trước khi chi → `PROPOSED` (`APPROVED` sau khi duyệt, `EXECUTED` sau khi thực thi) cho tới `POST /room-moves/{id}/approve` (BR-OVER-06). Khách `CHECKED_IN` **KHÔNG ĐƯỢC** điều chuyển, trừ bất khả kháng và phải `MANAGER`+ duyệt → `409 E_OVER_MOVE_NOT_ALLOWED` (BR-OVER-09).
 - Thực thi gửi thông báo cho khách trong thời hạn BR-OVER-10 và ghi `AuditLog`. Cạn bậc 1–3 → `409 E_OVER_NO_PLAN_AVAILABLE`.
@@ -567,7 +591,7 @@ Lỗi 5xx **PHẢI** có `traceId` và được ghi log JSON cùng mã đó, **k
 | `E_SYS_IDEMPOTENCY_KEY_REUSED` | 409 | Khoá chống trùng đã dùng cho một yêu cầu khác. | Cùng `Idempotency-Key`, khác payload | Sinh khoá mới (BR-GEN-08) |
 | `E_AUTH_INVALID_CREDENTIALS` | 401 | Tên đăng nhập hoặc mật khẩu không đúng. | Sai thông tin đăng nhập | Nhập lại; 5 lần sai bị khoá 15 phút (BR-RBAC-06) |
 | `E_AUTH_PIN_REQUIRED` | 401 | Cần xác thực PIN cho thao tác tài chính. | Thiếu hoặc hết hạn `pinToken` | Gọi `/auth/pin/verify` rồi thử lại (BR-RBAC-05) |
-| `E_RBAC_FORBIDDEN` | 403 | Bạn không có quyền thực hiện thao tác này. | Vai trò thấp hơn mức tối thiểu hoặc ngoài phạm vi được phép | Nhờ người có quyền (`MANAGER`+) hoặc dùng tài khoản thuộc cơ sở đó (BR-RBAC-02,03) |
+| `E_RBAC_FORBIDDEN` | 403 | Bạn không có quyền thực hiện thao tác này. | Không thuộc tập permission của thao tác | Dùng tài khoản được cấp đúng quyền và phạm vi (BR-RBAC-02,03) |
 | `E_AUTH_OUT_OF_SCOPE` | 403 | Bạn không được truy cập dữ liệu của cơ sở này. | Ngoài `User.propertyScope` | Chỉ thao tác trên cơ sở được giao (BR-RBAC-02) |
 | `E_INV_NO_AVAILABILITY` | 409 | Loại phòng đã hết trong khoảng ngày đã chọn. | Tồn khả dụng bằng 0 ở ít nhất một đêm — tầng nghiệp vụ | Chọn ngày/loại phòng khác (BR-INV-07) |
 | `E_INV_ROOM_TAKEN` | 409 | Đơn vị bán (phòng hoặc giường) vừa được gán cho khách khác, vui lòng chọn lại. | Ràng buộc loại trừ CSDL từ chối (`23P01`); hệ thống **KHÔNG** nuốt lỗi rồi báo thành công | Tải lại tồn phòng rồi thử lại (BR-INV-03) |
@@ -587,10 +611,10 @@ Lỗi 5xx **PHẢI** có `traceId` và được ghi log JSON cùng mã đó, **k
 | `E_CANCEL_NOT_ALLOWED` | 409 | Không thể huỷ đặt phòng ở trạng thái hiện tại. | Đã check-out, no-show, đã huỷ, hoặc yêu cầu hoàn đã `APPROVED`/`PAID` | Kiểm tra trạng thái booking và yêu cầu hoàn (BR-BOOK-11, BR-CANCEL-16,18) |
 | `E_PAY_REASON_TOO_SHORT` | 400 | Lý do quá ngắn, cần nêu rõ tối thiểu 20 ký tự. | Ca bất khả kháng thiếu lý do | Bổ sung lý do (BR-CANCEL-13) |
 | `E_PAY_AMOUNT_MISMATCH` | 422 | Số tiền không khớp số phải thu. | Lệch `depositAmount`/`balanceDue`/`requestedAmount` | Dùng đúng số tiền hệ thống trả về (BR-PAY-01,02) |
-| `E_PAY_CALLBACK_DUPLICATE` | 409 | Giao dịch đã được ghi nhận trước đó. | Callback gửi lại với khoá idempotency đã xử lý | Không gửi lại; đọc trạng thái cũ (BR-PAY-03) |
+| `E_PAY_CALLBACK_DUPLICATE` | ACK theo §5, không là lỗi HTTP nghiệp vụ | Giao dịch đã được ghi nhận trước đó. | Nhãn chẩn đoán nội bộ cho callback trùng hợp lệ | Trả ACK hợp lệ; không yêu cầu khách trả lần nữa (BR-PAY-03) |
 | `E_PAY_GATEWAY_ERROR` | 502 | Cổng thanh toán trả lỗi. | PSP từ chối giao dịch | Thử phương thức khác (NFR-USE-02) |
 | `E_PAY_SIGNATURE_INVALID` | 401 | Chữ ký callback của cổng thanh toán không hợp lệ. | Sai khoá bí mật, chuỗi canonical sai, hoặc body bị sửa | Kiểm tra cấu hình chữ ký PSP; **không** đổi trạng thái giao dịch (BR-PAY-03, NFR-SEC-05) |
-| `E_PAY_GATEWAY_TIMEOUT` | 504 | Cổng thanh toán không phản hồi kịp. | Quá 15 phút không có callback | Giao dịch chuyển `FAILED`, tạo lại (BR-PAY-05) |
+| `E_PAY_GATEWAY_TIMEOUT` | 504 | Chưa xác định được kết quả cổng thanh toán. | Lỗi chờ tạo/query giao dịch | Đọc lại cùng paymentId/đối soát; không lập khoản thu mới khi kết quả cũ chưa rõ (BR-PAY-05,11) |
 | `E_PAY_REFUND_EXCEEDS_PAID` | 422 | Số tiền hoàn vượt số tiền đã thu. | Tổng hoàn luỹ kế > `paidAmount` | Giảm số hoàn (BR-PAY-07, BR-CANCEL-17) |
 | `E_PAY_SELF_APPROVAL` | 403 | Người tạo yêu cầu không được tự duyệt. | `approvedBy` trùng `requestedBy` | Nhờ người khác duyệt (BR-CANCEL-15) |
 | `E_PAY_REFUND_NOT_APPROVED` | 409 | Yêu cầu hoàn chưa được duyệt. | Chi tiền khi chưa `APPROVED` | Duyệt trước rồi chi (BR-CANCEL-16) |
@@ -598,7 +622,7 @@ Lỗi 5xx **PHẢI** có `traceId` và được ghi log JSON cùng mã đó, **k
 | `E_PAY_REFUND_FORCE_MAJEURE_FORBIDDEN` | 403 | Chỉ quản lý trở lên được tạo ca bất khả kháng. | Vai trò thấp hơn `MANAGER` | Nhờ `MANAGER`+ tạo (BR-CANCEL-13) |
 | `E_CHAN_SYNC_FAILED` | 502 | Đồng bộ lên kênh bán thất bại. | Lỗi liên tiếp từ phía OTA | Sau 3 lần hệ thống cảnh báo `MANAGER`, kênh `DEGRADED` (BR-CHAN-07) |
 | `E_CHAN_SIGNATURE_INVALID` | 401 | Chữ ký webhook kênh bán không hợp lệ. | Sai khoá bí mật, chuỗi ký sai, hoặc body bị sửa | Kiểm tra cấu hình chữ ký kênh (§5.1) (BR-CHAN-02, BR-CHAN-06) |
-| `E_CHAN_REPLAY_DETECTED` | 409 | Sự kiện đã được xử lý trước đó. | Trùng `channelEventId` trong cửa sổ 7 ngày | Không xử lý lại (§5.1) |
+| `E_CHAN_REPLAY_DETECTED` | 409 | Mã sự kiện bị tái sử dụng với nội dung khác. | Cùng ID, khác payload hash sau xác thực | Cách ly/đối soát; trùng cùng hash phải ACK bình thường (§5.1) |
 | `E_OVER_LIMIT_EXCEEDED` | 409 | Đã vượt trần bán vượt của cơ sở. | Tổng vượt > trần theo cơ sở khi hệ thống chủ động bán vượt | Ngừng bán vượt hoặc chọn kênh/ngày khác (BR-OVER-02) |
 | `E_OVER_MERGE_GENDER` | 409 | Chưa được quản lý duyệt để ghép khách khác giới. | Đủ đồng thuận hai bên nhưng khác giới tính (kể cả `UNSPECIFIED`) và thiếu `MANAGER`+ duyệt | Cần `MANAGER` duyệt kèm lý do hoặc chọn phương án khác (BR-OVER-14) |
 | `E_OVER_NO_CONSENT` | 409 | Cần đồng thuận của khách trước khi ghép phòng. | Thiếu `consentPrimary`/`consentSecondary` | Ghi nhận đồng thuận rồi thực hiện (BR-OVER-13) |
@@ -611,6 +635,12 @@ Lỗi 5xx **PHẢI** có `traceId` và được ghi log JSON cùng mã đó, **k
 | `E_CRM_PHONE_INVALID` | 422 | Số điện thoại không hợp lệ. | Không chuẩn hoá được về `+84…` | Nhập lại số Việt Nam hợp lệ (BR-CRM-01) |
 | `E_GEN_SERVICE_UNAVAILABLE` | 503 | Hệ thống tạm thời không sẵn sàng. | Bảo trì, phụ thuộc lỗi hoặc lỗi lập trình đã che chi tiết | Thử lại; theo dõi `GET /system/health` (NFR-USE-01) |
 | `E_SYS_AUDIT_IMMUTABLE` | 405 | Nhật ký kiểm toán chỉ được ghi thêm. | Yêu cầu `PATCH`/`DELETE` | Không thao tác (BR-SYS-01) |
+| `E_GEN_NOT_FOUND` | 404 | Không tìm thấy dữ liệu. | Không tồn tại hoặc khách không sở hữu đối tượng | Không tiết lộ dữ liệu người khác |
+| `E_GEN_PRECONDITION_REQUIRED` | 428 | Cần phiên bản dữ liệu trước khi cập nhật. | Thiếu If-Match | Đọc chi tiết và dùng ETag |
+| `E_GEN_VERSION_CONFLICT` | 412 | Dữ liệu đã được thay đổi. | If-Match không khớp version | Tải lại, so sánh, xác nhận thao tác mới |
+| `E_SYS_REQUEST_IN_PROGRESS` | 409 | Yêu cầu đang được xử lý. | Khoá idempotency đang có chủ thực hiện | Retry cùng khoá sau Retry-After |
+| `E_RATE_QUOTE_MISMATCH` | 409 | Báo giá không khớp yêu cầu đặt phòng. | Fingerprint/principal khác quote đã phát hành | Lấy báo giá mới cho đầu vào hiện tại |
+| `E_RATE_CONFIGURATION_INVALID` | 422 | Cấu hình giá/chính sách chưa hợp lệ. | Sai mốc, thiếu catch-all, trường hoặc phạm vi gói | Hiển thị lỗi theo trường, không publish |
 
 ### 4.3. Ánh xạ sang lớp ngoại lệ miền
 
@@ -634,28 +664,32 @@ Lỗi 5xx **PHẢI** có `traceId` và được ghi log JSON cùng mã đó, **k
 | Sự kiện | `eventType ∈ {booking.created, booking.modified, booking.cancelled}` | BR-CHAN-03,04 |
 | Chữ ký & cửa sổ thời gian | `X-Pinehill-Signature: t=<unix>,v1=<hex(hmac_sha256(secret, t + "." + rawBody))>`; so sánh hằng thời gian; lệch `t` quá 300 giây bị từ chối; sai → `401 E_CHAN_SIGNATURE_INVALID` | NFR-SEC-05 |
 | Chống phát lại | Giữ `X-Channel-Event-Id` **7 ngày**; trùng → `200 { "duplicate": true }`, không xử lý lại. Khoá gộp `(channelId, providerBookingCode)` bảo đảm mỗi booking OTA chỉ tạo đúng một `Booking` | NFR-REL-06, BR-CHAN-03 |
-| Ghi nhận | Lưu payload thô + `OutboxEvent` **trước** khi trả lời; mọi thay đổi tồn/giá sinh `OutboxEvent` trong cùng transaction | BR-CHAN-06 |
+| Ghi nhận | Ghi Inbox bền (payload nghiệp vụ được bảo vệ + hash + ID nhà cung cấp) **trước** ACK; worker áp nghiệp vụ và ghi Outbox trong cùng transaction | BR-CHAN-06 |
 | Mã phản hồi & hiệu năng | `202` khi đã bền hoá (p95 ≤ 300 ms; payload lưới tồn phòng ≤ 200 KB); `400 E_GEN_VALIDATION_FAILED` payload sai cấu trúc; `401` chữ ký; `409 E_CHAN_REPLAY_DETECTED` phát lại ngoài cửa sổ | NFR-PERF-05 |
 | Thứ tự xử lý | Một hàng đợi, khoá theo `providerBookingCode` ⇒ sự kiện cùng booking xử lý tuần tự; sự kiện cũ hơn (`providerUpdatedAt` nhỏ hơn) bị bỏ; `booking.cancelled` **luôn thắng** `booking.modified` | BR-CHAN-04 |
 | Tạo mới | Booking OTA đã thu tiền (`OTA_COLLECT`) tạo thẳng `CONFIRMED` **kể cả khi tồn khả dụng bằng 0**: `overbookLimitPct` chỉ áp cho quyết định bán vượt do hệ thống chủ động, không chặn booking do kênh ngoài đẩy vào. Hệ thống ghi `oversold = true` và mở `OverbookingCase` | BR-CHAN-03, BR-OVER-02,03 |
 | Huỷ | OTA huỷ theo chính sách của kênh, **không** áp BR-CANCEL; ghi `cancelReason = OTA_CANCELLATION` + `Booking.channelPolicyCode` để đối soát | BR-CHAN-04, NFR-COMP-05 |
-| Thử lại | 5 lần, backoff mũ; cạn lượt → `OutboxEvent.status = FAILED`, cảnh báo `MANAGER`, `Channel.syncStatus = DEGRADED` + `consecutiveSyncFailures` + `lastSyncError` | BR-CHAN-07 |
-| Bán vượt | Số phòng bán trên OTA không bao giờ vượt `ChannelAllotment.allotment` còn lại; tồn ≤ 2 tự đóng bán OTA | BR-CHAN-05,08 |
+| Thử lại | Inbox xử lý lại có backoff, cạn lượt vào dead letter để vận hành xử lý. Đồng bộ **ra** dùng Outbox; 3 lỗi liên tiếp cảnh báo và DEGRADED theo BR-CHAN-07; 5 lần thử vận chuyển thất bại đưa sự kiện ra dead letter, không mất payload | BR-CHAN-07 |
+| Bán vượt | Tồn **chủ động đẩy ra** không vượt quota; booking OTA đã cam kết vẫn tiếp nhận theo BR-CHAN-03, used thực tế có thể vượt quota và phải cảnh báo | BR-CHAN-05,08 |
+
+HMAC và `X-Channel-Event-Id` ở bảng này là **hợp đồng simulator Pine Hill**, không tuyên bố là API thật của Booking.com/Agoda/Airbnb. Khi có hợp đồng đối tác, adapter ánh xạ sang sự kiện chuẩn và có contract test riêng. Khoá tự nhiên bao gồm tài khoản đối tác/cơ sở ngoài nếu mã booking không duy nhất toàn kênh. Sự kiện khác ID có cùng booking vẫn dùng UNIQUE nghiệp vụ; timestamp bằng nhau nhưng nội dung khác thì cách ly/đối soát, không đoán thứ tự. Huỷ đến trước tạo phải lưu tombstone để create cũ không hồi sinh booking.
 
 ### 5.2. Nhóm B — Cổng thanh toán gọi về
 
-**Endpoint:** `POST /api/v1/integrations/psp/{provider}/callback`, `{provider} ∈ {vnpay, momo}`.
+**Endpoint:** `GET /api/v1/integrations/psp/vnpay/callback` (IPN query string) và `POST /api/v1/integrations/psp/momo/callback` (IPN JSON). Đây là ngoại lệ GET có tác dụng ghi của giao thức bên ngoài, không áp dụng cache HTTP. Return URL chỉ hiển thị kết quả đọc lại từ server.
 
 | Khía cạnh | Quy định | Căn cứ |
 |-----------|----------|--------|
-| Chữ ký | VNPay `vnp_SecureHash` = HMAC-SHA512 trên chuỗi tham số đã sắp xếp; MoMo `signature` = HMAC-SHA256 trên chuỗi canonical `accessKey\|amount\|extraData\|message\|orderId\|orderInfo\|orderType\|partnerCode\|payType\|requestId\|responseTime\|resultCode\|transId`. Sai → `401 E_PAY_SIGNATURE_INVALID` | NFR-SEC-05, BR-PAY-03 |
+| Chữ ký | Adapter theo đặc tả provider/version: VNPay ký tham số sắp xếp và URL-encode đúng quy tắc, loại trường chữ ký; MoMo ký chuỗi `key=value` nối bằng `&` theo danh sách/thứ tự của IPN, **không** nối giá trị bằng dấu pipe. So sánh constant-time, xác minh merchant/partner, order reference, currency và amount trước ghi tiền | NFR-SEC-05, BR-PAY-03 |
 | Chống phát lại | Khoá theo `(provider, providerTxnId)`, đối chiếu `Payment.idempotencyKey` lưu khi khởi tạo | BR-PAY-03 |
-| Idempotency | Gửi lại cùng callback → ack `200`, **không** tạo `Payment` thứ hai, **không** cộng dồn `paidAmount`; kiểm tra và cập nhật trong một transaction | BR-PAY-03, NFR-REL-06 |
+| Idempotency | Callback hợp lệ lặp lại nhận ACK đúng provider; UNIQUE `(merchant/provider, providerTxnId)` và liên kết giao dịch gốc bảo vệ cả sau khi dọn Inbox. Cùng ID khác payload phải đối soát, không cộng tiền | BR-PAY-03, NFR-REL-06 |
 | Lưu trữ | Chỉ lưu `providerTxnId`, `amount`, `status`, `paidAt`; **KHÔNG** lưu số thẻ/CVV/ngày hết hạn | BR-PAY-04, NFR-SEC-02 |
-| Đối chiếu số tiền | `amount` khác số đã khởi tạo → `422 E_PAY_AMOUNT_MISMATCH`, không đổi trạng thái booking, phát cảnh báo | BR-PAY-01,02 |
-| Quá hạn | Quá **15 phút** không có callback → `FAILED`, giải phóng hold tương ứng | BR-PAY-05 |
-| Ack | Trả đúng đặc tả nhà cung cấp: VNPay `{"RspCode":"00","Message":"Confirm Success"}`, MoMo `{"resultCode":0,"message":"Success"}`; lỗi nội bộ vẫn ack để PSP không gửi lặp vô hạn, xử lý lại bằng hàng đợi | BR-PAY-03 |
-| Thứ tự xử lý | Khoá theo `providerTxnId`; `SUCCEEDED` là trạng thái cuối, callback `FAILED` đến sau bị bỏ; hoàn tiền là bút toán **mới** loại `REFUND`, không sửa giao dịch gốc | BR-PAY-09 |
+| Đối chiếu số tiền | So với payment khởi tạo, VNPay chuyển đơn vị hệ số 100 đúng một lần, MoMo theo VND. Không khớp thì không ghi thu; ánh xạ `E_PAY_AMOUNT_MISMATCH` sang mã giao thức provider | BR-PAY-01,02 |
+| Quá hạn | Theo BR-PAY-05/11: timeout cục bộ không chứng minh tiền chưa thu; hold vẫn theo hạn riêng; thành công muộn phải đối soát/hoàn và không tái chiếm phòng đã nhả | BR-PAY-05, BR-PAY-11 |
+| Ack | VNPay JSON `RspCode`: 00 đã ghi nhận, 02 đã xử lý, 01 không có đơn, 04 sai tiền, 97 sai chữ ký, 99 lỗi chưa lưu được. MoMo IPN đã ghi nhận trả **HTTP 204, body rỗng**. Không success-ACK khi transaction ghi nhận thất bại | BR-PAY-03 |
+| Thứ tự xử lý | Khoá payment và booking; `SUCCEEDED` không lùi theo callback lỗi cũ. Payment FAILED do timeout có thể chuyển SUCCEEDED khi có bằng chứng xác minh; xử lý booking theo BR-PAY-11. Hoàn là bút toán REFUND mới | BR-PAY-09, BR-PAY-11 |
+
+Nguồn hợp đồng kiểm tra ngày 22-09-2026: [VNPAY Payment 2.1.0/IPN](https://sandbox.vnpayment.vn/apis/docs/thanh-toan-pay/pay.html), [MoMo Payment Notification](https://developers.momo.vn/v3/vi/docs/payment/api/result-handling/notification/). Fixture chữ ký và ACK cần lưu theo phiên bản khi thi công, gồm payload hợp lệ, sai chữ ký, sai tiền, trùng và DB lỗi. Tham chiếu này không thay thế quyền truy cập sandbox/merchant.
 
 ### 5.3. Trình tự xử lý chung cho mọi webhook
 
@@ -664,35 +698,34 @@ sequenceDiagram
     autonumber
     participant EXT as OTA / PSP
     participant W as Webhook Controller
-    participant IDEM as Idempotency Store
     participant DB as PostgreSQL
     participant Q as BullMQ Worker
     participant DOM as Domain + Service
-    EXT->>W: POST raw body + header chữ ký
-    W->>W: kiểm chữ ký HMAC + cửa sổ 300 giây
-    alt chữ ký sai hoặc ngoài cửa sổ
-        W-->>EXT: 401 E_CHAN_SIGNATURE_INVALID
+    EXT->>W: IPN theo giao thức provider
+    W->>W: Xác minh chữ ký, merchant, schema và amount
+    alt xác minh thất bại
+        W-->>EXT: Lỗi theo giao thức provider
     else hợp lệ
-        W->>IDEM: kiểm khoá sự kiện
-        alt sự kiện mới
-            W->>DB: ghi OutboxEvent + payload thô (1 transaction, BR-CHAN-06)
-            W-->>EXT: 202 Accepted trong 300ms (NFR-PERF-05)
-            Q->>DOM: xử lý bất đồng bộ, khoá theo booking/providerTxnId
-            DOM->>DB: cập nhật Booking/Payment + AuditLog (1 transaction, BR-GEN-07)
-            DOM->>Q: phát OutboxEvent đồng bộ tồn & giá (BR-CHAN-02)
-        else đã xử lý
-            IDEM-->>EXT: 200 duplicate, không xử lý lại
+        W->>DB: INSERT Inbox UNIQUE provider + eventId
+        alt lỗi commit
+            W-->>EXT: Lỗi retryable, không ACK thành công
+        else đã ghi bền hoặc bản trùng cùng hash đã tồn tại
+            W-->>EXT: ACK theo OTA simulator hoặc PSP
+            Q->>DOM: Đọc Inbox chưa xử lý, khóa aggregate
+            DOM->>DB: Nghiệp vụ + Audit + Outbox + Inbox processed cùng TX
+            Q->>DB: Đọc Outbox đã commit để gửi ra
         end
     end
 ```
 
 **Quy tắc bắt buộc cho cả hai nhóm**
 
-1. **Ghi bền rồi mới ack** — không bao giờ ack trước khi `OutboxEvent` nằm trong CSDL.
+1. **Ghi bền rồi mới ACK** — Inbox là sự kiện vào, Outbox là sự kiện ra; không dùng Redis/BullMQ đơn độc làm bằng chứng đã lưu. PSP có thể ghi payment receipt cùng Inbox trong transaction nhận, còn xử lý nặng ở worker.
 2. Xử lý bất đồng bộ; controller **KHÔNG** gọi động cơ giá hay nghiệp vụ nặng (NFR-PERF-05).
 3. Mọi sự kiện vào đều idempotent theo khoá tự nhiên của nhà cung cấp (BR-GEN-08, BR-PAY-03).
 4. Ngoài hai nhóm trên, **không** endpoint nào cho phép hệ thống ngoài gọi vào nghiệp vụ.
 5. Lỗi xử lý nền **PHẢI** quan sát được: log JSON có `traceId` và metric cảnh báo (NFR-OBS-01, NFR-OBS-04).
+6. Cửa sổ chữ ký simulator 300 giây không áp máy móc lên PSP; tuân thủ từng giao thức và vẫn nhận retry hợp lệ. Không log raw payload chứa PII hoặc secret; lưu payload tối thiểu có kiểm soát truy cập. Sự kiện lỗi mapping vẫn nằm trong Inbox để replay có audit sau sửa mapping.
 
 ---
 
@@ -705,7 +738,7 @@ sequenceDiagram
 | `POST /payments` | FRONT_DESK | `booking.propertyId ∈ propertyScope` | PIN 6 số; ghi `createdBy` để đối soát (BR-PAY-06) |
 | `POST /payments/online` | GUEST (chủ booking) hoặc FRONT_DESK | Booking thuộc khách hoặc cơ sở trong phạm vi | Chỉ khởi tạo; kết quả do PSP xác nhận (BR-PAY-03) |
 | `POST /refund-requests` | FRONT_DESK | `booking.propertyId ∈ propertyScope` | `isForceMajeure` yêu cầu `MANAGER`+ và lý do ≥ 20 ký tự (BR-CANCEL-13) |
-| `POST /refund-requests/{id}/approve` | MANAGER | Cơ sở của booking | Người duyệt ≠ người tạo; > 5.000.000 VND bắt buộc hai cấp (BR-CANCEL-15) |
+| `POST /refund-requests/{id}/approve` | MANAGER | Cơ sở của booking | Người duyệt MANAGER/OWNER ≠ người tạo, đúng scope; hai cấp là người lập + người duyệt độc lập, không phải MANAGER rồi OWNER (BR-CANCEL-15) |
 | `POST /refund-requests/{id}/pay` | ACCOUNTANT | Cơ sở của booking | Chỉ khi `APPROVED`; hoàn về phương thức gốc (BR-CANCEL-16, BR-PAY-08) |
 | `GET /reconciliation/**` | ACCOUNTANT | Cơ sở trong phạm vi; `OWNER` xem toàn chuỗi | Chênh lệch > 50.000 VND phải báo `MANAGER` (BR-PAY-10) |
 | `POST /room-moves` | FRONT_DESK | Cả cơ sở đi và cơ sở đến thuộc phạm vi | `MANAGER`+ duyệt khi có bồi thường; khác thành phố cần đồng thuận (BR-OVER-06,07) |
@@ -722,9 +755,45 @@ sequenceDiagram
 |---|---------|--------|
 | 1 | Guard xác thực → guard vai trò → guard phạm vi cơ sở → guard trạng thái nghiệp vụ, đúng thứ tự đó | BR-RBAC-02, NFR-SEC-01 |
 | 2 | Phạm vi cơ sở **PHẢI** áp ở tầng truy vấn (`propertyId IN propertyScope`), không lọc sau khi đọc | BR-RBAC-02 |
-| 3 | `OWNER` không giới hạn cơ sở; mọi vai trò khác có `propertyScope` bắt buộc khác rỗng | BR-RBAC-02 |
+| 3 | `OWNER` có phạm vi chuỗi, không có nghĩa được phép mọi thao tác. SYSADMIN thao tác hạ tầng toàn hệ thống qua quyền kỹ thuật, không đọc hồ sơ nghiệp vụ; vai trò nghiệp vụ khác có propertyScope khác rỗng | BR-RBAC-02 |
 | 5 | `ACCOUNTANT` đọc dữ liệu thanh toán/hoàn tiền nhưng **không** tạo và **không** huỷ booking | BR-RBAC-03 |
 | 7 | Lớp ca sử dụng **lặp lại** kiểm tra bất biến nghiệp vụ (phòng thủ nhiều lớp), không tin tưởng guard ở tầng API | BR-BOOK-14, BR-INV-03 |
+
+### 6.3. Tập permission và projection bắt buộc
+
+Bảng này triển khai BR-RBAC-03, có hiệu lực cho các nhãn tóm tắt trong §2/§6.1; **không so sánh role theo thứ tự số**. Mọi route chưa được ánh xạ permission phải fail closed khi khởi động/test hợp đồng. Không tự cấp quyền viết vì được phép đọc. Khách và service principal được xử lý riêng, không gán vào vai trò nhân viên.
+
+| Nhóm thao tác | Tập được phép | Điều kiện trên dữ liệu |
+|---|---|---|
+| Tìm phòng, báo giá, xem gói giá đang bán | Công khai | Chỉ WEB, response công khai không lộ quota/hoa hồng/giới hạn oversell/PII; rate limit và giới hạn khoảng ngày |
+| Khách đặt/giữ, xem, đổi ngày, huỷ, trả trực tuyến | GUEST | Chỉ principal sở hữu; không khai FORCE_MAJEURE, hotel relocation, phí/giá/phê duyệt; phòng con thuộc booking |
+| Xem booking/lịch tồn vận hành | FRONT_DESK, RESERVATION_AGENT, MANAGER, OWNER | Đúng cơ sở; ACCOUNTANT chỉ projection cần đối soát; HOUSEKEEPING dùng task/rooms tối giản, không booking |
+| Tạo/sửa/huỷ booking tại quầy/điện thoại, giải phóng hold | FRONT_DESK, RESERVATION_AGENT | Các ngoại lệ cần quyết định MANAGER/OWNER riêng, không nâng quyền toàn request |
+| Ghi nhận khoản thu | FRONT_DESK, RESERVATION_AGENT, ACCOUNTANT | RESERVATION_AGENT chỉ nhận cọc; ACCOUNTANT ghi nhận khi đối soát; PIN gắn người, hành động, đối tượng và amount |
+| Check-in/out, no-show thủ công, thực thi move/merge | FRONT_DESK | No-show chỉ khi đã tới mốc BR-CANCEL-10; mọi guard trạng thái/sức chứa/sẵn sàng vẫn áp dụng |
+| Lập hồ sơ hoàn từ nghiệp vụ | FRONT_DESK, RESERVATION_AGENT, MANAGER, OWNER; service principal được chỉ định | Quyền thao tác nguồn, snapshot, giữ hạn mức hoàn; khách tạo qua lệnh cancel của chính mình |
+| Duyệt/từ chối hoàn, duyệt move/merge/ngoại lệ | MANAGER, OWNER | Khác người lập, đúng cơ sở, số tiền/version như lúc duyệt; nguyên tắc BR-CANCEL-15 |
+| Chi hoàn/bồi thường, đối soát và xuất tài chính | ACCOUNTANT | Hồ sơ đã duyệt; tệp xuất gắn principal và scope, URL tải có hạn, không dùng link công khai |
+| Đọc báo cáo tài chính | ACCOUNTANT, OWNER | MANAGER chỉ báo cáo vận hành cơ sở của mình; không có quyền chi tiền vì được xem báo cáo |
+| Tạo block, cấu hình quota, đồng bộ kênh, xử lý case | MANAGER, OWNER | Đúng scope; đối tượng đích và các booking bị ảnh hưởng cùng được kiểm tra |
+| Giá/mùa/kênh/policy/rateplan/tham số nghiệp vụ | OWNER | MANAGER chỉ khuyến mãi được UC-RATE-04 cho phép trong scope, không sửa giá/policy qua endpoint khuyến mãi |
+| Xem/cập nhật dọn phòng | HOUSEKEEPING, FRONT_DESK, MANAGER | HOUSEKEEPING chỉ việc được giao và PENDING/IN_PROGRESS/DONE; FRONT_DESK/MANAGER phân công, INSPECTED/mở lại; không trả giấy tờ/giá |
+| Hồ sơ khách, điểm | FRONT_DESK, RESERVATION_AGENT, MANAGER, OWNER | Projection phù hợp nhiệm vụ, khách phải có booking thuộc scope; không lộ lịch sử toàn chuỗi từ số điện thoại |
+| Blacklist/ẩn danh hoá | MANAGER, OWNER | Có lý do, quyền trên hồ sơ, kiểm tra lịch lưu giữ và nghĩa vụ đang mở |
+| Thông báo đã gửi/gửi lại | FRONT_DESK, RESERVATION_AGENT, MANAGER | Đúng booking/scope, che thông tin người nhận trên danh sách, chống gửi trùng |
+| Người dùng/quyền | OWNER, SYSADMIN | Không tự cấp quyền nghiệp vụ, có audit, chống loại bỏ quản trị cuối; thay quyền/vô hiệu hoá thu hồi phiên |
+| Backup/restore/tham số kỹ thuật/health chi tiết | SYSADMIN | Tách credential hạ tầng; restore chỉ môi trường diễn tập; không gồm quyền thanh toán |
+| Audit | MANAGER, OWNER; SYSADMIN projection kỹ thuật | Lọc scope và che PII, không trả token/bí mật/payload thanh toán |
+
+Phiên refresh có token hash, family, expiry, revokedAt; rotation reuse thu hồi family. Web back-office phải cưỡng chế **idle timeout** ở máy chủ theo BR-RBAC-05, không chỉ dùng JWT có tuổi thọ cố định. Dùng cookie HttpOnly/Secure và bảo vệ CSRF nếu xác thực cookie; Android dùng secure storage. PIN có rate limit độc lập; token PIN một lần không được replay sang booking/amount khác, nhưng retry idempotent thành công được trả kết quả cũ sau kiểm quyền.
+
+### 6.4. Hợp đồng validation và tác vụ dài
+
+- `adults`/`children`/`roomCount` là số nguyên; `childAges[]` phải có đúng `children` phần tử, tuổi tính tại ngày nhận phòng theo BR-BOOK-05, không thu ngày sinh nếu chỉ cần nhóm tuổi. Quote snapshot lưu nhóm tuổi và phụ thu áp dụng; chưa chốt cấu hình phụ thu thì không báo giá có phụ thu bằng con số tự đoán.
+- `bookingRoomIds[]` không trùng, tất cả ACTIVE và thuộc đúng booking. Khoảng lưu trú là `[checkIn, checkOut)`; bộ lọc báo cáo phải khai rõ `businessDate` hay thời điểm UTC và không dùng lẫn. Lệnh đổi ngày phải gửi quote mới đã chấp nhận và version; giữ nguyên giá/điều khoản phần còn lại theo BR-BOOK-12.
+- `requestedAmount`/`approvedAmount` của refund là **tiền hoàn gộp**, `netRefund=max(0, gross-refundFee)` là tiền thực chi. Reservation/leg/payout tính trên net, không trừ phí lần hai. `reason` là enum, `note` là lý do tự do, `evidenceRefs[]` chỉ ID tệp được phép.
+- Lệnh trả 202 (sync, export, backup/restore) trả `{operationId,status,statusUrl}` và `Location`. `GET /api/v1/operations/{operationId}` kiểm tra người khởi tạo/quyền hiện tại, trả PENDING/RUNNING/SUCCEEDED/FAILED, lỗi đã che, resultRef khi có. Trạng thái này là DTO tác vụ kỹ thuật, không mở rộng enum booking/refund. Tệp xuất hết hạn phải tạo yêu cầu mới; không giữ URL tải trong audit công khai.
+- Danh sách có thứ tự ổn định `(sortKey,id)`, cursor gắn bộ lọc/phạm vi và được ký. Không lấy `propertyId` từ cursor làm nguồn cấp quyền. Endpoint ghi từ chối trường lạ để phát hiện lỗi hợp đồng và tránh mass assignment.
 
 ---
 
@@ -763,8 +832,8 @@ sequenceDiagram
 
 | Bên tiêu thụ | Ràng buộc |
 |--------------|-----------|
-| Web khách & web back-office | Dùng chung `packages/contracts`; nâng cấp cùng nhịp API |
-| Android (ACT-02, ACT-04, ACT-07) | Bản cũ **PHẢI** chạy được với API mới ít nhất **3 tháng**; dùng cờ tính năng từ `/system-settings` thay vì buộc nâng cấp (BR-SYS-02) |
+| Customer web + operations web | Dùng chung `packages/contracts` và `packages/api-client`; mỗi app có release/version gate độc lập |
+| Customer Android + operations Android | Bản cũ **PHẢI** chạy được với API mới ít nhất **3 tháng**; dùng cờ tính năng từ `/system-settings` thay vì buộc nâng cấp (BR-SYS-02) |
 | `ChannelAdapter` (OTA) | Hợp đồng adapter là nội bộ; payload nhà cung cấp được chuẩn hoá ở ACL, không rò vào miền |
 
 ---
@@ -782,8 +851,8 @@ sequenceDiagram
 
 ## Tham chiếu
 
-- [00 — Tổng quan dự án](../00-tong-quan.md) — từ điển thực thể, enum, danh mục 52 use case, 13 module, stack
-- [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — nguồn chân lý 136 quy tắc BR
+- [00 — Tổng quan dự án](../00-tong-quan.md) — từ điển thực thể, enum, danh mục 53 use case, 13 module, stack
+- [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — nguồn chân lý 139 quy tắc BR
 - [02 — Chính sách huỷ & hoàn cọc](../02-nghiep-vu/chinh-sach-huy-hoan-coc.md) — thang mốc thời gian, bảng quyết định
 - [02 — Động giá](../02-nghiep-vu/dong-gia.md) — công thức giá và thứ tự hệ số
 - [02 — Quá tải – ghép & đổi phòng](../02-nghiep-vu/qua-tai-ghep-doi-phong.md) — thang điều chuyển, walk-out

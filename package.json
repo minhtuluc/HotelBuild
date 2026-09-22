@@ -1,0 +1,28 @@
+{
+  "name": "pine-hill-ooad-docs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Executable checks for the OOAD documentation; no production application",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "check": "npm run check:docs && npm test",
+    "check:docs": "npm run check:links && npm run check:mermaid && npm run check:ids",
+    "check:links": "node scripts/check-links.mjs",
+    "check:mermaid": "node scripts/check-mermaid.mjs",
+    "check:ids": "node scripts/check-ids.mjs",
+    "extract:sql": "node scripts/extract-sql.mjs",
+    "test": "npm run test:tooling && npm run test:db",
+    "test:tooling": "node --test tests/tooling.test.mjs",
+    "test:db": "node --test --test-concurrency=1 tests/database.test.mjs",
+    "test:postgres": "node scripts/test-postgres.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
+    "github-slugger": "^2.0.0",
+    "jsdom": "^26.1.0",
+    "markdown-it": "^14.1.0",
+    "mermaid": "^11.12.0",
+    "pg": "^8.16.3"
+  }
+}

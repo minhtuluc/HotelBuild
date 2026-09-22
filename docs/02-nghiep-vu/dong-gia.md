@@ -16,7 +16,7 @@
 | Hệ số công suất lấy ở đâu, snapshot trễ thì sao? | §6 | BR-RATE-01 bước 4, BR §4.3 | UC-INV-01 |
 | Khuyến mãi bị cắt trần 30% và bị chặn bởi sàn giá xử lý thế nào? | §5 ca 6, §8 | BR-RATE-10..14 | UC-RATE-04 |
 | Gói dài ngày `LONGSTAY14` được bảo đảm rẻ hơn `FLEX7` bằng cách nào? | §5 ca 4 | BR-RATE-19 | UC-RATE-01, UC-RATE-04 |
-| Vì sao web khách, app Android và API phải ra cùng một giá? | §9 | BR-RATE-15..17 | UC-RATE-05 |
+| Vì sao bốn frontend và API phải ra cùng một giá? | §9 | BR-RATE-15..17 | UC-RATE-05 |
 
 Giới hạn thời gian phản hồi của động cơ giá: **NFR-PERF-04** (≤ 20 ms cho 14 đêm). Yêu cầu miền thuần: **NFR-MAIN-01** (`packages/domain`, 0 I/O). Tiền VND số nguyên: **NFR-LOC-03**.
 
@@ -64,7 +64,7 @@ flowchart TD
 
 | # | Đầu vào | Phép tính | Nguồn dữ liệu | Quy tắc | Ví dụ (STD, SE-SUM 1,40, đêm Thứ Sáu, công suất 92%, kỳ 5 đêm → LOS 0,95, kênh WEB) |
 |---|---|---|---|---|---|
-| 1 | Loại phòng + ngày + kênh + gói giá | Chọn dòng `RateCalendar` có `priority` cao nhất khớp khoá; không dòng nào khớp → `RoomType.basePrice` | `RateCalendar` (`priority`, `source`, `channelCode`), `RatePlan.fixedNightlyPrice`, `RoomType.basePrice` | BR-RATE-02, BR-RATE-03 | `650.000` (dòng `BASE` / giá mặc định) |
+| 1 | Loại phòng + ngày + kênh + gói giá | Chọn dòng `RateCalendar` có `priority` cao nhất khớp khoá gồm ratePlanId khi nguồn RATE_PLAN; không dòng nào khớp → `RoomType.basePrice` | `RateCalendar` (`priority`, `source`, `channelCode`), `RatePlan.fixedNightlyPrice`, `RoomType.basePrice` | BR-RATE-02, BR-RATE-03 | `650.000` (dòng `BASE` / giá mặc định) |
 | 2 | base, mùa của đêm | `p1 = base × multiplier` | `Season` đã chọn theo §4 | BR-RATE-05 | `650.000 × 1,40 = 910.000` |
 | 3 | p1, thứ trong tuần (giờ VN), cờ phụ thu cuối tuần của mùa | `p2 = p1 × 1,20` nếu là **Thứ Sáu/Thứ Bảy** **và** mùa cho phép; ngược lại `p2 = p1` | `Season.weekendSurchargeEnabled`, `SystemSetting` `pricing.weekendMultiplier`, BR-GEN-05 | BR-RATE-06 | Thứ Sáu: `910.000 × 1,20 = 1.092.000` |
 | 4 | p2, công suất cơ sở trong đêm | `p3 = p2 × hệ số công suất`; snapshot cũ hơn 5 phút → hệ số `1,00` | `OccupancySnapshot` của `(propertyId, date)`; ngưỡng `pricing.occupancyMidPct` / `pricing.occupancyHighPct` | BR-RATE-01 bước 4, BR §4.3, §6 | `1.092.000 × 1,15 = 1.255.800` |
@@ -81,7 +81,7 @@ flowchart TD
 | `source` | `priority` | Ý nghĩa | Thắng khi nào |
 |---|---|---|---|
 | `OVERRIDE` | **100** | Ghi đè tường minh theo ngày (lễ, sự kiện, giá thoả thuận) | Cao nhất |
-| `RATE_PLAN` | **90** | Giá cố định của gói giá | Không có `OVERRIDE` khớp |
+| `RATE_PLAN` | **90** | Giá base của đúng ratePlanId; không dùng cho gói khác | Không có `OVERRIDE` khớp |
 | `SEASON` | **50** | Lịch giá theo mùa | Không có hai mức trên |
 | `BASE` | **10** | Giá nền theo ngày của loại phòng | Không có ba mức trên |
 
@@ -378,12 +378,12 @@ Chênh 60.000 VND chỉ vì thứ tự — đây là lý do BR-RATE-13 phải c�
 |---|---|
 | Thực thể | `OccupancySnapshot`: `id`, `propertyId`, `roomTypeId`, `date`, `physicalRooms`, `soldRooms`, `occupancyPct`, `capturedAt` (00 §7.2) |
 | Phạm vi tính | Theo `(propertyId, date)` — công suất của **cơ sở**, không theo loại phòng, không theo kênh (BR §4.3). Dòng `roomTypeId` **rỗng** là dòng tổng hợp cấp cơ sở và là dòng duy nhất mà bước 4 đọc |
-| Tử số (`soldRooms`) | Số phòng có `RoomAssignment` đang hoạt động trong đêm đó **+** số booking đang `HELD` còn hiệu lực (`Hold.status = ACTIVE`) |
-| Mẫu số (`physicalRooms`) | Số phòng `ACTIVE` của cơ sở **đã trừ `RoomBlock`** (và đã loại `MAINTENANCE`/`INACTIVE` theo BR-PROP-06) |
-| Phòng bị `RoomBlock` | **Không** vào tử số (không bán được) và **cũng không** vào mẫu số (không phải nguồn cung khả dụng) ⇒ cơ sở khoá nửa số phòng vẫn có thể đạt công suất 100% |
+| Tử số (`soldRooms`) | Tổng demand thương mại BR-INV-01 theo đơn vị bán; gồm hold HELD/PENDING_PAYMENT còn hạn và oversold chưa gán, đếm một lần theo BookingRoom |
+| Mẫu số (`physicalRooms`) | Tên legacy nhưng giá trị là supply theo đơn vị bán BR-INV-01; DOR là giường ở cả tử và mẫu, block trùng loại một lần |
+| Phòng bị `RoomBlock` | Giảm supply; booking đã cam kết vẫn ở demand cho tới xử lý. Không xoá nhu cầu của khách chỉ vì phòng bị block |
 | Tần suất cập nhật | Mỗi **5 phút** (300 giây) |
-| Nguồn tính lại | Bản ghi `RoomAssignment` và `Hold` (nguồn chân lý), không tính từ `ChannelAllotment` |
-| Đọc khi báo giá | Đọc **một lần** ở đầu mỗi `PriceQuote` và dùng cho **mọi** đêm của kỳ lưu trú; ghi lại thời điểm chụp vào `PriceSnapshot` (BR-RATE-16) |
+| Nguồn tính lại | Booking/BookingRoom/Room/RoomBlock/assignment từ CSDL; Hold Redis chỉ cache, không là nguồn chân lý |
+| Đọc khi báo giá | Chốt tập snapshot **từng đêm** tại một quotedAt; lưu ID và capturedAt của từng dòng vào PriceSnapshot. Cùng quote không đọc lại sau khi đã chốt |
 | Bất biến | Hệ số công suất áp ở bước 4, **trước** hệ số LOS và hệ số kênh (BR-RATE-01) |
 
 | Tình huống | Kịch bản | Hệ quả | Đối sách |
@@ -392,7 +392,7 @@ Chênh 60.000 VND chỉ vì thứ tự — đây là lý do BR-RATE-13 phải c�
 | Snapshot trễ trong lúc cầu thấp | Công suất thực 60%, snapshot 6 phút tuổi | Cũng về `1,00` — trùng với hệ số đúng, không thiệt hại | Không cần xử lý |
 | `capturedAt` trong tương lai | Lệch đồng hồ giữa các tiến trình | Không xác định được snapshot có hợp lệ hay không | Chốt thời gian theo UTC từ một nguồn (BR-GEN-02); coi `capturedAt > quotedAt` là không hợp lệ → hệ số `1,00` |
 | Nhảy bậc giữa hai bậc | 79,99% → 80,00% | Giá một đêm nhảy 15% (`1,00 → 1,15`) | Chấp nhận theo BR §4.3; hiển thị hệ số và % công suất trên màn hình UC-RATE-05 để lễ tân giải thích được |
-| Đọc snapshot khác nhau cho các đêm trong cùng kỳ | Hai đêm đọc hai bản chụp khác nhau | Cùng một kỳ lưu trú bị hai hệ số công suất khác nhau — không tất định theo BR-RATE-17 | Chốt một bản chụp cho cả `PriceQuote` (xem §9.2 dòng 5) |
+| Đọc snapshot theo từng đêm | Công suất ngày A và B khác nhau nên hệ số có thể khác | Đây là đúng nghiệp vụ; chỉ đọc lại cùng đêm giữa một lần tính mới gây bất định | Chốt tập snapshot tại quotedAt |
 
 Bất đối xứng có chủ đích: quy tắc "trễ thì dùng 1,00" khiến hệ thống **chỉ có thể bán thiếu phụ thu**, không bao giờ báo giá cao hơn công suất thực — đánh đổi để giữ uy tín giá niêm yết.
 
@@ -468,11 +468,13 @@ Ghi chú kiểm thử cho E4: mức giảm lớn nhất còn hợp lệ của bo
 
 ## 9. Tính tất định
 
+UC-RATE-06 kiểm toàn bộ gói/policy trước lưu. Quote ràng buộc principal, kênh, ngày, số đơn vị, khách và childAges, gói, khuyến mãi; quote không giữ tồn. Kiểm hạn trước tạo hold, sau hold snapshot đã chốt không đổi do cấu hình hoặc quote hết hạn. Chính sách huỷ đọc policySnapshotJson theo BR-RATE-20.
+
 ### 9.1. Phát biểu
 
-**BR-RATE-17:** cùng bộ đầu vào `(roomTypeId, propertyId, channelCode, ratePlanId, checkIn, checkOut, adults, children, promoCode, thời điểm)` phải cho cùng một kết quả trên web khách, app Android và API. Bộ đầu vào này là **toàn bộ** những gì `PricingEngine` được phép đọc ngoài cấu hình giá đã chốt; mọi thứ khác phải truyền vào qua tham số.
+**BR-RATE-17:** cùng bộ đầu vào `(roomTypeId, propertyId, channelCode, ratePlanId, checkIn, checkOut, adults, children, promoCode, thời điểm)` phải cho cùng một kết quả trên customer web, customer Android, operations web, operations Android và API. Bộ đầu vào này là **toàn bộ** những gì `PricingEngine` được phép đọc ngoài cấu hình giá đã chốt; mọi thứ khác phải truyền vào qua tham số.
 
-Bằng chứng kiểm chứng được: §5 ca 1–6 tái lập được bằng tay; kết quả trong bảng là giá trị duy nhất đúng và ba nền tảng phải trả cùng `total`. Với E1–E3, kết quả phụ thuộc yếu tố thời gian (thứ trong tuần) → phải xác định theo `Asia/Ho_Chi_Minh`, không theo múi giờ tiến trình. Mọi `PriceQuote`/`PriceSnapshot` PHẢI mang `engineVersion` (00 §7.2) để phân biệt lệch do nghiệp vụ với lệch do phiên bản động cơ.
+Bằng chứng kiểm chứng được: §5 ca 1–6 tái lập được bằng tay; kết quả trong bảng là giá trị duy nhất đúng và bốn frontend cùng API phải trả cùng `total`. Với E1–E3, kết quả phụ thuộc yếu tố thời gian (thứ trong tuần) → phải xác định theo `Asia/Ho_Chi_Minh`, không theo múi giờ tiến trình. Mọi `PriceQuote`/`PriceSnapshot` PHẢI mang `engineVersion` (00 §7.2) để phân biệt lệch do nghiệp vụ với lệch do phiên bản động cơ.
 
 ### 9.2. Nguồn gây bất định phải loại trừ
 
@@ -482,7 +484,7 @@ Bằng chứng kiểm chứng được: §5 ca 1–6 tái lập được bằng 
 | 2 | Số thực dấu phẩy động | `650.000 × 2,20 × 1,10` (dòng SE-NY, cột WALKIN của §3.2) trên kiểu `number` cho `1.573.000,0000000002`; `Math.ceil(x/1000)*1000` ra **1.574.000**, sai 1.000 VND | `Money` số nguyên; hệ số biểu diễn dạng phần nghìn (850, 1190, 1250) và chia có làm tròn tường minh | BR-GEN-01, NFR-LOC-03 |
 | 3 | Thứ tự tra nguồn giá cơ bản | Đổi thứ tự `OVERRIDE`/`RATE_PLAN`/`SEASON`/`BASE` → base khác | Cài đặt đúng `priority` giảm dần 100/90/50/10, có ca kiểm thử cho từng tầng và cho trường hợp dòng khai `channelCode` | BR-RATE-02 |
 | 4 | Múi giờ khi xác định thứ trong tuần | `Date.getDay()` phụ thuộc `TZ` của tiến trình; 01/01/2027 là Thứ Sáu ở VN nhưng vẫn là Thứ Năm ở UTC | Chuyển sang giờ VN trước khi xét thứ; tuần bắt đầu Thứ Hai, cuối tuần T6/T7 | BR-GEN-05, NFR-LOC-02/04 |
-| 5 | Bản chụp công suất đọc nhiều lần | Mỗi đêm đọc một `OccupancySnapshot` khác nhau → giá không tái lập được | Chốt một bản chụp cho mỗi `PriceQuote`, so tuổi snapshot với `quotedAt`, ghi id + `capturedAt` vào `PriceSnapshot` | BR-RATE-16, BR-RATE-01 bước 4 |
+| 5 | Đọc lại cùng đêm giữa một lần tính | Snapshot thay khi đang tính tạo kết quả không tái lập | Chốt tập snapshot từng đêm tại quotedAt; lưu ID/capturedAt từng dòng | BR-RATE-16, BR-RATE-01 |
 | 6 | Thứ tự áp nhiều khuyến mãi xếp chồng | `AMOUNT` 300.000 + `PERCENT` 20% cho `2.354.000`, đảo thứ tự cho `2.294.000` — chênh 60.000 (§5 ca 6) | Áp `AMOUNT` trước, `PERCENT` sau, cùng loại theo `code` tăng dần | BR-RATE-13 |
 | 7 | Bộ đếm `usedCount`/`maxUses` | Hai request đồng thời cùng đọc `usedCount` còn 1 → cả hai đều được áp | Kiểm tra và tăng `usedCount` trong cùng transaction; BR-RATE-14 từ chối tại thời điểm xác nhận | BR-RATE-14 |
 | 8 | Tie-break mùa | Hai dòng cấu hình trùng `priority` và trùng độ dài khoảng → phụ thuộc thứ tự tạo bản ghi | Ghi `seasonId` đã chọn vào `PriceSnapshot`; cài đúng bậc 3 của BR §4.2 (`createdAt` nhỏ hơn thắng, không dùng `id` UUID) | BR §4.2 |
@@ -506,7 +508,7 @@ Bằng chứng kiểm chứng được: §5 ca 1–6 tái lập được bằng 
 | I5 | Làm tròn lên phải làm **theo từng đêm** (bước 8), không dồn về cuối chuỗi | Ca 4: 10 đêm × 172.000 + 4 đêm × 206.000 = `2.544.000`. Nếu cộng `p5` trước rồi mới làm tròn một lần: `2.539.587,50 → 2.540.000`, lệch 4.000 | `TC-RATE-12` |
 | I6 | `subtotal − discount ≥ Σ minPrice`, nếu vi phạm thì bỏ mã và giữ giá gốc | E4 | `TC-RATE-22` |
 | I7 | Mọi kênh có hoa hồng > 0 và **không chạm trần** có `giá niêm yết × (1 − hoa hồng) ≥ giá niêm yết WEB`; nếu chạm trần thì hệ thống phải cảnh báo | §7.2, §7.3 | `TC-RATE-22` |
-| I8 | Cùng đầu vào, 3 lần gọi trên 3 nền tảng ⇒ 1 giá trị | BR-RATE-17 | `TC-RATE-22` |
+| I8 | Cùng đầu vào, 5 lần gọi trên API + 4 frontend ⇒ 1 giá trị | BR-RATE-17 | `TC-RATE-22` |
 
 ---
 
@@ -528,8 +530,8 @@ Mọi bổ sung mới (nếu phát sinh) PHẢI ghi vào danh sách trên, **kh�
 
 ## Tham chiếu
 
-- [00 — Tổng quan dự án](../00-tong-quan.md) — từ điển thực thể (`RateCalendar`, `Season`, `Channel`, `OccupancySnapshot`), enum, danh mục 52 use case, quyết định công nghệ
-- [02 — Quy tắc nghiệp vụ](quy-tac-nghiep-vu.md) — **nguồn chân lý** của 136 quy tắc BR (trong đó `BR-RATE-01..19`) và mọi hệ số dùng trong tài liệu này
+- [00 — Tổng quan dự án](../00-tong-quan.md) — từ điển thực thể (`RateCalendar`, `Season`, `Channel`, `OccupancySnapshot`), enum, danh mục 53 use case, quyết định công nghệ
+- [02 — Quy tắc nghiệp vụ](quy-tac-nghiep-vu.md) — **nguồn chân lý** của 139 quy tắc BR (trong đó `BR-RATE-01..20`) và mọi hệ số dùng trong tài liệu này
 - [02 — Chính sách huỷ & hoàn cọc](chinh-sach-huy-hoan-coc.md) — cọc theo gói giá, thang mốc thời gian (BR-CANCEL-02, BR-CANCEL-05)
 - [02 — Quá tải, ghép & đổi phòng](qua-tai-ghep-doi-phong.md) — giá gốc được giữ khi điều chuyển (BR-OVER-08)
 - [01 — Yêu cầu chức năng](../01-yeu-cau/yeu-cau-chuc-nang.md) — FR-RATE-*

@@ -13,7 +13,7 @@
 | Trong phạm vi | 3 máy trạng thái · 6 sơ đồ hoạt động · 3 sơ đồ tuần tự mức phân tích · bảng sự kiện miền · ma trận trạng thái × hành động |
 | Ngoài phạm vi | Chi tiết lớp, khung nhìn triển khai, mã lỗi HTTP, hợp đồng REST (xem [04/thiết kế lớp](../04-thiet-ke/thiet-ke-lop.md), [04/API](../04-thiet-ke/api.md)) |
 | Mức trừu tượng | Chỉ đối tượng **miền** và **lớp ca sử dụng**; không tô màu, không gắn nhãn lớp kỹ thuật (controller, repository, HTTP) |
-| Quy mô tham chiếu | **13 module · 52 use case · 136 quy tắc BR** theo [00 §5, §8](../00-tong-quan.md); mọi mã BR/UC trong tài liệu này lấy từ hai danh mục đó |
+| Quy mô tham chiếu | **13 module · 53 use case · 139 quy tắc BR** theo [00 §5, §8](../00-tong-quan.md); mọi mã BR/UC trong tài liệu này lấy từ hai danh mục đó |
 
 | Quy ước | Nghĩa |
 |---------|-------|
@@ -75,12 +75,12 @@ stateDiagram-v2
 | E4 | `DRAFT` | OTA đẩy booking vào qua webhook | `PaymentMethod = OTA_COLLECT` và OTA báo đã thu tiền; **miễn trừ** điều kiện `overbookLimitPct` (BR-CHAN-03), cho phép tạo kể cả khi tồn khả dụng bằng 0 | `CONFIRMED` | Đặt `oversold = true` nếu không còn phòng vật lý; mở `OverbookingCase`; phát **`BookingConfirmed`** | BR-CHAN-03, BR-OVER-01, BR-OVER-02, BR-OVER-03 |
 | E5 | `HELD` | Khách bắt đầu thanh toán | `hold` chưa hết hạn; `Payment` tạo mới ở `PENDING` | `PENDING_PAYMENT` | Giữ nguyên `RoomAssignment`; chưa giải phóng `Hold` | BR-BOOK-07, BR-PAY-05 |
 | E6 | `HELD` | Đã thu đủ tiền cọc (ghi nhận tại quầy hoặc chuyển khoản) | `paidAmount ≥ depositAmount`; hoặc giao dịch dùng `PaymentMethod = OTA_COLLECT`; hoặc `MANAGER`+ cho phép ghi nợ có lý do | `CONFIRMED` | Giữ `PriceSnapshot` đã lưu khi rời `DRAFT` (bất biến, kèm `engineVersion`); `Hold.status = RELEASED`; phát **`BookingConfirmed`** | BR-BOOK-09, BR-RATE-16 |
-| E7 | `HELD` | **`HoldExpired`** do scheduler ACT-11 quét mỗi 30 giây | `now > holdExpiresAt`; xử lý trong vòng 60 giây | `EXPIRED` | Giải phóng mọi `RoomAssignment`; `Hold.status = EXPIRED` trong cùng transaction | BR-BOOK-08, BR-INV-04, BR-SYS-02 |
+| E7 | `HELD` | **`HoldExpired`** do scheduler ACT-11 quét mỗi 30 giây | `decisionAt >= holdExpiresAt`; xử lý trong vòng 60 giây | `EXPIRED` | Giải phóng mọi `RoomAssignment`; `Hold.status = EXPIRED` trong cùng transaction | BR-BOOK-08, BR-INV-04, BR-SYS-02 |
 | E8 | `HELD` | Yêu cầu huỷ | Tra bậc `CancellationTier` theo `hoursBeforeCheckIn`; không có bất khả kháng | `CANCELLED` | Tính hoàn theo `paidAmount`; giải phóng `RoomAssignment`; phát **`BookingCancelled`**; mở `RefundRequest` nếu tiền hoàn lớn hơn 0 | BR-BOOK-11, BR-CANCEL-01, BR-CANCEL-04 |
 | E9 | `PENDING_PAYMENT` | **`PaymentSucceeded`** từ cổng thanh toán | Callback idempotent theo `idempotencyKey`; callback gửi lại cùng khoá đã xử lý trả `E_PAY_CALLBACK_DUPLICATE` và **không** tạo `Payment` mới; `paidAmount ≥ depositAmount`, hoặc `PaymentMethod = OTA_COLLECT`, hoặc `MANAGER`+ cho phép ghi nợ | `CONFIRMED` | Giữ `PriceSnapshot` đã lưu kèm `engineVersion`; phát **`BookingConfirmed`**; gửi thông báo xác nhận | BR-PAY-03, BR-BOOK-09, BR-RATE-16 |
 | E10 | `PENDING_PAYMENT` | Hết hạn giao dịch | Quá 15 phút không có callback, hoặc `holdExpiresAt` đã qua | `EXPIRED` | Chuyển `Payment` sang `FAILED`; giải phóng `RoomAssignment`; `Hold.status = RELEASED` hoặc `EXPIRED` | BR-PAY-05, BR-BOOK-08 |
 | E11 | `PENDING_PAYMENT` | Yêu cầu huỷ | Khách hoặc nhân viên huỷ khi chưa thu được tiền; `refundBase = paidAmount` | `CANCELLED` | Tính hoàn trên phần đã trả; giải phóng `RoomAssignment`; phát **`BookingCancelled`** | BR-CANCEL-04, BR-BOOK-11 |
-| E12 | `CONFIRMED` | Check-in tại quầy | `penaltyAmount + balanceDue = 0`; hoặc cho phép ghi nợ khi nợ ≤ `deal.threshold.checkInDebt` **và** ≤ `checkInDebtPct` của `totalAmount` do `MANAGER`+ duyệt, vượt cả hai ngưỡng phải `OWNER` duyệt; ngày VN hiện tại = ngày `checkIn`; không quá 23:59 ngày nhận phòng | `CHECKED_IN` | Gán phòng vật lý, đánh dấu khách đã tới nơi; ghi `AuditLog` kèm lý do và hạn thu của khoản nợ | BR-FO-01, BR-FO-02, BR-SYS-02 |
+| E12 | `CONFIRMED` | Check-in tại quầy | `balanceDue = 0`; hoặc cho phép ghi nợ khi nợ ≤ `deal.threshold.checkInDebt` **và** ≤ `checkInDebtPct` của `totalAmount` do `MANAGER`+ duyệt, vượt một trong hai ngưỡng phải `OWNER` duyệt; ngày VN hiện tại = ngày `checkIn`; không quá 23:59 ngày nhận phòng | `CHECKED_IN` | Gán phòng vật lý, đánh dấu khách đã tới nơi; ghi `AuditLog` kèm lý do và hạn thu của khoản nợ | BR-FO-01, BR-FO-02, BR-SYS-02 |
 | E13 | `CONFIRMED` | Scheduler ghi no-show lúc 23:59 ngày nhận phòng | Booking còn `CONFIRMED` và chưa check-in | `NO_SHOW` | Áp bậc cuối của chính sách: hoàn 0%, tạo `Payment` loại `PENALTY` ở `PENDING` nếu bậc quy định phụ thu đêm đầu; giải phóng `RoomAssignment` | BR-CANCEL-10, BR-CANCEL-06 |
 | E14 | `CONFIRMED` | **`BookingCancelled`** | Có yêu cầu huỷ hợp lệ; `cancelReason` thuộc `CancelReason`; nếu huỷ theo chính sách kênh ngoài thì `cancelReason = OTA_CANCELLATION`, lưu `channelPolicyCode` và **không** áp bậc hoàn của BR-CANCEL; huỷ **một phần** phòng thì booking **không** đổi trạng thái, chỉ giảm `totalAmount` và lưu `PriceSnapshot` mới `kind = PARTIAL_CANCEL` theo BR-CANCEL-19 | `CANCELLED` | Tính hoàn theo bậc; ghi `cancelledAt`, `cancelReason`, `channelPolicyCode`; giải phóng `RoomAssignment` trong cùng transaction | BR-CANCEL-01, BR-CANCEL-05, BR-BOOK-11, BR-CHAN-04 |
 | E15 | `CHECKED_IN` | Check-out | `balanceDue` chốt về 0; số dư và phụ thu đã thu hoặc `MANAGER`+ cho phép ghi nợ | `CHECKED_OUT` | Tạo `HousekeepingTask`; tích điểm và cập nhật hạng khách; ghi thời điểm trả phòng thực tế | BR-FO-05, BR-FO-06, BR-CRM-03 |
@@ -145,7 +145,7 @@ stateDiagram-v2
 | Mã | Từ | Sự kiện | Điều kiện | Đích | Hành động phát sinh | Mã BR |
 |----|----|---------|-----------|------|---------------------|-------|
 | E17 | `[*]` | Yêu cầu hoàn cọc | Booking `CANCELLED`/`NO_SHOW`/`CHECKED_OUT` có `paidAmount > 0`, hoặc ca walk-out, hoặc bất khả kháng do `MANAGER`+ tạo có lý do và đính kèm `evidenceRefs` | `PENDING` | Lưu `hoursBeforeCheckIn`, `appliedTierId`, `refundPercent`, `requestedAmount`; ghi `AuditLog` | BR-CANCEL-01, BR-CANCEL-03, BR-CANCEL-05, BR-CANCEL-13 |
-| E18 | `PENDING` | Duyệt hoàn tiền | Người duyệt **khác** người tạo; vai trò từ `MANAGER` trở lên; mức trên 5.000.000 VND bắt buộc `MANAGER` khác người tạo hoặc `OWNER` | `APPROVED` | Ghi `approvedBy`, `approvedAmount`, `decidedAt`; `AuditLog` kèm lý do | BR-CANCEL-15, BR-RBAC-03, BR-CANCEL-16 |
+| E18 | `PENDING` | Duyệt hoàn tiền | Người duyệt **khác** người tạo; vai trò `MANAGER` hoặc `OWNER`; mức trên 5.000.000 VND bắt buộc `MANAGER` khác người tạo hoặc `OWNER` | `APPROVED` | Ghi `approvedBy`, `approvedAmount`, `decidedAt`; `AuditLog` kèm lý do | BR-CANCEL-15, BR-RBAC-03, BR-CANCEL-16 |
 | E19 | `PENDING` | Từ chối | Hồ sơ không hợp lệ, sai bậc mốc, hoặc khách không đủ điều kiện; bắt buộc có lý do, `RefundRequest.reason` thuộc enum `CancelReason` | `REJECTED` | Ghi `decidedAt`, `reason`; `AuditLog`; thông báo cho khách | BR-CANCEL-16, BR-SYS-05 |
 | E20 | `PENDING` | Huỷ yêu cầu | Khách rút yêu cầu, hoặc booking được khôi phục; chỉ người tạo hoặc `MANAGER`+ thực hiện, phải ghi lý do; đã `APPROVED` hoặc `PAID` thì **không** được huỷ | `CANCELLED` | Ghi lý do và người thực hiện; `AuditLog`; không tạo bút toán | BR-CANCEL-18, BR-SYS-05 |
 | E21 | `APPROVED` | Chi hoàn tiền | Cổng hoặc quầy xác nhận chi thành công; tổng hoàn luỹ kế của booking không vượt `paidAmount`; hoàn về phương thức gốc | `PAID` | Tạo `Payment` loại `REFUND` trạng thái `SUCCEEDED`; ghi `paidAt`; tăng `Booking.refundedAmount`; thông báo kết quả hoàn tiền cho khách | BR-PAY-07, BR-PAY-08, BR-PAY-09, BR-CANCEL-12 |
@@ -214,7 +214,7 @@ flowchart TD
     A([Khách nhập ngày, số khách, cơ sở]) --> B[Kiểm tra tham số và số đêm theo ratePlan.minNights, maxNights - BR-BOOK-03] --> C{Kỳ lưu trú hợp lệ}
     C -- Không --> C1[Báo E_BOOK_MISSING_FIELD] --> Z([Kết thúc])
     C -- Có --> D[AvailabilityCalculator kiểm tra từng đêm - BR-INV-01, BR-INV-07] --> E{Còn phòng mọi đêm}
-    E -- Không --> E1[Trả E_INV_NO_AVAILABILITY kèm đêm thiếu; gợi ý ngày khác] --> Z
+    E -- Không --> E1[Trả E_INV_NO_AVAILABILITY kèm đêm thiếu, gợi ý ngày khác] --> Z
     E -- Có --> F[PricingEngine tính giá từng đêm] --> G[Trả PriceQuote hiệu lực 15 phút] --> H{Khách xác nhận}
     H -- Không --> Z
     H -- Quá hạn báo giá --> F
@@ -244,7 +244,7 @@ flowchart TD
     D -- Có --> D1{MANAGER+ override có lý do}
     D1 -- Không --> Z([Từ chối tạo booking])
     D1 -- Có --> E
-    D -- Không --> E[Chọn phòng còn trống theo sơ đồ buồng] --> F[Chọn gói giá; kênh WALKIN hệ số 1,10] --> G[PricingEngine báo giá từng đêm]
+    D -- Không --> E[Chọn phòng còn trống theo sơ đồ buồng] --> F[Chọn gói giá, kênh WALKIN hệ số 1,10] --> G[PricingEngine báo giá từng đêm]
     G --> H[Tạo Booking DRAFT với RoomAssignment] --> I[Thu tiền cọc theo PAY-01 - BR-PAY-01] --> J{paidAmount đủ depositAmount}
     J -- Đủ --> K[Booking CONFIRMED, lưu PriceSnapshot]
     J -- Chưa đủ --> L{Kênh được phép xác nhận không cọc}
@@ -261,8 +261,8 @@ flowchart TD
     B -- Không --> Z([Không vào HELD])
     B -- Có --> C[Tạo Hold với expiresAt = tạo + holdMinutes] --> D[Giữ RoomAssignment, tăng allotment đã dùng] --> E[Booking HELD]
     E --> F{Khách hoàn tất cọc}
-    F -- Có --> G[Booking CONFIRMED; giải phóng Hold, giữ RoomAssignment] --> Z
-    F -- Không --> H[Scheduler quét mỗi 30 giây theo job.hold.releaseIntervalSeconds; job đối chiếu Hold với holdExpiresAt mỗi 900 giây] --> I{now lớn hơn holdExpiresAt}
+    F -- Có --> G[Booking CONFIRMED, giải phóng Hold, giữ RoomAssignment] --> Z
+    F -- Không --> H[Scheduler quét mỗi 30 giây theo job.hold.releaseIntervalSeconds, job đối chiếu Hold với holdExpiresAt mỗi 900 giây] --> I{now lớn hơn holdExpiresAt}
     I -- Chưa --> F
     I -- Đúng --> J[Phát HoldExpired] --> K[Booking EXPIRED trong cùng transaction]
     K --> L[Giải phóng mọi RoomAssignment và Hold] --> M[Trả phòng về tồn khả dụng trong 60 giây] --> N[Ghi OutboxEvent đồng bộ tồn lên kênh] --> Z
@@ -275,22 +275,22 @@ flowchart TD
     A([Yêu cầu huỷ booking]) --> B{Trạng thái booking}
     B -- DRAFT hoặc HELD --> C[Giải phóng RoomAssignment và Hold]
     B -- CONFIRMED --> C
-    B -- CHECKED_IN hoặc trạng thái kết thúc --> B1[Không huỷ được; hướng dẫn trả phòng sớm] --> Z([Kết thúc])
-    C --> D{Ca bất khả kháng do MANAGER+; huỷ một phần thì giữ RoomAssignment của các phòng còn lại - BR-CANCEL-19}
+    B -- CHECKED_IN hoặc trạng thái kết thúc --> B1[Không huỷ được, hướng dẫn trả phòng sớm] --> Z([Kết thúc])
+    C --> D{Ca bất khả kháng do MANAGER+, huỷ một phần thì giữ RoomAssignment của các phòng còn lại - BR-CANCEL-19}
     D -- Có --> E[refundPercent = 100, miễn phụ thu và phí xử lý]
     D -- Không --> F[Tính hoursBeforeCheckIn theo giờ nhận phòng danh nghĩa] --> G[Chọn CancellationTier có offsetHours lớn nhất mà vẫn thỏa] --> H[refundAmount = làm tròn xuống 1.000 của paidAmount nhân tỷ lệ]
     H --> I{Bậc có chargeFirstNight}
     I -- Có --> J[penaltyAmount = max của 0 và hiệu firstNightPrice trừ paidAmount] --> K
     I -- Không --> K{Bậc hoàn toàn phần, phụ thu đêm đầu nữa không}
     E --> K
-    K --> L[Chuyển CANCELLED, hoặc giảm totalAmount và lưu PriceSnapshot điều chỉnh khi huỷ một phần - BR-CANCEL-19] --> M[Phát BookingCancelled; gửi thông báo cho khách] --> N{refundAmount lớn hơn 0}
+    K --> L[Chuyển CANCELLED, hoặc giảm totalAmount và lưu PriceSnapshot điều chỉnh khi huỷ một phần - BR-CANCEL-19] --> M[Phát BookingCancelled, gửi thông báo cho khách] --> N{refundAmount lớn hơn 0}
     N -- Không --> Z
     N -- Có --> O[Tạo RefundRequest PENDING] --> P{Người duyệt khác người tạo và từ MANAGER trở lên}
     P -- Không --> P1[Từ chối duyệt] --> Z
     P -- Có --> Q{Tổng hoàn luỹ kế vượt paidAmount}
     Q -- Có --> Q1[Cắt về phần còn lại của paidAmount] --> R
     Q -- Không --> R[APPROVED]
-    R --> S[Chi hoàn về phương thức gốc; tạo Payment REFUND] --> T[PAID; cập nhật refundedAmount; AuditLog] --> Z
+    R --> S[Chi hoàn về phương thức gốc, tạo Payment REFUND] --> T[PAID, cập nhật refundedAmount, AuditLog] --> Z
 ```
 
 ### 5.5. Phát hiện và xử lý quá tải
@@ -304,7 +304,7 @@ flowchart TD
     A2 --> B
     A3 --> B
     B --> C[OverbookingCase OPEN, tính shortageCount] --> D[Tính keepScore cho mọi booking bị ảnh hưởng]
-    D --> E[Sắp thứ tự: keepScore tăng dần, createdAt giảm dần, bookingId tăng dần] --> F{Bậc 1: còn phòng cùng loại cùng cơ sở}
+    D --> E[Sắp thứ tự: keepScore tăng dần, createdAt giảm dần, Booking.seq tăng dần] --> F{Bậc 1: còn phòng cùng loại cùng cơ sở}
     F -- Có --> G[RoomMove SAME_TYPE_SAME_PROPERTY] --> N
     F -- Không --> H{Bậc 2: còn phòng hạng cao hơn, sức chứa đủ}
     H -- Có --> I[RoomMove UPGRADE_SAME_PROPERTY, miễn phí nâng hạng] --> N
@@ -315,8 +315,8 @@ flowchart TD
     J -- Không --> L{Bậc 4: walk-out}
     L --> N{MANAGER+ duyệt chi phí}
     N -- Không --> N1[Giữ case ở PROPOSED] --> O
-    N -- Có --> P[Giải phóng RoomAssignment cũ; tạo RoomAssignment mới] --> Q[priceLocked = true; ghi compensationAmount và transportCost]
-    Q --> R[Phát RoomMoveExecuted; AuditLog; thông báo trong 15 phút] --> S[Case RESOLVED, ghi resolvedAt và resolvedBy] --> T[Mở lại bán trên kênh theo tồn mới] --> Z([Kết thúc])
+    N -- Có --> P[Giải phóng RoomAssignment cũ, tạo RoomAssignment mới] --> Q[priceLocked = true, ghi compensationAmount và transportCost]
+    Q --> R[Phát RoomMoveExecuted, AuditLog, thông báo trong 15 phút] --> S[Case RESOLVED, ghi resolvedAt và resolvedBy] --> T[Mở lại bán trên kênh theo tồn mới] --> Z([Kết thúc])
     O --> U{Quá T−24h chưa RESOLVED}
     U -- Có --> V[Case ESCALATED, leo thang OWNER] --> Z
     U -- Chưa --> F
@@ -327,11 +327,11 @@ flowchart TD
 ```mermaid
 flowchart TD
     A([ACT-02 mở booking tại quầy]) --> B{booking.status = CONFIRMED}
-    B -- Không --> B1[Từ chối; xử lý no-show hoặc trạng thái tương ứng] --> Z([Kết thúc])
+    B -- Không --> B1[Từ chối, xử lý no-show hoặc trạng thái tương ứng] --> Z([Kết thúc])
     B -- Có --> C{Ngày VN hiện tại bằng ngày checkIn}
     C -- Không --> C1[Chỉ cho check-in sớm theo BR-FO-04 hoặc chờ đúng ngày] --> Z
     C -- Có --> D{Hiện tại muộn hơn 23:59 ngày nhận phòng}
-    D -- Có --> D1[Từ chối; ghi no-show trước] --> Z
+    D -- Có --> D1[Từ chối, ghi no-show trước] --> Z
     D -- Không --> E{penaltyAmount + balanceDue bằng 0}
     E -- Không --> E1{Nợ trong ngưỡng: không quá deal.threshold.checkInDebt và không quá checkInDebtPct của totalAmount}
     E1 -- Không --> E4[Vượt cả hai ngưỡng: chỉ OWNER được duyệt ghi nợ] --> E5{OWNER duyệt}
@@ -345,7 +345,7 @@ flowchart TD
     G1 -- Có --> H
     G1 -- Không --> G2[Thu 30 phần trăm giá đêm đầu hoặc đặt thêm 1 đêm nếu trước 08:00] --> H
     G -- Không --> H[Xác nhận RoomAssignment đang hiệu lực]
-    H --> I[Booking chuyển CHECKED_IN; ghi BookingStatusHistory] --> J[Đánh dấu khách đã tới nơi; cập nhật keepScore và hồ sơ khách] --> K[Ghi AuditLog và mở phiên lưu trú] --> Z
+    H --> I[Booking chuyển CHECKED_IN, ghi BookingStatusHistory] --> J[Đánh dấu khách đã tới nơi, cập nhật keepScore và hồ sơ khách] --> K[Ghi AuditLog và mở phiên lưu trú] --> Z
 ```
 
 ---
@@ -452,8 +452,8 @@ sequenceDiagram
     OC->>OC: mở case OPEN với shortageCount
     OC->>OP: yêu cầu phương án điều chuyển
     OP->>OP: tính keepScore cho mọi booking bị ảnh hưởng
-    OP->>OP: sắp thứ tự keepScore tăng dần, createdAt giảm dần, bookingId tăng dần
-    OP->>OP: chọn bậc đầu tiên khả thi theo thang 1 đến 4
+    OP->>OP: sắp thứ tự keepScore tăng dần, createdAt giảm dần, Booking.seq tăng dần
+    OP->>OP: chọn bậc khả thi theo thang 1, 2, 4 của dữ liệu đề tài
     OP-->>OC: PROPOSED kèm danh sách phương án
     alt Bậc 3 hoặc bậc 4
         OC->>KH: xin đồng thuận bằng văn bản
@@ -462,12 +462,14 @@ sequenceDiagram
     OC->>QL: trình duyệt chi phí và phương án
     QL-->>OC: phê duyệt
     OC->>SAGA: thực thi điều chuyển
+    Note over SAGA,RA: BEGIN, khóa đủ booking và tài nguyên, recheck version và consent
     SAGA->>RM: tạo RoomMove với priceLocked = true
     SAGA->>RA: giải phóng RoomAssignment cũ
     SAGA->>RA: tạo RoomAssignment mới
-    RM->>EV: phát RoomMoveExecuted
+    RM->>EV: ghi RoomMoveExecuted cùng TX
+    Note over SAGA,RA: COMMIT toàn move, lỗi rollback giữ nguyên assignment cũ
     EV-->>KH: thông báo đổi phòng trong 15 phút
-    SAGA-->>OC: RESOLVED, ghi resolvedAt và resolvedBy
+    SAGA-->>OC: Đo lại shortage toàn case, chỉ RESOLVED khi hết thiếu
     Note over SC,OC: quá T−24h chưa RESOLVED thì chuyển ESCALATED cho OWNER
 ```
 
@@ -475,31 +477,17 @@ sequenceDiagram
 
 ## 7. Bảng sự kiện miền
 
-Sự kiện phát qua **Outbox** trong cùng transaction với thao tác ghi, bảo đảm không mất sự kiện khi tiến trình chết (BR-CHAN-06).
+Các workflow thực hiện tác động giữ/nhả tồn, receipt, quyết định booking, refund reservation và audit **trước commit**, trong cùng transaction theo [ADR-014](../04-thiet-ke/adr/ADR-014-giao-dich-ton-phong.md). Sự kiện là thông báo về thay đổi đã hoàn tất; không dùng listener bất đồng bộ để bổ sung bất biến còn thiếu.
 
-| Sự kiện | Nguồn phát | Bên lắng nghe | Hành động | Tính bất đồng bộ |
-|---------|-----------|---------------|-----------|------------------|
-| **`BookingConfirmed`** | `Booking` qua `CreateBookingUseCase` khi vào `CONFIRMED` (E4, E6, E9) | `NotificationService` | Gửi email xác nhận và nhắc hẹn theo mẫu NOTI-01 | Bất đồng bộ, gửi lại tối đa 3 lần cách nhau 5 phút |
-| **`BookingConfirmed`** | Như trên | `ChannelSyncService` | Giảm allotment còn lại của kênh, phát bản ghi outbox đồng bộ tồn lên OTA | Bất đồng bộ, tối đa 5 phút |
-| **`BookingConfirmed`** | Như trên | `ReportingService` | Cập nhật chỉ số công suất và doanh thu dự kiến theo kênh | Bất đồng bộ |
-| **`BookingCancelled`** | `Booking` qua `CancelBookingUseCase` (E8, E11, E14) | `InventoryService` | Giải phóng `RoomAssignment` và trả phòng về tồn khả dụng | Đồng bộ trong cùng transaction với đổi trạng thái |
-| **`BookingCancelled`** | Như trên | `RefundService` | Mở `RefundRequest` ở `PENDING` nếu tiền hoàn lớn hơn 0; bất khả kháng đặt `isForceMajeure = true` | Bất đồng bộ |
-| **`BookingCancelled`** | Như trên | `NotificationService` | Thông báo huỷ, số tiền hoàn và thời hạn chi theo NOTI-02 | Bất đồng bộ |
-| **`BookingCancelled`** | Như trên | `ChannelSyncService` | Đồng bộ lại tồn lên kênh đang mở bán | Bất đồng bộ, tối đa 5 phút |
-| **`HoldExpired`** | Scheduler ACT-11 khi `now > holdExpiresAt` (E7) | `InventoryService` | Giải phóng toàn bộ `RoomAssignment` và `Hold` trong cùng transaction | Đồng bộ trong transaction xử lý hết hạn |
-| **`HoldExpired`** | Như trên | `ChannelSyncService` | Trả phòng về tồn và đồng bộ lên mọi kênh đang mở bán | Bất đồng bộ, tối đa 5 phút |
-| **`HoldExpired`** | Như trên | `NotificationService` | Thông báo giữ chỗ đã hết hạn nếu khách đã để lại liên hệ | Bất đồng bộ |
-| **`PaymentSucceeded`** | `Payment` qua callback cổng thanh toán theo `idempotencyKey` (gửi lặp trả `E_PAY_CALLBACK_DUPLICATE`) | `BookingService` | Cộng `paidAmount` một lần duy nhất; kiểm tra `paidAmount ≥ depositAmount` để chuyển `CONFIRMED` | Đồng bộ trong transaction xử lý callback |
-| **`PaymentSucceeded`** | Như trên | `NotificationService` | Gửi biên nhận cọc cho khách | Bất đồng bộ |
-| **`PaymentSucceeded`** | Như trên | `ReportingService` | Cập nhật dòng tiền thu theo kênh và phương thức | Bất đồng bộ |
-| **`PaymentSucceeded`** | Như trên | `AuditService` | Ghi nhật ký giao dịch, không lưu dữ liệu thẻ | Đồng bộ |
-| **`RoomMoveExecuted`** | `RoomMove` qua `OverbookingService` và `OverbookingRelocationSaga` (E25, E27) | `InventoryService` | Giải phóng phòng cũ, tạo `RoomAssignment` mới giữ nguyên giá | Đồng bộ trong transaction thực thi |
-| **`RoomMoveExecuted`** | Như trên | `NotificationService` | Thông báo phòng mới, chi phí hỗ trợ và bồi thường trong 15 phút | Bất đồng bộ, có ràng buộc thời hạn |
-| **`RoomMoveExecuted`** | Như trên | `OverbookingService` | Chuyển `OverbookingCase` sang `RESOLVED`; ghi `resolvedAt`, `resolvedBy` | Đồng bộ |
-| **`RoomMoveExecuted`** | Như trên | `ReportingService` | Cập nhật báo cáo quá tải và chi phí xử lý theo cơ sở | Bất đồng bộ |
-| **`RoomMoveExecuted`** | Như trên | `AuditService` | Ghi nhật ký kèm `keepScore`, `moveType`, giá trị bồi thường | Đồng bộ |
+| Sự kiện | Nguồn phát cùng TX | Consumer sau commit |
+|---|---|---|
+| BookingConfirmed | Booking đã xác nhận theo tiền thu/ngoại lệ hợp lệ, allocation/quota đã cập nhật | NotificationService, ChannelSyncService, ReportingService; không trừ quota lần hai |
+| BookingCancelled | Phạm vi huỷ, release tồn/quota, nghĩa vụ và RefundRequest/reservation đã commit cùng nhau | Thông báo huỷ, đồng bộ tồn, báo cáo; không tạo lại refund |
+| HoldExpired | HELD/PENDING_PAYMENT đã quá hạn theo giờ DB sau khóa, release nguyên tử | Thông báo và đồng bộ tồn; không nhả assignment lần hai |
+| PaymentSucceeded | Receipt xác minh, allocation, quyết định booking hoặc hồ sơ đối soát muộn, Inbox completion | Biên nhận và báo cáo; callback hợp lệ lặp lại ACK đúng provider, không cộng tiền |
+| RoomMoveExecuted | Release nguồn + gán đích + EXECUTED + audit/outbox cùng TX | Thông báo trong SLA, báo cáo, đồng bộ kênh; đo lại shortage trước khi đóng case |
 
-Nguyên tắc chung: bên lắng nghe **không** được ném lỗi làm hỏng transaction nghiệp vụ đã hoàn tất; lỗi xử lý bất đồng bộ ghi lại và thử lại, đồng bộ thất bại 3 lần liên tiếp thì trả `E_CHAN_SYNC_FAILED`, đặt `Channel.syncStatus = DEGRADED` và cảnh báo `MANAGER` theo BR-CHAN-07; các chỉ số mà bên lắng nghe báo cáo (ADR, RevPAR, công suất, tỷ lệ huỷ, chi phí xử lý quá tải) PHẢI dùng đúng định nghĩa duy nhất ở BR-REP-01, DOR đếm theo đơn vị bán là giường.
+Mỗi consumer có dedup/lease/completion bền ở event_deliveries theo [ADR-017](../04-thiet-ke/adr/ADR-017-inbox-outbox-idempotency.md). Lỗi thông báo không đảo transaction nghiệp vụ; retry/đối soát từ nguồn bền. Chỉ số báo cáo theo BR-REP-01.
 
 ---
 
@@ -538,7 +526,7 @@ Ký hiệu: `✔` được phép · `~` có điều kiện · `✖` bị cấm. 
 | `PENDING_PAYMENT` | Huỷ | Hoàn trên phần đã trả; giao dịch đang chờ phải chuyển `FAILED` | BR-CANCEL-04 |
 | `PENDING_PAYMENT` | Đổi phòng | Như `HELD` | BR-OVER-11 |
 | `CONFIRMED` | Đổi ngày | Như `DRAFT`; đổi ngày không tạo `RefundRequest` | BR-BOOK-12, BR-CANCEL-08 |
-| `CONFIRMED` | Check-in | `penaltyAmount + balanceDue = 0`; hoặc nợ ≤ `deal.threshold.checkInDebt` và ≤ `checkInDebtPct` của `totalAmount` do `MANAGER`+ duyệt, vượt cả hai ngưỡng phải `OWNER` duyệt; ngày VN hiện tại = ngày `checkIn`; không quá 23:59 ngày nhận phòng | BR-FO-01, BR-FO-02, BR-FO-04, BR-SYS-02 |
+| `CONFIRMED` | Check-in | `balanceDue = 0`; hoặc nợ ≤ `deal.threshold.checkInDebt` và ≤ `checkInDebtPct` của `totalAmount` do `MANAGER`+ duyệt, vượt một trong hai ngưỡng phải `OWNER` duyệt; ngày VN hiện tại = ngày `checkIn`; không quá 23:59 ngày nhận phòng | BR-FO-01, BR-FO-02, BR-FO-04, BR-SYS-02 |
 | `CONFIRMED` | Đổi phòng | Theo thang khả dụng 1 → 2 → 4; bậc 4 walk-out cần `MANAGER`+ duyệt; mọi `RoomMove` đi qua `PROPOSED` rồi `APPROVED` và `EXECUTED` | BR-OVER-06, BR-OVER-07, BR-OVER-11 |
 | `CONFIRMED` | Ghi no-show | Chỉ do scheduler lúc 23:59 ngày nhận phòng, khi booking còn `CONFIRMED` và chưa check-in | BR-CANCEL-10 |
 | `CHECKED_IN` | Sửa booking | Chỉ sửa thông tin khách và ghi chú; **không** sửa ngày lưu trú | BR-BOOK-13 |

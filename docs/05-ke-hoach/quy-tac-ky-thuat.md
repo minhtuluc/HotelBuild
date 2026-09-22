@@ -214,7 +214,7 @@ Người duyệt PHẢI tick đủ 12 điểm trước khi approve. Mỗi điể
 | Quy tắc | Nội dung | Cưỡng chế |
 |---------|----------|-----------|
 | 7.2.1 | Phản hồi review **≤ 4 giờ** trong giờ làm việc (theo [lo-trinh §9](lo-trinh.md#9-nhịp-độ--nghi-thức)). | `REV` — nhắc tự động qua Slack/webhook; thống kê thời gian phản hồi ở retrospective. |
-| 7.2.2 | Phân công duyệt theo sở hữu: Kiến trúc sư duyệt `packages/domain`, migration SQL, `packages/contracts`; Backend/Frontend web duyệt `apps/api`, `apps/web`; QA/DevOps duyệt CI, kiểm thử, hạ tầng; PO/BA duyệt AC & tài liệu. | `CI` — file `CODEOWNERS` bắt buộc owner review khi chạm thư mục tương ứng. |
+| 7.2.2 | Phân công duyệt theo sở hữu: Kiến trúc sư duyệt `packages/domain`, migration SQL, `packages/contracts`; Backend duyệt `apps/api`, `apps/worker`; Frontend duyệt bốn app và package UI/client; QA/DevOps duyệt CI, kiểm thử, hạ tầng; PO/BA duyệt AC & tài liệu. | `CI` — file `CODEOWNERS` bắt buộc owner review khi chạm thư mục tương ứng. |
 
 ```text
 # .github/CODEOWNERS
@@ -222,8 +222,14 @@ packages/domain/        @kientrucsu
 infra/sql/              @kientrucsu
 packages/contracts/     @kientrucsu
 apps/api/               @backend
-apps/web/               @backend-web
-apps/mobile/            @mobile
+apps/worker/            @backend
+apps/customer-web/      @customer-web
+apps/customer-android/  @customer-mobile
+apps/operations-web/    @operations-web
+apps/operations-android/ @operations-mobile
+packages/api-client/    @frontend-platform
+packages/ui-web/        @customer-web @operations-web
+packages/ui-native/     @customer-mobile @operations-mobile
 .github/                @devops
 docs/                   @po-ba
 ```
@@ -245,7 +251,7 @@ flowchart BT
 |------|---------|------------------------|----------|
 | Đơn vị / miền (thuần) | Vitest + fast-check | ~60% | Mỗi PR |
 | Tích hợp (CSDL thật, giao dịch, webhook) | Testcontainers + Supertest | ~25% | Mỗi PR |
-| E2E (web khách, back-office, Android) | Playwright + Maestro | ~10% | Nightly |
+| E2E (customer web, operations web, customer Android, operations Android) | Playwright + Maestro | ~10% | Nightly |
 | Tải / đồng thời | k6 hoặc script 200 yêu cầu (US-INF-02/03) | ~5% | Nightly + trước mốc |
 
 Cưỡng chế: `CI` — báo cáo phân bố tầng kiểm thử xuất ra ở mỗi pipeline; lệch > 10 điểm phần trăm so với mục tiêu → cảnh báo; QG-3 (xem [lo-trinh §6](lo-trinh.md#6-cổng-chất-lượng-quality-gate)) chặn nếu miền < 90%. Trùng khớp với [NFR-MAIN-01](../01-yeu-cau/yeu-cau-phi-chuc-nang.md) (miền thuần, 4 lớp lõi phủ nhánh ≥ 90%) và [NFR-MAIN-03](../01-yeu-cau/yeu-cau-phi-chuc-nang.md) (100% BR có ≥ 1 ca kiểm thử).
@@ -306,10 +312,10 @@ Cưỡng chế: `LINT` — trong `packages/domain/**/*.spec.ts`, `no-restricted-
 | # | Điều kiện | Kiểm bởi |
 |---|-----------|----------|
 | D1 | Có mã `US-<MOD>-<nn>` duy nhất | PO/BA |
-| D2 | AC viết xong, dạng quan sát được (không phải "làm màn hình X") | PO/BA |
-| D3 | Mọi BR tham chiếu tồn tại và đã chốt trong [02](../02-nghiep-vu/quy-tac-nghiep-vu.md) | PO/BA |
-| D4 | Phụ thuộc đã gỡ hoặc có thỏa thuận thay thế | Cả nhóm |
-| D5 | Ước lượng SP đã chốt, ≤ 25 điểm/sprint | PO/BA |
+| D2 | AC có Given/When/Then cho luồng thành công, lỗi, tranh chấp và retry; có fixture, oracle, mã TC và người kiểm | PO/BA + QA |
+| D3 | BR tồn tại trong [02](../02-nghiep-vu/quy-tac-nghiep-vu.md); quyết định nghiệp vụ chặn story có bằng chứng xác nhận theo [sổ unknown §8.1](quan-ly-rui-ro.md). Im lặng không phải chấp thuận; prototype dùng giả định phải ghi nhãn và không tính là triển khai đã sẵn sàng | PO/BA |
+| D4 | Có hợp đồng API/lỗi, ranh giới transaction, dữ liệu/migration và UI states tương ứng; phụ thuộc đã gỡ hoặc phương án thay thế được ghi rõ giới hạn bằng chứng | ARCH + FE + QA |
+| D5 | Ước lượng SP và năng lực sprint đã được review; 25 SP là năng lực kế hoạch, backlog vượt mức phải cắt/chuyển story hoặc có bằng chứng điều chỉnh năng lực | PO/BA |
 
 Cưỡng chế: `CI` — template story trong backlog; sprint planning không nhận story thiếu bất kỳ mục D1–D5.
 
@@ -318,12 +324,16 @@ Cưỡng chế: `CI` — template story trong backlog; sprint planning không nh
 | # | Điều kiện | Cưỡng chế |
 |---|-----------|-----------|
 | X1 | Mã đã review (≥ 1 người duyệt khác người viết, đủ 12 điểm §7.1) và đã gộp `main` | `CI` — branch protection |
-| X2 | Kiểm thử tự động xanh: unit + tích hợp + diff-coverage ≥ 80% | `CI` — pipeline |
-| X3 | AC được chứng minh bằng **demo chạy thật** (không chụp màn hình) cho PO | Demo thứ Sáu |
-| X4 | Tài liệu, ma trận truy vết [06](../06-truy-vet/ma-tran-truy-vet.md) cập nhật cùng PR | `CI` — docs-guard (§10.3) |
+| X2 | Unit + tích hợp + diff-coverage ≥ 80% có báo cáo gắn revision; ca rủi ro cao và bất biến liên quan đã chạy trên đúng tầng, không skip; không dùng mock để chứng minh ràng buộc DB | `CI` — link run, lệnh, exit code, seed, môi trường và artifact; chưa chạy ghi `NOT_RUN` |
+| X3 | AC được chứng minh bằng **demo chạy thật** cho PO; UI có empty/loading/error/conflict/offline và accessibility theo phạm vi story | Biên bản demo ghi build, fixture, TC, người chạy, kết quả; ảnh/video chỉ là bằng chứng bổ trợ |
+| X4 | Tài liệu, ma trận truy vết [06](../06-truy-vet/ma-tran-truy-vet.md) cập nhật cùng PR; thay đổi API/DDL có kiểm hợp đồng, migration và phương án phục hồi | Báo cáo kiểm tra tài liệu + review ngữ nghĩa; script tồn tại chưa đồng nghĩa đã chạy |
 | X5 | Không có lỗi P0/P1 mới mở | `REV` — bảng lỗi |
 
-Cưỡng chế: `CI` — `.github/pull_request_template.md` chứa đúng checklist X1–X5; script `pr-template-check` fail nếu mục nào chưa tick. Tóm tắt DoD phải khớp mô tả ở [ke-hoach-sprint §1](ke-hoach-sprint.md#1-quy-ước).
+Cưỡng chế cần triển khai: `.github/pull_request_template.md` chứa checklist X1–X5 và liên kết evidence; `pr-template-check` phải kiểm cả trường bằng chứng, không chỉ dấu tick. Khi chưa có pipeline/script hoặc chưa chạy, ghi `NOT_RUN`, không ghi `PASS`. Tóm tắt DoD phải khớp [ke-hoach-sprint §1](ke-hoach-sprint.md#1-quy-ước).
+
+### 9.3. Hồ sơ bằng chứng tối thiểu
+
+Mỗi story/gate lưu `revision/build`, phạm vi BR/UC/TC, người chạy/reviewer, thời điểm, lệnh và exit code, môi trường/phiên bản DB, fixture/seed, kết quả mong đợi/thực tế, link log/report đã che PII, lỗi còn mở và quyết định stakeholder liên quan. Trạng thái chỉ gồm `NOT_RUN`, `BLOCKED`, `FAIL`, `PASS`; thiếu artifact hoặc không tái lập được thì chưa đủ DoD. Đạt kiểm tra Markdown không thay thế test hành vi. Kết quả của revision cũ chỉ được dùng lại khi reviewer chứng minh thay đổi không ảnh hưởng, ghi rõ phạm vi tái sử dụng.
 
 ---
 
@@ -389,7 +399,7 @@ flowchart LR
 | 12.1.6 `integration` | Testcontainers (Postgres 16 + Redis 7); bắn 200 yêu cầu đồng thời (US-INF-02) — xác nhận [NFR-REL-01](../01-yeu-cau/yeu-cau-phi-chuc-nang.md) (0 bán trùng) | `CI` |
 | 12.1.7 `migrate-from-empty` | `prisma migrate deploy` trên CSDL trống phải chạy sạch (mốc M3) | `CI` |
 | 12.1.8 `openapi-diff` | Đóng băng hợp đồng API từ M3; thay đổi phá vỡ → fail trừ khi có nhãn `api-change` + diff docs | `CI` |
-| 12.1.9 `e2e` (nightly) | Playwright (web) + Maestro (Android) chạy lịch đêm | `CI` |
+| 12.1.9 `e2e` (nightly) | Playwright (2 web apps) + Maestro (2 Android apps) chạy lịch đêm | `CI` |
 
 ### 12.2. Thời gian tối đa & điều kiện chặn gộp
 
@@ -457,8 +467,8 @@ Các cổng ra (`Clock`, `IdGenerator`, `OutboxPort`, `NotificationPort`, `UnitO
 
 ## Tham chiếu
 
-- [00 — Tổng quan dự án](../00-tong-quan.md) — định danh, từ điển thực thể, stack, cấu trúc repo, 52 UC, 13 module
-- [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — 136 BR (nguồn chân lý về giá trị)
+- [00 — Tổng quan dự án](../00-tong-quan.md) — định danh, từ điển thực thể, stack, cấu trúc repo, 53 UC, 13 module
+- [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — 139 BR (nguồn chân lý về giá trị)
 - [04 — Kiến trúc](../04-thiet-ke/kien-truc.md) — ADR-001…ADR-013, phân tầng hexagonal
 - [04 — API](../04-thiet-ke/api.md) — hợp đồng REST, mã lỗi `E_*`, idempotency, webhook
 - [05 — Lộ trình](lo-trinh.md) — cổng chất lượng QG-0…QG-4, mốc M4–M8, thang cắt giảm

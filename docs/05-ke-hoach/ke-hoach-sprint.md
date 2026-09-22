@@ -14,9 +14,11 @@
 | AC | Tiêu chí chấp nhận, viết ở dạng quan sát được |
 | Ưu tiên | **M** bắt buộc · **S** nên có · **C** có thì tốt |
 
-**Định nghĩa Sẵn sàng (DoR):** story chỉ được đưa vào sprint khi có mã US, AC viết xong, BR tham chiếu tồn tại, phụ thuộc đã gỡ, và ước lượng đã chốt.
+**Định nghĩa Sẵn sàng (DoR):** theo [quy tắc kỹ thuật §9](quy-tac-ky-thuat.md): story có mã US, AC quan sát được với fixture/oracle và nhánh lỗi, BR hợp lệ, bằng chứng chốt unknown phụ thuộc, API/DB/UI đủ hợp đồng và ước lượng phù hợp năng lực sprint. Prototype theo giả định chưa phải story đã đủ điều kiện thi công.
 
-**Định nghĩa Hoàn thành (DoD):** xem [05/quy-tac-ky-thuat](quy-tac-ky-thuat.md) §6. Tóm tắt: mã đã review + gộp; kiểm thử tự động xanh; AC được chứng minh bằng demo chạy thật; tài liệu và ma trận truy vết đã cập nhật; không có lỗi P0/P1 mới.
+**Định nghĩa Hoàn thành (DoD):** xem [05/quy-tac-ky-thuat](quy-tac-ky-thuat.md) §9. Mã review + gộp, test thực chạy có evidence gắn build, AC demo được và UI states được kiểm, truy vết cập nhật, không có lỗi P0/P1 mới. Chưa chạy ghi `NOT_RUN`, bị unknown chặn ghi `BLOCKED`; không dùng tiến độ viết tài liệu làm tiến độ PASS.
+
+Các bảng SP là backlog đề xuất, chưa phải cam kết hoàn thành. Sprint 2 liệt kê 34 SP trong khi năng lực kế hoạch là 25 SP: planning phải cắt/chuyển ít nhất 9 SP hoặc có dữ liệu năng lực mới trước khi nhận sprint. Ca nghiệm thu bổ sung: Sprint 1 `TC-INV-11`, `TC-AUTH-10`; Sprint 2 `TC-BOOK-28`, `TC-RATE-27`, `TC-SYS-11`; Sprint 3 `TC-BOOK-27`, `TC-PAY-22/23`; Sprint 4 `TC-OVER-18`; Sprint 5 `TC-FO-08`, `TC-SYS-09/10`. Chốt hợp đồng của các ca này ở QG-2 dù lịch triển khai muộn hơn.
 
 ---
 
@@ -27,7 +29,7 @@
 | Mã | User story | SP | Ưu tiên | UC / BR | AC chính |
 |----|-----------|----|---------|---------|----------|
 | US-INF-01 | Dựng monorepo, CI, Docker, migration từ CSDL trống | 5 | M | — | `docker compose up` dựng Postgres + Redis; `pnpm migrate` chạy sạch trên CSDL trống; CI chạy lint + typecheck + test |
-| US-AUTH-01 | Đăng nhập nội bộ, phân quyền theo vai trò và phạm vi cơ sở | 5 | M | UC-AUTH-01/02, BR-RBAC-01/02/06 | 6 vai trò đăng nhập được; `FRONT_DESK` của CS-02 không thấy dữ liệu CS-01; 5 lần sai khoá 15 phút |
+| US-AUTH-01 | Đăng nhập nội bộ, phân quyền theo vai trò và phạm vi cơ sở | 5 | M | UC-AUTH-01/02, BR-RBAC-01/02/06 | 7 vai trò đăng nhập được; `FRONT_DESK` của CS-02 không thấy dữ liệu CS-01; 5 lần sai khoá 15 phút |
 | US-PROP-01 | Quản lý cơ sở, loại phòng, phòng vật lý | 5 | M | UC-PROP-01/02/03, BR-PROP-01…06 | Nhập đủ 3 cơ sở / 55 phòng; sức chứa và mã phòng đúng quy ước; không tạo được phòng trùng mã trong một cơ sở |
 | US-PROP-02 | Khoá phòng bảo trì / ngừng bán | 3 | M | UC-PROP-04, BR-INV-06 | Khoá một phòng làm tồn khả dụng giảm ngay; chặn khoá đè lên booking đang hoạt động nếu không phải MANAGER |
 | US-INV-01 | Lịch tồn phòng dạng lưới theo ngày | 5 | M | UC-INV-01, BR-INV-01/07 | Hiển thị 55 phòng × 30 ngày; cột tồn khả dụng khớp phép tính BR-INV-01; đổi khoảng ngày không cần tải lại trang |
@@ -64,7 +66,7 @@
 
 **Kịch bản demo:** Chọn CS-01, phòng Deluxe, 3 đêm vắt qua 30/4 → in ra bảng giá từng đêm với các hệ số mùa/cuối tuần/kênh → đặt ở kênh WEB và ở kênh WALKIN, cho thấy chênh 10% → để một hold hết hạn trước mắt người xem.
 
-**Rủi ro trọng yếu:** sai thứ tự áp hệ số (**RSK-02**); lệch giá giữa web và API (**RSK-08**). Gỡ bằng ca kiểm thử đối chiếu ba nền tảng.
+**Rủi ro trọng yếu:** sai thứ tự áp hệ số (**RSK-02**); lệch giá giữa bốn frontend và API (**RSK-08**). Gỡ bằng ca kiểm thử đối chiếu năm nguồn.
 
 ---
 
@@ -116,9 +118,9 @@
 
 ---
 
-## 6. Sprint 5 — Android, báo cáo, hoàn thiện (W14–W15, 21/12/2026–02/01/2027)
+## 6. Sprint 5 — 4 frontend, báo cáo, hoàn thiện (W14–W15, 21/12/2026–02/01/2027)
 
-**Mục tiêu sprint:** *"Lễ tân làm được việc trên điện thoại, ban giám đốc tự xem được báo cáo, và hệ thống chịu được tải."*
+**Mục tiêu sprint:** *"Khách dùng được customer Android, vận hành làm được việc trên operations Android/web, ban giám đốc tự xem được báo cáo, và hệ thống chịu được tải."*
 
 | Mã | User story | SP | Ưu tiên | UC / BR | AC chính |
 |----|-----------|----|---------|---------|----------|
@@ -126,15 +128,16 @@
 | US-MOB-02 | App Android: check-in và check-out | 5 | M | UC-FO-01/02, BR-FO-01…05 | Check-in bị chặn khi còn nợ tiền; check-out muộn tự tính 50%/100%; nhập PIN 6 số cho thao tác tài chính |
 | US-MOB-03 | App Android: tra cứu, đổi phòng, ghi no-show | 5 | M | UC-OVER-02, UC-FO-04 | Đổi phòng bậc 1–2 trong ≤ 30 giây; ghi no-show hỏi xác nhận và hiện số tiền bị tính |
 | US-MOB-04 | App Android: cập nhật trạng thái buồng phòng | 3 | S | UC-FO-03, BR-FO-06/07 | Nhân viên buồng phòng đánh dấu dọn xong; phòng chưa dọn không gán được cho khách khác |
+| US-MOB-05 | Customer Android: tìm phòng, đặt, thanh toán, tra cứu | 3 | M | UC-INV-02, UC-BOOK-01/07, UC-PAY-02 | Deep link PSP an toàn; cùng `PriceQuote` với API/customer web; xem booking và huỷ/đổi ngày; không tự tính giá |
 | US-REP-01 | Báo cáo công suất, ADR, RevPAR | 5 | M | UC-REP-01 | Chọn khoảng ngày + cơ sở; ADR = doanh thu thuần / số phòng bán; khớp số liệu thử |
 | US-REP-02 | Báo cáo doanh thu theo kênh (gộp và thuần sau hoa hồng) | 3 | M | UC-REP-02, BR-RATE-08 | Bảng 7 kênh × doanh thu gộp/thuần/hoa hồng; xuất CSV |
 | US-REP-03 | Báo cáo huỷ phòng, hoàn cọc, quá tải | 3 | M | UC-REP-03/04 | Tỷ lệ huỷ theo gói giá; tổng hoàn cọc; số ca quá tải và chi phí xử lý |
 | US-NOTI-01 | Thông báo email xác nhận, huỷ, đổi phòng | 3 | S | UC-NOTI-01/02, BR-SYS-06 | Email gửi trong 1 phút; gửi lại tối đa 3 lần; mọi lần gửi có bản ghi |
 | US-INF-03 | Kiểm thử tải 200 đồng thời + diễn tập phục hồi sao lưu | 3 | M | NFR-PERF-01, BR-SYS-03 | p95 tra cứu < 800ms ở 200 người dùng đồng thời; phục hồi từ bản sao lưu trong ≤ 4 giờ, có biên bản |
 | US-DOC-01 | Báo cáo cuối kỳ, ma trận truy vết, kịch bản demo | 3 | M | — | Ma trận không còn ô trống; README chạy được trên máy sạch |
-| **Tổng** | | **38** | | | |
+| **Tổng** | | **41** | | | |
 
-> Đây là sprint cuối; mọi việc chưa xong tới hết ngày thứ Tư tuần cuối **bị cắt**, không dồn. Ưu tiên tuyệt đối: `US-MOB-02`, `US-REP-01`, `US-REP-02`, `US-DOC-01`.
+> Đây là sprint cuối; mọi việc chưa xong tới hết ngày thứ Tư tuần cuối **bị cắt**, không dồn. Ưu tiên tuyệt đối: `US-MOB-02`, `US-MOB-05`, `US-REP-01`, `US-REP-02`, `US-DOC-01`.
 
 **Kịch bản demo:** Lễ tân check-in một khách trên điện thoại → check-out muộn và hệ thống tính 50% → Owner mở báo cáo doanh thu theo kênh và chỉ ra kênh OTA Booking có doanh thu gộp cao nhất nhưng thuần thấp hơn WEB.
 
@@ -148,10 +151,10 @@
 | 2 | W8–W9 | 34 | Động cơ giá, đặt phòng, giữ chỗ, web khách | M5 |
 | 3 | W10–W11 | 36 | Chính sách huỷ, thanh toán, hoàn tiền hai cấp | M6 |
 | 4 | W12–W13 | 37 | Kênh OTA, quá tải, điều chuyển, ghép phòng | M7 |
-| 5 | W14–W15 | 38 | Android, báo cáo, kiểm thử tải, báo cáo cuối kỳ | M8 |
-| **Tổng** | | **176** | | |
+| 5 | W14–W15 | 41 | 4 frontend, báo cáo, kiểm thử tải, báo cáo cuối kỳ | M8 |
+| **Tổng** | | **179** | | |
 
-Ngân sách 750 giờ ≈ 188 điểm; kế hoạch dùng 176 điểm, dự phòng **12 điểm (≈ 6,4%)** cho nợ kỹ thuật và phát sinh. Mức này **thấp hơn** dải 10–15% khuyến nghị, nhóm chấp nhận vì đã có van an toàn thứ hai là thang cắt giảm phạm vi ở [lo-trinh §7](lo-trinh.md#7-thang-cắt-giảm-phạm-vi-khi-trễ).
+Ngân sách 750 giờ ≈ 188 điểm; kế hoạch dùng 179 điểm, dự phòng **9 điểm (≈ 4,8%)** cho nợ kỹ thuật và phát sinh. Mức này **thấp hơn** dải 10–15% khuyến nghị, nhóm chỉ chấp nhận nếu giữ van an toàn là thang cắt giảm phạm vi ở [lo-trinh §7](lo-trinh.md#7-thang-cắt-giảm-phạm-vi-khi-trễ) và không mở thêm surface thứ năm.
 
 ## 8. Backlog chưa lên lịch
 

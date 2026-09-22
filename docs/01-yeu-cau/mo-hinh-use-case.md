@@ -1,7 +1,7 @@
 # 01 — Mô hình Use Case
 
 > Trả lời bốn câu hỏi: **ai** dùng hệ thống, **được làm gì**, **theo trình tự nào**, **bị ràng buộc bởi quy tắc nào**.
-> Nguồn chân lý mã UC/actor: [00 — Tổng quan](../00-tong-quan.md) §4 và §8. Nguồn chân lý con số nghiệp vụ: [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) (136 quy tắc `BR-*`); mã lỗi `E_*` đầy đủ ở [04/api](../04-thiet-ke/api.md) §4.2.
+> Nguồn chân lý mã UC/actor: [00 — Tổng quan](../00-tong-quan.md) §4 và §8. Nguồn chân lý con số nghiệp vụ: [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) (139 quy tắc `BR-*`); mã lỗi `E_*` đầy đủ ở [04/api](../04-thiet-ke/api.md) §4.2.
 > Tài liệu này không định nghĩa lại giá trị nghiệp vụ nào; mọi con số chỉ được tham chiếu qua mã.
 
 ## 1. Phạm vi & quy ước
@@ -9,8 +9,8 @@
 | # | Quy ước | Nội dung |
 |---|---------|----------|
 | 1 | Phạm vi | 3 cơ sở (**CS-01** Đà Lạt 24 phòng · **CS-02** Vũng Tàu 18 · **CS-03** Phan Thiết 13) — tổng **55 phòng**, **7 kênh bán**; bài toán **BT-1/BT-2/BT-3** |
-| 2 | Số use case | **52 UC** = 3 AUTH · 4 PROP · 3 INV · 5 RATE · 8 BOOK · 5 PAY · 3 CHAN · 5 OVER · 4 FO · 3 CRM · 2 NOTI · 4 REP · 3 SYS |
-| 3 | Số actor | **12 actor** `ACT-01…ACT-12`; `ACT-08/09/10/11` là **actor phụ** (hệ thống ngoài hoặc dịch vụ lập lịch) |
+| 2 | Số use case | **53 UC** = 3 AUTH · 4 PROP · 3 INV · 6 RATE · 8 BOOK · 5 PAY · 3 CHAN · 5 OVER · 4 FO · 3 CRM · 2 NOTI · 4 REP · 3 SYS |
+| 3 | Số actor | **12 actor** `ACT-01…ACT-12`; ACT-08/09/10/11 là hệ thống ngoài hoặc scheduler; chính/phụ tùy UC |
 | 4 | Mã quy tắc | Chỉ dùng mã `BR-<MOD>-<nn>` đã có trong [02/quy-tac-nghiep-vu](../02-nghiep-vu/quy-tac-nghiep-vu.md) §14; tài liệu này không phát sinh mã `BR-*` mới |
 | 5 | Mã phi chức năng | Chỉ dùng mã `NFR-<NHÓM>-<nn>` (8 nhóm PERF, REL, SEC, USE, MAIN, COMP, OBS, LOC) đã có trong [01/yeu-cau-phi-chuc-nang](yeu-cau-phi-chuc-nang.md) |
 | 6 | Ký hiệu sơ đồ | `-->` actor–UC (kết hợp) · `-.->|"<<include>>"|` bắt buộc · `-.->|"<<extend>>"|` có điều kiện · `==>|tổng quát hoá|` con → cha |
@@ -22,7 +22,7 @@
 | Nhóm | Tên nhóm | Module | Số UC | Sơ đồ | Điểm hội tụ bắt buộc |
 |------|----------|--------|-------|-------|----------------------|
 | **N1** | Nền tảng, cơ sở & tồn phòng | `AUTH`, `PROP`, `INV` | 10 | §3.1 | `UC-INV-02` (mọi báo giá) |
-| **N2** | Giá, mùa & gói giá | `RATE` | 5 | §3.2 | `UC-RATE-05` (xem trước) |
+| **N2** | Giá, mùa & gói giá | `RATE` | 6 | §3.2 | `UC-RATE-05` (xem trước) |
 | **N3** | Đặt phòng & thanh toán | `BOOK`, `PAY` | 13 | §3.3 | `UC-INV-02`, `UC-PAY-04` |
 | **N4** | Kênh bán & xử lý quá tải | `CHAN`, `OVER` | 8 | §3.4 | `UC-OVER-02` (bộ điều phối) |
 | **N5** | Vận hành, khách hàng, thông báo, báo cáo & hệ thống | `FO`, `CRM`, `NOTI`, `REP`, `SYS` | 16 | §3.5 | `UC-NOTI-02`, `UC-FO-02` |
@@ -42,9 +42,9 @@
 | ACT-09 | Kênh OTA | Hệ thống ngoài, **phụ** | Đẩy đặt phòng vào, kéo tồn phòng & giá ra | N1, N3, N4 | — |
 | ACT-10 | Dịch vụ thông báo | Hệ thống ngoài, **phụ** | Gửi email (Resend), SMS, Zalo OA | N5 | — |
 | ACT-11 | Dịch vụ lập lịch (Scheduler) | Hệ thống nội bộ, **phụ** | Hết hạn hold, quét quá tải T−24h, no-show, đồng bộ kênh, tích điểm | N3, N4, N5 | tài khoản dịch vụ |
-| ACT-12 | Quản trị hệ thống | Người, **chính** | Cấu hình tham số, phân quyền, sao lưu, xem nhật ký kiểm toán | N1, N5 | `OWNER`/quản trị nền tảng |
+| ACT-12 | Quản trị hệ thống | Người, **chính** | Cấu hình tham số, phân quyền, sao lưu, xem nhật ký kiểm toán | N1, N5 | `SYSADMIN` |
 
-**Actor chính** khởi phát UC và nhận giá trị nghiệp vụ; **actor phụ** chỉ tham gia ở một bước (được gọi ra hoặc bị gọi tới) và không bao giờ đứng một mình.
+**Actor chính** khởi phát và nhận giá trị của UC; vai trò này có thể là hệ thống ngoài hoặc scheduler trong UC tích hợp/tự động. Actor phụ hỗ trợ ở bước cụ thể. Đây không phải cơ chế phân quyền.
 Ba nhóm actor trong [00 §4](../00-tong-quan.md#4-actor) (người dùng nội bộ = `ACT-02…ACT-07, ACT-12`; dịch vụ ngoài = `ACT-08/09/10`; dịch vụ nội bộ = `ACT-11`) là **cách vẽ gọn**, không phải actor có mã mới; `UC-AUTH-01` phục vụ cả nhóm người dùng nội bộ nên được vẽ qua nút khái quát hoá ở §3.1.
 
 ## 3. Sơ đồ use case theo 5 nhóm chức năng
@@ -86,16 +86,16 @@ flowchart LR
 flowchart LR
   A4(["ACT-04 QL cơ sở"]); A5(["ACT-05 Chủ chuỗi"])
   subgraph GRATE["RATE — Giá & mùa"]
-    URA["UC-RATE-01 Cấu hình giá cơ bản & lịch giá"]; URB["UC-RATE-02 Cấu hình mùa & hệ số mùa"]; URC["UC-RATE-03 Cấu hình hệ số & hoa hồng theo kênh"]; URD["UC-RATE-04 Quản lý khuyến mãi"]; URE["UC-RATE-05 Xem trước báo giá đa kênh"]
+    URA["UC-RATE-01 Cấu hình giá cơ bản & lịch giá"]; URB["UC-RATE-02 Cấu hình mùa & hệ số mùa"]; URC["UC-RATE-03 Cấu hình hệ số & hoa hồng theo kênh"]; URD["UC-RATE-04 Quản lý khuyến mãi"]; URE["UC-RATE-05 Xem trước báo giá đa kênh"]; URF["UC-RATE-06 Cấu hình gói giá và chính sách huỷ"]
   end
-  A5 --> URA & URB & URC & URD
+  A5 --> URA & URB & URC & URD & URF
   A4 --> URD
   A4 & A5 --> URE
-  URA & URB & URC & URD -.->|"<<include>>"| URE
+  URA & URB & URC & URD & URF -.->|"<<include>>"| URE
   UIB2["UC-INV-02 Kiểm tra trống & báo giá (N1)"] -.->|"<<include>>"| URE
 ```
 
-`UC-RATE-05` và `UC-INV-02` dùng **cùng động cơ giá**, kết quả phải trùng khớp theo `BR-RATE-17`; cả 4 UC cấu hình include `UC-RATE-05` để thấy tác động trước khi lưu.
+`UC-RATE-05` và `UC-INV-02` dùng **cùng động cơ giá**, kết quả phải trùng khớp theo `BR-RATE-17`; cả 5 UC cấu hình include `UC-RATE-05` để thấy tác động trước khi lưu.
 
 ### 3.3. Nhóm N3 — Đặt phòng & thanh toán
 
@@ -253,7 +253,7 @@ flowchart LR
   FO4 ==>|"tổng quát hoá"| BK8
 ```
 
-## 4. Danh mục 52 use case
+## 4. Danh mục 53 use case
 
 Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use-case). Cột **BR chính** là ràng buộc không thể bỏ qua khi thực hiện UC; danh sách đầy đủ hơn ở §5 và ở từng đặc tả §6.
 
@@ -274,6 +274,7 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 | RATE | UC-RATE-03 | Cấu hình hệ số & hoa hồng theo kênh | ACT-05 | — | BR-RATE-07, BR-RATE-09, BR-RATE-18, BR-CHAN-06 |
 | RATE | UC-RATE-04 | Quản lý khuyến mãi | ACT-05, ACT-04 | — | BR-RATE-10, BR-RATE-11, BR-RATE-12, BR-RATE-13, BR-RATE-14 |
 | RATE | UC-RATE-05 | Xem trước báo giá đa kênh | ACT-04, ACT-05 | — | BR-RATE-01, BR-RATE-08, BR-RATE-15, BR-RATE-17 |
+| RATE | UC-RATE-06 | Cấu hình gói giá & chính sách huỷ | ACT-05 | — | BR-RATE-20, BR-CANCEL-01/02/09, BR-BOOK-12, BR-RBAC-03 |
 | BOOK | UC-BOOK-01 | Tạo đặt phòng trên web | ACT-01 | ACT-08, ACT-10, ACT-11 | BR-BOOK-01, BR-BOOK-03, BR-BOOK-09, BR-BOOK-15, BR-BOOK-16, BR-RATE-16 |
 | BOOK | UC-BOOK-02 | Tạo đặt phòng tại quầy (khách vãng lai) | ACT-02 | ACT-10 | BR-BOOK-01, BR-BOOK-04, BR-BOOK-09, BR-BOOK-10, BR-PAY-01 |
 | BOOK | UC-BOOK-03 | Tạo đặt phòng qua điện thoại | ACT-03 | ACT-10, ACT-11 | BR-BOOK-01, BR-BOOK-07, BR-BOOK-09, BR-RATE-07 |
@@ -312,7 +313,7 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 | SYS | UC-SYS-02 | Cấu hình tham số hệ thống | ACT-12, ACT-05 | — | BR-SYS-02, BR-CANCEL-11 |
 | SYS | UC-SYS-03 | Sao lưu & phục hồi dữ liệu | ACT-12 | — | BR-SYS-03, BR-SYS-04 |
 
-**Kiểm tra phủ:** 52/52 UC có ≥ 1 mã BR thật và ≥ 1 actor chính; 12 UC rủi ro **Cao** đều có đặc tả ở §6; danh sách UC theo actor ở §7; ước lượng độ phức tạp ở §8.
+**Kiểm tra phủ:** 53/53 UC có ≥ 1 mã BR thật và ≥ 1 actor chính; 13 UC rủi ro **Cao** đều có đặc tả ở §6; danh sách UC theo actor ở §7; ước lượng độ phức tạp ở §8.
 
 ## 5. Quan hệ giữa các use case
 
@@ -340,7 +341,7 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 | I-12 | UC-FO-02 | UC-FO-03 | BR-FO-06 | Không sinh `HousekeepingTask`, phòng bẩn được bán tiếp |
 | I-13 | UC-FO-02 | UC-CRM-02 | BR-CRM-03 | Khách không được tích điểm sau khi hoàn tất lưu trú |
 | I-14 | UC-CRM-02 | UC-CRM-01 | BR-CRM-01, BR-CRM-02 | Điểm/hạng gắn sai hồ sơ khách |
-| I-15 | UC-RATE-01, UC-RATE-02, UC-RATE-03, UC-RATE-04 | UC-RATE-05 | BR-RATE-15, BR-RATE-17 | Người cấu hình không thấy tác động giá trước khi lưu |
+| I-15 | UC-RATE-01, UC-RATE-02, UC-RATE-03, UC-RATE-04, UC-RATE-06 | UC-RATE-05 | BR-RATE-15, BR-RATE-17 | Người cấu hình không thấy tác động giá trước khi lưu |
 | I-16 | UC-INV-02 | UC-RATE-05 | BR-RATE-01, BR-RATE-17 | Giá trả cho khách lệch với giá xem trước |
 
 ### 5.2. Quan hệ `<<extend>>`
@@ -368,28 +369,28 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 
 `UC-OVER-04` (walk-out) **không** là UC con của `UC-BOOK-08`: nó không chỉ chấm dứt booking mà còn phát sinh bồi thường và hỗ trợ tìm chỗ ở thay thế, nên được mô hình hoá bằng `<<extend>>` E-11 + include `UC-PAY-04` (I-10).
 
-## 6. Đặc tả chi tiết 12 UC rủi ro cao
+## 6. Đặc tả chi tiết 13 UC rủi ro cao
 
-12 UC dưới đây được chọn vì **tập trung cả ba bài toán BT-1/BT-2/BT-3** và là nơi sai sót gây thiệt hại tiền hoặc trải nghiệm: `UC-BOOK-01`, `UC-BOOK-02`, `UC-BOOK-04`, `UC-BOOK-06`, `UC-BOOK-08`, `UC-PAY-02`, `UC-PAY-04`, `UC-CHAN-03`, `UC-OVER-01`, `UC-OVER-02`, `UC-OVER-03`, `UC-FO-01`. Mã `E_*` chỉ dùng những mã đã chốt ở [04/api](../04-thiet-ke/api.md); các vi phạm chưa có mã riêng được mô tả bằng điều kiện nghiệp vụ.
+13 UC dưới đây được chọn vì **tập trung cả ba bài toán BT-1/BT-2/BT-3** và là nơi sai sót gây thiệt hại tiền hoặc trải nghiệm: `UC-BOOK-01`, `UC-BOOK-02`, `UC-BOOK-04`, `UC-BOOK-06`, `UC-BOOK-08`, `UC-PAY-02`, `UC-PAY-04`, `UC-CHAN-03`, `UC-OVER-01`, `UC-OVER-02`, `UC-OVER-03`, `UC-FO-01`, `UC-RATE-06`. Mã `E_*` chỉ dùng những mã đã chốt ở [04/api](../04-thiet-ke/api.md); các vi phạm chưa có mã riêng được mô tả bằng điều kiện nghiệp vụ.
 
 ### 6.1. UC-BOOK-01 — Tạo đặt phòng trên web
 
 **Actor.** Chính: ACT-01 (khách web) · Phụ: ACT-08 (qua UC-PAY-02), ACT-10, ACT-11 (qua UC-BOOK-04) · **Tần suất.** ≈35 lượt/ngày toàn chuỗi, cao điểm lễ ×2–3.
 **Mục tiêu.** Khách tự tạo booking, thấy giá **từng đêm**, và booking chỉ chuyển `CONFIRMED` khi đã trả đủ cọc.
 **Tiền điều kiện.** Khách có phiên đăng nhập (UC-AUTH-03); kỳ lưu trú còn tồn khả dụng cho **mọi** đêm; khách không nằm trong danh sách đen.
-**Hậu điều kiện.** Thành công: `Booking` ở `HELD` → `PENDING_PAYMENT`/`CONFIRMED`, `RoomAssignment` đang hoạt động cho mọi đêm, `PriceSnapshot` + `BookingStatusHistory` + `AuditLog` + `OutboxEvent`. Thất bại: không có `Booking`; hold (nếu đã tạo) được giải phóng.
+**Hậu điều kiện.** Thành công: `Booking` ở `HELD` → `PENDING_PAYMENT`/`CONFIRMED`, `RoomAssignment` đang hoạt động cho mọi đêm, `PriceSnapshot` + `BookingStatusHistory` + `AuditLog` + `OutboxEvent`. Thất bại trước commit giữ chỗ: không tạo booking. Sau commit giữ chỗ nhưng thanh toán lỗi: giữ booking chờ tới holdExpiresAt; tiền thu muộn theo BR-PAY-11, không xoá chứng từ.
 **Luồng chính.**
 1. Khách chọn cơ sở, ngày nhận/trả, số người lớn và trẻ em.
-2. Hệ thống gọi UC-INV-02: kiểm tra tồn **theo từng đêm** (tồn chung = phòng `ACTIVE` − `RoomBlock` − `RoomAssignment` − hold chưa sinh assignment; tồn kênh = `min(tồn chung, allotment − used)`), chọn `ChannelPropertySetting` theo `effectiveFrom` lớn nhất ≤ **ngày của từng đêm** và báo giá theo thứ tự hệ số cố định.
+2. Hệ thống gọi UC-INV-02: kiểm tra tồn **theo từng đêm** (supply/demand và used theo BR-INV-01, không đếm trùng hold/assignment), chọn `ChannelPropertySetting` theo `effectiveFrom` lớn nhất ≤ **ngày của từng đêm** và báo giá theo thứ tự hệ số cố định.
 3. Hệ thống hiển thị loại phòng khả dụng kèm giá từng đêm, tổng tạm tính, tiền cọc và chính sách huỷ của từng gói giá.
 4. Khách chọn loại phòng + gói giá; hệ thống kiểm tra số đêm so với `minNights`/`maxNights`, sức chứa tối đa và phụ thu trẻ em.
 5. Khách nhập thông tin liên hệ; hệ thống định danh khách theo số điện thoại chuẩn hoá, kiểm tra danh sách đen và chống đặt trùng.
 6. Khách nhập mã khuyến mãi (tuỳ chọn); hệ thống áp theo thứ tự tất định (`AMOUNT` trước, `PERCENT` sau, cùng loại theo `code` tăng dần), cắt trần 30% tổng tạm tính; nếu kết quả chạm sàn giá thì **bỏ mã, giữ giá gốc, vẫn cho xác nhận**, ghi cảnh báo `E_RATE_BELOW_FLOOR` vào `PriceQuote.warnings[]` (nhánh chặn HTTP 422 chỉ áp ở màn hình cấu hình khuyến mãi của quản lý).
-7. Khách xác nhận → hệ thống tạo `Hold` (`holdExpiresAt` theo `channel.holdMinutes`), booking `HELD` (include UC-BOOK-04) và **lưu `PriceSnapshot` (`seq`, `kind = ORIGINAL`, `engineVersion`) ngay khi booking rời `DRAFT`** để phục vụ tính phụ thu đêm đầu về sau.
-8. Hệ thống kiểm tra báo giá còn hiệu lực 15 phút; quá hạn thì tính lại và trình giá mới trước khi thu tiền.
+7. Khách xác nhận → kiểm quoteId thuộc khách/kênh WEB, còn hạn và khớp toàn bộ đầu vào (kể cả childAges, roomCount); kiểm lượt khuyến mãi và tồn dưới khóa, chốt giá khách đã đồng ý rồi hệ thống tạo Hold (`holdExpiresAt` theo `channel.holdMinutes`), booking `HELD` (include UC-BOOK-04) và **lưu `PriceSnapshot` (`seq`, `kind = ORIGINAL`, `engineVersion`) ngay khi booking rời `DRAFT`** để phục vụ tính phụ thu đêm đầu về sau.
+8. Quote hết hạn/khác đầu vào trước lúc tạo hold phải báo lại giá và nhận xác nhận; sau khi hold đã chốt, không tính lại giá do quote hết hạn. Khởi tạo thanh toán chỉ trong thời hạn hold.
 9. Khách trả cọc trực tuyến (include UC-PAY-02) → `Payment` loại `DEPOSIT` mang `Idempotency-Key`.
 10. Khi `paidAmount ≥ depositAmount` → `CONFIRMED`; bổ sung/khẳng định `PriceSnapshot` của booking, ghi lịch sử trạng thái + `AuditLog` + `OutboxEvent`, xếp hàng UC-NOTI-01 và hiển thị mã đặt phòng.
-**Luồng thay thế.** A1 (b.5) khách chưa có tài khoản → UC-AUTH-03 đăng ký nhanh rồi quay lại b.5. A2 (b.6) mã khuyến mãi hết hạn/hết lượt → từ chối áp, tiếp tục b.8 với giá gốc; nếu áp mã làm tổng chạm sàn → bỏ mã và trả cảnh báo `E_RATE_BELOW_FLOOR`. A3 (b.8) giá đã đổi → khách chấp nhận giá mới thì đi tiếp b.9, từ chối thì huỷ hold và kết thúc. A4 (b.9) khách chọn trả sau → booking `PENDING_PAYMENT`, hold tiếp tục chạy tới hạn.
+**Luồng thay thế.** A1 (b.5) khách chưa có tài khoản → UC-AUTH-03 đăng ký nhanh rồi quay lại b.5. A2 (b.6) mã khuyến mãi hết hạn/hết lượt → từ chối áp, trình giá gốc và yêu cầu khách xác nhận lại; nếu áp mã làm tổng chạm sàn → bỏ mã và trả cảnh báo `E_RATE_BELOW_FLOOR`. A3 quote đổi trước tạo hold → khách đồng ý giá mới rồi tạo hold; đã chốt hold không tự đổi giá. A4 (b.9) khách chọn trả sau → booking `PENDING_PAYMENT`, hold tiếp tục chạy tới hạn.
 **Luồng ngoại lệ.** E1 thiếu trường bắt buộc → `E_BOOK_MISSING_FIELD`; số khách vượt sức chứa → `E_BOOK_OVER_CAPACITY`. E2 hết phòng ở tầng nghiệp vụ (một đêm không còn phòng) → `E_INV_NO_AVAILABILITY` (HTTP 409) kèm danh sách đêm thiếu; tranh chấp đồng thời ở tầng CSDL → ràng buộc loại trừ trả `23P01`, tầng ứng dụng chuyển thành `E_INV_ROOM_TAKEN` (HTTP 409), cấm nuốt lỗi rồi báo thành công. E3 hold hết hạn trước khi trả cọc → booking `EXPIRED`, phòng trở lại tồn khả dụng, khách phải đặt lại. E4 khách trong danh sách đen → chặn, chỉ `MANAGER`+ override có lý do (UC-CRM-03 extend). E5 nghi trùng trong 24 giờ → trả về booking cũ kèm cờ `duplicateSuspected`, không tạo mới.
 **BR áp dụng.** BR-BOOK-01/02/03/04/05/07/08/09/10/15/16, BR-INV-01/02/03/07, BR-RATE-01/10/11/12/13/14/15/16/17, BR-GEN-01/03/06/08, BR-CRM-01, BR-CHAN-06, BR-SYS-06.
 **NFR liên quan.** NFR-PERF-01, NFR-PERF-03, NFR-REL-01, NFR-REL-02, NFR-REL-06, NFR-SEC-02, NFR-USE-05, NFR-COMP-01, NFR-COMP-03, NFR-LOC-03 ([chi tiết](yeu-cau-phi-chuc-nang.md)).
@@ -399,20 +400,20 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 **Actor.** Chính: ACT-02 (lễ tân) · Phụ: ACT-10, ACT-11 (hết hạn), ACT-08 nếu khách quét QR · **Tần suất.** 8–12 lượt/ngày toàn chuỗi (2–5 lượt/cơ sở), cao điểm ≈20 lượt/ngày.
 **Mục tiêu.** Ghi nhận booking walk-in và cấp phòng trong **≤ 3 phút** (tiêu chí thành công #5 của [00 §12](../00-tong-quan.md#12-tiêu-chí-thành-công-của-dự-án)), giá theo hệ số kênh `WALKIN`.
 **Tiền điều kiện.** Lễ tân đã đăng nhập với `propertyScope` đúng cơ sở; còn tồn khả dụng; ngày nhận phòng là hôm nay.
-**Hậu điều kiện.** Thành công: `Booking` `CONFIRMED` (đủ cọc **hoặc** `MANAGER`+ cho ghi nợ có lý do), `RoomAssignment`, `PriceSnapshot`, `AuditLog`, phiếu xác nhận, thông báo xếp hàng. Thất bại: không có `Booking`; nếu tiền đã thu thì `Payment` được đảo bằng bút toán `REFUND` (không sửa/xoá bản ghi gốc).
+**Hậu điều kiện.** Thành công: `Booking` `CONFIRMED` (đủ cọc **hoặc** `MANAGER`+ cho ghi nợ có lý do), `RoomAssignment`, `PriceSnapshot`, `AuditLog`, phiếu xác nhận, thông báo xếp hàng. Thất bại trước commit không tạo booking/phiếu thu. Thanh toán ngoài hệ thống chỉ bắt đầu sau khi đã có booking chờ hữu hạn; thu muộn xử lý BR-PAY-11.
 **Luồng chính.**
 1. Lễ tân tra khách theo số điện thoại; hệ thống hiển thị hồ sơ và hạng khách nếu đã có.
 2. Lễ tân mở màn tạo booking, chọn cơ sở trong phạm vi được phép.
 3. Nhập ngày nhận/trả, số người; hệ thống gọi UC-INV-02 kiểm tra tồn từng đêm.
 4. Chọn loại phòng; hệ thống báo giá theo kênh quầy (cao hơn kênh trực tiếp), tiền cọc và chính sách huỷ.
 5. Lễ tân xác nhận số khách, giấy tờ tuỳ thân và thông tin liên hệ; hệ thống lưu vào hồ sơ khách.
-6. Lễ tân thu tiền: cọc theo gói giá, hoặc toàn bộ, hoặc một phần (UC-PAY-01 extend).
+6. Trong transaction kiểm tồn, tạo booking PENDING_PAYMENT có hạn 15 phút, assignment và snapshot trước khi yêu cầu thu ngoài hệ thống; tiền mặt ghi phiếu thu và trạng thái trong một transaction. Thu qua UC-PAY-01.
 7. Khi đủ cọc **hoặc** có duyệt ghi nợ của `MANAGER`+ → booking `CONFIRMED`; ngược lại giữ `PENDING_PAYMENT`.
 8. Hệ thống lưu `PriceSnapshot`, ghi `BookingStatusHistory` + `AuditLog` + `OutboxEvent`, cấp `RoomAssignment` cho mọi đêm.
 9. Nếu phòng sạch và khách muốn vào ngay → chuyển sang UC-FO-01 (extend).
 10. In/gửi phiếu xác nhận, xếp hàng thông báo và kết thúc.
 **Luồng thay thế.** A1 (b.1) khách chưa có hồ sơ → UC-CRM-01 tạo hồ sơ tối thiểu theo số điện thoại chuẩn hoá. A2 (b.6) khách trả một phần → ghi `balanceDue`, phần còn lại bắt buộc thu trước khi giao phòng. A3 (b.4) kỳ lưu trú ≥ 14 đêm → gợi ý gói `LONGSTAY14`. A4 (b.9) khách đến sớm → áp quy tắc check-in sớm (UC-FO-01).
-**Luồng ngoại lệ.** E1 hết phòng hôm nay → đề xuất phương án điều chuyển (UC-OVER-02) hoặc từ chối lịch sự. E2 khách trong danh sách đen → chặn, chỉ `MANAGER`+ override có lý do (UC-CRM-03 extend). E3 trùng booking trong 24 giờ → trả booking cũ kèm cờ nghi trùng. E4 vượt sức chứa → `E_BOOK_OVER_CAPACITY`; thiếu trường → `E_BOOK_MISSING_FIELD`. E5 thu tiền xong nhưng không tạo được booking → hoàn ngay bằng bút toán `REFUND`, ghi `AuditLog`.
+**Luồng ngoại lệ.** E1 hết phòng hôm nay → đề xuất phương án điều chuyển (UC-OVER-02) hoặc từ chối lịch sự. E2 khách trong danh sách đen → chặn, chỉ `MANAGER`+ override có lý do (UC-CRM-03 extend). E3 trùng booking trong 24 giờ → trả booking cũ kèm cờ nghi trùng. E4 vượt sức chứa → `E_BOOK_OVER_CAPACITY`; thiếu trường → `E_BOOK_MISSING_FIELD`. E5 thanh toán thất bại giữ booking chờ tới hạn; thu thành công sau hạn → BR-PAY-11, không mất chứng từ và không chi hoàn khi chưa duyệt.
 **BR áp dụng.** BR-BOOK-01/02/03/04/05/09/10/16, BR-RATE-03/04/07/16, BR-PAY-01/02/06, BR-RBAC-02/03, BR-CRM-01/04, BR-GEN-06/07/08.
 **NFR liên quan.** NFR-USE-05, NFR-PERF-02, NFR-REL-05, NFR-REL-06, NFR-SEC-01, NFR-SEC-05, NFR-MAIN-05, NFR-LOC-03/04 ([chi tiết](yeu-cau-phi-chuc-nang.md)).
 
@@ -420,19 +421,19 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 
 **Actor.** Chính: ACT-11 (job hết hạn) và ACT-01 (người khởi tạo hold qua UC-BOOK-01) · Phụ: ACT-10 · **Tần suất.** ≈20 lượt tạo hold/ngày; job quét 2.880 lượt/ngày (mỗi 30 giây).
 **Mục tiêu.** Giữ phòng cho khách trong thời hạn của kênh và **tự trả phòng về tồn khả dụng** khi hết hạn, chống giữ chỗ ảo.
-**Tiền điều kiện.** Có yêu cầu giữ chỗ từ UC-BOOK-01/03; kênh có `holdMinutes > 0`; kỳ lưu trú còn tồn cho mọi đêm.
+**Tiền điều kiện.** Có yêu cầu giữ chỗ từ UC-BOOK-01/03 hoặc WALKIN chờ theo BR-BOOK-07; kênh có `holdMinutes > 0`; kỳ lưu trú còn tồn cho mọi đêm.
 **Hậu điều kiện.** Thành công (tạo hold): `Hold` + booking `HELD` + `RoomAssignment` giữ chỗ. Thất bại/hết hạn: `Hold.releasedAt` được đặt, `RoomAssignment` giải phóng, booking `EXPIRED` trong **cùng transaction**.
 **Luồng chính.**
 1. Hệ thống mở transaction và khoá bi quan theo `(roomTypeId, date)` cho mọi đêm của kỳ lưu trú.
 2. Kiểm tra tồn từng đêm; nếu mọi đêm còn phòng thì giữ chỗ.
 3. Tạo `Hold` với `expiresAt = thời điểm tạo + channel.holdMinutes` và chuyển booking sang `HELD`.
 4. Ghi `BookingStatusHistory` + `AuditLog`; trả đồng hồ đếm ngược cho giao diện.
-5. Job của ACT-11 chạy mỗi 30 giây (khoá `job.hold.releaseIntervalSeconds`), tìm `Hold` ở `ACTIVE` có `expiresAt ≤ hiện tại`; song song đó job đối chiếu mỗi 900 giây (khoá `job.holdReconcile.intervalSeconds`) so `Hold` với `Booking.holdExpiresAt` để phát hiện lệch trạng thái.
-6. Trong một transaction: `Hold.status` → `EXPIRED` kèm `releasedAt`, chuyển booking `HELD` → `EXPIRED`, giải phóng toàn bộ `RoomAssignment`.
+5. Job đọc nguồn chân lý Booking HELD/PENDING_PAYMENT có holdExpiresAt ≤ giờ CSDL (không phụ thuộc Redis); Redis chỉ đếm nhanh và đối chiếu định kỳ.
+6. Trong một transaction: `Hold.status` → `EXPIRED` kèm `releasedAt`, chuyển booking HELD/PENDING_PAYMENT → `EXPIRED`, giải phóng assignment, giảm demand/used; hoàn toàn bộ phần tiền đã thu chưa đủ cọc theo BR-BOOK-18, không phạt.
 7. Phát biến cố `HoldExpired` qua outbox và đồng bộ lại tồn/giá lên kênh đang mở bán.
 8. Ghi `AuditLog`; nếu đã có liên hệ thì xếp hàng thông báo cho khách; phòng trở lại tồn khả dụng trong ≤ 60 giây.
-**Luồng thay thế.** A1 kênh có `holdMinutes = 0` → bỏ qua trạng thái `HELD`, booking đi thẳng `PENDING_PAYMENT`/`CONFIRMED`. A2 khách thanh toán trước hạn → hold chuyển thành assignment đang hoạt động và booking sang `PENDING_PAYMENT`/`CONFIRMED`. A3 hold của kênh OTA → do OTA giữ chỗ, hệ thống chỉ ghi nhận theo webhook.
-**Luồng ngoại lệ.** E1 hai yêu cầu giữ cùng phòng/đêm đồng thời → ràng buộc loại trừ ở CSDL trả `23P01`, tầng ứng dụng chuyển thành `E_INV_ROOM_TAKEN` (kịch bản 200 yêu cầu đồng thời: đúng 1 thành công, phần còn lại nhận 409). E2 job chậm hoặc lỗi → chạy lại idempotent, cảnh báo vận hành khi vượt cam kết 60 giây. E3 booking đã `CANCELLED`/đã thanh toán khi job chạy → bỏ qua, không đổi trạng thái.
+**Luồng thay thế.** A1 WALKIN bỏ qua HELD nhưng PENDING_PAYMENT có hạn 15 phút. A2 đủ cọc trước hạn → CONFIRMED, kết thúc hold, giữ assignment hiện có. A3 OTA đã thu hộ → CONFIRMED theo BR-CHAN-03, không tạo hold nội bộ.
+**Luồng ngoại lệ.** E1 hai yêu cầu giữ cùng phòng/đêm đồng thời → ràng buộc loại trừ ở CSDL trả `23P01`, tầng ứng dụng chuyển thành `E_INV_ROOM_TAKEN` (kịch bản 200 yêu cầu đồng thời: đúng 1 thành công, phần còn lại nhận 409). E2 job chậm hoặc lỗi → chạy lại idempotent, cảnh báo vận hành khi vượt cam kết 60 giây. E3 callback và job cùng lúc: khóa cùng Booking; CONFIRMED đã commit trước hạn thì bỏ qua, chỉ đã trả một phần chưa đủ cọc vẫn hết hạn. Tại đúng hạn không được xác nhận; tiền muộn theo BR-PAY-11.
 **BR áp dụng.** BR-BOOK-07/08, BR-INV-02/03/04/07, BR-PAY-05, BR-CHAN-02/06, BR-GEN-07, BR-SYS-02/06.
 **NFR liên quan.** NFR-REL-01, NFR-REL-02, NFR-REL-05, NFR-PERF-01, NFR-SEC-04, NFR-OBS-02/04 ([chi tiết](yeu-cau-phi-chuc-nang.md)).
 
@@ -441,19 +442,19 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 **Actor.** Chính: ACT-01, ACT-03 · Phụ: ACT-10, ACT-02/ACT-04 khi thao tác hộ · **Tần suất.** 2–4 lượt/ngày, tăng gấp đôi khi có bão/lễ.
 **Mục tiêu.** Cho phép dời ngày **một lần miễn phí** theo gói giá, tính đúng chênh lệch giá và **không** phát sinh hoàn tiền.
 **Tiền điều kiện.** Booking ở `HELD`/`PENDING_PAYMENT`/`CONFIRMED` (không `CHECKED_IN`); chưa từng đổi ngày; gói giá cho phép hoặc khách chấp nhận phí.
-**Hậu điều kiện.** Thành công: kỳ lưu trú mới được gán phòng, **trạng thái booking giữ nguyên**, `PriceSnapshot` cũ vẫn được giữ để đối chiếu, `AuditLog` ghi thay đổi, chênh lệch (nếu tăng) đã thu. Thất bại: booking giữ nguyên kỳ cũ, không thay đổi gán phòng, không phát sinh `RefundRequest`.
+**Hậu điều kiện.** Thành công: kỳ lưu trú mới được gán phòng, **trạng thái booking giữ nguyên**, `PriceSnapshot` cũ vẫn được giữ để đối chiếu, `AuditLog` ghi thay đổi, chênh lệch và phí được ghi nhận riêng vào số dư thu trước check-in. Thất bại: booking giữ nguyên kỳ cũ, không thay đổi gán phòng, không phát sinh RefundRequest do đổi ngày.
 **Luồng chính.**
 1. Người dùng mở booking (UC-BOOK-07) và chọn "đổi ngày", nhập kỳ lưu trú mới.
 2. Hệ thống kiểm tra điều kiện: trạng thái cho phép, `Booking.rescheduleCount` (chưa từng đổi ngày), số giờ còn lại tới giờ nhận phòng (14:00 giờ VN) và gói giá.
 3. Hệ thống gọi UC-INV-02 kiểm tra tồn cho kỳ mới theo từng đêm.
-4. Tính giá kỳ mới theo thứ tự hệ số bắt buộc và chênh lệch so với giá đã chốt.
+4. Tính giá kỳ mới theo thứ tự hệ số bắt buộc và chênh lệch so với giá đã chốt. Tổng tiền phòng mới = max(tổng cũ, giá kỳ mới); giữ cọc và policy đã chốt theo BR-BOOK-12.
 5. Trình cho người dùng: phí đổi (nếu gói giá quy định), chênh lệch **phải thu thêm**, chính sách huỷ áp cho kỳ mới.
-6. Người dùng xác nhận; hệ thống giải phóng `RoomAssignment` cũ và tạo mới cho kỳ mới trong **một transaction**.
-7. Nếu chênh lệch > 0 hoặc có phí đổi → ghi `Payment` loại `RESCHEDULE_FEE` (UC-PAY-01/02/03); nếu chênh lệch < 0 → **không hoàn**.
+6. Người dùng xác nhận; hệ thống giải phóng `RoomAssignment` cũ và tạo mới cho kỳ mới trong một transaction khóa booking và các đêm cả hai kỳ, tái kiểm phiên bản/tồn/điều kiện; phần ngày giao nhau không tính trùng nhu cầu của chính booking.
+7. Ghi chênh lệch tăng là nghĩa vụ tiền phòng (BALANCE), phí đổi là RESCHEDULE_FEE; cả hai vào balanceDue, thu qua UC-PAY-01/02/03 trước check-in, không gọi PSP trong transaction đổi ngày. Giá giảm không hoàn, không hạ tổng cam kết cũ.
 8. Tăng `rescheduleCount`, **giữ nguyên trạng thái** booking, **lưu thêm `PriceSnapshot` mới cho kỳ mới (`kind = RESCHEDULE`) và giữ bản cũ** để đối chiếu; ghi `AuditLog` mô tả kỳ cũ → kỳ mới và `OutboxEvent` đồng bộ kênh.
 9. Thông báo xác nhận đổi ngày (UC-NOTI-02); không tạo `RefundRequest`.
-**Luồng thay thế.** A1 `rescheduleCount ≥ 1` (đổi lần thứ hai) → hệ thống chặn, đề nghị huỷ theo UC-BOOK-08 rồi tạo booking mới. A2 gói `NONREF` → thu phí 10% giá trị booking trước khi áp dụng. A3 kỳ mới dài hơn → áp hệ số độ dài kỳ lưu trú và kiểm tra lại `minNights`. A4 chỉ dời một đêm → vẫn tính lại toàn bộ kỳ, không tính riêng lẻ.
-**Luồng ngoại lệ.** E1 kỳ mới không đủ tồn → từ chối, giữ nguyên booking hiện tại (transaction rollback). E2 booking `CHECKED_IN` → từ chối, hướng dẫn check-out rồi tạo booking mới. E3 còn dưới 168 giờ → không miễn phí; xử lý như huỷ + đặt mới. E4 thu chênh lệch thất bại → hoàn nguyên kỳ cũ, giữ nguyên gán phòng ban đầu.
+**Luồng thay thế.** A1 `rescheduleCount ≥ 1` (đổi lần thứ hai) → hệ thống chặn, đề nghị huỷ theo UC-BOOK-08 rồi tạo booking mới. A2 gói `NONREF` → thu phí 10% giá trị booking vào số dư phải thu trước check-in. A3 kỳ mới dài hơn → áp hệ số độ dài kỳ lưu trú và kiểm tra lại `minNights`. A4 chỉ dời một đêm → vẫn tính lại toàn bộ kỳ, không tính riêng lẻ.
+**Luồng ngoại lệ.** E1 kỳ mới không đủ tồn → từ chối, giữ nguyên booking hiện tại (transaction rollback). E2 booking `CHECKED_IN` → từ chối, hướng dẫn check-out rồi tạo booking mới. E3 còn dưới 168 giờ → không miễn phí; xử lý như huỷ + đặt mới. E4 sau khi đổi ngày commit, thu phí/chênh lệch thất bại thì giữ kỳ mới và công nợ; không tự hoàn nguyên vì kỳ cũ có thể đã bán. Nếu transaction đổi ngày lỗi thì rollback cả kỳ mới lẫn assignment, không phát sinh nghĩa vụ.
 **BR áp dụng.** BR-BOOK-03/12/13, BR-CANCEL-08, BR-INV-02/03/07, BR-RATE-01/16/17, BR-PAY-02, BR-CHAN-06, BR-GEN-07.
 **NFR liên quan.** NFR-REL-05/06, NFR-PERF-04, NFR-COMP-03, NFR-COMP-05, NFR-LOC-02/03 ([chi tiết](yeu-cau-phi-chuc-nang.md)).
 
@@ -465,17 +466,17 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 **Hậu điều kiện.** Thành công: booking `CANCELLED` kèm `cancelReason`, mọi `RoomAssignment` được giải phóng, `RefundRequest` (`PENDING`) nếu số hoàn > 0, `Payment` loại `PENALTY` ở `PENDING` nếu bậc yêu cầu phụ thu, `AuditLog` + `OutboxEvent` + thông báo. Thất bại: booking giữ nguyên trạng thái, không giải phóng phòng, không tạo yêu cầu hoàn.
 **Luồng chính.**
 1. Người dùng chọn huỷ booking và nhập lý do; hệ thống kiểm tra quyền theo vai trò và phạm vi cơ sở.
-2. Xác định trạng thái hiện tại: `DRAFT`/`HELD` **chưa phát sinh thanh toán** → xoá cứng kèm `AuditLog` có `beforeJson` đầy đủ ghi **trước khi** xoá; đã phát sinh thanh toán → đi tiếp luồng huỷ; đã `CANCELLED` → kết thúc idempotent.
-3. Lấy `CancellationPolicy` theo gói giá của booking.
+2. Khóa và đọc lại Booking, kiểm trạng thái/ownership. Huỷ giữ bản ghi CANCELLED; thao tác xoá cứng riêng chỉ cho DRAFT/HELD chưa có bất kỳ Payment nào theo BR-BOOK-14/17. Booking chưa xác nhận áp BR-BOOK-18, không phạt.
+3. Đọc policy/tier và giờ nhận đã chốt trong PriceSnapshot.policySnapshotJson, không dùng policy vừa được sửa.
 4. Tính số giờ còn lại tới thời điểm nhận phòng danh nghĩa (14:00 giờ Việt Nam).
-5. Chọn bậc có `offsetHours` lớn nhất mà số giờ còn lại đạt tới; bậc cuối (`offsetHours = −1`) là **bậc bắt tất**, áp cho mọi trường hợp còn dưới 24 giờ **kể cả giá trị âm** (ví dụ no-show lúc 23:59) → xác định `refundPercent` và `chargeFirstNight`.
+5. Chọn bậc có `offsetHours` lớn nhất mà số giờ còn lại đạt tới; bậc cuối (`offsetHours = −1`) là **bậc bắt tất**, áp cho mọi trường hợp không đạt offset không âm của gói (LONGSTAY14 dưới 168h, NONREF mọi mốc) **kể cả giá trị âm** (ví dụ no-show lúc 23:59) → xác định `refundPercent` và `chargeFirstNight`.
 6. Tính số hoàn trên **`paidAmount`** (không phải `totalAmount`), làm tròn **xuống** bội số 1.000 VND.
 7. Nếu bậc yêu cầu phụ thu đêm đầu → tính `penaltyAmount = max(0, giá đêm đầu − paidAmount)` và tạo `Payment` loại `PENALTY` ở `PENDING` (ghi công nợ, không tự thu). Booking đã `CANCELLED` **không** ghi công nợ cho phần `totalAmount − paidAmount`; `balanceDue = penaltyAmount`.
 8. Trong một transaction: chuyển `CANCELLED` + `cancelReason`, giải phóng toàn bộ `RoomAssignment`, ghi `BookingStatusHistory` + `AuditLog`.
-9. Nếu số hoàn > 0 → tạo `RefundRequest` ở `PENDING` và chuyển sang UC-PAY-04 (extend E-04).
+9. Trong cùng transaction huỷ, nếu netRefund > 0 → tạo `RefundRequest` ở `PENDING` và chuyển sang UC-PAY-04 (extend E-04).
 10. Phát `OutboxEvent` đồng bộ tồn/giá lên kênh, xếp hàng UC-NOTI-02, và trả cho người dùng bảng tính: bậc áp dụng, số giờ trước nhận phòng, tỷ lệ hoàn, số tiền hoàn, phụ thu, thời hạn chi.
-**Luồng thay thế.** A1 huỷ do bất khả kháng → UC-OVER-05 (extend E-06): hoàn 100%, miễn phụ thu và phí xử lý, bắt buộc lý do ≥ 20 ký tự và lưu minh chứng vào `RefundRequest.evidenceRefs[]`. A2 huỷ do khách sạn/walk-out → UC-OVER-04: hoàn 100% + bồi thường một đêm đầu. A3 booking từ OTA → áp chính sách của OTA, ghi `cancelReason = OTA_CANCELLATION` và lưu mã chính sách kênh vào `Booking.channelPolicyCode` để đối soát. A4 khách trả phòng sớm → áp quy tắc trả phòng sớm (cơ sở tính `min(paidAmount, tổng giá các đêm chưa ở)`, ngưỡng ở `CancellationPolicy.earlyCheckoutFreeHours`/`earlyCheckoutRefundPct`, lý do `EARLY_CHECKOUT`) và đi tiếp UC-PAY-04 (extend E-05). A5 **huỷ một phần** (booking `roomCount > 1`): chỉ huỷ một số `BookingRoom`, `refundBase` phân bổ theo **tỷ lệ giá của các phòng bị huỷ trên `totalAmount`** rồi mới áp công thức hoàn, các phòng còn lại giữ nguyên giá và `RoomAssignment`, `totalAmount` giảm, lưu thêm một `PriceSnapshot` điều chỉnh (`kind = PARTIAL_CANCEL`) và giữ bản gốc; huỷ hết phòng mới chuyển `CANCELLED` toàn phần.
-**Luồng ngoại lệ.** E1 gói `NONREF` → tỷ lệ hoàn 0% ở mọi mốc, hệ thống vẫn ghi nhận huỷ nhưng không tạo `RefundRequest`. E2 booking đang `CHECKED_IN` → không cho huỷ; hướng dẫn check-out sớm rồi lập yêu cầu hoàn riêng. E3 tổng hoàn lũy kế vượt `paidAmount` → chặn ở tầng nghiệp vụ và tầng thanh toán. E4 lỗi giữa chừng → rollback toàn bộ, booking không đổi. E5 gửi lại cùng `Idempotency-Key` → trả đúng kết quả cũ, không tạo hai yêu cầu hoàn.
+**Luồng thay thế.** A1 huỷ do bất khả kháng → UC-OVER-05 (extend E-06): hoàn 100%, miễn phụ thu và phí xử lý, bắt buộc lý do ≥ 20 ký tự và lưu minh chứng vào `RefundRequest.evidenceRefs[]`. A2 huỷ do khách sạn/walk-out → UC-OVER-04: hoàn 100% + bồi thường một đêm đầu. A3 booking từ OTA → áp chính sách của OTA, ghi `cancelReason = OTA_CANCELLATION` và lưu mã chính sách kênh vào `Booking.channelPolicyCode` để đối soát. A4 khách trả phòng sớm đi UC-FO-02 riêng, không chuyển CANCELLED → áp quy tắc trả phòng sớm (cơ sở tính `min(paidAmount, tổng giá các đêm chưa ở)`, ngưỡng ở `CancellationPolicy.earlyCheckoutFreeHours`/`earlyCheckoutRefundPct`, lý do `EARLY_CHECKOUT`) và đi tiếp UC-PAY-04 (extend E-05). A5 **huỷ một phần** (booking `roomCount > 1`): chỉ huỷ một số `BookingRoom`, refundBase lấy phân bổ tiền phòng bất biến của các phòng bị huỷ theo BR-CANCEL-19 rồi mới áp công thức hoàn, các phòng còn lại giữ nguyên giá và `RoomAssignment`, `totalAmount` giảm, lưu thêm một `PriceSnapshot` điều chỉnh (`kind = PARTIAL_CANCEL`) và giữ bản gốc; huỷ hết phòng mới chuyển `CANCELLED` toàn phần.
+**Luồng ngoại lệ.** E1 gói `NONREF` → tỷ lệ hoàn 0% khi huỷ thông thường; ngoại lệ BR-CANCEL-13/14, BR-PAY-11 vẫn có hiệu lực, hệ thống vẫn ghi nhận huỷ nhưng không tạo `RefundRequest`. E2 booking đang `CHECKED_IN` → không cho huỷ; hướng dẫn check-out sớm rồi lập yêu cầu hoàn riêng. E3 tổng hoàn lũy kế vượt `paidAmount` → chặn ở tầng nghiệp vụ và tầng thanh toán. E4 lỗi giữa chừng → rollback toàn bộ, booking không đổi. E5 gửi lại cùng `Idempotency-Key` → trả đúng kết quả cũ, không tạo hai yêu cầu hoàn.
 **BR áp dụng.** BR-BOOK-11/13/14/17, BR-CANCEL-01/02/03/04/05/06/07/09/10/13/14/16/17/19, BR-PAY-02/07/09, BR-CHAN-04/06, BR-GEN-04/05/07/08, BR-SYS-06.
 **NFR liên quan.** NFR-REL-05/06, NFR-PERF-04, NFR-COMP-03, NFR-COMP-05, NFR-OBS-04, NFR-LOC-02/03 ([chi tiết](yeu-cau-phi-chuc-nang.md)).
 
@@ -483,8 +484,8 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 
 **Actor.** Chính: ACT-01, ACT-08 (PSP) · Phụ: ACT-11 (job quá hạn 15 phút), ACT-10 · **Tần suất.** 25–40 giao dịch/ngày (mỗi giao dịch 1 request + 1 callback).
 **Mục tiêu.** Thu cọc/số dư qua VNPay hoặc MoMo, ghi nhận thanh toán **idempotent**, không lưu dữ liệu thẻ.
-**Tiền điều kiện.** Booking ở `HELD`/`PENDING_PAYMENT`; số tiền cần thu > 0; hold chưa hết hạn; adapter của cổng đang hoạt động.
-**Hậu điều kiện.** Thành công: `Payment` `SUCCEEDED` kèm `providerTxnId`, `paidAmount` tăng, booking `CONFIRMED` khi đủ cọc, `AuditLog` + `OutboxEvent` + biên nhận. Thất bại: `Payment` `FAILED`, `paidAmount` không đổi, hold giữ tới hạn hoặc được giải phóng.
+**Tiền điều kiện.** Thu cọc: Booking HELD/PENDING_PAYMENT còn hạn; thu số dư: CONFIRMED/CHECKED_IN có nghĩa vụ chưa thu; số tiền cần thu > 0; hold chưa hết hạn; adapter của cổng đang hoạt động.
+**Hậu điều kiện.** Thành công: `Payment` `SUCCEEDED` kèm `providerTxnId`, `paidAmount` tăng, booking `CONFIRMED` khi đủ cọc, `AuditLog` + `OutboxEvent` + biên nhận. Thất bại: `Payment` `FAILED`, `paidAmount` không đổi, hold chỉ giải phóng khi hết hạn hoặc huỷ. Callback thành công muộn theo BR-PAY-11, không khôi phục booking.
 **Luồng chính.**
 1. Người dùng chọn phương thức thanh toán trực tuyến (VNPay/MoMo).
 2. Hệ thống tạo `Payment` ở `PENDING` với `Idempotency-Key` và số tiền = tiền cọc hoặc số dư còn lại.
@@ -492,12 +493,12 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 4. Cổng trả về URL/QR; hệ thống chuyển người dùng sang trang thanh toán của cổng.
 5. Khách hoàn tất thanh toán trên cổng.
 6. Cổng gọi webhook `/api/v1/integrations/psp/{provider}/callback`.
-7. Hệ thống xác thực chữ ký, tra `Payment` theo `idempotencyKey`; nếu đã `SUCCEEDED` thì trả 200 và **không** tạo bản ghi mới.
+7. Hệ thống xác thực chữ ký, kiểm merchant/số tiền/tiền tệ, tra Payment bằng định danh giao dịch PSP và yêu cầu đã lưu, khóa Booking/Payment; nếu đã `SUCCEEDED` thì trả 200 và **không** tạo bản ghi mới.
 8. Ghi `Payment` `SUCCEEDED` + `providerTxnId` + `paidAt`; cộng `paidAmount` trong một transaction.
-9. Nếu `paidAmount ≥ depositAmount` → booking `CONFIRMED`; ghi `BookingStatusHistory` + `AuditLog` + `OutboxEvent`.
+9. Nếu đang chờ, hold còn hạn và tiền phòng đủ cọc → CONFIRMED cùng transaction ghi thu. Nếu đã quá hạn/booking kết thúc → BR-PAY-11 ghi thu và lập hoàn khoản muộn, không tái chiếm tồn.
 10. Xếp hàng thông báo xác nhận/biên nhận (UC-NOTI-01) và hiển thị kết quả cho khách.
-**Luồng thay thế.** A1 khách trả tiền mặt/chuyển khoản → UC-PAY-01 (không qua cổng). A2 khách chỉ trả cọc → booking ở `PENDING_PAYMENT`, `balanceDue` theo công thức `totalAmount − paidAmount + penaltyAmount`. A3 callback tới trước khi khách quay lại web → khách xem trạng thái qua UC-BOOK-07. A4 thu số dư tại quầy → UC-PAY-03.
-**Luồng ngoại lệ.** E1 chữ ký không hợp lệ → từ chối, ghi log bảo mật, `Payment` giữ `PENDING`. E2 callback trùng khoá idempotency → trả kết quả cũ, phân loại `E_PAY_CALLBACK_DUPLICATE`, **không** tạo `Payment` mới và không cộng tiền hai lần. E3 quá 15 phút không có callback → `Payment` `FAILED` và giải phóng hold tương ứng. E4 số tiền callback lệch số tiền yêu cầu → đánh dấu bất thường, chuyển ACT-06 đối soát (UC-PAY-05), **không** cộng `paidAmount`. E5 cổng không phản hồi → circuit breaker, thử lại có giới hạn, cảnh báo vận hành; khách được gợi ý phương thức khác.
+**Luồng thay thế.** A1 khách trả tiền mặt/chuyển khoản → UC-PAY-01 (không qua cổng). A2 trả đủ cọc → CONFIRMED dù còn balanceDue; trả chưa đủ → PENDING_PAYMENT tới holdExpiresAt. A3 callback tới trước khi khách quay lại web → khách xem trạng thái qua UC-BOOK-07. A4 thu số dư tại quầy → UC-PAY-03.
+**Luồng ngoại lệ.** E1 chữ ký không hợp lệ → từ chối, ghi log bảo mật, `Payment` giữ `PENDING`. E2 callback trùng khoá idempotency → trả kết quả cũ, phân loại `E_PAY_CALLBACK_DUPLICATE`, **không** tạo `Payment` mới và không cộng tiền hai lần. E3 quá 15 phút không có callback → `Payment` `FAILED` nhưng không hết hạn hold trước hạn riêng; callback muộn theo BR-PAY-11. E4 số tiền callback lệch số tiền yêu cầu → đánh dấu bất thường, chuyển ACT-06 đối soát (UC-PAY-05), **không** cộng `paidAmount`. E5 cổng không phản hồi → circuit breaker, thử lại có giới hạn, cảnh báo vận hành; khách được gợi ý phương thức khác.
 **BR áp dụng.** BR-PAY-01/02/03/04/05, BR-BOOK-09, BR-GEN-08, BR-CHAN-06, BR-SYS-06.
 **NFR liên quan.** NFR-SEC-02, NFR-SEC-03, NFR-SEC-05, NFR-SEC-06, NFR-REL-06, NFR-PERF-02, NFR-USE-02, NFR-COMP-03, NFR-OBS-01/02 ([chi tiết](yeu-cau-phi-chuc-nang.md)).
 
@@ -506,20 +507,20 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 **Actor.** Chính: ACT-04 (duyệt), ACT-06 (chi) · Phụ: ACT-05 (ngoại lệ/vượt ngưỡng), ACT-08 (hoàn về ví/thẻ), ACT-10 · **Tần suất.** 5–10 yêu cầu/ngày; khoảng 5% số yêu cầu vượt 5.000.000 VND.
 **Mục tiêu.** Kiểm soát chặt việc chi tiền ra: phê duyệt hai cấp, chi **về phương thức gốc**, ghi bút toán đảo thay vì sửa bản ghi thanh toán gốc.
 **Tiền điều kiện.** Tồn tại `RefundRequest` ở `PENDING`; có `Payment` gốc `SUCCEEDED`; tổng hoàn lũy kế + số yêu cầu không vượt `paidAmount`.
-**Hậu điều kiện.** Thành công: `RefundRequest` `APPROVED` → `PAID`, sinh `Payment` loại `REFUND` ở `SUCCEEDED`, `refundedAmount` tăng, `AuditLog` + thông báo. Thất bại: `REJECTED` (kèm lý do) hoặc `CANCELLED`, không sinh `Payment` `REFUND`, số dư không đổi.
+**Hậu điều kiện.** Thành công: `RefundRequest` `APPROVED` → `PAID`, sinh `Payment` loại `REFUND` ở `SUCCEEDED`, `refundedAmount` tăng, `AuditLog` + thông báo. Từ chối/rút trước duyệt: REJECTED/CANCELLED, không chi. Lỗi/timeout khi chi: giữ APPROVED và lần chi PENDING chưa rõ kết quả; chỉ tra/retry cùng khóa, không tạo giao dịch chi mới.
 **Luồng chính.**
 1. ACT-04/ACT-06 mở danh sách `RefundRequest` ở `PENDING` trong phạm vi cơ sở được phép.
 2. Hệ thống hiển thị: booking, `paidAmount`, số giờ trước nhận phòng, bậc đã áp, tỷ lệ hoàn, số tiền yêu cầu, phương thức gốc, cờ bất khả kháng, người tạo.
-3. Người duyệt kiểm tra quy tắc hai cấp **trên `netRefund = refundAmount − refundFee`**: `netRefund > 5.000.000 VND` thì người duyệt phải **khác** người tạo và từ `MANAGER` trở lên; **mọi** mức tiền đều cấm tự duyệt yêu cầu do chính mình tạo.
+3. Kiểm maker–checker BR-CANCEL-15: một MANAGER hoặc OWNER trong phạm vi và khác người tạo duyệt ở mọi mức tiền; trên ngưỡng hiện cảnh báo. Không yêu cầu chuỗi MANAGER→OWNER.
 4. Nhập `approvedAmount` (có thể thấp hơn yêu cầu, phải kèm lý do) và `refundFee` khi cấu hình phí lớn hơn 0; `RefundRequest.reason` phải là một giá trị của enum `CancelReason`, không nhận chuỗi tự do.
-5. Hệ thống tính `netRefund = refundAmount − refundFee` và kiểm tra tổng hoàn lũy kế không vượt `paidAmount`.
+5. netRefund = max(0, approvedAmount − refundFee); khóa booking và Payment gốc, kiểm cả tiền đã chi lẫn phần giữ của yêu cầu khác theo BR-CANCEL-17; không so approvedAmount (gộp) với netRefund (sau phí).
 6. Xác nhận duyệt → `APPROVED` kèm `approvedBy`, `decidedAt` và bản ghi `AuditLog`.
 7. Xác định phương thức chi: hoàn về phương thức gốc; nếu gốc là tiền mặt thì chuyển khoản kèm ghi chú số tài khoản.
-8. Thực hiện chi qua cổng thanh toán (ví/thẻ) hoặc chuyển khoản thủ công có chứng từ.
+8. Thực hiện chi qua cổng thanh toán (ví/thẻ) hoặc chuyển khoản thủ công có chứng từ. Tạo lần chi PENDING với khóa ổn định trước gọi PSP; timeout phải tra trạng thái, không chi lại mù.
 9. Ghi `Payment` loại `REFUND` ở `SUCCEEDED`; chuyển `RefundRequest` sang `PAID` + `paidAt`.
 10. Theo dõi tuổi yêu cầu theo cam kết 3 ngày làm việc, tối đa 7 ngày kể từ khi duyệt; vượt hạn → cảnh báo.
 11. Phát `OutboxEvent`, xếp hàng UC-NOTI-02 thông báo đã hoàn tiền và đưa số liệu vào UC-REP-03.
-**Luồng thay thế.** A1 duyệt một phần → `approvedAmount < requestedAmount`, phần chênh không chi nhưng phải ghi lý do. A2 từ chối → `REJECTED` + lý do, khách được thông báo và có thể lập yêu cầu mới nếu có căn cứ. A3 phí xử lý > 0 → trừ vào tiền hoàn (`netRefund`), **không** thu thêm khách. A4 người tạo rút yêu cầu hoặc booking được khôi phục → `PENDING` chuyển `CANCELLED` (chỉ người tạo hoặc `MANAGER`+, bắt buộc ghi lý do). A5 hoàn cho booking OTA đã thu tiền hộ → ghi công nợ với kênh và chi theo sao kê đối soát.
+**Luồng thay thế.** A1 duyệt một phần → `approvedAmount < requestedAmount`, phần chênh không chi nhưng phải ghi lý do. A2 từ chối → `REJECTED` + lý do, khách được thông báo và có thể lập yêu cầu mới nếu có căn cứ. A3 phí xử lý > 0 → trừ vào tiền hoàn (`netRefund`), **không** thu thêm khách. A4 người tạo rút yêu cầu (không khôi phục booking) → `PENDING` chuyển `CANCELLED` (chỉ người tạo hoặc `MANAGER`+, bắt buộc ghi lý do). A5 OTA thu hộ → không chi RefundRequest nội bộ; đối soát trách nhiệm hoàn của OTA theo BR-CHAN-04.
 **Luồng ngoại lệ.** E1 người duyệt trùng người tạo → chặn ở mọi mức tiền. E2 yêu cầu đã `APPROVED` hoặc `PAID` → **không** được chuyển sang `CANCELLED`. E3 tổng hoàn vượt `paidAmount` → từ chối. E4 cổng hoàn tiền lỗi → giữ `APPROVED`, thử lại, cảnh báo vận hành, không đánh dấu `PAID`. E5 ca bất khả kháng thiếu lý do ≥ 20 ký tự → từ chối tạo/duyệt.
 **BR áp dụng.** BR-CANCEL-05/11/12/13/15/16/17/18/19, BR-PAY-07/08/09/10, BR-RBAC-03, BR-GEN-07/08.
 **NFR liên quan.** NFR-SEC-01, NFR-SEC-04, NFR-COMP-03, NFR-COMP-05, NFR-PERF-02, NFR-REL-06, NFR-OBS-04, NFR-LOC-03 ([chi tiết](yeu-cau-phi-chuc-nang.md)).
@@ -528,21 +529,21 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 
 **Actor.** Chính: ACT-09 (kênh OTA) · Phụ: ACT-11 (chạy lại/đồng bộ), ACT-04 (xử lý quá tải), ACT-10 · **Tần suất.** 20–40 booking/ngày từ 3 OTA (≈40–50% tổng booking).
 **Mục tiêu.** Nhận booking kênh ngoài qua webhook, chuyển đổi dữ liệu kênh về mô hình nội bộ, **không bao giờ mất booking** và biến mọi ca vượt tồn thành hồ sơ quá tải có người chịu trách nhiệm.
-**Tiền điều kiện.** Kênh OTA đang mở bán; adapter của kênh đã đăng ký; webhook có chữ ký hợp lệ và payload đủ trường bắt buộc.
+**Tiền điều kiện.** Kênh OTA hợp lệ (kể cả đang đóng bán); adapter của kênh đã đăng ký; webhook có chữ ký hợp lệ và payload đủ trường bắt buộc.
 **Hậu điều kiện.** Thành công: `Booking` `CONFIRMED` với `Payment` phương thức `OTA_COLLECT`, `ChannelAllotment.used` tăng, `PriceSnapshot` + `AuditLog` + `OutboxEvent`; nếu hết phòng vật lý thì `oversold = true` + `OverbookingCase` ở `OPEN`. Thất bại: không tạo bản ghi, trả mã lỗi cho OTA để gửi lại, ghi log.
 **Luồng chính.**
 1. OTA gửi webhook `POST /api/v1/integrations/ota/{channel}/bookings` với payload đặt phòng.
 2. `ChannelAdapter` của kênh chuyển payload sang DTO nội bộ (anti-corruption layer), tra `ChannelMapping` để ánh xạ mã phòng của OTA ↔ `roomTypeId`, chuẩn hoá thời gian về UTC và số điện thoại về dạng `+84…`.
 3. Hệ thống xác thực chữ ký/khoá và kiểm tra tính idempotent theo mã đặt phòng của OTA.
-4. Kiểm tra `ChannelAllotment` còn lại của `(channelId, roomTypeId, date)`; vượt phần đã phân bổ → từ chối.
+4. Đọc allotment và trạng thái đóng bán để đối chiếu; cam kết OTA đã xác nhận vẫn được tiếp nhận nếu vượt hạn mức/đang đóng bán, cảnh báo BR-CHAN-08.
 5. Kiểm tra tồn khả dụng **từng đêm** trong transaction có khoá bi quan.
 6. Ghi nhận booking ở `CONFIRMED` kèm `Payment` phương thức `OTA_COLLECT` **kể cả khi tồn khả dụng bằng 0** (miễn trừ tường minh của `BR-CHAN-03` đối với hạn mức bán vượt); nếu không còn phòng vật lý → đặt `oversold = true`. Hạn mức `overbookLimitPct` chỉ điều tiết quyết định bán vượt do **hệ thống chủ động**; vượt trần đó trả `E_OVER_LIMIT_EXCEEDED`.
-7. Còn phòng vật lý → tạo `RoomAssignment` cho mọi đêm và tăng `ChannelAllotment.used`.
+7. Còn phòng vật lý → tạo `RoomAssignment` cho mọi đêm ; mọi cam kết tiếp nhận đều tăng used theo demand, kể cả oversold chưa gán.
 8. Lưu `PriceSnapshot` theo giá đã bán trên kênh; ghi `BookingStatusHistory` + `AuditLog` + `OutboxEvent`.
 9. Nếu `oversold = true` → mở `OverbookingCase` ở `OPEN` và kích hoạt UC-OVER-01 (extend E-07).
 10. Trả 200 kèm mã booking nội bộ cho OTA; xếp hàng UC-NOTI-01; hoa hồng chờ đối soát ở UC-PAY-05.
 **Luồng thay thế.** A1 OTA báo huỷ → UC-BOOK-08 theo chính sách của OTA, ghi `cancelReason = OTA_CANCELLATION` và `Booking.channelPolicyCode`. A2 OTA báo sửa đổi → UC-BOOK-05. A3 webhook trùng mã đặt OTA → trả về booking đã có, không tạo mới. A4 khách chưa có trong CRM → tạo hồ sơ tối thiểu theo số điện thoại; đã có → gắn `guestId` và cập nhật tên/hạng.
-**Luồng ngoại lệ.** E1 chữ ký sai/không xác thực → trả 401, không tạo bản ghi, ghi log bảo mật. E2 payload thiếu trường bắt buộc → `E_BOOK_MISSING_FIELD`, OTA gửi lại. E3 vượt allotment còn lại → từ chối và ghi cảnh báo để đối chiếu với kênh. E4 kênh lỗi 3 lần liên tiếp → trả `E_CHAN_SYNC_FAILED`, đặt `Channel.syncStatus = DEGRADED` kèm `consecutiveSyncFailures`, `lastSyncAt`, `lastSyncError` và cảnh báo `MANAGER`. E5 webhook đến trùng do timeout phía OTA → idempotent theo khoá, không nhân đôi doanh thu.
+**Luồng ngoại lệ.** E1 chữ ký sai/không xác thực → trả 401, không tạo bản ghi, ghi log bảo mật. E2 payload thiếu trường bắt buộc → `E_BOOK_MISSING_FIELD`, OTA gửi lại. E3 vượt allotment/đã đóng bán → vẫn ghi nhận cam kết đã xác nhận, cảnh báo đối soát; thiếu nguồn cung mở case. E4 kênh lỗi 3 lần liên tiếp → trả `E_CHAN_SYNC_FAILED`, đặt `Channel.syncStatus = DEGRADED` kèm `consecutiveSyncFailures`, `lastSyncAt`, `lastSyncError` và cảnh báo `MANAGER`. E5 webhook đến trùng do timeout phía OTA → idempotent theo khoá, không nhân đôi doanh thu.
 **BR áp dụng.** BR-CHAN-01/02/03/04/06/07/08, BR-OVER-01/02/03, BR-BOOK-01/09/16, BR-INV-01/02/07, BR-RATE-08, BR-CRM-01, BR-GEN-02/07/08.
 **NFR liên quan.** NFR-PERF-05, NFR-REL-01, NFR-REL-06, NFR-SEC-03, NFR-SEC-05, NFR-USE-02, NFR-OBS-03/04, NFR-LOC-02/04 ([chi tiết](yeu-cau-phi-chuc-nang.md)).
 
@@ -554,8 +555,8 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 **Hậu điều kiện.** Thành công (có ca thiếu): `OverbookingCase` ở `OPEN` với `shortageCount` đúng, danh sách khách theo thứ tự ưu tiên, cảnh báo trên bảng điều khiển. Không có ca thiếu: job kết thúc không tạo bản ghi nào.
 **Luồng chính.**
 1. Job chạy mỗi giờ, quét phạm vi 30 ngày tới trên cả 3 cơ sở.
-2. Với mỗi bộ ba (cơ sở, ngày, loại phòng): đếm **nhu cầu** = `RoomAssignment` đang hoạt động + hold chưa hết hạn + booking OTA `oversold` chưa gán phòng.
-3. Đếm **cung** = số phòng `ACTIVE` của loại phòng đó trừ các `RoomBlock` đang hiệu lực.
+2. Với mỗi (cơ sở, ngày, loại phòng), demand theo BR-INV-01: BookingRoom hiệu lực, gồm PENDING_PAYMENT còn hạn và oversold chưa gán; không cộng thêm assignment/hold đã đếm.
+3. Supply theo BR-INV-01, đơn vị bán (giường DOR/phòng khác), loại block bằng tập hợp để không trừ trùng.
 4. Tính `shortageCount = max(0, nhu cầu − cung)`; bằng 0 thì bỏ qua để không sinh bản ghi nhiễu.
 5. Gộp trùng theo khoá `(cơ sở, ngày, loại phòng)`; nếu đã có hồ sơ chưa `RESOLVED` thì cập nhật `shortageCount` thay vì tạo mới.
 6. Tạo/cập nhật `OverbookingCase` ở `OPEN` kèm `detectedAt`; ghi `AuditLog`.
@@ -619,13 +620,13 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 
 **Actor.** Chính: ACT-02 · Phụ: ACT-07 (trạng thái buồng), ACT-11 (no-show), ACT-08 khi khách trả số dư trực tuyến, ACT-10 · **Tần suất.** 25–40 lượt/ngày toàn chuỗi; cao điểm ≈60 lượt/ngày.
 **Mục tiêu.** Giao đúng phòng cho đúng khách, **chỉ khi đã hết nợ** (hoặc có duyệt ghi nợ), phòng ở trạng thái sạch và hợp lệ về ngày.
-**Tiền điều kiện.** Booking `CONFIRMED`; ngày Việt Nam hiện tại trùng ngày nhận phòng; `penaltyAmount + balanceDue = 0`, hoặc ghi nợ được `MANAGER`+ cho phép **khi nợ ≤ 5.000.000 VND đồng thời ≤ 50% `totalAmount`** (vượt cả hai ngưỡng phải `OWNER` duyệt), kèm lý do + hạn thu trong `AuditLog`; phòng đích không ở trạng thái `MAINTENANCE`/`INACTIVE`.
+**Tiền điều kiện.** Booking `CONFIRMED`; ngày Việt Nam hiện tại trùng ngày nhận phòng; `balanceDue = 0`, hoặc ghi nợ được `MANAGER`+ cho phép **khi nợ ≤ 5.000.000 VND đồng thời ≤ 50% `totalAmount`** (vượt bất kỳ ngưỡng phải `OWNER` duyệt), kèm lý do + hạn thu trong `AuditLog`; phòng đích không ở trạng thái `MAINTENANCE`/`INACTIVE`.
 **Hậu điều kiện.** Thành công: booking `CHECKED_IN`, `RoomAssignment` đang hoạt động cho mọi đêm, `BookingStatusHistory` + `AuditLog`, phát sinh (nếu có) được ghi nhận, khách nhận phiếu xác nhận. Thất bại: booking giữ `CONFIRMED`, không giao phòng; nếu đã quá 23:59 ngày nhận phòng thì phải xử lý no-show trước.
 **Luồng chính.**
 1. Lễ tân mở danh sách khách đến trong ngày của **đúng cơ sở** thuộc phạm vi được phép.
 2. Hệ thống hiển thị mã booking, gói giá, số đêm, phòng dự kiến, `paidAmount`, `balanceDue`, `penaltyAmount` và ghi chú khách.
 3. Kiểm tra điều kiện check-in: trạng thái `CONFIRMED`, ngày nhận phòng đúng hôm nay, tổng còn phải thu bằng 0.
-4. Nếu còn phải thu → thu qua UC-PAY-03 (include) hoặc UC-PAY-02; nếu ghi nợ thì kiểm tra ngưỡng (≤ 5.000.000 VND **và** ≤ 50% `totalAmount` → `MANAGER`+ duyệt; vượt cả hai → `OWNER` duyệt) và ghi `AuditLog` kèm lý do + hạn thu.
+4. Nếu còn phải thu → thu qua UC-PAY-03 (include) hoặc UC-PAY-02; nếu ghi nợ thì kiểm tra ngưỡng (≤ 5.000.000 VND **và** ≤ 50% `totalAmount` → `MANAGER`+ duyệt; vượt bất kỳ → `OWNER` duyệt) và ghi `AuditLog` kèm lý do + hạn thu.
 5. Đối chiếu giấy tờ tuỳ thân, cập nhật hồ sơ khách và xin đồng ý xử lý dữ liệu cá nhân.
 6. Xác nhận phòng vật lý: phòng dự kiến phải đã dọn xong; nếu chưa → chọn phòng khác cùng hạng hoặc chuyển UC-OVER-02 (extend E-09).
 7. Chuyển booking sang `CHECKED_IN`; **giữ nguyên** `RoomAssignment` đang hoạt động cho mọi đêm.
@@ -633,9 +634,48 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 9. Ghi nhận phát sinh ban đầu (nếu có) để thu khi check-out, hoặc thu ngay tại quầy.
 10. In/gửi phiếu xác nhận check-in và xếp hàng thông báo; đánh dấu khách "đã tới nơi" để tính `keepScore` khi cần xếp điều chuyển.
 **Luồng thay thế.** A1 check-in sớm: 08:00–12:00 miễn phí nếu phòng sẵn sàng; 12:00–14:00 thu 30% giá đêm đầu; trước 08:00 phải đặt thêm một đêm. A2 đoàn nhiều phòng → check-in từng booking, hiển thị hoá đơn gộp. A3 khách đã được điều chuyển phòng trước đó → check-in vào phòng mới với giá gốc đã khoá. A4 khách đã trả trước toàn bộ → bỏ qua bước thu tiền, chỉ đối chiếu giấy tờ.
-**Luồng ngoại lệ.** E1 booking `CANCELLED`/`EXPIRED`/`NO_SHOW` → không cho check-in, gợi ý tạo booking mới. E2 quá 23:59 ngày nhận phòng → từ chối check-in, phải xử lý no-show trước. E3 phòng dự kiến ở `MAINTENANCE`/`INACTIVE` → không giao phòng, chuyển sang điều chuyển phòng. E4 phòng chưa dọn xong → không gán cho khách khác cùng ngày. E5 phát hiện khách trong danh sách đen tại quầy → leo thang `MANAGER`.
+**Luồng ngoại lệ.** E1 booking `CANCELLED`/`EXPIRED`/`NO_SHOW` → không cho check-in, gợi ý tạo booking mới. E2 quá 23:59 ngày nhận phòng → từ chối check-in, phải xử lý no-show trước. E3 phòng dự kiến ở `MAINTENANCE`/`INACTIVE` → không giao phòng, chuyển sang điều chuyển phòng. E4 phòng chưa dọn xong → không giao cho khách tới khi task mới nhất DONE/INSPECTED; vẫn được gán/bán theo ngày. E5 phát hiện khách trong danh sách đen tại quầy → leo thang `MANAGER`.
 **BR áp dụng.** BR-FO-01/02/04/06/07, BR-PAY-02/06, BR-INV-03, BR-PROP-06, BR-RBAC-02/03/05, BR-CRM-01/04, BR-OVER-08/11, BR-GEN-07, BR-SYS-06.
 **NFR liên quan.** NFR-USE-05, NFR-PERF-02, NFR-SEC-01/05, NFR-USE-03, NFR-COMP-01, NFR-LOC-01/04 ([chi tiết](yeu-cau-phi-chuc-nang.md)).
+
+### 6.13. UC-RATE-06 — Cấu hình gói giá & chính sách huỷ
+
+**Actor.** ACT-05 (OWNER). **Mục tiêu.** Cập nhật bốn gói giá canonical và policy/tier có thể kiểm chứng trước khi bán, giữ nguyên cam kết booking đã chốt.
+
+**Tiền điều kiện.** OWNER đã xác thực; gói/policy tồn tại; có phiên bản hiện hành để gửi If-Match, Idempotency-Key và lý do thay đổi. Các mức mẫu là giả định ở 00 §11; không đổi mã FLEX7/SAVER3/NONREF/LONGSTAY14.
+
+**Luồng chính.**
+
+1. Đọc danh sách/chi tiết qua GET `/api/v1/rate-plans`, GET `/api/v1/cancellation-policies`; hiển thị policy đang gắn và số booking đã dùng.
+2. Sửa tỷ lệ cọc, min/max nights, LOS, giá cố định, điều kiện/phí đổi ngày, liên kết policy; sửa toàn bộ bộ tier và ngưỡng trả phòng sớm. UI diễn giải các khoảng thời gian, bậc −1 và ngoại lệ NONREF.
+3. Kiểm BR-RATE-20 và bất biến tier; nguồn RATE_PLAN phải thuộc đúng ratePlanId, tiền nguyên VND, ngưỡng không trùng, một catch-all, tỷ lệ hoàn không tăng khi huỷ muộn. Chặn policy thiếu/bị ngừng dùng cho booking mới.
+4. Xem trước giá qua UC-RATE-05 và các mốc huỷ ngay trước/đúng/sau mỗi ngưỡng; hiển thị cọc, phí, policy áp cho booking mới và cảnh báo LONGSTAY14 trùng giá FLEX7.
+5. OWNER xác nhận; PUT `/api/v1/cancellation-policies/{policyId}` thay **toàn bộ tier atomically**; PUT `/api/v1/rate-plans/{ratePlanId}` cập nhật gói/liên kết một policy hợp lệ. Mỗi request có transaction, If-Match và audit/outbox riêng; không hứa hai request HTTP là một transaction. Policy chỉ có hiệu lực khi lưu trọn bộ hợp lệ.
+6. Trả cấu hình/phiên bản mới, thông báo áp dụng cho booking mới. Booking đang giữ/chờ/xác nhận tiếp tục dùng PriceSnapshot.policySnapshotJson đã chốt.
+
+**Hậu điều kiện.** Thành công: cấu hình hợp lệ và audit lưu cùng transaction; quote mới phản ánh cấu hình mới, booking cũ không bị tính lại tiền/policy. Thất bại: request bị từ chối không lưu gói/tier dở dang; giữ nguyên cấu hình trước request, không thay snapshot booking.
+
+**Thay thế.** A1 ngừng bán gói → không xoá và không huỷ booking cũ. A2 cảnh báo ưu đãi/cân bằng giá không chặn được OWNER xác nhận kèm lý do theo BR-RATE-09/19.
+
+**Ngoại lệ/đồng thời.** E1 thiếu catch-all/trùng offset/tỷ lệ sai/policy không tồn tại → báo trường lỗi và không lưu. E2 If-Match cũ → `E_GEN_VERSION_CONFLICT`; thiếu điều kiện phiên bản → HTTP 428; tải lại và xem khác biệt, không ghi đè im lặng. E3 không phải OWNER hoặc principal hết quyền trước replay → từ chối. E4 cùng Idempotency-Key đang chạy → `E_SYS_REQUEST_IN_PROGRESS`; khác payload → xung đột; request lỗi giữa chừng rollback toàn bộ. Không thêm POST tạo mã gói mới trong UC này.
+
+**Truy vết.** FR-RATE-19; BR-RATE-20/16/19, BR-CANCEL-01/02/09, BR-BOOK-12, BR-RBAC-03, BR-GEN-07/08.
+
+### 6.14. Hợp đồng chung và nghiệm thu các nhánh tranh chấp
+
+Mọi UC thao tác booking kiểm principal, propertyScope/guestId và các ID con qua booking đã được cấp quyền; không nhận quyền từ số điện thoại, mã booking, kênh hay role do client gửi. Khách chỉ dùng WEB; nhân viên chọn kênh trong tập quyền được cấp; PSP/OTA/scheduler dùng principal riêng. Kiểm lại quyền cả khi phát lại kết quả idempotency. HOUSEKEEPING chỉ nhận dữ liệu task tối thiểu, không nhận DTO booking/tài chính.
+
+| Tình huống nghiệm thu | Kết quả bắt buộc |
+|---|---|
+| Hai người lấy chỗ cuối cùng | Một transaction thắng; bên còn lại 409, không ghi thu/assignment mồ côi |
+| Callback đủ cọc và job hết hạn cùng lúc | Khóa cùng booking; chỉ xác nhận khi commit kiểm hạn còn hiệu lực; đúng/sau hạn → EXPIRED và hoàn khoản thu muộn, không gán lại |
+| Hai yêu cầu hoàn khác khóa cùng tiền gốc | Tiền đã chi + đang giữ không vượt tiền thu; yêu cầu xung đột không được duyệt/chi |
+| PSP đã chi hoàn nhưng response mất | Giữ lần chi PENDING; tra/retry cùng khóa, không chi lần hai; SUCCEEDED mới PAID |
+| Đổi ngày và khách khác đặt chỗ cũ/mới | Kiểm tồn và thay cả hai kỳ nguyên tử; thất bại giữ kỳ cũ, thành công giữ kỳ mới và số dư theo BR-BOOK-12 |
+| Huỷ phòng A rồi huỷ phòng B của cùng booking | Mỗi phần chỉ dùng phân bổ tiền riêng; không dùng lại paidAmount toàn booking; không làm mất nợ phần còn ở |
+| Check-in và no-show/mở lại task bẩn | Tái kiểm booking/task dưới khóa; chỉ một kết quả hợp lệ, không vừa NO_SHOW vừa giao phòng |
+| Quote đúng ID nhưng đổi childAges/kênh/ngày | Từ chối `E_RATE_QUOTE_MISMATCH`, báo lại giá và yêu cầu xác nhận trước giữ/thu |
+| Policy thay khi khách đang giữ phòng | Snapshot cũ giữ nguyên; quote mới đọc cấu hình mới; stale PUT bị từ chối |
 
 ## 7. Use case theo actor
 
@@ -645,7 +685,7 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 | ACT-02 Lễ tân | chính | UC-PROP-03, UC-INV-01, UC-BOOK-02, UC-BOOK-05, UC-BOOK-07, UC-BOOK-08, UC-PAY-01, UC-PAY-03, UC-OVER-02, UC-OVER-03, UC-FO-01, UC-FO-02, UC-FO-03, UC-FO-04, UC-CRM-01 |
 | ACT-03 Nhân viên đặt phòng | chính | UC-INV-01, UC-INV-02, UC-BOOK-03, UC-BOOK-05, UC-BOOK-06, UC-BOOK-07, UC-BOOK-08, UC-PAY-01, UC-CRM-01 |
 | ACT-04 Quản lý cơ sở | chính | UC-PROP-02, UC-PROP-03, UC-PROP-04, UC-INV-01, UC-INV-03, UC-RATE-04, UC-RATE-05, UC-BOOK-05, UC-BOOK-07, UC-BOOK-08, UC-PAY-04, UC-OVER-01, UC-OVER-02, UC-OVER-03, UC-OVER-04, UC-OVER-05, UC-CRM-03, UC-REP-01, UC-REP-04 |
-| ACT-05 Chủ chuỗi | chính | UC-AUTH-02, UC-PROP-01, UC-PROP-02, UC-INV-03, UC-RATE-01, UC-RATE-02, UC-RATE-03, UC-RATE-04, UC-RATE-05, UC-OVER-05, UC-CRM-03, UC-REP-01, UC-REP-02, UC-REP-03, UC-REP-04, UC-SYS-01, UC-SYS-02 |
+| ACT-05 Chủ chuỗi | chính | UC-AUTH-02, UC-PROP-01, UC-PROP-02, UC-INV-03, UC-RATE-01, UC-RATE-02, UC-RATE-03, UC-RATE-04, UC-RATE-05, UC-RATE-06, UC-PAY-04, UC-OVER-05, UC-CRM-03, UC-REP-01, UC-REP-02, UC-REP-03, UC-REP-04, UC-SYS-01, UC-SYS-02 |
 | ACT-06 Kế toán | chính | UC-PAY-01, UC-PAY-04, UC-PAY-05, UC-CRM-02, UC-REP-02, UC-REP-03 |
 | ACT-07 Nhân viên buồng phòng | chính | UC-FO-03; **phụ**: UC-PROP-03, UC-FO-01, UC-FO-02 |
 | ACT-08 Cổng thanh toán | **phụ** | UC-PAY-02 (tạo giao dịch + callback), UC-PAY-04 (chi hoàn về ví/thẻ) |
@@ -655,11 +695,11 @@ Mã và tên **giữ nguyên** như [00 §8](../00-tong-quan.md#8-danh-mục-use
 | ACT-12 Quản trị hệ thống | chính | UC-AUTH-02, UC-SYS-01, UC-SYS-02, UC-SYS-03 |
 | (người dùng nội bộ — không mã hoá) | chính | UC-AUTH-01 (dùng chung cho ACT-02…ACT-07 và ACT-12) |
 
-**Kiểm tra phủ:** 52/52 UC xuất hiện ít nhất một lần ở trên với tư cách actor chính; `UC-AUTH-01` có actor chính là nhóm người dùng nội bộ (không có mã `ACT-*` riêng theo [00 §4](../00-tong-quan.md#4-actor)).
+**Kiểm tra phủ:** 53/53 UC xuất hiện ít nhất một lần ở trên với tư cách actor chính; `UC-AUTH-01` có actor chính là nhóm người dùng nội bộ (không có mã `ACT-*` riêng theo [00 §4](../00-tong-quan.md#4-actor)).
 
 ## 8. Ước lượng độ phức tạp
 
-Số bước là **luồng chính**; cột "Thay thế/Ngoại lệ" là số nhánh rẽ. Với 12 UC rủi ro cao, số liệu khớp đúng đặc tả ở §6. Tên UC xem bảng danh mục §4.
+Số bước/nhánh dưới đây là ước lượng lập kế hoạch, không phải tiêu chí chấp nhận; đặc tả hiện hành ở §6 ưu tiên khi bổ sung nhánh đồng thời/thất bại.
 
 | Mã UC | Bước | Thay thế/Ngoại lệ | Mức rủi ro | Mã UC | Bước | Thay thế/Ngoại lệ | Mức rủi ro |
 |-------|------|-------------------|------------|-------|------|-------------------|------------|
@@ -689,8 +729,9 @@ Số bước là **luồng chính**; cột "Thay thế/Ngoại lệ" là số nh
 | UC-REP-02 | 5 | 2/2 | Thấp | UC-REP-03 | 5 | 2/2 | Thấp |
 | UC-REP-04 | 5 | 2/2 | Thấp | UC-SYS-01 | 4 | 1/1 | Thấp |
 | UC-SYS-02 | 6 | 2/2 | Thấp | UC-SYS-03 | 6 | 2/3 | Thấp |
+| **UC-RATE-06** | **6** | **2/4** | **Cao** | — | — | — | — |
 
-Tổng hợp: **12 Cao · 17 Trung · 23 Thấp**. Ba UC phức tạp nhất về số bước: `UC-OVER-02` (12), `UC-PAY-04` (11), và nhóm 10 bước gồm `UC-BOOK-01/02/08`, `UC-PAY-02`, `UC-CHAN-03`, `UC-OVER-01/03`, `UC-FO-01`. Ba UC nhiều nhánh rẽ nhất: `UC-PAY-04`, `UC-BOOK-08` (5/5), rồi `UC-BOOK-01/02`, `UC-PAY-02`, `UC-CHAN-03`, `UC-OVER-03`, `UC-FO-01` (4/5).
+Tổng hợp: **13 Cao · 17 Trung · 23 Thấp**. Ba UC phức tạp nhất về số bước: `UC-OVER-02` (12), `UC-PAY-04` (11), và nhóm 10 bước gồm `UC-BOOK-01/02/08`, `UC-PAY-02`, `UC-CHAN-03`, `UC-OVER-01/03`, `UC-FO-01`. Ba UC nhiều nhánh rẽ nhất: `UC-PAY-04`, `UC-BOOK-08` (5/5), rồi `UC-BOOK-01/02`, `UC-PAY-02`, `UC-CHAN-03`, `UC-OVER-03`, `UC-FO-01` (4/5).
 
 ## 9. Đề xuất bổ sung
 
@@ -708,10 +749,10 @@ Các mục dưới đây **không** phải mã mới dùng trong tài liệu nà
 
 | Tài liệu | Dùng cho nội dung gì trong tài liệu này |
 |----------|----------------------------------------|
-| [00 — Tổng quan](../00-tong-quan.md) | Bối cảnh, phạm vi, **actor §4**, từ điển thực thể §7, enum §7.8, **danh mục 52 UC §8** |
+| [00 — Tổng quan](../00-tong-quan.md) | Bối cảnh, phạm vi, **actor §4**, từ điển thực thể §7, enum §7.8, **danh mục 53 UC §8** |
 | [01 — Yêu cầu chức năng](yeu-cau-chuc-nang.md) | `FR-*` theo module, mức ưu tiên MoSCoW, tiêu chí chấp nhận |
 | [01 — Yêu cầu phi chức năng](yeu-cau-phi-chuc-nang.md) | 40 mã `NFR-<NHÓM>-<nn>` trong 8 nhóm, trích ở từng đặc tả §6 |
-| [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) | 136 quy tắc `BR-*` gồm cả `BR-REP-01` (định nghĩa chỉ số báo cáo) — nguồn chân lý; §14 là bảng tra nhanh |
+| [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) | 139 quy tắc `BR-*` gồm cả `BR-REP-01` (định nghĩa chỉ số báo cáo) — nguồn chân lý; §14 là bảng tra nhanh |
 | [02 — Chính sách huỷ & hoàn cọc](../02-nghiep-vu/chinh-sach-huy-hoan-coc.md) | Thang mốc thời gian, bảng quyết định của BT-1 |
 | [02 — Động giá](../02-nghiep-vu/dong-gia.md) | Công thức giá, thứ tự ưu tiên, ví dụ tính của BT-2 |
 | [02 — Quá tải, ghép & đổi phòng](../02-nghiep-vu/qua-tai-ghep-doi-phong.md) | Cơ chế chống bán quá, thang xử lý, quy trình walk-out của BT-3 |
@@ -719,6 +760,6 @@ Các mục dưới đây **không** phải mã mới dùng trong tài liệu nà
 | [03 — Mô hình động](../03-phan-tich/mo-hinh-dong.md) | Máy trạng thái `BookingStatus` và activity/sequence mức phân tích |
 | [04 — API](../04-thiet-ke/api.md) | Mã lỗi `E_*` dùng ở §6 và điểm cuối webhook OTA/PSP |
 | [04 — Sequence Diagram](../04-thiet-ke/sequence-diagram.md) | Tuần tự chi tiết cho các UC rủi ro cao |
-| [05 — Lộ trình](../05-ke-hoach/lo-trinh.md) | Mốc M2 (52 UC + 12 đặc tả), WBS mục 2.1–2.2 |
+| [05 — Lộ trình](../05-ke-hoach/lo-trinh.md) | Mốc M2 (53 UC + 12 đặc tả), WBS mục 2.1–2.2 |
 | [05 — Kế hoạch Sprint](../05-ke-hoach/ke-hoach-sprint.md) | Ánh xạ UC → user story theo sprint |
 | [06 — Ma trận truy vết](../06-truy-vet/ma-tran-truy-vet.md) | `BR → UC → API → Entity → Test`; 100% BR phải có ít nhất một UC (NFR-MAIN-03) |

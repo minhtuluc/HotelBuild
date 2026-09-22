@@ -2,8 +2,8 @@
 
 > Thiết kế CSDL vật lý cho hệ thống đặt phòng – homestay chuỗi Pine Hill: **3 cơ sở · 55 phòng · 75 đơn vị bán · 7 kênh bán · 13 module**.
 > CSDL mục tiêu **PostgreSQL 16** (ADR-003): Prisma 6 sinh phần thân bảng, **migration SQL thủ công** cho ràng buộc loại trừ, cột sinh, chỉ mục biểu thức và trigger.
-> Định danh thực thể/enum: [00 §7](../00-tong-quan.md#7-từ-điển-thực-thể-nguồn-chân-lý-về-định-danh) · Quy tắc nghiệp vụ: [02/quy-tắc-nghiệp-vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) (**136 BR**).
-> DDL trong tài liệu này **đã chạy thành công trên PostgreSQL 16**, kèm **41 kịch bản kiểm chứng ràng buộc** và **5 truy vấn then chốt** ở §9.
+> Định danh thực thể/enum: [00 §7](../00-tong-quan.md#7-từ-điển-thực-thể-nguồn-chân-lý-về-định-danh) · Quy tắc nghiệp vụ: [02/quy-tắc-nghiệp-vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) (**139 BR**).
+> §3 là nguồn DDL chạy theo thứ tự; §9 gồm **5 truy vấn then chốt**. Kết quả kiểm chứng phải gắn với phiên bản tài liệu và môi trường thực thi; không suy diễn kiểm thử PostgreSQL 16 từ kiểm tra cú pháp hoặc PostgreSQL nhúng.
 > Nguồn duy nhất của mọi giá trị số là file BR — tài liệu này chỉ **tham chiếu mã BR**.
 
 ---
@@ -34,7 +34,7 @@
 | `room_assignments.valid_range` | `daterange GENERATED ALWAYS AS (daterange(start_date, end_date, '[)')) STORED` | Khoá loại trừ cần kiểu khoảng có chỉ mục GiST (§4) |
 | `bookings.nights` | `smallint GENERATED ALWAYS AS ((check_out - check_in)::smallint) STORED` | BR-BOOK-03: số đêm suy ra từ khoảng ngày |
 | `bookings.seq` | `bigint NOT NULL DEFAULT nextval('bookings_seq') UNIQUE` | BR-OVER-11: phá hoà cuối khi xếp khách điều chuyển, tăng đơn điệu (UUID không có thứ tự) |
-| `bookings.balance_due` | cột sinh theo `status` | BR-PAY-02: booking `CANCELLED`/`NO_SHOW`/`EXPIRED` chỉ còn nợ `penalty_amount` |
+| `bookings.balance_due` | `bigint` projection ≥ 0 | BR-PAY-02: tổng nghĩa vụ còn phải thu từ `booking_charges` và `payment_allocations`; cập nhật cùng transaction, không dùng công thức cột sinh theo tổng thu |
 | `payments.amount` | `bigint` **có dấu** | BR-PAY-09: bút toán `REFUND` ghi âm để doanh thu thuần cộng trực tiếp |
 | `rate_calendars.priority` | `smallint` + `CHECK` khớp `source` | BR-RATE-02: `OVERRIDE` 100 → `RATE_PLAN` 90 → `SEASON` 50 → `BASE` 10 |
 | `rate_calendars.channel_code` | `text NULL` (FK `channels.code`) | BR-RATE-02: dòng khai kênh chỉ áp cho kênh đó; `NULL` = mọi kênh |
@@ -42,7 +42,7 @@
 | `price_snapshots.seq`, `kind` | `smallint` / `text` | BR-RATE-16, BR-CANCEL-19: giữ bản gốc và các bản điều chỉnh (`RESCHEDULE`, `PARTIAL_CANCEL`) |
 | `price_snapshots.channel_property_setting_id` | FK | BR-RATE-18: ghi lại dòng `ChannelPropertySetting` đã chọn (theo `effectiveFrom` của từng đêm) để tái lập kết quả |
 | `refund_requests.reason` | enum `CancelReason` | Ràng buộc theo enum, không phải chuỗi tự do (BR-CANCEL-13/18/19) |
-| `refund_requests.net_refund` | cột sinh `coalesce(approved_amount, requested_amount) − refund_fee` | BR-CANCEL-05: mọi ngưỡng phê duyệt và báo cáo so trên **`netRefund`** |
+| `refund_requests.net_refund` | cột sinh `greatest(0, coalesce(approved_amount, requested_amount) − refund_fee)` | BR-CANCEL-05: phí không được làm tiền hoàn âm; mọi ngưỡng phê duyệt và báo cáo so trên **`netRefund`** |
 | `guests.phone` | `text` + `UNIQUE` từng phần | BR-CRM-01: nhận diện khách theo SĐT chuẩn hoá `+84…` (NFR-LOC-04) |
 | `bookings.external_ref` | `text` + `UNIQUE (channel_id, external_ref)` | BR-CHAN-03/04: đối soát booking OTA, chặn webhook gửi lại tạo bản ghi mới |
 
@@ -473,7 +473,7 @@ CREATE TABLE users (
   username           text NOT NULL UNIQUE,
   password_hash      text NOT NULL,
   full_name          text NOT NULL,
-  role               text NOT NULL CHECK (role IN ('OWNER','MANAGER','FRONT_DESK','RESERVATION_AGENT','ACCOUNTANT','HOUSEKEEPING')),
+  role               text NOT NULL CHECK (role IN ('OWNER','MANAGER','FRONT_DESK','RESERVATION_AGENT','ACCOUNTANT','HOUSEKEEPING','SYSADMIN')),
   phone              text,
   is_active          boolean NOT NULL DEFAULT true,
   failed_login_count smallint NOT NULL DEFAULT 0 CHECK (failed_login_count >= 0),
@@ -604,6 +604,9 @@ CREATE TABLE rate_plans (
   fixed_nightly_price bigint CHECK (fixed_nightly_price IS NULL OR fixed_nightly_price > 0),
   los_discount_enabled boolean NOT NULL DEFAULT true,
   reschedule_allowed  boolean NOT NULL DEFAULT true,
+  reschedule_min_hours integer NOT NULL DEFAULT 168 CHECK (reschedule_min_hours >= 0),
+  reschedule_fee_pct numeric(5,2) NOT NULL DEFAULT 0 CHECK (reschedule_fee_pct BETWEEN 0 AND 100),
+  max_reschedules smallint NOT NULL DEFAULT 1 CHECK (max_reschedules >= 0),
   status              text NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE','INACTIVE')),
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT ck_rate_plans_nights CHECK (max_nights >= min_nights)
@@ -675,6 +678,7 @@ CREATE TABLE rate_calendars (
   priority     smallint NOT NULL,
   channel_code text REFERENCES channels(code) ON DELETE CASCADE,
   season_id    uuid REFERENCES seasons(id) ON DELETE SET NULL,
+  rate_plan_id uuid REFERENCES rate_plans(id) ON DELETE RESTRICT,
   reason       text,
   created_by   uuid REFERENCES users(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
@@ -684,6 +688,7 @@ CREATE TABLE rate_calendars (
     (source = 'SEASON'    AND priority = 50)  OR
     (source = 'BASE'      AND priority = 10)),
   CONSTRAINT ck_rate_calendars_season CHECK (source = 'SEASON' OR season_id IS NULL),
+  CONSTRAINT ck_rate_calendars_plan CHECK ((source = 'RATE_PLAN') = (rate_plan_id IS NOT NULL)),
   CONSTRAINT ck_rate_calendars_reason CHECK (source <> 'OVERRIDE' OR length(coalesce(reason, '')) > 0)
 );
 
@@ -699,7 +704,6 @@ CREATE TABLE channel_allotments (
   closed_at     timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT uq_channel_allotments_scope UNIQUE (channel_id, room_type_id, date),
-  CONSTRAINT ck_channel_allotments_used CHECK (used <= allotment),
   CONSTRAINT ck_channel_allotments_closed CHECK (is_closed = false OR closed_at IS NOT NULL)
 );
 
@@ -790,9 +794,7 @@ CREATE TABLE bookings (
   paid_amount        bigint NOT NULL DEFAULT 0 CHECK (paid_amount >= 0),
   refunded_amount    bigint NOT NULL DEFAULT 0 CHECK (refunded_amount >= 0),
   penalty_amount     bigint NOT NULL DEFAULT 0 CHECK (penalty_amount >= 0),
-  balance_due        bigint GENERATED ALWAYS AS (
-                       CASE WHEN status IN ('CANCELLED','NO_SHOW','EXPIRED') THEN penalty_amount
-                            ELSE total_amount - paid_amount + penalty_amount END) STORED,
+  balance_due        bigint NOT NULL DEFAULT 0 CHECK (balance_due >= 0), -- projection du sổ nghĩa vụ/phân bổ (§3.6)
   currency           char(3) NOT NULL DEFAULT 'VND',
   hold_expires_at    timestamptz,
   oversold           boolean NOT NULL DEFAULT false,
@@ -811,7 +813,7 @@ CREATE TABLE bookings (
   CONSTRAINT ck_bookings_range CHECK (check_out > check_in),
   CONSTRAINT ck_bookings_refund_cap CHECK (refunded_amount <= paid_amount),
   CONSTRAINT ck_bookings_cancelled CHECK (status <> 'CANCELLED' OR cancelled_at IS NOT NULL),
-  CONSTRAINT ck_bookings_hold CHECK (status <> 'HELD' OR hold_expires_at IS NOT NULL)
+  CONSTRAINT ck_bookings_hold CHECK (status NOT IN ('HELD','PENDING_PAYMENT') OR hold_expires_at IS NOT NULL)
 );
 
 CREATE TABLE booking_rooms (
@@ -859,11 +861,19 @@ CREATE TABLE price_snapshots (
   kind         text NOT NULL DEFAULT 'ORIGINAL'
                CHECK (kind IN ('ORIGINAL','RESCHEDULE','PARTIAL_CANCEL')),
   payload_json jsonb NOT NULL,
+  quote_id uuid UNIQUE,
+  quote_fingerprint text,
+  gross_amount bigint NOT NULL CHECK (gross_amount >= 0),
+  commission_amount bigint NOT NULL CHECK (commission_amount >= 0 AND commission_amount <= gross_amount),
+  policy_snapshot_json jsonb NOT NULL CHECK (jsonb_typeof(policy_snapshot_json) = 'object'),
   engine_version text NOT NULL,
-  channel_property_setting_id uuid REFERENCES channel_property_settings(id) ON DELETE SET NULL,
+  channel_property_setting_id uuid REFERENCES channel_property_settings(id) ON DELETE RESTRICT,
   captured_at  timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT uq_price_snapshots_seq UNIQUE (booking_id, seq)
+  CONSTRAINT uq_price_snapshots_seq UNIQUE (booking_id, seq),
+  CONSTRAINT ck_snapshot_quote CHECK (
+    (quote_id IS NULL AND quote_fingerprint IS NULL)
+    OR (kind = 'ORIGINAL' AND quote_id IS NOT NULL AND length(coalesce(quote_fingerprint, '')) > 0))
 );
 ```
 
@@ -906,13 +916,13 @@ CREATE TABLE room_moves (
   walk_out_doc_no      text,
   guest_signature_ref  text,
   staff_signature_ref  text,
-  approved_by      uuid REFERENCES users(id) ON DELETE SET NULL,
+  approved_by      uuid REFERENCES users(id) ON DELETE RESTRICT,
   status           text NOT NULL DEFAULT 'PROPOSED' CHECK (status IN ('PROPOSED','APPROVED','EXECUTED','REJECTED','CANCELLED')),
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT ck_room_moves_target CHECK (to_room_id IS NOT NULL OR move_type = 'WALK_OUT'),
-  CONSTRAINT ck_room_moves_approval CHECK (status = 'PROPOSED' OR approved_by IS NOT NULL),
+  CONSTRAINT ck_room_moves_approval CHECK (status NOT IN ('APPROVED','EXECUTED') OR approved_by IS NOT NULL),
   CONSTRAINT ck_room_moves_price_lock CHECK (price_locked),
-  CONSTRAINT ck_room_moves_walkout_doc CHECK (move_type <> 'WALK_OUT' OR walk_out_doc_no IS NOT NULL)
+  CONSTRAINT ck_room_moves_walkout_doc CHECK (move_type <> 'WALK_OUT' OR status <> 'EXECUTED' OR walk_out_doc_no IS NOT NULL)
 );
 
 CREATE TABLE room_merges (
@@ -947,12 +957,13 @@ CREATE TABLE payments (
   amount          bigint NOT NULL CHECK (amount <> 0),
   status          text NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','SUCCEEDED','FAILED','REVERSED')),
   provider_txn_id text,
-  idempotency_key text NOT NULL,
+  idempotency_key text NOT NULL, -- mã nghiệp vụ do server tạo, không sao chép khoá HTTP của khách
   paid_at         timestamptz,
   created_by      uuid REFERENCES users(id) ON DELETE SET NULL,
   note            text,
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT uq_payments_idempotency UNIQUE (idempotency_key),
+  CONSTRAINT uq_payments_idempotency UNIQUE (booking_id, type, idempotency_key),
+  CONSTRAINT uq_payments_provider_txn UNIQUE (method, provider_txn_id),
   CONSTRAINT ck_payments_sign CHECK ((type = 'REFUND' AND amount < 0) OR (type <> 'REFUND' AND amount > 0)),
   CONSTRAINT ck_payments_paid_at CHECK (status <> 'SUCCEEDED' OR paid_at IS NOT NULL),
   CONSTRAINT ck_payments_cash_shift CHECK (method <> 'CASH' OR created_by IS NOT NULL)
@@ -961,7 +972,8 @@ CREATE TABLE payments (
 CREATE TABLE refund_requests (
   id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id           uuid NOT NULL REFERENCES bookings(id) ON DELETE RESTRICT,
-  payment_id           uuid REFERENCES payments(id) ON DELETE SET NULL,
+  event_key            text NOT NULL CHECK (length(event_key) > 0),
+  payment_id           uuid REFERENCES payments(id) ON DELETE RESTRICT, -- tham chiếu nguồn đơn nếu có; phân bổ đầy đủ ở refund_allocations
   policy_id            uuid NOT NULL REFERENCES cancellation_policies(id) ON DELETE RESTRICT,
   hours_before_check_in numeric(10,2) NOT NULL,
   applied_tier_id      uuid REFERENCES cancellation_tiers(id) ON DELETE SET NULL,
@@ -970,23 +982,86 @@ CREATE TABLE refund_requests (
   approved_amount      bigint CHECK (approved_amount IS NULL OR approved_amount >= 0),
   refund_fee           bigint NOT NULL DEFAULT 0 CHECK (refund_fee >= 0),
   net_refund           bigint GENERATED ALWAYS AS
-                         (coalesce(approved_amount, requested_amount) - refund_fee) STORED,
+                         (greatest(0::bigint, coalesce(approved_amount, requested_amount) - refund_fee)) STORED,
   status               text NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','APPROVED','REJECTED','PAID','CANCELLED')),
   is_force_majeure     boolean NOT NULL DEFAULT false,
   evidence_refs        text[] NOT NULL DEFAULT '{}',
   reason               text NOT NULL CHECK (reason IN
                        ('GUEST_REQUEST','FORCE_MAJEURE','HOTEL_RELOCATION','PAYMENT_TIMEOUT',
                         'DUPLICATE','NO_SHOW','SYSTEM','OTA_CANCELLATION','EARLY_CHECKOUT')),
-  requested_by         uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  requested_by         uuid REFERENCES users(id) ON DELETE RESTRICT,
+  requester_type       text NOT NULL CHECK (requester_type IN ('USER','GUEST','SYSTEM')),
+  requester_id         text NOT NULL CHECK (length(requester_id) > 0),
   approved_by          uuid REFERENCES users(id) ON DELETE RESTRICT,
   decided_at           timestamptz,
   cancelled_at         timestamptz,
   paid_at              timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_refund_event UNIQUE (booking_id, event_key),
+  CONSTRAINT ck_refund_requester CHECK (
+    (requester_type = 'USER' AND requested_by IS NOT NULL AND requester_id = requested_by::text)
+    OR (requester_type IN ('GUEST','SYSTEM') AND requested_by IS NULL)),
   CONSTRAINT ck_refund_requests_two_level CHECK (approved_by IS NULL OR approved_by <> requested_by),
+  CONSTRAINT ck_refund_amount_limit CHECK (approved_amount IS NULL OR approved_amount <= requested_amount),
   CONSTRAINT ck_refund_requests_force_majeure CHECK (NOT is_force_majeure OR reason = 'FORCE_MAJEURE'),
+  CONSTRAINT ck_refund_requests_approved CHECK (status NOT IN ('APPROVED','PAID') OR
+    (approved_amount IS NOT NULL AND approved_by IS NOT NULL AND decided_at IS NOT NULL)),
   CONSTRAINT ck_refund_requests_paid CHECK (status <> 'PAID' OR (approved_amount IS NOT NULL AND paid_at IS NOT NULL)),
   CONSTRAINT ck_refund_requests_cancelled CHECK (status <> 'CANCELLED' OR (cancelled_at IS NOT NULL AND decided_at IS NULL))
+);
+
+-- Sổ nghĩa vụ và phân bổ tiền: chi tiết vật lý của Booking/Payment (BR-PAY-02).
+CREATE TABLE booking_charges (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  booking_id uuid NOT NULL REFERENCES bookings(id) ON DELETE RESTRICT,
+  booking_room_id uuid REFERENCES booking_rooms(id) ON DELETE RESTRICT,
+  stay_date date,
+  kind text NOT NULL CHECK (kind IN ('ROOM','PENALTY','RESCHEDULE_FEE','EXTRA_SERVICE')),
+  source_key text NOT NULL,
+  amount bigint NOT NULL CHECK (amount >= 0),
+  voided_amount bigint NOT NULL DEFAULT 0 CHECK (voided_amount >= 0 AND voided_amount <= amount),
+  reason text,
+  created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (booking_id, source_key),
+  CHECK (kind <> 'ROOM' OR (booking_room_id IS NOT NULL AND stay_date IS NOT NULL))
+);
+
+CREATE TABLE payment_allocations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  payment_id uuid NOT NULL REFERENCES payments(id) ON DELETE RESTRICT,
+  charge_id uuid NOT NULL REFERENCES booking_charges(id) ON DELETE RESTRICT,
+  amount bigint NOT NULL CHECK (amount > 0),
+  released_amount bigint NOT NULL DEFAULT 0 CHECK (released_amount >= 0 AND released_amount <= amount),
+  release_reason text,
+  created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (payment_id, charge_id),
+  CHECK (released_amount = 0 OR length(btrim(coalesce(release_reason, ''))) > 0)
+);
+
+-- Chi tiết vật lý của RefundRequest; không thêm cấp duyệt bắt buộc.
+CREATE TABLE refund_approvals (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  refund_request_id uuid NOT NULL REFERENCES refund_requests(id) ON DELETE RESTRICT,
+  request_version bigint NOT NULL CHECK (request_version > 0),
+  approver_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  approver_role text NOT NULL CHECK (approver_role IN ('MANAGER','OWNER')),
+  decision text NOT NULL CHECK (decision IN ('APPROVED','REJECTED')),
+  approved_amount bigint CHECK (approved_amount >= 0),
+  refund_fee bigint NOT NULL CHECK (refund_fee >= 0),
+  reason text NOT NULL CHECK (length(btrim(reason)) > 0),
+  created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (refund_request_id, request_version),
+  CHECK (decision <> 'APPROVED' OR approved_amount IS NOT NULL)
+);
+
+CREATE TABLE refund_allocations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  refund_request_id uuid NOT NULL REFERENCES refund_requests(id) ON DELETE RESTRICT,
+  original_payment_id uuid NOT NULL REFERENCES payments(id) ON DELETE RESTRICT,
+  refund_payment_id uuid UNIQUE REFERENCES payments(id) ON DELETE RESTRICT,
+  amount bigint NOT NULL CHECK (amount > 0),
+  created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (refund_request_id, original_payment_id)
 );
 ```
 
@@ -1023,8 +1098,10 @@ CREATE TABLE notifications (
   CONSTRAINT ck_notifications_sent CHECK (status <> 'SENT' OR sent_at IS NOT NULL)
 );
 
+CREATE SEQUENCE audit_chain_seq;
 CREATE TABLE audit_logs (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  chain_seq   bigint NOT NULL UNIQUE,
   actor_id    uuid REFERENCES users(id) ON DELETE SET NULL,
   actor_role  text NOT NULL,
   action      text NOT NULL,
@@ -1057,14 +1134,47 @@ CREATE TABLE system_settings (
 
 CREATE TABLE idempotency_keys (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  key                text NOT NULL UNIQUE,
+  key                text NOT NULL CHECK (length(key) BETWEEN 1 AND 255),
+  principal_type     text NOT NULL CHECK (principal_type IN ('USER','GUEST','SYSTEM','ANONYMOUS')),
+  principal_id       text NOT NULL CHECK (length(principal_id) > 0),
+  method             text NOT NULL CHECK (method IN ('POST','PUT','PATCH','DELETE')),
+  path               text NOT NULL CHECK (left(path, 1) = '/'),
   actor_id           uuid REFERENCES users(id) ON DELETE SET NULL,
   request_hash       text NOT NULL,
-  response_status    smallint NOT NULL CHECK (response_status BETWEEN 100 AND 599),
+  status             text NOT NULL DEFAULT 'IN_PROGRESS' CHECK (status IN ('IN_PROGRESS','COMPLETED')),
+  lease_token        uuid NOT NULL DEFAULT gen_random_uuid(),
+  lease_expires_at   timestamptz NOT NULL,
+  response_status    smallint CHECK (response_status BETWEEN 100 AND 599),
   response_body_json jsonb,
+  response_headers_json jsonb,
   expires_at         timestamptz NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT ck_idempotency_keys_expiry CHECK (expires_at > created_at)
+  CONSTRAINT uq_idempotency_scope UNIQUE (principal_type, principal_id, method, path, key),
+  CONSTRAINT ck_idempotency_keys_expiry CHECK (expires_at > created_at),
+  CONSTRAINT ck_idempotency_result CHECK (
+    (status = 'IN_PROGRESS' AND response_status IS NULL)
+    OR (status = 'COMPLETED' AND response_status IS NOT NULL))
+);
+
+CREATE TABLE webhook_inbox (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider text NOT NULL CHECK (length(provider) > 0),
+  provider_account_id text NOT NULL CHECK (length(provider_account_id) > 0),
+  event_id text NOT NULL CHECK (length(event_id) > 0),
+  payload_hash text NOT NULL,
+  payload_json jsonb NOT NULL,
+  signature_verified_at timestamptz NOT NULL,
+  status text NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','PROCESSING','PROCESSED','FAILED','DEAD_LETTER')),
+  attempts integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+  available_at timestamptz NOT NULL DEFAULT now(),
+  lease_token uuid,
+  lease_expires_at timestamptz,
+  processed_at timestamptz,
+  last_error text,
+  created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (provider, provider_account_id, event_id),
+  CHECK (status <> 'PROCESSING' OR (lease_token IS NOT NULL AND lease_expires_at IS NOT NULL)),
+  CHECK (status <> 'PROCESSED' OR processed_at IS NOT NULL)
 );
 
 CREATE TABLE outbox_events (
@@ -1091,10 +1201,26 @@ CREATE TABLE occupancy_snapshots (
   date           date NOT NULL,
   physical_rooms smallint NOT NULL CHECK (physical_rooms >= 0),
   sold_rooms     smallint NOT NULL CHECK (sold_rooms >= 0),
-  occupancy_pct  numeric(5,2) NOT NULL CHECK (occupancy_pct >= 0 AND occupancy_pct <= 200),
+  occupancy_pct  numeric(10,2) NOT NULL CHECK (occupancy_pct >= 0), -- cam kết OTA có thể vượt 200%
   captured_at    timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT uq_occupancy_snapshots_scope UNIQUE NULLS NOT DISTINCT (property_id, room_type_id, date)
+);
+
+-- Trạng thái giao bền từng consumer; Redis/BullMQ chỉ là vận chuyển (ADR-017).
+CREATE TABLE event_deliveries (
+  event_id uuid NOT NULL REFERENCES outbox_events(id) ON DELETE RESTRICT,
+  consumer text NOT NULL CHECK (length(btrim(consumer)) > 0),
+  status text NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','PROCESSING','COMPLETED','DEAD_LETTER')),
+  lease_token uuid,
+  lease_expires_at timestamptz,
+  attempts integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+  completed_at timestamptz,
+  last_error text,
+  created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (consumer, event_id),
+  CHECK (status <> 'PROCESSING' OR (lease_token IS NOT NULL AND lease_expires_at IS NOT NULL)),
+  CHECK (status <> 'COMPLETED' OR completed_at IS NOT NULL)
 );
 ```
 
@@ -1102,6 +1228,194 @@ CREATE TABLE occupancy_snapshots (
 ### 3.3. Ràng buộc loại trừ, trigger bảo vệ bất biến
 
 ```sql
+-- expectedVersion/If-Match là đầu vào API; version là giá trị lưu ở CSDL.
+DO $$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['bookings','refund_requests','room_moves','room_merges','housekeeping_tasks','properties','room_types',
+    'channels','channel_property_settings','channel_allotments','cancellation_policies',
+    'cancellation_tiers','rate_plans','seasons','rate_calendars','promotions','system_settings']
+  LOOP
+    EXECUTE format('ALTER TABLE %I ADD COLUMN version bigint NOT NULL DEFAULT 1 CHECK (version > 0)', t);
+  END LOOP;
+END $$;
+
+CREATE FUNCTION fn_increment_version() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.version := OLD.version + 1;
+  RETURN NEW;
+END $$;
+
+DO $$
+DECLARE t record;
+BEGIN
+  FOR t IN SELECT table_name FROM information_schema.columns
+    WHERE table_schema = 'public' AND column_name = 'version'
+  LOOP
+    EXECUTE format('CREATE TRIGGER trg_version BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION fn_increment_version()', t.table_name);
+  END LOOP;
+END $$;
+
+CREATE FUNCTION fn_immutable_record() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  -- Cascade chỉ khi parent đã qua guard xoá DRAFT/HELD và lưu bằng chứng vào AuditLog.
+  IF TG_OP = 'DELETE' AND TG_TABLE_NAME = 'price_snapshots' THEN
+    IF NOT EXISTS (SELECT 1 FROM bookings WHERE id = OLD.booking_id)
+       AND EXISTS (SELECT 1 FROM audit_logs WHERE entity_id = OLD.booking_id
+                    AND entity_type = 'Booking' AND action = 'DELETE') THEN
+      RETURN OLD;
+    END IF;
+  END IF;
+  RAISE EXCEPTION 'immutable record in %', TG_TABLE_NAME USING ERRCODE = '42501';
+END $$;
+CREATE TRIGGER trg_price_snapshots_immutable BEFORE UPDATE OR DELETE ON price_snapshots
+  FOR EACH ROW EXECUTE FUNCTION fn_immutable_record();
+CREATE TRIGGER trg_refund_approvals_immutable BEFORE UPDATE OR DELETE ON refund_approvals
+  FOR EACH ROW EXECUTE FUNCTION fn_immutable_record();
+
+CREATE FUNCTION fn_guard_booking_delete() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF OLD.status NOT IN ('DRAFT','HELD') OR EXISTS (SELECT 1 FROM payments WHERE booking_id = OLD.id)
+     OR length(btrim(coalesce(current_setting('app.delete_reason', true), ''))) = 0 THEN
+    RAISE EXCEPTION 'only unpaid DRAFT/HELD with deletion reason can be deleted' USING ERRCODE = '23514';
+  END IF;
+  INSERT INTO audit_logs(actor_id, actor_role, action, entity_type, entity_id, before_json, reason)
+    VALUES (nullif(current_setting('app.actor_id', true), '')::uuid, fn_current_role(),
+      'DELETE', 'Booking', OLD.id, jsonb_build_object('booking', to_jsonb(OLD),
+        'priceSnapshots', (SELECT coalesce(jsonb_agg(to_jsonb(s)), '[]'::jsonb)
+          FROM price_snapshots s WHERE s.booking_id = OLD.id)),
+      current_setting('app.delete_reason', true));
+  RETURN OLD;
+END $$;
+CREATE TRIGGER trg_bookings_delete BEFORE DELETE ON bookings
+  FOR EACH ROW EXECUTE FUNCTION fn_guard_booking_delete();
+
+CREATE FUNCTION fn_guard_refund_approval() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE r refund_requests%ROWTYPE; u users%ROWTYPE;
+BEGIN
+  SELECT * INTO STRICT r FROM refund_requests WHERE id = NEW.refund_request_id FOR UPDATE;
+  SELECT * INTO STRICT u FROM users WHERE id = NEW.approver_id;
+  IF r.status <> 'PENDING' OR r.version <> NEW.request_version
+    OR NEW.approver_id = r.requested_by OR NOT u.is_active
+    OR u.role NOT IN ('MANAGER','OWNER') OR NEW.approver_role <> u.role
+    OR NEW.refund_fee <> r.refund_fee THEN
+    RAISE EXCEPTION 'invalid refund approval or stale version' USING ERRCODE = '23514';
+  END IF;
+  IF u.role = 'MANAGER' AND NOT EXISTS (
+    SELECT 1 FROM bookings b JOIN user_property_scopes s ON s.property_id = b.property_id
+      WHERE b.id = r.booking_id AND s.user_id = u.id) THEN
+    RAISE EXCEPTION 'approver outside property scope' USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_refund_approvals_guard BEFORE INSERT ON refund_approvals
+  FOR EACH ROW EXECUTE FUNCTION fn_guard_refund_approval();
+
+CREATE FUNCTION fn_guard_refund_request() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.requester_type = 'GUEST' AND NOT EXISTS (
+    SELECT 1 FROM bookings b WHERE b.id = NEW.booking_id AND b.guest_id::text = NEW.requester_id) THEN
+    RAISE EXCEPTION 'refund guest must own booking' USING ERRCODE = '23514';
+  END IF;
+  IF NEW.payment_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM payments p WHERE p.id = NEW.payment_id AND p.booking_id = NEW.booking_id AND p.amount > 0) THEN
+    RAISE EXCEPTION 'refund source belongs to another booking' USING ERRCODE = '23514';
+  END IF;
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.status <> 'PENDING' THEN
+      RAISE EXCEPTION 'refund starts PENDING' USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+  END IF;
+  IF (NEW.booking_id, NEW.event_key, NEW.requester_type, NEW.requester_id, NEW.requested_by)
+    IS DISTINCT FROM (OLD.booking_id, OLD.event_key, OLD.requester_type, OLD.requester_id, OLD.requested_by) THEN
+    RAISE EXCEPTION 'refund requester and booking are immutable' USING ERRCODE = '23514';
+  END IF;
+  IF OLD.status <> 'PENDING' AND (
+    (NEW.approved_amount, NEW.refund_fee, NEW.requested_amount, NEW.approved_by, NEW.decided_at)
+      IS DISTINCT FROM (OLD.approved_amount, OLD.refund_fee, OLD.requested_amount, OLD.approved_by, OLD.decided_at)
+    OR (NEW.status <> OLD.status AND NOT (OLD.status = 'APPROVED' AND NEW.status = 'PAID'))) THEN
+    RAISE EXCEPTION 'refund decision is final' USING ERRCODE = '23514';
+  END IF;
+  IF OLD.status = 'PENDING' AND NEW.status IN ('APPROVED','REJECTED') AND NOT EXISTS (
+    SELECT 1 FROM refund_approvals a WHERE a.refund_request_id = OLD.id
+      AND a.request_version = OLD.version AND a.decision = NEW.status
+      AND a.approver_id = NEW.approved_by AND a.refund_fee = NEW.refund_fee
+      AND a.approved_amount IS NOT DISTINCT FROM NEW.approved_amount) THEN
+    RAISE EXCEPTION 'independent approval record required' USING ERRCODE = '23514';
+  END IF;
+  IF OLD.status = 'PENDING' AND NEW.status = 'PAID' THEN
+    RAISE EXCEPTION 'approve before paying' USING ERRCODE = '23514';
+  END IF;
+  IF NEW.status IN ('PENDING','APPROVED') AND (SELECT coalesce(sum(a.amount), 0)
+    FROM refund_allocations a WHERE a.refund_request_id = NEW.id)
+    > greatest(0::bigint, coalesce(NEW.approved_amount, NEW.requested_amount) - NEW.refund_fee) THEN
+    RAISE EXCEPTION 'adjust reserved allocations before reducing refund' USING ERRCODE = '23514';
+  END IF;
+  IF NEW.status = 'PAID' AND (SELECT coalesce(sum(a.amount), 0)
+      FROM refund_allocations a JOIN payments p ON p.id = a.refund_payment_id
+     WHERE a.refund_request_id = NEW.id AND p.status = 'SUCCEEDED')
+      <> greatest(0::bigint, coalesce(NEW.approved_amount, NEW.requested_amount) - NEW.refund_fee) THEN
+    RAISE EXCEPTION 'successful allocations must equal net refund' USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_refund_requests_guard BEFORE INSERT OR UPDATE ON refund_requests
+  FOR EACH ROW EXECUTE FUNCTION fn_guard_refund_request();
+
+CREATE FUNCTION fn_guard_refund_allocation() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE r refund_requests%ROWTYPE; p payments%ROWTYPE; reserved numeric;
+BEGIN
+  SELECT * INTO STRICT r FROM refund_requests WHERE id = NEW.refund_request_id FOR UPDATE;
+  SELECT * INTO STRICT p FROM payments WHERE id = NEW.original_payment_id FOR UPDATE;
+  IF r.status NOT IN ('PENDING','APPROVED') OR p.booking_id <> r.booking_id OR p.amount <= 0 OR p.status <> 'SUCCEEDED' THEN
+    RAISE EXCEPTION 'allocation needs pending/approved refund and successful original payment' USING ERRCODE = '23514';
+  END IF;
+  IF TG_OP = 'UPDATE' AND ((NEW.refund_request_id, NEW.original_payment_id)
+    IS DISTINCT FROM (OLD.refund_request_id, OLD.original_payment_id)
+    OR (r.status <> 'PENDING' AND NEW.amount <> OLD.amount)) THEN
+    RAISE EXCEPTION 'allocation source and amount are immutable' USING ERRCODE = '23514';
+  END IF;
+  SELECT coalesce(sum(a.amount), 0) INTO reserved FROM refund_allocations a
+    JOIN refund_requests rr ON rr.id = a.refund_request_id
+    WHERE a.original_payment_id = p.id AND a.id <> NEW.id AND rr.status IN ('PENDING','APPROVED','PAID');
+  IF reserved + NEW.amount > p.amount OR NEW.amount + (
+    SELECT coalesce(sum(a.amount), 0) FROM refund_allocations a
+    WHERE a.refund_request_id = r.id AND a.id <> NEW.id) > r.net_refund THEN
+    RAISE EXCEPTION 'refund allocation exceeds available funds' USING ERRCODE = '23514';
+  END IF;
+  IF NEW.refund_payment_id IS NOT NULL AND (r.status <> 'APPROVED' OR NOT EXISTS (
+    SELECT 1 FROM payments rp WHERE rp.id = NEW.refund_payment_id
+      AND rp.booking_id = r.booking_id AND rp.type = 'REFUND'
+      AND (rp.method = p.method OR (p.method = 'CASH' AND rp.method = 'BANK_TRANSFER' AND length(btrim(coalesce(rp.note, ''))) > 0))
+      AND rp.amount = -NEW.amount)) THEN
+    RAISE EXCEPTION 'refund payment must match original method, booking and allocation' USING ERRCODE = '23514';
+  END IF;
+  IF TG_OP = 'UPDATE' AND OLD.refund_payment_id IS NOT NULL
+    AND NEW.refund_payment_id IS DISTINCT FROM OLD.refund_payment_id THEN
+    RAISE EXCEPTION 'reuse the same refund payment when retrying' USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_refund_allocations_guard BEFORE INSERT OR UPDATE ON refund_allocations
+  FOR EACH ROW EXECUTE FUNCTION fn_guard_refund_allocation();
+CREATE TRIGGER trg_refund_allocations_no_delete BEFORE DELETE ON refund_allocations
+  FOR EACH ROW EXECUTE FUNCTION fn_immutable_record();
+
+CREATE FUNCTION fn_guard_payment_identity() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF (NEW.booking_id, NEW.type, NEW.method, NEW.amount, NEW.idempotency_key)
+    IS DISTINCT FROM (OLD.booking_id, OLD.type, OLD.method, OLD.amount, OLD.idempotency_key)
+    OR (OLD.provider_txn_id IS NOT NULL AND NEW.provider_txn_id IS DISTINCT FROM OLD.provider_txn_id)
+    OR (OLD.status = 'SUCCEEDED' AND NEW.status <> 'SUCCEEDED') THEN
+    RAISE EXCEPTION 'payment identity and successful receipt are immutable; use a refund entry'
+      USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_payments_identity BEFORE UPDATE ON payments
+  FOR EACH ROW EXECUTE FUNCTION fn_guard_payment_identity();
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- BR-INV-03 — BẤT BIẾN CỨNG: mỗi (room_id, bed_no, đêm) tối đa 1 RoomAssignment hoạt động.
 -- Đơn vị bán là (phòng, giường): bed_no = 0 nghĩa là "cả phòng" (mọi loại phòng bán theo
@@ -1109,7 +1423,16 @@ CREATE TABLE occupancy_snapshots (
 -- ─────────────────────────────────────────────────────────────────────────────
 ALTER TABLE room_assignments
   ADD CONSTRAINT excl_room_assignments_no_double_booking
-  EXCLUDE USING gist (room_id WITH =, bed_no WITH =, valid_range WITH &&)
+  EXCLUDE USING gist (room_id WITH =,
+    (CASE WHEN bed_no = 0 THEN int4range(0, NULL, '[)')
+          ELSE int4range(bed_no::int, bed_no::int + 1, '[)') END) WITH &&,
+    valid_range WITH &&)
+  WHERE (released_at IS NULL);
+
+-- Một BookingRoom chỉ được gán một nơi trong một đêm; đổi phòng dùng đoạn ngày liền kề.
+ALTER TABLE room_assignments
+  ADD CONSTRAINT excl_booking_room_one_assignment
+  EXCLUDE USING gist (booking_room_id WITH =, valid_range WITH &&)
   WHERE (released_at IS NULL);
 
 -- Đơn vị bán hợp lệ: giường chỉ tồn tại ở phòng đa giường, số giường không vượt sức chứa phòng.
@@ -1122,7 +1445,12 @@ BEGIN
   SELECT rt.allow_shared, r.bed_count INTO v_shared, v_bed_count
     FROM rooms r JOIN room_types rt ON rt.id = r.room_type_id
    WHERE r.id = NEW.room_id;
-  IF NEW.bed_no = 0 THEN RETURN NEW; END IF;
+  IF NEW.bed_no = 0 THEN
+    IF v_shared THEN
+      RAISE EXCEPTION 'DOR requires individual bed claims, not bed_no=0' USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+  END IF;
   IF NOT v_shared THEN
     RAISE EXCEPTION 'E_PROP_NOT_SHARED: phòng % bán theo phòng, không dùng bed_no > 0', NEW.room_id
       USING ERRCODE = '23514';
@@ -1138,14 +1466,15 @@ CREATE TRIGGER trg_room_assignments_bed_no
   BEFORE INSERT OR UPDATE ON room_assignments
   FOR EACH ROW EXECUTE FUNCTION fn_guard_bed_no();
 
--- Phòng không đa dụng chỉ có đúng 1 giường (BR-PROP-04).
+-- Phòng thường bán một đơn vị dù có nhiều giường vật lý (BR-PROP-04).
 CREATE OR REPLACE FUNCTION fn_guard_room_bed_count() RETURNS trigger
 LANGUAGE plpgsql AS $$
 DECLARE v_shared boolean;
 BEGIN
   SELECT allow_shared INTO v_shared FROM room_types WHERE id = NEW.room_type_id;
-  IF v_shared IS NOT TRUE AND NEW.bed_count <> 1 THEN
-    RAISE EXCEPTION 'E_PROP_BED_COUNT: phòng không đa dụng phải có bed_count = 1'
+  IF EXISTS (SELECT 1 FROM room_assignments ra WHERE ra.room_id = NEW.id
+      AND ra.released_at IS NULL AND (ra.bed_no > NEW.bed_count OR (NOT v_shared AND ra.bed_no > 0))) THEN
+    RAISE EXCEPTION 'E_PROP_BED_COUNT: thay đổi sức chứa làm mất đơn vị đang được gán'
       USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
@@ -1162,6 +1491,8 @@ DECLARE
   v_room_id uuid          := COALESCE(NEW.room_id, OLD.room_id);
   v_range   daterange;
 BEGIN
+  -- Mọi đường ghi block/assignment khoá cùng room; transaction dùng READ COMMITTED.
+  PERFORM 1 FROM rooms WHERE id = v_room_id FOR UPDATE;
   IF TG_TABLE_NAME = 'room_blocks' THEN
     v_range := daterange(NEW.start_date, NEW.end_date, '[)');
     IF EXISTS (SELECT 1 FROM room_assignments ra
@@ -1174,14 +1505,14 @@ BEGIN
       END IF;
     END IF;
   ELSE
-    v_range := NEW.valid_range;
+    IF NEW.released_at IS NOT NULL THEN RETURN NEW; END IF;
+    -- Cột GENERATED chưa có giá trị trong BEFORE trigger.
+    v_range := daterange(NEW.start_date, NEW.end_date, '[)');
     IF EXISTS (SELECT 1 FROM room_blocks b
                 WHERE b.room_id = v_room_id
                   AND daterange(b.start_date, b.end_date, '[)') && v_range) THEN
-      IF fn_current_role() NOT IN ('MANAGER','OWNER') THEN
-        RAISE EXCEPTION 'E_INV_ROOM_BLOCKED: phòng đang bị khoá trong khoảng ngày này'
-          USING ERRCODE = '23P01';
-      END IF;
+      RAISE EXCEPTION 'E_INV_ROOM_BLOCKED: phòng đang bị khoá trong khoảng ngày này'
+        USING ERRCODE = '23P01';
     END IF;
   END IF;
   RETURN NEW;
@@ -1201,6 +1532,9 @@ LANGUAGE plpgsql AS $$
 DECLARE
   v_physical integer;
 BEGIN
+  -- Ghi used thực tế của OTA không phải sửa cấu hình quota.
+  IF TG_OP = 'UPDATE' AND (NEW.allotment, NEW.room_type_id, NEW.date)
+    IS NOT DISTINCT FROM (OLD.allotment, OLD.room_type_id, OLD.date) THEN RETURN NEW; END IF;
   SELECT sum(CASE WHEN rt.allow_shared THEN r.bed_count ELSE 1 END)::int INTO v_physical
     FROM rooms r JOIN room_types rt ON rt.id = r.room_type_id
    WHERE r.room_type_id = NEW.room_type_id AND r.status = 'ACTIVE';
@@ -1215,7 +1549,7 @@ CREATE TRIGGER trg_channel_allotments_capacity
   BEFORE INSERT OR UPDATE ON channel_allotments
   FOR EACH ROW EXECUTE FUNCTION fn_guard_allotment_capacity();
 
--- BR-SYS-01 + NFR-SEC-04 — AuditLog append-only: bất biến cả khi có quyền superuser.
+-- BR-SYS-01 + NFR-SEC-04 — app role không sửa/xoá; superuser không nằm trong trust boundary này.
 CREATE OR REPLACE FUNCTION fn_audit_logs_append_only() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -1227,21 +1561,25 @@ CREATE TRIGGER trg_audit_logs_append_only
   BEFORE UPDATE OR DELETE ON audit_logs
   FOR EACH ROW EXECUTE FUNCTION fn_audit_logs_append_only();
 
--- NFR-SEC-04 — chuỗi băm: mỗi bản ghi băm cả bản ghi trước, phát hiện sửa lén.
+-- Hash chuẩn dùng epoch; không phụ thuộc TimeZone session khi kiểm tra.
+CREATE FUNCTION fn_audit_digest(a audit_logs, previous_hash text) RETURNS text
+LANGUAGE sql STABLE AS $$
+  SELECT encode(digest(jsonb_build_array(coalesce(previous_hash, 'GENESIS'),
+    to_jsonb(a) - 'row_hash' - 'prev_hash' - 'at' - 'created_at' - 'updated_at',
+    extract(epoch FROM a.at), extract(epoch FROM a.created_at))::text, 'sha256'), 'hex')
+$$;
+
+-- Cấp chain_seq SAU khóa; thứ tự append không phụ thuộc timestamp/UUID của client.
 CREATE OR REPLACE FUNCTION fn_audit_logs_hash_chain() RETURNS trigger
 LANGUAGE plpgsql AS $$
 DECLARE
   v_prev text;
 BEGIN
   PERFORM pg_advisory_xact_lock(hashtext('audit_logs.chain'));
-  SELECT row_hash INTO v_prev FROM audit_logs ORDER BY at DESC, id DESC LIMIT 1;
+  NEW.chain_seq := nextval('audit_chain_seq');
+  SELECT row_hash INTO v_prev FROM audit_logs ORDER BY chain_seq DESC LIMIT 1;
   NEW.prev_hash := v_prev;
-  NEW.row_hash  := encode(digest(
-      coalesce(v_prev, 'GENESIS') || '|' || NEW.id::text || '|' ||
-      coalesce(NEW.actor_id::text, '-') || '|' || NEW.action || '|' ||
-      NEW.entity_type || '|' || coalesce(NEW.entity_id::text, '-') || '|' ||
-      coalesce(NEW.before_json::text, '{}') || '|' || coalesce(NEW.after_json::text, '{}') || '|' ||
-      NEW.at::text, 'sha256'), 'hex');
+  NEW.row_hash := fn_audit_digest(NEW, v_prev);
   RETURN NEW;
 END $$;
 
@@ -1276,6 +1614,11 @@ END $$;
 
 ```sql
 -- Tồn phòng theo khoảng ngày (BR-INV-01, BR-INV-07, UC-INV-01/02)
+CREATE UNIQUE INDEX uq_snapshot_original ON price_snapshots(booking_id) WHERE kind = 'ORIGINAL';
+CREATE UNIQUE INDEX uq_snapshot_quote_acceptance ON price_snapshots((payload_json->>'quoteId'))
+  WHERE kind = 'ORIGINAL' AND payload_json->>'quoteId' IS NOT NULL;
+CREATE INDEX idx_delivery_pending ON event_deliveries(status, lease_expires_at)
+  WHERE status IN ('PENDING','PROCESSING');
 CREATE INDEX idx_room_assignments_active_room_range
   ON room_assignments USING gist (room_id, bed_no, valid_range) WHERE released_at IS NULL;
 CREATE INDEX idx_room_assignments_booking_room
@@ -1290,7 +1633,7 @@ CREATE INDEX idx_bookings_property_checkin ON bookings (property_id, check_in);
 CREATE INDEX idx_bookings_deposit_due
   ON bookings (status, check_in) WHERE status IN ('HELD','PENDING_PAYMENT');
 CREATE INDEX idx_bookings_hold_expiry
-  ON bookings (hold_expires_at) WHERE status = 'HELD';
+  ON bookings (hold_expires_at) WHERE status IN ('HELD','PENDING_PAYMENT');
 CREATE UNIQUE INDEX uq_bookings_channel_external_ref
   ON bookings (channel_id, external_ref) WHERE external_ref IS NOT NULL;
 CREATE INDEX idx_bookings_cancel_reason
@@ -1334,7 +1677,13 @@ CREATE INDEX idx_payments_collector_vn_day
   WHERE method = 'CASH' AND status = 'SUCCEEDED';
 CREATE INDEX idx_occupancy_snapshots_property_date
   ON occupancy_snapshots (property_id, date) WHERE room_type_id IS NULL;
-CREATE INDEX idx_idempotency_keys_expiry ON idempotency_keys (expires_at);
+CREATE INDEX idx_idempotency_keys_expiry ON idempotency_keys (expires_at) WHERE status = 'COMPLETED';
+CREATE INDEX idx_idempotency_keys_recovery ON idempotency_keys (lease_expires_at) WHERE status = 'IN_PROGRESS';
+CREATE INDEX idx_webhook_inbox_pending ON webhook_inbox (available_at, created_at) WHERE status IN ('PENDING','FAILED');
+CREATE INDEX idx_webhook_inbox_recovery ON webhook_inbox (lease_expires_at) WHERE status = 'PROCESSING';
+CREATE INDEX idx_refund_allocations_source ON refund_allocations (original_payment_id);
+CREATE INDEX idx_booking_charges_booking ON booking_charges (booking_id);
+CREATE INDEX idx_payment_allocations_charge ON payment_allocations (charge_id);
 CREATE INDEX idx_channel_property_settings_effective
   ON channel_property_settings (channel_id, property_id, effective_from DESC);
 ```
@@ -1357,10 +1706,15 @@ BEGIN
 END $$;
 
 GRANT USAGE ON SCHEMA public TO app_rw, app_ro, analytics_ro;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_rw;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_rw;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_ro, analytics_ro;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_ro;
+-- Analytics không được đọc users/guests/inbox/raw audit; cấp view tổng hợp đã review khi thi công.
+GRANT SELECT ON properties, room_types, channels TO analytics_ro;
 
 REVOKE UPDATE, DELETE, TRUNCATE ON audit_logs FROM app_rw, app_ro, analytics_ro;
+REVOKE UPDATE, DELETE, TRUNCATE ON price_snapshots, refund_approvals FROM app_rw, app_ro, analytics_ro;
+REVOKE DELETE, TRUNCATE ON refund_allocations, payments, refund_requests FROM app_rw, app_ro, analytics_ro;
 
 -- Quyền mặc định cho bảng tạo về sau; mọi migration PHẢI chạy lại khối REVOKE ở trên
 -- cho các bảng append-only mới (xem §8.3 Quy tắc migration).
@@ -1368,6 +1722,35 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_rw;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO app_ro;
 ```
+
+### 3.6. Hợp đồng ghi dữ liệu và giới hạn bảo vệ
+
+**Snapshot giá/policy.** `PriceQuote` vẫn ở Redis; quote hết TTL phải báo giá lại. Khi rời DRAFT, cùng transaction tạo đủ `BookingRoom`, chốt snapshot và giữ chỗ. Mỗi snapshot mới mô tả **toàn bộ** booking hiện hành; không sửa snapshot cũ. `gross_amount = tổng nights[].grossAmount = Booking.totalAmount`, `commission_amount = tổng nights[].commissionAmount`; số tiền nguyên VND, phần dư khi phân bổ giảm giá chia theo thứ tự `bookingRoomId, date` cố định. Hoa hồng mỗi dòng tính từ giá sau phân bổ giảm và `commissionPct` đã phân giải theo ngày đêm, làm tròn VND một lần mỗi dòng. Không nhân tổng booking với hoa hồng live.
+
+| Đường dẫn trong `payload_json` | Nội dung bắt buộc |
+|---|---|
+| `schemaVersion` | Phiên bản cấu trúc JSON (khởi đầu 1); khác `engine_version` là phiên bản thuật toán |
+| `ratePlan` | `id`, `code`, `version`, `depositPercent`, `minNights`, `maxNights`, `fixedNightlyPrice`, `losDiscountEnabled`, `rescheduleAllowed`, `rescheduleMinHours`, `rescheduleFeePct`, `maxReschedules` đã chốt |
+| `policy` | `id`, `code`, `version`, `earlyCheckoutFreeHours`, `earlyCheckoutRefundPct`, `tiers[]` gồm `id`, `offsetHours`, `refundPercent`, `chargeFirstNight`, `sortOrder`; bằng `policy_snapshot_json` |
+| `stay` | `checkIn`, `checkOut`, `timezone`, `checkInTime`, `checkOutTime`; tính mốc huỷ từ điều kiện đã chốt |
+| `nights[]` | Một dòng cho mỗi `bookingRoomId`/`date`: giá cơ bản, mọi hệ số, nguồn/ID/version giá, `grossAmount` sau giảm, `commissionPct`, `commissionAmount`, `channelPropertySettingId` (nullable), `channelPropertySettingVersion` (nullable), `channelVersion` dùng fallback |
+| `totals` | `subtotal`, `discountAmount`, `grossAmount`, `commissionAmount`, `depositAmount`, `currency` |
+
+Cột `channel_property_setting_id` cấp snapshot chỉ là tham chiếu tiện tra khi mọi đêm dùng cùng cấu hình (NULL khi hỗn hợp); **mỗi đêm** mới là nguồn xác định setting. Policy/tier và điều kiện gói đang sống được sửa với `version`; huỷ/hoàn đọc bản sao chốt, không đọc lại live policy. Dịch vụ cấu hình kiểm tra đúng một tier −1, các ngưỡng không trùng, tỷ lệ hoàn không tăng khi huỷ muộn hơn, và toàn bộ gói+tier+audit+outbox cùng transaction (BR-RATE-20). `CHECK` từng dòng không tự kiểm tra được những điều kiện cả tập này. Giá nguồn RATE_PLAN phải lọc `rate_plan_id` đúng gói.
+
+**Khoá, phiên bản và quyền.** API dùng `UPDATE ... WHERE id = :id AND version = :expectedVersion RETURNING version`; trigger tăng version, 0 dòng cập nhật trả lỗi xung đột theo API. Mọi callback/job/confirm/cancel/reschedule/check-in khóa Booking trước, rồi RefundRequest, Payment theo UUID tăng dần; thao tác cấu hình nhiều dòng cũng khóa theo thứ tự cố định. Sau khi lấy khóa, so hạn giữ chỗ với `clock_timestamp()` (không dùng `now()` đã chốt ở đầu transaction chờ khóa). Giữ chỗ khóa các `room_types` theo UUID trước khi đọc lại Q1, rồi khóa room/quota và ghi booking/assignment/used/audit/outbox nguyên tử. Mọi luồng tăng/giảm tồn phải theo giao thức này, kể cả webhook. `EXCLUDE` chỉ bảo vệ chồng lấn assignment, không chứng minh không oversell ở booking chưa gán. Chỉ vai trò dịch vụ tin cậy được đặt `app.actor_role`; các vai trò nghiệp vụ gồm SYSADMIN **không** là cây kế thừa quyền (OWNER không tự có quyền thu/chi của ACCOUNTANT).
+
+**Idempotency và inbox.** `principal_id` lấy từ danh tính đã xác thực (`USER`: User UUID; `GUEST`: Guest UUID đã xác thực; `SYSTEM`: mã service/job; `ANONYMOUS`: định danh phiên do server cấp). `path` chuẩn hoá nhưng giữ ID tài nguyên và query có nghĩa; `request_hash` gồm body chuẩn hoá và `If-Match`. Commit bản ghi IN_PROGRESS trước khi bắt đầu xử lý. Trùng scope khác hash trả conflict; cùng hash còn xử lý trả lỗi đang xử lý; COMPLETED replay status/body/các header an toàn đã lưu. Worker claim bằng CAS `lease_token`; trong transaction nghiệp vụ khóa dòng idempotency, kiểm tra token, ghi kết quả COMPLETED cùng commit với mutation/outbox. Lease hết chỉ cho phép worker mới tiếp quản khi khóa được dòng; không được chạy hai mutation song song. Dọn TTL **chỉ COMPLETED**, xử lý IN_PROGRESS treo qua recovery. Timeout gọi PSP dùng khóa chi ổn định của Payment và truy vấn PSP, không tạo payment mới.
+
+Webhook chỉ nhận sau xác minh chữ ký/merchant/số tiền/tiền tệ; commit `webhook_inbox` trước ACK. Trùng `(provider, provider_account_id, event_id)` phải cùng hash, khác hash ghi cảnh báo và không ghi đè payload. Worker claim bằng lease, khóa inbox rồi Booking; mutation, payment dedup, audit/outbox và PROCESSED cùng transaction. Crash trước commit được retry; sau commit không chạy lại. `payments.provider_txn_id` là mã PSP chuẩn hoá kèm merchant/account khi PSP chỉ bảo đảm duy nhất theo merchant; UNIQUE `(method, provider_txn_id)` sống lâu hơn TTL idempotency. Payload chỉ lưu dữ liệu nghiệp vụ cần thiết, không lưu thẻ/token bí mật.
+
+**Sổ nghĩa vụ và thu/hoàn.** `booking_charges.amount − voided_amount` là nghĩa vụ hiện hành theo phòng–đêm hoặc loại phí. Tiền đã trả cho một nghĩa vụ = tổng `payment_allocations.amount − released_amount` từ Payment thu SUCCEEDED. `balance_due` là tổng phần còn thiếu không âm của từng nghĩa vụ. `paid_amount` tổng thu SUCCEEDED không giảm khi hoàn; `refunded_amount` chỉ REFUND SUCCEEDED. COMPENSATION là chi ra, không tham gia tiền thu/phân bổ nợ. Khi huỷ/đổi, giảm nghĩa vụ bằng `voided_amount`, giải phóng đúng phân bổ cũ và dự trữ tiền hoàn bằng `refund_allocations`; không dùng tiền đó bù phần ở còn lại. EXPIRED miễn phí/phạt theo BR-BOOK-18. Không cộng `penalty_amount` lần nữa vào `balance_due`.
+
+Dịch vụ dưới khóa Booking/Payment kiểm tra: charge, nguồn thu và booking-room cùng Booking; chỉ phân bổ nguồn thu SUCCEEDED; tổng phân bổ còn hiệu lực + phần giữ hoàn/đã hoàn không vượt từng nguồn thu; không trả dư một nghĩa vụ; đồng bộ các projection với ledger. Trigger refund chặn vượt nguồn hoàn và sai phương thức, nhưng **không thay thế** kiểm tra tổng hợp giữa hai sổ. CHECK trên các projection chỉ kiểm miền giá trị, không chứng minh tổng ledger đúng. Cần integration test giao dịch cạnh tranh và job đối chiếu trước vận hành; DDL không phải một API tự hoàn tất kế toán.
+
+**Yêu cầu và quyết định hoàn.** `requested_amount`/`approved_amount` là gross; `net_refund = max(0, gross − refund_fee)`. `requester_type/requester_id` giữ dấu người khởi tạo; `requested_by` chỉ có khi USER; SYSTEM phải là danh tính scheduler được dịch vụ cho phép, không nhận tự do từ body. Một sự kiện huỷ/thu muộn tạo một yêu cầu, nhiều dòng refund-allocation cho các nguồn/phương thức; duyệt tổng net, không tách để né ngưỡng. Một MANAGER hoặc OWNER độc lập ghi `refund_approvals` ở `request_version` hiện hành và cập nhật quyết định cùng transaction. Đây là requester + approver theo BR-CANCEL-15, **không** tự thêm chuỗi MANAGER rồi OWNER. `approved_by` là người ra quyết định; `decided_at` bắt buộc cho quyết định. Thay đổi đề nghị lúc PENDING làm tăng version và vô hiệu hoá quyết định cũ; quyết định đã kết thúc không sửa tiền. ACCOUNTANT thực hiện chi theo quyền API, approval trigger không cấp quyền chi.
+
+`refund_allocations` giữ nguồn thu từ PENDING; khi APPROVED, gắn mỗi dòng với một Payment REFUND có khóa chi ổn định. Hoàn đúng phương thức gốc; gốc CASH được BANK_TRANSFER có ghi thông tin tài khoản theo BR-PAY-08. PSP timeout giữ Payment PENDING và request APPROVED; tra giao dịch cũ trước retry. Chỉ PAID khi tổng nguồn chi SUCCEEDED khớp net; net bằng 0 không tạo Payment 0. Tiền đến sau hạn ghi nhận SUCCEEDED đúng một lần nhưng không xác nhận lại/chiếm phòng: giữ hoặc chuyển EXPIRED và tạo yêu cầu hoàn riêng 100% khoản đến muộn, phí 0 theo BR-PAY-11. Callback FAILED→SUCCEEDED được phép sau xác minh; bút toán đã SUCCEEDED không sửa căn cước/số tiền hoặc đảo trạng thái để che hoàn.
 
 ---
 
@@ -1386,7 +1769,10 @@ CREATE EXTENSION IF NOT EXISTS btree_gist;
 
 ALTER TABLE room_assignments
   ADD CONSTRAINT excl_room_assignments_no_double_booking
-  EXCLUDE USING gist (room_id WITH =, bed_no WITH =, valid_range WITH &&)
+  EXCLUDE USING gist (room_id WITH =,
+    (CASE WHEN bed_no = 0 THEN int4range(0, NULL, '[)')
+          ELSE int4range(bed_no::int, bed_no::int + 1, '[)') END) WITH &&,
+    valid_range WITH &&)
   WHERE (released_at IS NULL);
 ```
 
@@ -1396,12 +1782,12 @@ ALTER TABLE room_assignments
 |-----------|---------|
 | `daterange(start_date, end_date, '[)')` | Khoảng **nửa mở**: đêm cuối là `end_date − 1`. Trả phòng ngày 27 rồi nhận phòng ngày 27 là hai đêm khác nhau, **không** chồng lấn |
 | `WITH =` trên `room_id` | Chỉ đối kháng khi **cùng một phòng vật lý** |
-| `WITH =` trên `bed_no` | Đơn vị bán: `0` = cả phòng (mọi loại trừ DOR), `1..bedCount` = giường cụ thể. Hai khách ở hai giường khác nhau của cùng phòng DOR **không** va chạm; cùng một giường thì va chạm |
+| `WITH &&` trên khoảng giường | `bed_no = 0` thành `[0,∞)` xung đột với mọi giường trong phòng; giường n thành `[n,n+1)`. Hai giường khác nhau không va chạm, cả phòng và bất kỳ giường nào luôn va chạm |
 | `WITH &&` trên `valid_range` | Giao khoảng khác rỗng ⇒ chiếm trùng đêm cùng đơn vị bán ⇒ bị từ chối |
 | `WHERE (released_at IS NULL)` | Chỉ áp cho `RoomAssignment` **đang hoạt động**; bản ghi đã giải phóng (đổi phòng, huỷ, hết hạn hold) không chiếm tồn nhưng vẫn giữ để kiểm toán |
 | `btree_gist` | Lớp toán tử GiST cho `uuid` và `smallint` để ghép cùng `daterange` trong một chỉ mục loại trừ |
 
-Chỉ mục GiST mà ràng buộc tạo ra **đồng thời phục vụ truy vấn tồn phòng** (`room_id` + `bed_no` + giao khoảng ngày) nên không phát sinh chỉ mục thừa (§6, Q1–Q3 §9).
+Ràng buộc tạo GiST theo **biểu thức khoảng giường**; chỉ mục `idx_room_assignments_active_room_range` riêng phục vụ truy vấn trực tiếp theo `bed_no`. §3 còn loại trừ chồng đêm trên cùng `booking_room_id` để một đơn vị đặt không bị gán hai nơi.
 
 ### 4.3. Vì sao bộ ba `(room_id, bed_no, valid_range)`, **không** dùng khoá đơn tổng hợp
 
@@ -1429,8 +1815,8 @@ Tầng ứng dụng vẫn kiểm tra tồn **trước** (báo lỗi thân thiệ
 |----------|-----------|-----------------|------|
 | **`23P01`** | `excl_room_assignments_no_double_booking` (mất tranh chấp đơn vị bán) | **`E_INV_ROOM_TAKEN`** | 409 |
 | `23P01` | trigger `trg_room_blocks_overlap_guard`, `trg_room_assignments_block_guard` | `E_INV_ROOM_BLOCKED` · `E_INV_BLOCK_OVERLAP` | 409 |
-| `23505` | `payments.idempotency_key` | **`E_PAY_CALLBACK_DUPLICATE`** — trả **kết quả cũ**, không tạo `Payment` mới | 200 |
-| `23505` | `idempotency_keys.key` | trả lại `response_status` + `response_body_json` đã lưu (BR-GEN-08) | theo bản ghi gốc |
+| `23505` | `uq_payments_idempotency` / `uq_payments_provider_txn` | **`E_PAY_CALLBACK_DUPLICATE`** — đối chiếu nguồn và số tiền rồi trả kết quả cũ | 200 nếu khớp |
+| `23505` | `uq_idempotency_scope` | kiểm hash/trạng thái: chỉ replay COMPLETED; khác hash conflict, IN_PROGRESS chưa có kết quả để replay (§3.6) | theo API |
 | `23505` | `bookings.code` · `uq_bookings_channel_external_ref` · `uq_guests_phone` | `E_BOOK_DUPLICATE` · trả booking đã có · `E_CRM_DUPLICATE_PHONE` | 409 / 200 |
 | `23514` | `CHECK` nghiệp vụ; trigger `bed_no`, `bed_count`, allotment | `E_BOOK_OVER_CAPACITY` · `E_OVER_NO_CONSENT` · `E_OVER_MERGE_GENDER` (khác giới chưa duyệt) · `E_INV_ALLOTMENT_EXCEEDS_ROOMS` · `E_CANCEL_ALREADY_DECIDED` | 422 |
 | `23503` | FK `RESTRICT` (xoá cứng booking đã có thanh toán) | `E_BOOK_NOT_DELETABLE` (BR-BOOK-14/17) | 409 |
@@ -1454,37 +1840,37 @@ Hai mã **không** sinh từ SQLSTATE, do tầng nghiệp vụ/job trả về:
 
 | # | Bất biến | Cách ép | BR / NFR |
 |---|----------|---------|----------|
-| 1 | Mỗi **đơn vị bán** `(room_id, bed_no, đêm)` tối đa **1** `RoomAssignment` hoạt động | `EXCLUDE USING gist (room_id WITH =, bed_no WITH =, valid_range WITH &&) WHERE released_at IS NULL` | BR-INV-03, NFR-REL-01 |
+| 1 | Mỗi **đơn vị bán**/đêm tối đa **1** assignment; gán cả phòng xung đột mọi giường | `EXCLUDE` theo phòng + khoảng giường + khoảng ngày (§3.3); thêm EXCLUDE trên booking-room/đêm | BR-INV-03, NFR-REL-01 |
 | 2 | `bed_no > 0` chỉ dùng cho phòng đa dụng và không vượt `bedCount` | Trigger `trg_room_assignments_bed_no` ném `23514` | BR-PROP-04, BR-OVER §9.4 |
-| 3 | Phòng không đa dụng có đúng 1 đơn vị bán | Trigger `trg_rooms_bed_count` | BR-PROP-04, BR-PROP-03 |
+| 3 | Đổi số giường không được làm mất giường đang gán; phòng thường bán 1 đơn vị dù có nhiều giường | Trigger `trg_rooms_bed_count`; cách đếm theo `allow_shared` trong Q1/Q3 | BR-PROP-04, BR-PROP-03 |
 | 4 | `check_out > check_in` (tối thiểu 1 đêm) | `CHECK ck_bookings_range`, `ck_room_assignments_range` (miền: `StayPeriod`) | BR-BOOK-03 |
 | 5 | Số đêm luôn khớp khoảng ngày | Cột sinh `bookings.nights` | BR-BOOK-03/10 |
-| 6 | Số dư đúng công thức; booking đã huỷ/no-show/expired chỉ nợ phụ thu | Cột sinh `bookings.balance_due` theo `status` | BR-PAY-02 |
+| 6 | Số dư không âm | CHECK; **tính đúng với ledger do transaction ứng dụng + đối chiếu** §3.6, không được bảo đảm bởi CHECK | BR-PAY-02 |
 | 7 | Thứ tự tạo booking tăng đơn điệu để xếp ưu tiên tất định | `SEQUENCE bookings_seq` + `bookings.seq UNIQUE` | BR-OVER-11 |
 | 8 | Mã booking đúng `PH-<YYMMDD>-<5 ký tự>` và duy nhất | `CHECK (code ~ …)` + `UNIQUE` | BR-GEN-06 |
-| 9 | Tổng hoàn luỹ kế ≤ số đã trả | `CHECK ck_bookings_refund_cap` | BR-CANCEL-17, BR-PAY-07 |
+| 9 | Tổng hoàn projection ≤ tổng thu projection | `CHECK ck_bookings_refund_cap`; khớp sổ thu/hoàn cần transaction ứng dụng + đối chiếu §3.6 | BR-CANCEL-17, BR-PAY-07 |
 | 10 | Người tạo **không** tự duyệt yêu cầu hoàn tiền của mình | `CHECK ck_refund_requests_two_level` | BR-CANCEL-15 |
 | 11 | `isForceMajeure` ⇒ `reason = 'FORCE_MAJEURE'`; lý do ≥ 20 ký tự ghi ở `audit_logs.reason` | `CHECK ck_refund_requests_force_majeure` + quy trình | BR-CANCEL-13 |
-| 12 | Chỉ `PAID` khi đã có số duyệt và mốc chi | `CHECK ck_refund_requests_paid` | BR-CANCEL-16 |
-| 13 | Yêu cầu đã `APPROVED`/`PAID` **không** huỷ được | `CHECK ck_refund_requests_cancelled` | BR-CANCEL-18 |
+| 12 | Chỉ `PAID` khi đã duyệt, có mốc chi và tổng allocation chi SUCCEEDED bằng net | CHECK + `trg_refund_requests_guard` | BR-CANCEL-16 |
+| 13 | Yêu cầu đã `APPROVED`/`PAID` **không** huỷ hoặc sửa số tiền được | `trg_refund_requests_guard` kiểm tra trạng thái cũ và mới | BR-CANCEL-18 |
 | 14 | `refundBase` phân bổ theo phòng bị huỷ; phòng còn lại giữ nguyên | `booking_rooms.status/cancelled_at` + `refund_requests.net_refund` (cột sinh) | **BR-CANCEL-19**, BR-CANCEL-05 |
-| 15 | Callback trùng khoá idempotency không tạo bút toán thứ hai | `UNIQUE (payments.idempotency_key)` | BR-PAY-03 |
-| 16 | Mọi thao tác ghi gửi lại trong 24 giờ trả đúng kết quả cũ | `idempotency_keys.key UNIQUE`, `expires_at > created_at` | BR-GEN-08 |
-| 17 | Hoàn tiền là bút toán đảo (ghi âm); bút toán gốc không bị sửa | `CHECK ck_payments_sign` + nghiệp vụ chỉ `INSERT` | BR-PAY-09 |
+| 15 | Callback trùng giao dịch không tạo bút toán thứ hai | UNIQUE `(booking_id,type,idempotency_key)` và `(method,provider_txn_id)`; xác minh payload theo §3.6 | BR-PAY-03 |
+| 16 | Khoá idempotency độc lập theo principal/method/path, có lưu IN_PROGRESS | `uq_idempotency_scope` + CHECK trạng thái; replay/recovery do giao thức §3.6 | BR-GEN-08 |
+| 17 | Hoàn ghi âm; không sửa căn cước/số tiền bút toán thu | `CHECK ck_payments_sign` + `trg_payments_identity` + REVOKE DELETE | BR-PAY-09 |
 | 18 | Tiền mặt phải gắn người thu (đối soát theo cặp *người thu – ngày VN*) | `CHECK ck_payments_cash_shift` + `idx_payments_collector_vn_day` | BR-PAY-06/10 |
-| 19 | `allotment` không vượt số **đơn vị bán** `ACTIVE`; `used ≤ allotment` | Trigger `trg_channel_allotments_capacity` + `CHECK ck_channel_allotments_used` | BR-INV-05, BR-CHAN-01/08 |
+| 19 | Khi cấu hình, `allotment` không vượt đơn vị ACTIVE; `used` có thể vượt do OTA đã xác nhận | Trigger capacity chỉ cho thay đổi cấu hình; dịch vụ đóng bán khi quota hết, không từ chối nhập cam kết ngoài | BR-INV-05, BR-CHAN-01/08 |
 | 20 | Khoá phòng không chồng lấn lịch hoạt động (trừ `MANAGER`+ có lý do) | Trigger `trg_room_blocks_overlap_guard` / `trg_room_assignments_block_guard` ném `23P01` | BR-INV-06 |
 | 21 | Một ca quá tải chưa xử lý cho mỗi `(cơ sở, ngày, loại phòng)` | `UNIQUE` từng phần `uq_overbooking_open_case … WHERE status <> 'RESOLVED'` | BR-OVER-05 |
 | 22 | Ca `RESOLVED` có người và thời điểm; ca `ESCALATED` có mốc leo thang (case quá hạn không tự đóng) | `CHECK ck_overbooking_resolved`, `ck_overbooking_escalated` | BR-OVER-04, **BR-OVER-16** |
 | 23 | Điều chuyển giữ nguyên giá gốc | `CHECK ck_room_moves_price_lock (price_locked)` | BR-OVER-08 |
-| 24 | `RoomMove` phải có phòng đích, trừ `WALK_OUT`; `WALK_OUT` phải có số biên bản | `CHECK ck_room_moves_target`, `ck_room_moves_walkout_doc` | [02 §9.2](../02-nghiep-vu/quy-tac-nghiep-vu.md#92-thang-xử-lý-khi-thiếu-phòng), BR-OVER-06 |
+| 24 | Move APPROVED/EXECUTED phải có người duyệt; REJECTED/CANCELLED không bắt buộc; WALK_OUT EXECUTED mới bắt buộc biên bản | `ck_room_moves_approval`, `ck_room_moves_target`, `ck_room_moves_walkout_doc` | BR-OVER-06 |
 | 25 | `keepScore` nằm trong miền giá trị của công thức | `CHECK (keep_score BETWEEN 0 AND 173)` | BR-OVER-11 |
 | 26 | Ghép phòng chỉ `APPROVED`/`ACTIVE` khi cả hai đồng ý **và** `MANAGER`+ đã duyệt | `CHECK ck_room_merges_consent` | BR-OVER-13/14 |
 | 27 | Một booking không nằm trong hai ghép đang hoạt động (mỗi vai) | `uq_room_merges_active_primary`, `…_secondary` | BR-OVER-13 |
-| 28 | `HELD` phải có `hold_expires_at`; `CANCELLED` phải có `cancelled_at` | `CHECK ck_bookings_hold`, `ck_bookings_cancelled` | BR-BOOK-07/14 |
+| 28 | `HELD`/`PENDING_PAYMENT` có `hold_expires_at`; `CANCELLED` có `cancelled_at` | `CHECK ck_bookings_hold`, `ck_bookings_cancelled` | BR-BOOK-07/14/18 |
 | 29 | Không xoá cứng booking đã phát sinh thanh toán | FK `payments.booking_id ON DELETE RESTRICT` | BR-BOOK-14 |
 | 30 | Xoá cứng `DRAFT`/`HELD` vẫn giữ vết nhật ký | `audit_logs.entity_id` không FK + `before_json` ghi trước khi xoá | **BR-BOOK-17**, BR-GEN-07 |
-| 31 | Giá đã chốt bất biến, lưu theo lần (`ORIGINAL`/`RESCHEDULE`/`PARTIAL_CANCEL`) kèm `engineVersion` | `UNIQUE (booking_id, seq)` + FK `channel_property_setting_id` | BR-RATE-16, BR-RATE-18 |
+| 31 | Giá/policy đã chốt bất biến, lưu đủ mỗi lần kèm engineVersion và số tiền hoa hồng | UNIQUE + trigger cấm UPDATE/DELETE + REVOKE; đối chiếu tổng payload do ứng dụng §3.6 | BR-RATE-16/18/20 |
 | 32 | Khách nhận diện duy nhất theo SĐT chuẩn hoá `+84…` | `UNIQUE` từng phần `uq_guests_phone … WHERE anonymized_at IS NULL` | BR-CRM-01 |
 | 33 | Mỗi booking chỉ sinh điểm một lần cho mỗi loại bút toán | `UNIQUE NULLS NOT DISTINCT (guest_id, booking_id, type)` | BR-CRM-03/06 |
 | 34 | Sàn ≤ giá cơ bản ≤ trần; mã loại phòng thuộc enum | `CHECK ck_room_types_price_band`, `CHECK code IN (…)` | BR-RATE-03/04 |
@@ -1494,11 +1880,11 @@ Hai mã **không** sinh từ SQLSTATE, do tầng nghiệp vụ/job trả về:
 | 38 | Mã phòng duy nhất trong phạm vi một cơ sở | `UNIQUE (property_id, code)` | BR-PROP-05 |
 | 39 | Một nhiệm vụ buồng phòng cho mỗi `(phòng, ngày nghiệp vụ)` | `UNIQUE uq_housekeeping_room_date` | BR-FO-06 |
 | 40 | Khuyến mãi: `PERCENT ≤ 100`, `used_count ≤ max_uses`, phạm vi thuộc enum | `CHECK ck_promotions_*` | BR-RATE-10/13/14 |
-| 41 | `AuditLog` bất biến kể cả với quyền cao nhất | Trigger `trg_audit_logs_append_only` + `REVOKE UPDATE, DELETE` | BR-SYS-01, NFR-SEC-04 |
+| 41 | `AuditLog` append-only với vai trò ứng dụng | Trigger + REVOKE; superuser/owner DB vẫn có thể vô hiệu hoá trigger, cần kiểm soát vận hành độc lập | BR-SYS-01, NFR-SEC-04 |
 | 42 | Chuỗi băm `AuditLog` liền mạch | Trigger `trg_audit_logs_hash_chain` (SHA-256 qua `prev_hash`) | NFR-SEC-04 |
 | 43 | Mọi bảng đều có `updated_at` tự cập nhật | Trigger `trg_<bảng>_touch` (trừ `AuditLog`) | Quy ước §1 |
 
-**Bất biến không ép được ở CSDL** (quan hệ xuyên bảng trong một transaction — ép ở tầng ứng dụng + kiểm tra đối chiếu định kỳ):
+**Bất biến thiết kế này giao cho transaction ứng dụng + kiểm thử/đối chiếu** (có thể hiện thực thêm deferred trigger; DDL hiện tại không tự bảo vệ đầy đủ):
 
 | Bất biến | Lý do không ép ở CSDL | BR |
 |----------|----------------------|----|
@@ -1506,7 +1892,7 @@ Hai mã **không** sinh từ SQLSTATE, do tầng nghiệp vụ/job trả về:
 | Không bán vượt quá trần của cơ sở và trần 5% tuyệt đối | Phụ thuộc cấu hình và số phòng `ACTIVE` tại thời điểm bán | BR-OVER-02 |
 | Booking rời `DRAFT` phải có `PriceSnapshot` (`HELD`/`PENDING_PAYMENT`/`CONFIRMED`) | Quan hệ xuyên bảng, kiểm bằng truy vấn đối chiếu hằng ngày | BR-RATE-16 |
 | `LONGSTAY14` phải có giá riêng, khác `FLEX7` | Cảnh báo cấu hình trên màn hình, không chặn dữ liệu | BR-RATE-19 |
-| `balanceDue + penaltyAmount = 0` khi check-in (hoặc `MANAGER`+ cho ghi nợ) | Quy trình tiền sảnh, có ngoại lệ được duyệt | BR-FO-01 |
+| `balanceDue = 0` khi check-in (hoặc đúng vai trò được duyệt nợ) | Balance đã gồm phạt/phí, không cộng lần hai; kiểm tra ledger và quyền trong giao dịch | BR-FO-01, BR-PAY-02 |
 
 ---
 
@@ -1551,8 +1937,8 @@ Hai mã **không** sinh từ SQLSTATE, do tầng nghiệp vụ/job trả về:
 | Lớp | Cơ chế | Chặn được gì |
 |-----|--------|--------------|
 | 1. Quyền | `REVOKE UPDATE, DELETE, TRUNCATE ON audit_logs FROM app_rw, app_ro, analytics_ro` | Ứng dụng bị lộ thông tin đăng nhập vẫn không sửa được nhật ký |
-| 2. Trigger | `trg_audit_logs_append_only` ném `42501` | Kể cả `superuser`/chủ sở hữu bảng cũng không `UPDATE`/`DELETE` được (muốn tắt phải `ALTER TABLE … DISABLE TRIGGER`, để lại vết DDL trong log PostgreSQL) |
-| 3. Chuỗi băm | `trg_audit_logs_hash_chain`: `row_hash = SHA256(prev_hash ‖ nội dung bản ghi)` | Sửa dữ liệu ở tầng tệp hoặc phục hồi bản sao lưu bị can thiệp — phát hiện bằng truy vấn §7.3 |
+| 2. Trigger | `trg_audit_logs_append_only` ném `42501` | Chặn DML thường; **không** chống được superuser/owner có thể tắt trigger hoặc TRUNCATE. Tách credential và log quản trị ra nơi độc lập |
+| 3. Chuỗi băm | Hash toàn nội dung nghiệp vụ và chain_seq; số thứ tự cấp dưới khóa | Phát hiện sửa dữ liệu khi đối chiếu nội dung, liên kết và checkpoint ngoài DB; người có toàn quyền DB có thể tính lại cả chuỗi nên hash đơn độc không là bằng chứng chống mọi can thiệp |
 
 ### 7.2. DDL (trích §3.3 và §3.5)
 
@@ -1579,10 +1965,11 @@ Phân vai thực thi: **ứng dụng** ghi nhật ký bằng `app_rw` (chỉ `IN
 -- Số bản ghi bị đứt chuỗi (kỳ vọng 0). Chạy hằng ngày, kết quả vào báo cáo SYS.
 SELECT count(*) AS broken_links
   FROM (
-    SELECT prev_hash, lag(row_hash) OVER (ORDER BY at, id) AS expected_prev
-      FROM audit_logs
+    SELECT prev_hash, row_hash, lag(row_hash) OVER (ORDER BY chain_seq) AS expected_prev,
+           fn_audit_digest(a, a.prev_hash) AS expected_hash
+      FROM audit_logs a
   ) s
- WHERE prev_hash IS DISTINCT FROM expected_prev;
+ WHERE prev_hash IS DISTINCT FROM expected_prev OR row_hash IS DISTINCT FROM expected_hash;
 ```
 
 Lưu trữ: nhật ký giữ **5 năm**, booking/thanh toán **10 năm** (BR-SYS-04, NFR-COMP-02); sao lưu PITR với RPO ≤ 15 phút, RTO ≤ 4 giờ (BR-SYS-03). Nhật ký cũ chuyển sang bảng lưu trữ lạnh theo tháng (§10) nhưng `REVOKE` và trigger **phải được áp lại** cho mọi bảng mới.
@@ -1598,7 +1985,7 @@ Lưu trữ: nhật ký giữ **5 năm**, booking/thanh toán **10 năm** (BR-SYS
 | 0001 | `init_extensions` | `btree_gist`, `pgcrypto`, `SEQUENCE bookings_seq`, hàm `fn_current_role()` | Thủ công |
 | 0002 | `baseline_tables` | 36 bảng §3.2 + khoá chính/ngoáI/`CHECK` cơ bản | Prisma |
 | 0003 | `room_assignment_exclusion` | Cột sinh `valid_range`, `EXCLUDE USING gist (room_id, bed_no, valid_range)` | **Thủ công** |
-| 0004 | `generated_columns` | `bookings.nights`, `bookings.balance_due`, `refund_requests.net_refund` | **Thủ công** |
+| 0004 | `generated_columns` | `bookings.nights`, `refund_requests.net_refund`; `balance_due` là projection ledger | **Thủ công** |
 | 0005 | `invariant_triggers` | `bed_no`, `bed_count`, khoá phòng, allotment, `updated_at`, chuỗi băm nhật ký | **Thủ công** |
 | 0006 | `partial_indexes` | Toàn bộ chỉ mục §3.4 | **Thủ công** |
 | 0007 | `audit_append_only` | Trigger append-only + `REVOKE` cho vai trò ứng dụng | **Thủ công** |
@@ -1657,89 +2044,84 @@ Chi tiết quy trình và tiêu chí vào/ra: [05/kế-hoạch-kiểm-thử](../
 
 Tham số: `$1` ngày nhận phòng, `$2` ngày trả phòng, `$3` mã kênh đang xét.
 
-- `available_general` = **đơn vị bán** `ACTIVE` − `RoomBlock` − `RoomAssignment` đang hoạt động − hold **chưa sinh assignment** của kênh khác. `allotment` **không** bị trừ ở tầng này (đó là hạn mức bán của kênh, không phải tồn vật lý).
+- `available_general = supply − demand` là tồn **thương mại**, có thể âm: `supply` loại mỗi đơn vị bị block một lần; `demand` đếm từng `BookingRoom` hiệu lực một lần. `physical_available` riêng là tập ACTIVE trừ **hợp** block/assignment, không trừ hai lần phần giao. Bán thường phải đủ cả tồn thương mại và khả năng gán vật lý trên mọi đêm (BR-INV-01).
 - `available_channel` = `min(available_general, allotment − used của kênh đang xét)`; kênh trực tiếp không có hạn mức riêng (BR-CHAN-01) nên bằng `available_general`.
-- Hold đọc từ **`bookings`** (`status = 'HELD'`, `hold_expires_at > now()`), đúng nguồn chân lý ở [00 §7.3](../00-tong-quan.md#73-đặt-phòng-book). DOR đếm theo **giường** (`bed_count`), phòng thường đếm 1.
+- Cam kết gồm `HELD`/`PENDING_PAYMENT` chưa hết `hold_expires_at` của **mọi kênh**, và `CONFIRMED`/`CHECKED_IN` (kể cả oversold chưa gán). Mỗi đơn vị bán có một `booking_rooms` từ lúc rời DRAFT; phòng huỷ một phần không còn tạo cam kết. DOR đếm theo **giường** (`bed_count`), phòng thường đếm 1, bất kể số giường vật lý.
+- Chỉ `WEB`/`PHONE`/`WALKIN` không cần quota; OTA thiếu dòng dùng mặc định BR-CHAN-01 (80% số đơn vị ACTIVE, làm tròn xuống, tối thiểu 1 khi có phòng), AGENCY thiếu dòng trả 0. `is_closed` hoặc kênh ngừng hoạt động trả 0. Q1 tính `used` từ demand thật; cột `channel_allotments.used` là cache cập nhật cùng transaction, có thể vượt allotment khi tiếp nhận OTA đã xác nhận (BR-CHAN-08).
 - Giá trị âm = số đơn vị đang thiếu ⇒ mở `OverbookingCase` với `shortage_count = −available` (BR-OVER-03).
 
 ```sql
 WITH nights AS (
-  SELECT gs::date AS stay_date
-    FROM generate_series($1::date, $2::date - 1, interval '1 day') AS gs
+  SELECT $1::date + i AS stay_date
+    FROM generate_series(0, $2::date - $1::date - 1) AS i
 ),
 units AS (
-  SELECT r.property_id, r.room_type_id,
-         sum(CASE WHEN rt.allow_shared THEN r.bed_count ELSE 1 END)::int AS units_total
+  SELECT r.id AS room_id, r.property_id, r.room_type_id, s.bed_no
     FROM rooms r
     JOIN room_types rt ON rt.id = r.room_type_id
+    CROSS JOIN LATERAL generate_series(
+      CASE WHEN rt.allow_shared THEN 1 ELSE 0 END,
+      CASE WHEN rt.allow_shared THEN r.bed_count ELSE 0 END) AS s(bed_no)
    WHERE r.status = 'ACTIVE'
-   GROUP BY 1, 2
 ),
-blocked AS (
-  SELECT r.property_id, r.room_type_id, d.stay_date,
-         sum(CASE WHEN rt.allow_shared THEN r.bed_count ELSE 1 END)::int AS blocked_units
-    FROM room_blocks b
-    JOIN rooms r ON r.id = b.room_id
-    JOIN room_types rt ON rt.id = r.room_type_id
-    CROSS JOIN LATERAL generate_series(b.start_date, b.end_date - 1, interval '1 day') AS d(stay_date)
-   WHERE b.start_date < $2::date AND b.end_date > $1::date
-   GROUP BY 1, 2, 3
+physical_free AS (
+  SELECT rt.property_id, rt.id AS room_type_id, n.stay_date,
+    count(u.room_id)::int AS active_units,
+    count(u.room_id) FILTER (WHERE NOT EXISTS (
+      SELECT 1 FROM room_blocks bl WHERE bl.room_id = u.room_id
+        AND daterange(bl.start_date, bl.end_date, '[)') @> n.stay_date))::int AS supply,
+    count(u.room_id) FILTER (WHERE
+      NOT EXISTS (SELECT 1 FROM room_blocks bl WHERE bl.room_id = u.room_id
+        AND daterange(bl.start_date, bl.end_date, '[)') @> n.stay_date)
+      AND NOT EXISTS (SELECT 1 FROM room_assignments ra WHERE ra.room_id = u.room_id
+        AND ra.released_at IS NULL AND ra.valid_range @> n.stay_date
+        AND (ra.bed_no = 0 OR ra.bed_no = u.bed_no)))::int AS free_units
+    FROM room_types rt CROSS JOIN nights n
+    LEFT JOIN units u ON u.room_type_id = rt.id
+   GROUP BY rt.property_id, rt.id, n.stay_date
 ),
-occupied AS (
-  SELECT r.property_id, r.room_type_id, d.stay_date,
-         sum(CASE WHEN ra.bed_no > 0 THEN 1 ELSE r.bed_count END)::int AS occupied_units
-    FROM room_assignments ra
-    JOIN rooms r ON r.id = ra.room_id
-    JOIN room_types rt ON rt.id = r.room_type_id
-    CROSS JOIN LATERAL generate_series(ra.start_date, ra.end_date - 1, interval '1 day') AS d(stay_date)
-   WHERE ra.released_at IS NULL AND ra.start_date < $2::date AND ra.end_date > $1::date
-   GROUP BY 1, 2, 3
-),
-held AS (
-  SELECT b.property_id, b.room_type_id, d.stay_date, sum(b.room_count)::int AS held_units
+demand AS (
+  SELECT coalesce(ar.property_id, b.property_id) AS property_id,
+         coalesce(ar.room_type_id, br.room_type_id) AS room_type_id,
+         n.stay_date, b.channel_id, br.id AS booking_room_id
     FROM bookings b
-    JOIN channels hc ON hc.id = b.channel_id
-    CROSS JOIN LATERAL generate_series(b.check_in, b.check_out - 1, interval '1 day') AS d(stay_date)
-   WHERE b.status = 'HELD' AND b.hold_expires_at > now()
-     AND hc.code <> $3::text
-     AND b.check_in < $2::date AND b.check_out > $1::date
-     AND NOT EXISTS (
-           SELECT 1 FROM room_assignments ra
-             JOIN booking_rooms br ON br.id = ra.booking_room_id
-            WHERE br.booking_id = b.id AND ra.released_at IS NULL)
-   GROUP BY 1, 2, 3
+    JOIN booking_rooms br ON br.booking_id = b.id AND br.status = 'ACTIVE'
+    JOIN nights n ON n.stay_date >= b.check_in AND n.stay_date < b.check_out
+    LEFT JOIN room_assignments ra ON ra.booking_room_id = br.id
+      AND ra.released_at IS NULL AND ra.valid_range @> n.stay_date
+    LEFT JOIN rooms ar ON ar.id = ra.room_id
+   WHERE (b.status IN ('CONFIRMED','CHECKED_IN')
+      OR (b.status IN ('HELD','PENDING_PAYMENT') AND b.hold_expires_at > now()))
 ),
-channel_quota AS (
-  SELECT ca.room_type_id, ca.date AS stay_date,
-         sum(ca.allotment - ca.used)::int AS quota_left
-    FROM channel_allotments ca
-    JOIN channels c ON c.id = ca.channel_id
-   WHERE c.code = $3::text AND ca.date >= $1::date AND ca.date < $2::date
-   GROUP BY 1, 2
+pool AS (
+  SELECT pf.*, pf.supply - (SELECT count(*) FROM demand d
+    WHERE d.property_id = pf.property_id AND d.room_type_id = pf.room_type_id
+      AND d.stay_date = pf.stay_date)::int AS available_general
+    FROM physical_free pf
 )
-SELECT pr.code AS property, rt.code AS room_type, n.stay_date,
-       u.units_total - coalesce(bl.blocked_units, 0) - coalesce(oc.occupied_units, 0)
-         - coalesce(hd.held_units, 0) AS available_general,
-       least(u.units_total - coalesce(bl.blocked_units, 0) - coalesce(oc.occupied_units, 0)
-             - coalesce(hd.held_units, 0), coalesce(cq.quota_left, 2147483647)) AS available_channel
-  FROM nights n
-  JOIN units u ON true
-  JOIN properties pr ON pr.id = u.property_id
-  JOIN room_types rt ON rt.id = u.room_type_id
-  LEFT JOIN blocked bl
-         ON bl.property_id = u.property_id AND bl.room_type_id = u.room_type_id AND bl.stay_date = n.stay_date
-  LEFT JOIN occupied oc
-         ON oc.property_id = u.property_id AND oc.room_type_id = u.room_type_id AND oc.stay_date = n.stay_date
-  LEFT JOIN held hd
-         ON hd.property_id = u.property_id AND hd.room_type_id = u.room_type_id AND hd.stay_date = n.stay_date
-  LEFT JOIN channel_quota cq
-         ON cq.room_type_id = u.room_type_id AND cq.stay_date = n.stay_date
- ORDER BY pr.code, rt.code, n.stay_date;
+SELECT pr.code AS property, rt.code AS room_type, p.stay_date, p.available_general,
+       p.free_units AS physical_available,
+       CASE WHEN ch.status <> 'ACTIVE' OR pr.status <> 'ACTIVE' OR ca.is_closed THEN 0
+            WHEN ch.code IN ('WEB','PHONE','WALKIN') THEN greatest(0, p.available_general)
+            ELSE greatest(0, least(p.available_general,
+              coalesce(ca.allotment, CASE WHEN ch.code LIKE 'OTA\_%' ESCAPE '\'
+                THEN CASE WHEN p.active_units = 0 THEN 0
+                  ELSE greatest(1, floor(p.active_units * 0.80)::int) END ELSE 0 END)
+              - (SELECT count(*) FROM demand d WHERE d.channel_id = ch.id
+                 AND d.property_id = p.property_id AND d.room_type_id = p.room_type_id
+                 AND d.stay_date = p.stay_date)))
+       END AS available_channel
+  FROM pool p JOIN properties pr ON pr.id = p.property_id
+  JOIN room_types rt ON rt.id = p.room_type_id
+  JOIN channels ch ON ch.code = $3::text
+  LEFT JOIN channel_allotments ca ON ca.channel_id = ch.id
+    AND ca.room_type_id = p.room_type_id AND ca.date = p.stay_date
+ ORDER BY pr.code, rt.code, p.stay_date;
 ```
 
 ### Q2 — Một đơn vị bán cụ thể còn trống? (BR-INV-02)
 
-Tham số: `$1` phòng, `$2` `bed_no` (`0` = cả phòng), `$3`/`$4` khoảng ngày. Tách riêng lý do bận (lịch gán phòng / khoá bảo trì) để thông báo đúng cho lễ tân.
+Tham số: `$1` phòng, `$2` `bed_no` (`0` chỉ cho phòng không bán chung; DOR dùng `1..bedCount`), `$3`/`$4` khoảng ngày. Thuê trọn DOR phải kiểm và giữ tất cả giường trong cùng transaction, không tạo assignment `bed_no=0`. Tách riêng lý do bận (lịch gán phòng / khoá bảo trì) để thông báo đúng cho lễ tân.
 
 ```sql
 SELECT r.code AS room_code, r.bed_count, $2::smallint AS requested_bed_no,
@@ -1757,7 +2139,7 @@ SELECT r.code AS room_code, r.bed_count, $2::smallint AS requested_bed_no,
 
 ### Q3 — Lưới tồn phòng 30 ngày của một cơ sở (UC-INV-01)
 
-Tham số: `$1` cơ sở, `$2` ngày bắt đầu. Trả `55 × 30` dòng cho CS-01, kèm số đơn vị bán và số đơn vị đang bị chiếm; trạng thái theo thứ tự ưu tiên: hết bán → bảo trì → đầy → còn một phần (DOR) → trống.
+Tham số: `$1` cơ sở, `$2` ngày bắt đầu. Trả số phòng của cơ sở × 30 dòng (CS-01: 24 × 30; 55 là toàn chuỗi), kèm số đơn vị bán và số đơn vị bị chiếm; ưu tiên hết bán → bảo trì → đầy → còn một phần (DOR) → trống.
 
 ```sql
 SELECT r.code AS room_code, rt.code AS room_type, gs::date AS stay_date,
@@ -1776,7 +2158,7 @@ SELECT r.code AS room_code, rt.code AS room_type, gs::date AS stay_date,
   JOIN room_types rt ON rt.id = r.room_type_id
   CROSS JOIN generate_series($2::date, $2::date + 29, interval '1 day') AS gs
   LEFT JOIN LATERAL (
-    SELECT sum(CASE WHEN ra.bed_no > 0 THEN 1 ELSE r.bed_count END)::int AS occupied_units
+    SELECT sum(CASE WHEN ra.bed_no > 0 OR NOT rt.allow_shared THEN 1 ELSE r.bed_count END)::int AS occupied_units
       FROM room_assignments ra
      WHERE ra.room_id = r.id AND ra.released_at IS NULL AND ra.valid_range @> gs::date) oc ON true
  WHERE r.property_id = $1::uuid
@@ -1810,12 +2192,16 @@ SELECT b.code AS booking_code, b.status, g.full_name, g.phone, ch.code AS channe
 
 ### Q5 — Báo cáo doanh thu gộp và thuần theo kênh (BR-RATE-08, UC-REP-02)
 
-Tham số: `$1`, `$2` khoảng ngày. Doanh thu ghi nhận trên booking đã xác nhận/đã ở; **doanh thu thuần = gộp × (1 − hoa hồng)**; huỷ và no-show báo riêng để không trộn vào doanh thu.
+Tham số: `$1`, `$2` khoảng ngày nhận phòng `[from,to)`. Đây là báo cáo giá trị booking đã xác nhận/đã ở, không phải sổ tiền thu theo ngày thanh toán. Lấy **snapshot mới nhất** (mỗi snapshot là toàn bộ giá trị hiện hành, không phải delta); hoa hồng đã phân bổ theo từng phòng–đêm sau giảm giá ở §3.6. Không đọc hoa hồng cấu hình hiện tại. Hoàn tiền hiển thị riêng, không trừ lần nữa nếu giá trị booking đã giảm trong snapshot PARTIAL_CANCEL; huỷ/no-show/expired báo riêng. Booking thiếu snapshot được đếm riêng để báo lỗi dữ liệu, không âm thầm dùng cấu hình hiện tại.
 
 ```sql
 WITH realized AS (
-  SELECT b.channel_id, sum(b.total_amount) AS gross, sum(b.refunded_amount) AS refunded
+  SELECT b.channel_id, sum(ps.gross_amount) AS gross,
+         sum(ps.commission_amount) AS commission, sum(b.refunded_amount) AS refunded,
+         count(*) FILTER (WHERE ps.id IS NULL)::int AS missing_snapshots
     FROM bookings b
+    LEFT JOIN LATERAL (SELECT s.id, s.gross_amount, s.commission_amount
+      FROM price_snapshots s WHERE s.booking_id = b.id ORDER BY s.seq DESC LIMIT 1) ps ON true
    WHERE b.status IN ('CONFIRMED','CHECKED_IN','CHECKED_OUT')
      AND b.check_in >= $1::date AND b.check_in < $2::date
    GROUP BY b.channel_id
@@ -1827,10 +2213,12 @@ cancelled AS (
      AND b.check_in >= $1::date AND b.check_in < $2::date
    GROUP BY b.channel_id
 )
-SELECT ch.code AS channel_code, ch.name AS channel_name, ch.commission_pct,
+SELECT ch.code AS channel_code, ch.name AS channel_name,
        coalesce(rz.gross, 0) AS gross_revenue,
-       round(coalesce(rz.gross, 0) * ch.commission_pct / 100.0)::bigint AS ota_commission,
-       round(coalesce(rz.gross, 0) * (100 - ch.commission_pct) / 100.0)::bigint AS net_revenue,
+       coalesce(rz.commission, 0) AS channel_commission,
+       coalesce(rz.gross, 0) - coalesce(rz.commission, 0) AS net_revenue,
+       coalesce(rz.refunded, 0) AS refunded_of_realized,
+       coalesce(rz.missing_snapshots, 0) AS missing_snapshots,
        coalesce(cx.cancelled_bookings, 0) AS cancelled_bookings,
        coalesce(cx.refunded_amount, 0) AS refunded_of_cancelled
   FROM channels ch
@@ -1883,7 +2271,7 @@ Giả định thiết kế: **75 đơn vị bán** (34 + 23 + 18 — BR-PROP-03)
 
 ## 11. Đề xuất bổ sung
 
-Các mục dưới đây **chưa có trong [00 §7](../00-tong-quan.md#7-từ-điển-thực-thể-nguồn-chân-lý-về-định-danh)** (bản đóng băng 136 BR) nhưng cần thiết để CSDL chứa đủ dữ liệu mà quy tắc nghiệp vụ yêu cầu. Đây là **đề xuất**, không tự thêm vào xương sống.
+Các mục dưới đây **chưa có trong [00 §7](../00-tong-quan.md#7-từ-điển-thực-thể-nguồn-chân-lý-về-định-danh)** (bản đóng băng 139 BR) nhưng cần thiết để CSDL chứa đủ dữ liệu mà quy tắc nghiệp vụ yêu cầu. Đây là **đề xuất**, không tự thêm vào xương sống.
 
 | # | Bổ sung | Loại | Vì sao bắt buộc | BR/NFR |
 |---|---------|------|-----------------|--------|
@@ -1904,7 +2292,7 @@ Các mục dưới đây **chưa có trong [00 §7](../00-tong-quan.md#7-từ-đ
 ## Tham chiếu
 
 - [00 — Tổng quan dự án](../00-tong-quan.md) — từ điển thực thể §7, enum §7.8, quyết định công nghệ §9
-- [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — **136 quy tắc BR** (nguồn chân lý, gồm `BR-REP-01`)
+- [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — **139 quy tắc BR** (nguồn chân lý, gồm `BR-REP-01`)
 - [02 — Quá tải, ghép & đổi phòng](../02-nghiep-vu/qua-tai-ghep-doi-phong.md) — thang xử lý, ghép phòng, walk-out
 - [02 — Chính sách huỷ & hoàn cọc](../02-nghiep-vu/chinh-sach-huy-hoan-coc.md) · [02 — Động giá](../02-nghiep-vu/dong-gia.md)
 - [03 — Mô hình miền](../03-phan-tich/mo-hinh-mien.md) · [03 — Mô hình động](../03-phan-tich/mo-hinh-dong.md) — máy trạng thái `Booking`, phối hợp khoá khi giữ chỗ

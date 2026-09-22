@@ -1,10 +1,20 @@
 # 04 — Nhật ký quyết định kiến trúc (ADR)
 
-> Ghi lại **13 quyết định kiến trúc** đã chốt cho hệ thống đặt phòng Pine Hill, khớp bảng "Quyết định công nghệ đã chốt" ở [00 §9](../00-tong-quan.md). Mỗi ADR theo mẫu: Bối cảnh · Quyết định · Phương án đã cân nhắc · Hệ quả (tích cực/tiêu cực) · Trạng thái · Ngày.
+> Ghi lại **18 quyết định kiến trúc** đã chốt cho hệ thống đặt phòng Pine Hill, khớp bảng "Quyết định công nghệ đã chốt" ở [00 §9](../../00-tong-quan.md). Mỗi ADR theo mẫu: Bối cảnh · Quyết định · Phương án đã cân nhắc · Hệ quả (tích cực/tiêu cực) · Trạng thái · Ngày.
 >
 > Cách đọc: ADR trả lời "vì sao chọn cái này"; [kien-truc.md](../kien-truc.md) trả lời "hệ thống ráp lại ra sao". Mọi con số nghiệp vụ chỉ định nghĩa ở [02/quy tắc nghiệp vụ](../../02-nghiep-vu/quy-tac-nghiep-vu.md) — ADR tham chiếu mã BR, không chép giá trị.
 >
-> Quy ước trạng thái: **Đã chấp nhận** (đang hiệu lực) · **Đã thay thế** (có ADR mới thay) · **Đề xuất**. Đổi một quyết định đã chấp nhận phải tạo ADR mới thay thế, không sửa lịch sử. Toàn bộ 13 ADR dưới đây thuộc giai đoạn thiết kế GĐ-2 (12–25/10/2026) của [05/lộ trình](../../05-ke-hoach/lo-trinh.md).
+> Quy ước trạng thái: **Đã chấp nhận** (đang hiệu lực) · **Đã thay thế** (có ADR mới thay) · **Đề xuất**. Đổi một quyết định đã chấp nhận phải tạo ADR mới thay thế, không sửa lịch sử. Toàn bộ ADR dưới đây thuộc giai đoạn thiết kế GĐ-2 (12–25/10/2026) của [05/lộ trình](../../05-ke-hoach/lo-trinh.md), trừ ADR bổ sung được ghi rõ ngày rà soát.
+
+
+Các quyết định ADR-003/004/008/009/010 đọc cùng các bản chốt giao dịch sau đây; các mục bên dưới đã đồng bộ phần bị thay thế.
+
+| ADR | Quyết định hiện hành |
+|---|---|
+| [ADR-014](ADR-014-giao-dich-ton-phong.md) | Giao dịch cục bộ, khoá thô property/type và quyền sở hữu tồn |
+| [ADR-015](ADR-015-quote-policy-bat-bien.md) | Quote Redis; unique acceptance và snapshot giá/policy/commission bất biến |
+| [ADR-016](ADR-016-thanh-toan-hoan-tien.md) | Thu muộn, reservation NET, maker–checker và đối soát chi |
+| [ADR-017](ADR-017-inbox-outbox-idempotency.md) | Idempotency/inbox bền, ACK theo provider và delivery từng consumer |
 
 ---
 
@@ -16,35 +26,36 @@
 | ADR-002 | NestJS 11 (Node 22 LTS) + Fastify adapter cho API | Đã chấp nhận | 10/2026 | NFR-PERF-02, NFR-MAIN-02 |
 | ADR-003 | PostgreSQL 16 + Prisma 6 kèm migration SQL thủ công | Đã chấp nhận | 10/2026 | BR-INV-02, BR-INV-03, NFR-REL-01/05 |
 | ADR-004 | Redis 7 cho hold, khoá phân tán, cache và hàng đợi BullMQ | Đã chấp nhận | 10/2026 | BR-INV-04, BR-GEN-08, NFR-REL-02 |
-| ADR-005 | Next.js 15 App Router + Tailwind + shadcn/ui cho cả hai web | Đã chấp nhận | 10/2026 | UC-BOOK-01, UC-REP-01/02, NFR-USE-04 |
-| ADR-006 | Expo (React Native) + Expo Router, phát hành Android qua EAS Build | Đã chấp nhận | 10/2026 | UC-FO-01/02/03, NFR-USE-03 |
+| ADR-005 | Next.js 15 App Router + Tailwind + shadcn/ui cho customer/operations web | Đã chấp nhận | 10/2026 | UC-BOOK-01, UC-REP-01/02, NFR-USE-04 |
+| ADR-006 | Expo (React Native) + Expo Router cho customer/operations Android | Đã chấp nhận | 10/2026 | UC-FO-01/02/03, NFR-USE-03 |
 | ADR-007 | `packages/domain` thuần + `packages/contracts` bằng zod dùng chung | Đã chấp nhận | 10/2026 | BR-RATE-17, BR-CANCEL-01, NFR-MAIN-01 |
 | ADR-008 | REST/JSON + OpenAPI 3.1 sinh từ zod, webhook cho OTA và PSP | Đã chấp nhận | 10/2026 | UC-CHAN-03, UC-PAY-02, NFR-MAIN-04 |
 | ADR-009 | VNPay + MoMo (sandbox) kèm tiền mặt/chuyển khoản | Đã chấp nhận | 10/2026 | BR-PAY-03/04/08/09, NFR-SEC-02 |
 | ADR-010 | JWT (access 15 phút, refresh 7 ngày) + RBAC theo `propertyScope` | Đã chấp nhận | 10/2026 | BR-RBAC-01…06, NFR-SEC-01/05 |
 | ADR-011 | Vitest + fast-check, Testcontainers + Supertest, Playwright, Maestro, k6 | Đã chấp nhận | 10/2026 | NFR-REL-01, NFR-MAIN-01/03 |
-| ADR-012 | GitHub Actions → Docker (API/worker) + Vercel (web) + EAS Build (Android) | Đã chấp nhận | 10/2026 | NFR-USE-01, NFR-REL-04 |
+| ADR-012 | GitHub Actions → Docker (API/worker) + Vercel (2 web) + EAS Build (2 Android) | Đã chấp nhận | 10/2026 | NFR-USE-01, NFR-REL-04 |
+| ADR-018 | Một backend chung, bốn frontend deploy độc lập | Đã chấp nhận | 22/09/2026 | NFR-MAIN-04, NFR-USE-01, ADR-005/006 |
 | ADR-013 | Sơ đồ Mermaid nằm trong Markdown, lưu cùng mã nguồn | Đã chấp nhận | 10/2026 | [docs/README §3](../../README.md) |
 
 ## ADR-001 — TypeScript 5.x `strict` làm ngôn ngữ duy nhất cho toàn monorepo
 
 **Trạng thái:** Đã chấp nhận · **Ngày:** 10/2026 · **Liên quan:** BR-GEN-01, BR-RATE-17, NFR-MAIN-02, [kien-truc.md §5](../kien-truc.md)
 
-**Bối cảnh.** Cùng một đầu vào giá phải cho cùng kết quả trên web khách, app Android và API (BR-RATE-17); tiền tệ bắt buộc là số nguyên VND (BR-GEN-01); nhóm 5 người, một học kỳ, phải chứng minh được tính đúng của động cơ giá và chính sách huỷ.
+**Bối cảnh.** Cùng một đầu vào giá phải cho cùng kết quả trên bốn frontend và API (BR-RATE-17); tiền tệ bắt buộc là số nguyên VND (BR-GEN-01); nhóm 5 người, một học kỳ, phải chứng minh được tính đúng của động cơ giá và chính sách huỷ.
 
-**Quyết định.** Dùng **TypeScript 5.x với `strict: true`** cho cả ba ứng dụng và mọi gói chia sẻ; cấm `any` ngầm định; kiểu miền khai báo một lần trong `packages/domain`. Gói chạy trên Node 22 LTS, `tsc --noEmit` là một bước bắt buộc của CI.
+**Quyết định.** Dùng **TypeScript 5.x với `strict: true`** cho backend, worker, bốn frontend và mọi gói chia sẻ; cấm `any` ngầm định; kiểu miền khai báo một lần trong `packages/domain`. Gói chạy trên Node 22 LTS, `tsc --noEmit` là một bước bắt buộc của CI.
 
 **Phương án đã cân nhắc.**
 
 | Phương án | Ưu điểm | Nhược điểm | Kết luận |
 |-----------|---------|-----------|----------|
 | TypeScript `strict` toàn bộ | Một ngôn ngữ cho miền/web/mobile; kiểu tiền và VO chặt; IDE hỗ trợ tốt | Cần kỷ luật `any`, cấu hình build phức tạp hơn | **Chọn** |
-| JavaScript + JSDoc | Bớt bước build | Không ép kiểu miền; dễ lệch giá giữa ba giao diện | Loại |
+| JavaScript + JSDoc | Bớt bước build | Không ép kiểu miền; dễ lệch giá giữa bốn frontend | Loại |
 | TypeScript không `strict` | Nhanh lúc đầu | `null`/`undefined` lọt xuống tận runtime; trái NFR-MAIN-02 | Loại |
 | Đa ngôn ngữ (Java cho API, TS cho web) | Tận dụng thế mạnh từng nền tảng | Không chia sẻ được động cơ giá — vi phạm BR-RATE-17 | Loại |
 
 **Hệ quả.**
-- Tích cực: `Money` là kiểu không thể trộn với `number` thập phân ở mức kiểu; giá và chính sách huỷ chỉ viết một lần; `packages/contracts` sinh kiểu DTO cho cả ba ứng dụng nên lệch hợp đồng bị bắt lúc biên dịch.
+- Tích cực: `Money` là kiểu không thể trộn với `number` thập phân ở mức kiểu; giá và chính sách huỷ chỉ viết một lần; `packages/contracts` sinh kiểu DTO cho cả bốn frontend và backend nên lệch hợp đồng bị bắt lúc biên dịch.
 - Tích cực: `strictNullChecks` buộc xử lý tường minh các nhánh `undefined` của dữ liệu không đồng bộ (callback PSP, webhook OTA).
 - Tiêu cực: chi phí dựng cấu hình monorepo (đường dẫn, tham chiếu dự án, build theo gói) trả trước ở Sprint 1.
 - Tiêu cực: kiểu `zod` và kiểu TS có thể trùng lặp; giảm nhẹ bằng cách suy kiểu từ schema (`z.infer`) chứ không khai báo tay.
@@ -92,7 +103,7 @@
 
 **Hệ quả.**
 - Tích cực: bất biến chống trùng phòng được chứng minh bằng CSDL — kịch bản 200 yêu cầu đồng thời chỉ 1 thành công (NFR-REL-01).
-- Tích cực: khoá bi quan `SELECT … FOR UPDATE` theo `(roomTypeId, date)` biểu diễn được trong cùng transaction với Unit of Work.
+- Tích cực: khoá bi quan trên hàng `properties`/`room_types` có sẵn theo ADR-014 biểu diễn được trong cùng transaction với Unit of Work.
 - Tiêu cực: Prisma không sinh được ràng buộc loại trừ, nên migration thủ công là **điểm rủi ro RSK-04** — bắt buộc làm ngay tuần đầu Sprint 1 và có ca kiểm thử tích hợp.
 - Tiêu cực: bước sinh client Prisma thêm vào pipeline build; `prisma migrate deploy` phải chạy trước khi tiến trình API khởi động trong CI/CD.
 
@@ -102,7 +113,7 @@
 
 **Bối cảnh.** Hold phải hết hạn tự động và giải phóng trong ≤ 60 giây (BR-INV-04); báo giá có hiệu lực 15 phút (BR-RATE-15); thao tác ghi phải idempotent 24 giờ (BR-GEN-08); hệ thống cần bốn job nền và một outbox relay.
 
-**Quyết định.** **Redis 7** làm kho tạm cho hold/ngữ cảnh ngắn hạn, khoá phân tán và cache; **BullMQ** (trên Redis) làm hàng đợi việc nền. Redis **không** là nguồn chân lý: mọi quyết định giữ chỗ, tính tiền và trạng thái booking đều đọc/ghi PostgreSQL; cache chỉ phục vụ hiển thị, báo giá và gia tốc đọc.
+**Quyết định.** **Redis 7** lưu quote bất biến còn hạn và cache ngữ cảnh/hold/kết quả đã commit; **BullMQ** (trên Redis) làm hàng đợi việc nền. Redis **không** là nguồn chân lý: mọi quyết định giữ chỗ, tính tiền và trạng thái booking đều đọc/ghi PostgreSQL; cache chỉ phục vụ hiển thị, báo giá và gia tốc đọc.
 
 **Phương án đã cân nhắc.**
 
@@ -114,7 +125,7 @@
 | Bộ nhớ trong tiến trình | Đơn giản nhất | Mất trạng thái khi khởi động lại; sai khi chạy nhiều tiến trình worker | Loại |
 
 **Hệ quả.**
-- Tích cực: cùng một thành phần phục vụ idempotency (`idem:{Idempotency-Key}`), khoá phân tán theo `(roomTypeId, date)`, TTL cache báo giá và hàng đợi job.
+- Tích cực: Redis phục vụ cache và BullMQ; nguồn hold là `Booking.holdExpiresAt`, idempotency bền ở PostgreSQL. Job quét PostgreSQL vẫn đáp ứng BR-BOOK-18 khi Redis mất; phục hồi queue từ outbox và `event_deliveries` theo ADR-017. Quote còn hạn không bị xoá khi cấu hình đổi (ADR-015).
 - Tích cực: BullMQ cho retry có backoff — đáp ứng "thử lại 3 lần rồi cảnh báo" ở đồng bộ kênh (BR-CHAN-07).
 - Tiêu cực: phải bật AOF và đưa Redis vào kế hoạch sao lưu, dù không phải nguồn chân lý.
 - Tiêu cực: cache tồn phòng có thể lệch thực tế trong tối đa 60 giây; giảm nhẹ bằng quy tắc "mọi đường ghi phải vô hiệu hoá khoá cache liên quan trong cùng transaction phát outbox".
@@ -123,9 +134,9 @@
 
 **Trạng thái:** Đã chấp nhận · **Ngày:** 10/2026 · **Liên quan:** UC-BOOK-01, UC-REP-01/02, NFR-PERF-03, NFR-USE-04, [kien-truc.md §6](../kien-truc.md)
 
-**Bối cảnh.** Có hai bề mặt web khác nhau về đối tượng dùng: web khách (ACT-01 — tìm phòng, báo giá, đặt, trả cọc) và web back-office (ACT-04/05/06 — cấu hình, duyệt, báo cáo). Nhóm 5 người không đủ sức bảo trì hai codebase riêng; lịch tồn phòng và báo cáo cần bảng dữ liệu lớn, lọc, phân trang.
+**Bối cảnh.** Có hai bề mặt web khác nhau về đối tượng dùng: customer web (ACT-01 — tìm phòng, báo giá, đặt, trả cọc) và operations web (ACT-04/05/06 — cấu hình, duyệt, báo cáo). Hai app cần release độc lập để giảm blast radius và phân quyền rõ, nhưng vẫn phải chia sẻ contract/client/token.
 
-**Quyết định.** **Next.js 15 (App Router) + Tailwind CSS + shadcn/ui** trong một ứng dụng `apps/web`, tách bằng hai route group `(guest)` và `(admin)`; lớp dữ liệu gọi API qua `packages/contracts`; thành phần dùng chung nằm ở `src/components`.
+**Quyết định.** Dùng **Next.js 15 (App Router) + Tailwind CSS + shadcn/ui** cho hai ứng dụng độc lập `apps/customer-web` và `apps/operations-web`; mỗi app có route/layout/auth riêng, gọi API qua `packages/api-client`, dùng DTO từ `packages/contracts` và token từ `packages/ui-web`.
 
 **Phương án đã cân nhắc.**
 
@@ -137,7 +148,7 @@
 | Astro | Tốt cho trang tĩnh | Không phù hợp back-office nhiều tương tác | Loại |
 
 **Hệ quả.**
-- Tích cực: một pipeline build, một cấu hình biến môi trường, một nơi xác thực cho cả hai bề mặt.
+- Tích cực: hai pipeline release độc lập, nhưng cùng contract/version gate và package client để tránh lệch giao thức.
 - Tích cực: route group cho phép đặt layout, guard và quy tắc điều hướng khác nhau mà không tách dự án.
 - Tiêu cực: một lỗi build của back-office chặn cả web khách cùng pipeline — giảm nhẹ bằng kiểm thử Playwright tách theo route group.
 - Tiêu cực: cần kỷ luật để miền thuần không bị nhập vào bundle máy khách một cách vô ý (kiểm tra bundle trong CI).
@@ -146,9 +157,9 @@
 
 **Trạng thái:** Đã chấp nhận · **Ngày:** 10/2026 · **Liên quan:** UC-FO-01/02/03, BR-RBAC-05, NFR-USE-03, [kien-truc.md §7](../kien-truc.md)
 
-**Bối cảnh.** Lễ tân, quản lý cơ sở và nhân viên buồng phòng cần thao tác nhanh tại chỗ (check-in, check-out, đổi phòng, trạng thái buồng). Máy phát triển không có macOS/Xcode; yêu cầu hỗ trợ Android 9+ (API 28) và không mất dữ liệu khi mất mạng (NFR-USE-03). iOS nằm ngoài phạm vi ([00 §3.2](../00-tong-quan.md)).
+**Bối cảnh.** Khách cần customer Android cho tìm/đặt/thanh toán; lễ tân, quản lý và buồng phòng cần operations Android cho check-in, check-out, đổi phòng và trạng thái buồng. Máy phát triển không có macOS/Xcode; yêu cầu hỗ trợ Android 9+ (API 28) và không mất dữ liệu khi mất mạng (NFR-USE-03). iOS nằm ngoài phạm vi ([00 §3.2](../../00-tong-quan.md)).
 
-**Quyết định.** **Expo (React Native) + Expo Router**, mã nguồn một app `apps/mobile`, phát hành **APK phân phối nội bộ qua EAS Build**; bản vá chỉ-JS phát qua EAS Update. Dùng lại `packages/contracts` cho kiểu DTO và gọi API qua HTTP như web; không đọc CSDL trực tiếp.
+**Quyết định.** **Expo (React Native) + Expo Router** cho hai ứng dụng `apps/customer-android` và `apps/operations-android`, mỗi app có application ID/pipeline EAS riêng; bản vá chỉ-JS phát qua EAS Update. Cả hai dùng `packages/api-client`/`packages/contracts`, secure storage và không đọc CSDL trực tiếp.
 
 **Phương án đã cân nhắc.**
 
@@ -161,7 +172,7 @@
 | PWA thay app | Không cần phát hành | Camera/quét mã, hàng đợi ngoại tuyến và thông báo đẩy kém tin cậy hơn | Loại |
 
 **Hệ quả.**
-- Tích cực: cùng một `PricingEngine` và `CancellationPolicyEngine` chạy trên Android, nên giá hiển thị tại quầy khớp web (BR-RATE-17).
+- Tích cực: cả hai Android nhận cùng `PriceQuote`/policy snapshot từ backend, nên giá khách và giá vận hành khớp web (BR-RATE-17).
 - Tích cực: EAS Build tạo APK trong CI, không cần máy cấu hình Android SDK; phù hợp mốc M7 và M8 của [05/lộ trình](../../05-ke-hoach/lo-trinh.md).
 - Tiêu cực: một số thao tác tài chính vẫn phải nhập lại PIN 6 số theo BR-RBAC-05, làm tăng ma sát thao tác của lễ tân.
 - Tiêu cực: hàng đợi cục bộ khi mất mạng cần thiết kế riêng (lưu lệnh chờ + phát lại idempotent) và là hạng mục dễ bị cắt khi trễ tiến độ.
@@ -170,7 +181,7 @@
 
 **Trạng thái:** Đã chấp nhận · **Ngày:** 10/2026 · **Liên quan:** BR-RATE-01, BR-RATE-17, BR-CANCEL-01, NFR-MAIN-01/05, [kien-truc.md §5](../kien-truc.md)
 
-**Bối cảnh.** Động cơ giá áp sáu hệ số theo thứ tự cố định và làm tròn từng đêm (BR-RATE-01); chính sách huỷ phải lấy từ dữ liệu bậc mốc, cấm `if/else` cứng theo gói giá (BR-CANCEL-01); cùng đầu vào phải ra cùng kết quả trên ba giao diện (BR-RATE-17). Đây là phần được đánh giá cao nhất của môn học nên phải kiểm thử được ở mức hàm thuần.
+**Bối cảnh.** Động cơ giá áp sáu hệ số theo thứ tự cố định và làm tròn từng đêm (BR-RATE-01); chính sách huỷ phải lấy từ dữ liệu bậc mốc, cấm `if/else` cứng theo gói giá (BR-CANCEL-01); cùng đầu vào phải ra cùng kết quả trên bốn frontend và API (BR-RATE-17). Đây là phần được đánh giá cao nhất của môn học nên phải kiểm thử được ở mức hàm thuần.
 
 **Quyết định.** Tách **`packages/domain`** — chỉ chứa `PricingEngine`, `CancellationPolicyEngine`, `AvailabilityCalculator`, `OverbookingPlanner`, các Value Object (`Money`, `StayPeriod`, `DateRange`, `ChannelContext`, `PhoneNumber`), `BookingState` và lỗi miền; **không I/O**, không phụ thuộc NestJS/Prisma/HTTP/Redis, thời gian và mã định danh truyền vào qua tham số. Tách **`packages/contracts`** — schema `zod` cho DTO và mã lỗi `E_<MOD>_<TÊN>`, có thể phụ thuộc `zod` và kiểu của miền, không phụ thuộc framework.
 
@@ -178,8 +189,8 @@
 
 | Phương án | Ưu điểm | Nhược điểm | Kết luận |
 |-----------|---------|-----------|----------|
-| Gói miền thuần + gói hợp đồng zod | Một nguồn sự thật cho giá/huỷ; kiểm thử hàm thuần, chạy thuộc tính; cả ba app dùng chung | Phải giữ kỷ luật "không I/O"; đồng bộ phiên bản gói khi phát hành mobile | **Chọn** |
-| Sao chép logic giá vào từng ứng dụng | Không cần gói chung | Ba bản logic lệch nhau — vi phạm trực tiếp BR-RATE-17 | Loại |
+| Gói miền thuần + gói hợp đồng zod | Một nguồn sự thật cho giá/huỷ; kiểm thử hàm thuần, chạy thuộc tính; bốn frontend dùng chung contract | Phải giữ kỷ luật "không I/O"; đồng bộ phiên bản gói khi phát hành mobile | **Chọn** |
+| Sao chép logic giá vào từng ứng dụng | Không cần gói chung | Năm bản logic lệch nhau — vi phạm trực tiếp BR-RATE-17 | Loại |
 | Chỉ tính giá ở máy chủ, client hiển thị kết quả | Một nguồn duy nhất | Mọi thao tác nhập liệu đều phải gọi mạng; trải nghiệm quầy chậm và phụ thuộc kết nối | Loại |
 | Gói "shared" chung cả ORM, tiện ích, UI | Tiện trước mắt | Miền lẫn hạ tầng; phá vỡ luật phụ thuộc một chiều của kiến trúc lục giác | Loại |
 
@@ -187,13 +198,13 @@
 - Tích cực: bốn lớp lõi đạt được mục tiêu phủ nhánh ≥ 90% và được kiểm thử bằng `fast-check` (NFR-MAIN-01); các bất biến như "hoàn không vượt số đã trả" kiểm được bằng thuộc tính.
 - Tích cực: đổi quy tắc nghiệp vụ chỉ sửa một chỗ, và ca kiểm thử miền chạy trong vài giây không cần CSDL.
 - Tiêu cực: `packages/domain` bị nhập vào bundle mobile làm tăng kích thước APK; giảm nhẹ bằng tree-shaking và chỉ xuất những gì cần qua barrel có kiểm soát.
-- Tiêu cực: lệch phiên bản gói giữa ba ứng dụng là rủi ro thật; giảm nhẹ bằng workspace một phiên bản và cấm phát hành gói miền ra ngoài monorepo.
+- Tiêu cực: lệch phiên bản contract giữa bốn frontend là rủi ro thật; giảm nhẹ bằng workspace một phiên bản, compatibility window và cấm phát hành gói miền ra ngoài monorepo.
 
 ## ADR-008 — REST/JSON + OpenAPI 3.1 sinh từ zod, webhook cho OTA và PSP
 
-**Trạng thái:** Đã chấp nhận · **Ngày:** 10/2026 · **Liên quan:** UC-CHAN-02/03, UC-PAY-02, NFR-MAIN-04, [api.md](../04-thiet-ke/api.md)
+**Trạng thái:** Đã chấp nhận · **Ngày:** 10/2026 · **Liên quan:** UC-CHAN-02/03, UC-PAY-02, NFR-MAIN-04, [api.md](../api.md)
 
-**Bối cảnh.** Cần hợp đồng API ổn định cho ba ứng dụng và cho hai loại đối tác vào (webhook OTA, callback PSP). Đồ án phải vẽ được sequence diagram rõ ràng, mô phỏng được OTA mà không cần quyền truy cập đối tác thật, và "đóng băng hợp đồng API" ở mốc M3.
+**Bối cảnh.** Cần hợp đồng API ổn định cho backend, bốn frontend và hai loại đối tác vào (webhook OTA, callback PSP). Đồ án phải vẽ được sequence diagram rõ ràng, mô phỏng được OTA mà không cần quyền truy cập đối tác thật, và "đóng băng hợp đồng API" ở mốc M3.
 
 **Quyết định.** **REST/JSON** với tiền tố `/api/v1`, tài liệu **OpenAPI 3.1 sinh tự động từ schema `zod`** trong `packages/contracts` (một nguồn sự thật cho kiểm tra vào/ra và tài liệu). Mọi thao tác ghi mang header `Idempotency-Key`; webhook dùng `/api/v1/integrations/ota/{channel}/bookings` và `/api/v1/integrations/psp/{provider}/callback`; mã lỗi trả về đúng mã miền `E_<MOD>_<TÊN>`.
 
@@ -216,7 +227,7 @@
 
 **Trạng thái:** Đã chấp nhận · **Ngày:** 10/2026 · **Liên quan:** BR-PAY-01…10, BR-CANCEL-11/12/18, NFR-SEC-02, [kien-truc.md §2](../kien-truc.md)
 
-**Bối cảnh.** Khách cần trả cọc trực tuyến (UC-PAY-02) và lễ tân cần thu tiền mặt/chuyển khoản tại quầy (UC-PAY-01, UC-PAY-03). Hệ thống **không được** lưu dữ liệu thẻ (BR-PAY-04); callback phải idempotent (BR-PAY-03); hoàn tiền về phương thức gốc và ghi bằng bút toán đảo (BR-PAY-08/09); phí xử lý hoàn mặc định 0 và cấu hình được (BR-CANCEL-11); yêu cầu ở `PENDING` có thể bị huỷ khi khách rút hoặc booking được khôi phục (BR-CANCEL-18).
+**Bối cảnh.** Khách cần trả cọc trực tuyến (UC-PAY-02) và lễ tân cần thu tiền mặt/chuyển khoản tại quầy (UC-PAY-01, UC-PAY-03). Hệ thống **không được** lưu dữ liệu thẻ (BR-PAY-04); callback phải idempotent (BR-PAY-03); hoàn tiền về phương thức gốc và ghi bằng bút toán đảo (BR-PAY-08/09); phí xử lý hoàn mặc định 0 và cấu hình được (BR-CANCEL-11); yêu cầu ở `PENDING` có thể bị huỷ khi khách rút; việc rút không khôi phục booking (BR-CANCEL-18).
 
 **Quyết định.** Hai cổng trực tuyến là **VNPay** và **MoMo** ở chế độ sandbox, đặt sau `PaymentGatewayAdapter` với hai hiện thực `VnpayAdapter`, `MomoAdapter`; thanh toán tại quầy ghi trực tiếp bằng `Payment` với `method` là `CASH` hoặc `BANK_TRANSFER`, kèm `createdBy` và `paidAt` để đối soát theo cặp (người thu, ngày VN) — hệ thống không quản lý ca làm việc (BR-PAY-06/10). Không tích hợp PSP quốc tế (ngoài phạm vi).
 
@@ -231,7 +242,7 @@
 
 **Hệ quả.**
 - Tích cực: mẫu Adapter + ACL che toàn bộ khác biệt tham số, chữ ký và mã phản hồi giữa hai cổng; miền chỉ thấy `PaymentSucceeded`.
-- Tích cực: giao dịch quá 15 phút không có callback chuyển `FAILED` và giải phóng hold (BR-PAY-05), nên không giữ chỗ ảo.
+- Tích cực: giao dịch quá hạn BR-PAY-05 chuyển `FAILED(local_timeout)`; hold chỉ hết tại `holdExpiresAt` theo BR-BOOK-18. Thành công muộn vẫn ghi receipt và xử lý BR-PAY-11, không hồi sinh booking.
 - Tiêu cực: hoàn tiền qua PSP sandbox không phải lúc nào cũng tự động; luồng dự phòng là ghi `Payment` loại `REFUND` và chuyển `PAID` khi kế toán xác nhận, vẫn giữ đúng BR-PAY-09.
 - Tiêu cực: hai bộ tham số bí mật và hai luồng xác thực chữ ký phải kiểm thử riêng, tăng khối lượng kiểm thử tích hợp.
 
@@ -239,9 +250,9 @@
 
 **Trạng thái:** Đã chấp nhận · **Ngày:** 10/2026 · **Liên quan:** BR-RBAC-01…06, NFR-SEC-01/03/05, [kien-truc.md §3.2](../kien-truc.md)
 
-**Bối cảnh.** Sáu vai trò (BR-RBAC-01) với phạm vi cơ sở: ngoài `OWNER` mọi vai trò chỉ thấy dữ liệu thuộc cơ sở của mình (BR-RBAC-02). Web quản trị hết phiên sau 15 phút không hoạt động; Android giữ phiên 7 ngày nhưng thao tác tài chính yêu cầu nhập lại PIN 6 số (BR-RBAC-05); khoá tài khoản 15 phút sau 5 lần đăng nhập sai (BR-RBAC-06).
+**Bối cảnh.** Bảy vai trò độc lập (BR-RBAC-01, gồm SYSADMIN) với phạm vi cơ sở: ngoài `OWNER` mọi vai trò chỉ thấy dữ liệu thuộc cơ sở của mình (BR-RBAC-02). Web quản trị hết phiên sau 15 phút không hoạt động; Android giữ phiên 7 ngày nhưng thao tác tài chính yêu cầu nhập lại PIN 6 số (BR-RBAC-05); khoá tài khoản 15 phút sau 5 lần đăng nhập sai (BR-RBAC-06).
 
-**Quyết định.** **JWT**: access token 15 phút, refresh token 7 ngày có luân chuyển; payload mang `userId`, `role`, `propertyScope[]`; **RBAC** kiểm ở guard cho 100% endpoint, kèm bộ lọc phạm vi cơ sở áp ở tầng truy vấn. Mật khẩu và PIN băm bằng **Argon2id**. Refresh token bị thu hồi khi đổi mật khẩu/đăng xuất, danh sách thu hồi lưu Redis.
+**Quyết định.** **JWT**: access token 15 phút, refresh token 7 ngày có luân chuyển; payload mang `userId`, `role`, `propertyScope[]`; **RBAC** kiểm permission cụ thể × object × propertyScope ở guard và application cho 100% endpoint, kể cả replay; role không có thứ bậc, OWNER không tự kế thừa thu/chi của ACCOUNTANT, SYSADMIN chỉ có quyền kỹ thuật được cấp; kèm bộ lọc phạm vi cơ sở áp ở tầng truy vấn. Mật khẩu và PIN băm bằng **Argon2id**. Refresh token bị thu hồi khi đổi mật khẩu/đăng xuất, danh sách thu hồi lưu Redis.
 
 **Phương án đã cân nhắc.**
 
@@ -293,7 +304,7 @@
 
 | Phương án | Ưu điểm | Nhược điểm | Kết luận |
 |-----------|---------|-----------|----------|
-| GitHub Actions + Docker + Vercel + EAS Build | Một nơi cấu hình cho cả ba sản phẩm; repo đã ở GitHub; Vercel/EAS có gói miễn phí cho học tập | Hạn mức phút CI và hàng đợi EAS; phụ thuộc ba dịch vụ ngoài | **Chọn** |
+| GitHub Actions + Docker + Vercel + EAS Build | Một nơi cấu hình cho backend và bốn frontend; repo đã ở GitHub; Vercel/EAS có gói miễn phí cho học tập | Hạn mức phút CI và hàng đợi EAS; phụ thuộc ba dịch vụ ngoài | **Chọn** |
 | GitLab CI | Pipeline mạnh | Phải chuyển nơi lưu mã nguồn, không có lợi ích tương xứng | Loại |
 | Jenkins tự dựng | Kiểm soát hoàn toàn | Tốn công vận hành, không phù hợp ngân sách môn học | Loại |
 | Phát hành thủ công trên máy cá nhân | Nhanh lúc đầu | Không tái lập được, dễ lệch môi trường, khó chứng minh trong báo cáo | Loại |
@@ -333,7 +344,7 @@
 
 - [00 — Tổng quan dự án](../../00-tong-quan.md) — §9 bảng quyết định công nghệ, §10 cấu trúc repo đích
 - [01 — Yêu cầu phi chức năng](../../01-yeu-cau/yeu-cau-phi-chuc-nang.md) — NFR-PERF, NFR-REL, NFR-SEC, NFR-USE, NFR-MAIN, NFR-COMP, NFR-OBS, NFR-LOC
-- [02 — Quy tắc nghiệp vụ](../../02-nghiep-vu/quy-tac-nghiep-vu.md) — 136 quy tắc BR
+- [02 — Quy tắc nghiệp vụ](../../02-nghiep-vu/quy-tac-nghiep-vu.md) — 139 quy tắc BR
 - [04 — Kiến trúc](../kien-truc.md) — kiến trúc tổng thể, lục giác, phân rã 13 module, dữ liệu, triển khai, quan sát
 - [04 — Thiết kế lớp](../thiet-ke-lop.md) · [04 — Sequence Diagram](../sequence-diagram.md)
 - [04 — Cơ sở dữ liệu](../csdl.md) · [04 — API](../api.md)

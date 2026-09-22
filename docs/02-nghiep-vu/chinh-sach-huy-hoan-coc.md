@@ -42,7 +42,7 @@
 
 ## 2. Cấu trúc dữ liệu chính sách huỷ
 
-Dùng đúng định danh thực thể của [00 §7.5](../00-tong-quan.md#75-thanh-toán-pay--chính-sách-huỷ): `CancellationPolicy(id, code, name, isDefault, earlyCheckoutFreeHours, earlyCheckoutRefundPct, status)` · `CancellationTier(id, policyId, offsetHours, refundPercent, chargeFirstNight, label, sortOrder)`; `RatePlan.cancellationPolicyId` trỏ tới chính sách tương ứng. Ngưỡng trả phòng sớm (`earlyCheckoutFreeHours`/`earlyCheckoutRefundPct`) nằm ở **policy**, không suy ra từ `CancellationTier` — vì bậc ≥ 72h của `SAVER3` là 100% chứ không phải 50%, nếu suy ra thì `CancellationPolicyEngine` buộc phải hard-code (vi phạm BR-CANCEL-01 và BR-SYS-02).
+Dùng đúng định danh thực thể của [00 §7.5](../00-tong-quan.md#75-thanh-toán-pay--chính-sách-huỷ): `CancellationPolicy(id, code, name, isDefault, earlyCheckoutFreeHours, earlyCheckoutRefundPct, status)` · `CancellationTier(id, policyId, offsetHours, refundPercent, chargeFirstNight, label, sortOrder)`; `RatePlan.cancellationPolicyId` trỏ tới chính sách tương ứng. Ngưỡng trả phòng sớm (`earlyCheckoutFreeHours`/`earlyCheckoutRefundPct`) nằm ở **policy**, không suy ra từ `CancellationTier` — vì bậc ≥ 72h của `SAVER3` là 100% chứ không phải 50%, nếu suy ra thì `CancellationPolicyEngine` buộc phải hard-code (vi phạm BR-CANCEL-01 và BR-SYS-02). Cấu hình qua UC-RATE-06; lúc tính hoàn dùng bản policy trong PriceSnapshot.policySnapshotJson của booking.
 
 | `CancellationPolicy.code` | Gắn với `RatePlan` | Số bậc | Bậc cuối (bậc bắt tất) | Cọc | Trả phòng sớm (`earlyCheckoutFreeHours`/`earlyCheckoutRefundPct`) | Cơ sở pháp lý |
 |---------------------------|--------------------|--------|------------------------|-----|------------------------------------------------------------------|----------------|
@@ -57,7 +57,7 @@ Dùng đúng định danh thực thể của [00 §7.5](../00-tong-quan.md#75-th
 |---|----------|------------|
 | I1 | `offsetHours` **giảm dần nghiêm ngặt** theo `sortOrder` | Đảm bảo có đúng một bậc khớp cho mỗi giá trị giờ |
 | I2 | `refundPercent` **không tăng** khi `sortOrder` tăng | Đảm bảo tính đơn điệu "huỷ muộn hơn không bao giờ hoàn nhiều hơn" (§11 P2) |
-| I3 | Bậc cuối có `offsetHours = -1` và là **bậc bắt tất**: mọi `hoursBeforeCheckIn < 24`, **kể cả giá trị âm**, đều rơi vào bậc này | BR-CANCEL-01 (điều khoản làm rõ): nếu không, no-show lúc 23:59 (≈ −9,98h) không khớp bậc nào |
+| I3 | Bậc cuối có `offsetHours = -1` và là **bậc bắt tất**: mọi giá trị không đạt mốc không âm nào của gói (FLEX7/SAVER3 <24h, LONGSTAY14 <168h, NONREF mọi mốc), **kể cả giá trị âm**, đều rơi vào bậc này | BR-CANCEL-01 (điều khoản làm rõ): nếu không, no-show lúc 23:59 (≈ −9,98h) không khớp bậc nào |
 | I4 | `refundPercent ∈ [0, 100]`, là số nguyên; `chargeFirstNight ∈ {true, false}` | VO `CancellationTier` ([00 §7.7](../00-tong-quan.md#77-giá-trị-miền-value-object--bất-biến-so-sánh-theo-giá-trị)) |
 | I5 | `chargeFirstNight = true` ⟹ `refundPercent = 0` | Tránh vừa hoàn tiền vừa phụ thu đêm đầu trên cùng một đêm |
 | I6 | `earlyCheckoutRefundPct ∈ [0, 100]`; `earlyCheckoutFreeHours` phải là số nguyên dương hoặc `null` (khi `null` thì `earlyCheckoutRefundPct = 0`) | BR-CANCEL-09: `NONREF` không có ngưỡng nào và hoàn 0% |
@@ -141,7 +141,7 @@ KẾT THÚC HÀM
 | R1 | So sánh bằng **số nguyên phút**: `minutesBeforeCheckIn = floor((checkInDateTime − cancelledAt) / 60_000)`; so với `offsetHours × 60`. Không so bằng số thực | Loại sai số dấu phẩy động tại đúng mốc (168h00 ≠ 167h59) |
 | R2 | `checkInDateTime` = ngày `checkIn` lúc `Property.checkInTime` (mặc định 14:00 giờ VN), không dùng ngày hay giờ tạo booking | BR-GEN-04, BR-CANCEL-03 |
 | R3 | Điều kiện là **`≥`**: đúng mốc 168h00 rơi vào bậc cao hơn | BR-CANCEL-01 |
-| R4 | Bậc cuối (`offsetHours = -1`) là **bậc bắt tất** cho mọi `hoursBeforeCheckIn < 24`, **kể cả giá trị âm** | BR-CANCEL-01, I3 |
+| R4 | Bậc cuối (`offsetHours = -1`) là **bậc bắt tất** cho mọi giá trị không đạt mốc không âm nào của gói (FLEX7/SAVER3 <24h, LONGSTAY14 <168h, NONREF mọi mốc), **kể cả giá trị âm** | BR-CANCEL-01, I3 |
 | R5 | No-show dùng **cùng bậc bắt tất** như huỷ dưới ngưỡng cuối; khác biệt chỉ ở `cancelReason = NO_SHOW` và việc hệ thống tự kích hoạt | BR-CANCEL-10 |
 | R6 | Tại mọi mốc, bậc chọn **không phụ thuộc kênh bán** | BR-CANCEL-01 |
 
@@ -160,16 +160,16 @@ KẾT THÚC HÀM
 roundUp1000(x)      = ceil(x / 1000) × 1000        # giá bán, tiền cọc            (BR-GEN-03)
 roundDown1000(x)    = floor(x / 1000) × 1000       # mọi khoản hoàn               (BR-GEN-03)
 
-refundBase          = paidAmount                                        # BR-CANCEL-04
+refundBase          = tiền phòng thực thu được phân bổ cho phần huỷ, chưa xử lý trước đó # BR-CANCEL-04/19
 refundAmount        = roundDown1000(refundBase × tier.refundPercent / 100)   # BR-CANCEL-05
 penaltyAmount       = tier.chargeFirstNight ? max(0, firstNightPrice − paidAmount) : 0   # BR-CANCEL-06
-refundableRemaining = paidAmount − refundedAmount                       # BR-CANCEL-17 / BR-PAY-07
-refundAmount        = min(refundAmount, refundableRemaining)            # chặn trần luỹ kế
+refundableRemaining = tiền thu đủ điều kiện − đã hoàn SUCCEEDED − đang giữ PENDING/APPROVED khác # khóa booking + Payment gốc
+NẾU netRefund dự kiến > refundableRemaining → xung đột đối soát, không tự cắt nghĩa vụ hoàn
 refundFee           = SystemSetting("refund.feeAmount", 0)              # BR-CANCEL-11 (Q-02), khoá của BR-SYS-02
-netRefund           = refundAmount − refundFee                          # BR-CANCEL-05: số chi thực tế; ngưỡng duyệt & báo cáo so trên netRefund
+netRefund           = max(0, (approvedAmount ?? requestedAmount) − refundFee) # requestedAmount = refundAmount dự kiến
 ```
 
-`firstNightPrice` = giá đêm đầu trong `PriceSnapshot` bất biến của booking (BR-RATE-16). Mọi giá trị tiền là **số nguyên VND** ([NFR-LOC-03](../01-yeu-cau/yeu-cau-phi-chuc-nang.md), BR-GEN-01). `refundFee` PHẢI cấu hình ≤ mọi `refundAmount` khả dĩ vì BR-CANCEL-11 không cho thu thêm khách.
+`firstNightPrice` = giá đêm đầu trong `PriceSnapshot` bất biến của booking (BR-RATE-16). Mọi giá trị tiền là **số nguyên VND** ([NFR-LOC-03](../01-yeu-cau/yeu-cau-phi-chuc-nang.md), BR-GEN-01). Phí bị chặn ở tiền gộp được hoàn; phần phí dư không thành công nợ. Các ví dụ một phòng/không hoàn trước đó dùng refundBase = paidAmount.
 
 ---
 
@@ -177,15 +177,15 @@ netRefund           = refundAmount − refundFee                          # BR-C
 
 | Bước | Việc | Nguồn |
 |------|------|-------|
-| 1 | Kiểm tra quyền và trạng thái booking thuộc `{CONFIRMED, PENDING_PAYMENT, HELD}`; ngược lại → `E_CANCEL_INVALID_STATE` | BR-RBAC-03, BR-BOOK-14 |
+| 1 | Kiểm tra quyền và trạng thái booking thuộc `{CONFIRMED, PENDING_PAYMENT, HELD}`; chưa xác nhận áp BR-BOOK-18 (hoàn đủ, không phạt); ngược lại → `E_CANCEL_INVALID_STATE` | BR-RBAC-03, BR-BOOK-14 |
 | 2 | Tính `minutesBeforeCheckIn` (số nguyên phút) từ `checkInDateTime` danh nghĩa | BR-CANCEL-03, R1 |
 | 3 | `resolveTier` → `{offsetHours, refundPercent, chargeFirstNight}` | BR-CANCEL-01 |
 | 4 | Áp ngoại lệ nếu có: bất khả kháng (§9.1) hoặc walk-out (§9.2) **ghi đè** bậc | BR-CANCEL-13/14 |
-| 5 | `refundBase = paidAmount` | BR-CANCEL-04 |
+| 5 | refundBase theo phân bổ phạm vi huỷ (một phòng, chưa hoàn trước đó: paidAmount) | BR-CANCEL-04 |
 | 6 | `refundAmount` (làm tròn **xuống** 1.000đ) | BR-CANCEL-05, BR-GEN-03 |
 | 7 | `penaltyAmount` (dùng `firstNightPrice` từ `PriceSnapshot`; snapshot được lưu **ngay khi booking rời `DRAFT`**, nên `HELD`/`PENDING_PAYMENT`/`CONFIRMED` đều có) | BR-CANCEL-06, BR-RATE-16 |
-| 8 | Chặn trần luỹ kế: `refundAmount = min(refundAmount, paidAmount − refundedAmount)` | BR-CANCEL-17, BR-PAY-07 |
-| 9 | `refundFee`; `netRefund = refundAmount − refundFee` — ngưỡng phê duyệt hai cấp và báo cáo đều so trên `netRefund` | BR-CANCEL-11, BR-CANCEL-05, BR-CANCEL-15 |
+| 8 | Khóa tiền gốc và booking, kiểm tiền đã chi + phần giữ các yêu cầu khác; xung đột thì dừng, không tự giảm nghĩa vụ hoàn | BR-CANCEL-17, BR-PAY-07 |
+| 9 | `refundFee`; `netRefund = max(0, (approvedAmount ?? requestedAmount) − refundFee)` — ngưỡng phê duyệt hai cấp và báo cáo đều so trên `netRefund` | BR-CANCEL-11, BR-CANCEL-05, BR-CANCEL-15 |
 | 10 | Một transaction: `Booking.status → CANCELLED` (hoặc `NO_SHOW`), `cancelledAt`, `cancelReason`, `balanceDue = penaltyAmount` (booking đã huỷ **không** tạo công nợ cho phần `totalAmount − paidAmount`), giải phóng mọi `RoomAssignment`, `Hold.status = RELEASED` | BR-BOOK-11, BR-PAY-02, BR-BOOK-08 |
 | 11 | Cùng transaction: tạo `RefundRequest` (PENDING, `appliedTierId`, `refundPercent`, `hoursBeforeCheckIn`, `requestedAmount = refundAmount`, `isForceMajeure`), `Payment` loại `PENALTY` trạng thái `PENDING` nếu `penaltyAmount > 0`, `AuditLog`, `OutboxEvent` | BR-CANCEL-06/16, BR-GEN-07, BR-CHAN-06 |
 | 12 | Gửi `Notification` xác nhận huỷ + số tiền hoàn dự kiến | BR-SYS-06, UC-NOTI-02 |
@@ -214,14 +214,14 @@ Cơ sở: cột "Booking" là BK-A/BK-N/BK-B ở §3.3. `refundFee = 0` (Q-02) n
 | DT-11 | TC-CANCEL-11 | `FLEX7` | BK-A | **23h59** | 907.000 | -1 | 0% | **Có** | 0 | 159.000 |
 | DT-12 | TC-CANCEL-12 | `FLEX7` | BK-A | 10 | 907.000 | -1 | 0% | **Có** | 0 | 159.000 |
 | DT-13 | TC-CANCEL-13 | `FLEX7` | BK-A | 10 | 3.021.000 | -1 | 0% | **Có** | 0 | 0 |
-| DT-14 | TC-CANCEL-14 | `FLEX7` | BK-A | 10 | 0 | -1 | 0% | **Có** | 0 | 1.066.000 |
+| DT-14 | TC-CANCEL-14 | `FLEX7` | BK-A | 10 (CONFIRMED được miễn cọc) | 0 | -1 | 0% | **Có** | 0 | 1.066.000 |
 | DT-15 | TC-CANCEL-15 | `FLEX7` | BK-A | **-9,9833 (no-show)** | 907.000 | -1 | 0% | **Có** | 0 | 159.000 |
 | DT-16 | TC-CANCEL-16 | `SAVER3` | BK-A | 200 | 1.511.000 | 72 | 100% | Không | 1.511.000 | 0 |
 | DT-17 | TC-CANCEL-17 | `SAVER3` | BK-A | **72h00** | 1.511.000 | 72 | 100% | Không | 1.511.000 | 0 |
 | DT-18 | TC-CANCEL-18 | `SAVER3` | BK-A | **71h59** | 1.511.000 | 24 | 50% | Không | 755.000 | 0 |
 | DT-19 | TC-CANCEL-19 | `SAVER3` | BK-A | **24h00** | 1.511.000 | 24 | 50% | Không | 755.000 | 0 |
 | DT-20 | TC-CANCEL-20 | `SAVER3` | BK-A | **23h59** | 1.511.000 | -1 | 0% | **Có** | 0 | 0 |
-| DT-21 | TC-CANCEL-21 | `SAVER3` | BK-A | 10 | 0 | -1 | 0% | **Có** | 0 | 1.066.000 |
+| DT-21 | TC-CANCEL-21 | `SAVER3` | BK-A | 10 (CONFIRMED được miễn cọc) | 0 | -1 | 0% | **Có** | 0 | 1.066.000 |
 | DT-22 | TC-CANCEL-22 | `SAVER3` | BK-A | 10 | 500.000 | -1 | 0% | **Có** | 0 | 566.000 |
 | DT-23 | TC-CANCEL-23 | `NONREF` | BK-N | 2000 | 3.179.000 | -1 | 0% | Không | 0 | 0 |
 | DT-24 | TC-CANCEL-24 | `NONREF` | BK-N | **23h59** | 3.179.000 | -1 | 0% | Không | 0 | 0 |
@@ -233,8 +233,10 @@ Cơ sở: cột "Booking" là BK-A/BK-N/BK-B ở §3.3. `refundFee = 0` (Q-02) n
 | DT-30 | TC-CANCEL-30 | `LONGSTAY14` | BK-B | **168h00** | 5.813.000 | 168 | 50% | Không | 2.906.000 | 0 |
 | DT-31 | TC-CANCEL-31 | `LONGSTAY14` | BK-B | **167h59** | 5.813.000 | -1 | 0% | **Có** | 0 | 0 |
 | DT-32 | TC-CANCEL-32 | `LONGSTAY14` | BK-B | 10 | 5.813.000 | -1 | 0% | **Có** | 0 | 0 |
-| DT-33 | TC-CANCEL-33 | `LONGSTAY14` | BK-B | 10 | 0 | -1 | 0% | **Có** | 0 | 1.309.000 |
+| DT-33 | TC-CANCEL-33 | `LONGSTAY14` | BK-B | 10 (CONFIRMED được miễn cọc) | 0 | -1 | 0% | **Có** | 0 | 1.309.000 |
 | DT-34 | TC-CANCEL-34 | `LONGSTAY14` | BK-B | **-9,9833 (no-show)** | 5.813.000 | -1 | 0% | **Có** | 0 | 0 |
+
+Các ca paidAmount = 0 mà phát sinh phạt giả định booking đã CONFIRMED theo ngoại lệ miễn cọc; booking còn HELD/PENDING_PAYMENT không chịu phạt (BR-BOOK-18).
 
 Năm quan sát kiểm chứng được trực tiếp trên 34 hàng (đối chiếu bằng mắt, không cần chạy mã):
 
@@ -359,15 +361,15 @@ Chín mốc dưới đây là **đúng mốc và sát mốc 1 phút**; mỗi ô 
 | 9.1 | Bất khả kháng | BR-CANCEL-13, UC-OVER-05 | Thiên tai, dịch bệnh, cơ sở đóng cửa, lỗi hệ thống | Hoàn **100% `paidAmount`**, miễn phụ thu, miễn `refundFee` | `MANAGER`+ tạo, lý do ≥ 20 ký tự, minh chứng tuỳ chọn | TC-CANCEL-50 |
 | 9.2 | Walk-out do khách sạn | BR-CANCEL-14, BR-OVER-06, UC-OVER-04 | Hết phương án điều chuyển khả dụng (thang **1 → 2 → 4**; bậc 3 không khả dụng vì 3 cơ sở cách 160–300 km), hoặc khách từ chối phương án | Hoàn **100% `paidAmount`** + bồi thường **1 × giá đêm đầu** + hỗ trợ tìm chỗ | `MANAGER`+ | TC-CANCEL-51 |
 | 9.3 | Trả phòng sớm | BR-CANCEL-09 | Đang ở, muốn rời trước `checkOut` | Hoàn 50% × `min(paidAmount, giá các đêm chưa ở)`; `NONREF` → 0% | `MANAGER`+ xác nhận, ghi lý do `EARLY_CHECKOUT` | TC-CANCEL-52 |
-| 9.4 | Đổi ngày | BR-BOOK-12, BR-CANCEL-08, UC-BOOK-06 | Muốn dời kỳ lưu trú | **Không** tạo `RefundRequest`; lần đầu miễn phí khi ≥ 168h (`FLEX7`, `SAVER3`, `LONGSTAY14`); `NONREF` phí 10% giá trị booking | `FRONT_DESK`+ | TC-CANCEL-53 |
+| 9.4 | Đổi ngày | BR-BOOK-12, BR-CANCEL-08, UC-BOOK-06 | Muốn dời kỳ lưu trú | **Không** tạo `RefundRequest`; lần đầu miễn phí khi ≥ 168h (`FLEX7`, `SAVER3`, `LONGSTAY14`); `NONREF` phí 10% giá trị booking | Khách sở hữu / FRONT_DESK / RESERVATION_AGENT / MANAGER theo UC | TC-CANCEL-53 |
 | 9.5 | No-show | BR-CANCEL-10, UC-FO-04 | 23:59 ngày nhận phòng, còn `CONFIRMED`, chưa check-in | Bậc bắt tất + phụ thu đêm đầu nếu bậc quy định | tự động (ACT-11) hoặc `FRONT_DESK` | TC-CANCEL-15, TC-CANCEL-34 |
 | 9.6 | Huỷ do OTA | BR-CHAN-04 | OTA báo huỷ | Áp chính sách **của kênh**, không áp bảng §3; ghi `cancelReason = OTA_CANCELLATION` và `Booking.channelPolicyCode` để đối soát | tự động | TC-CANCEL-55 |
-| 9.7 | Huỷ một phần nhiều phòng | BR-CANCEL-19 | `roomCount > 1`, huỷ một số `BookingRoom` | `refundBase` phân bổ theo **tỷ lệ giá phòng bị huỷ / `totalAmount`** rồi mới áp BR-CANCEL-05; phòng còn lại giữ giá + `RoomAssignment`; `totalAmount` giảm, lưu thêm `PriceSnapshot` điều chỉnh và giữ bản gốc | `FRONT_DESK`+ | TC-CANCEL-54 |
-| 9.8 | Booking chưa xác nhận | BR-BOOK-08, BR-PAY-05, BR-BOOK-17 | `HELD`/`DRAFT` hết hạn, `PENDING_PAYMENT` quá 15 phút | Hoàn 0 nếu `paidAmount = 0`, không phụ thu, **không** tạo `RefundRequest`; xoá cứng `DRAFT`/`HELD` phải ghi `AuditLog` trước khi xoá | tự động | TC-CANCEL-50 (chung) |
+| 9.7 | Huỷ một phần nhiều phòng | BR-CANCEL-19 | `roomCount > 1`, huỷ một số `BookingRoom` | `refundBase` phân bổ theo phân bổ tiền phòng bất biến BR-CANCEL-19 rồi mới áp BR-CANCEL-05; phòng còn lại giữ giá + `RoomAssignment`; `totalAmount` giảm, lưu thêm `PriceSnapshot` điều chỉnh và giữ bản gốc | Khách sở hữu / FRONT_DESK / RESERVATION_AGENT / MANAGER theo UC | TC-CANCEL-54 |
+| 9.8 | Booking chưa xác nhận | BR-BOOK-18, BR-PAY-11 | HELD/PENDING_PAYMENT hết holdExpiresAt hoặc khách rút giữ chỗ | Không phạt; hoàn toàn bộ tiền đã thu chưa hoàn; net > 0 mới lập yêu cầu. Timeout PSP riêng không làm hết hạn hold; tiền muộn không tái xác nhận | tự động | Nhánh nghiệm thu UC §6.14 |
 
 ### 9.1. Bất khả kháng — chi tiết
 
-Bậc **không** lấy từ bảng: `RefundRequest.appliedTierId = null`, `refundPercent = 100`, `isForceMajeure = true`, `reason = FORCE_MAJEURE` (enum `CancelReason`), `evidenceRefs[]` đính kèm (tuỳ chọn), **diễn giải văn bản ≥ 20 ký tự** ghi ở `AuditLog.reason` (BR-GEN-07; xung đột cần chốt — xem §13), `refundFee = 0`, `penaltyAmount = 0`.
+Bậc **không** lấy từ bảng: `RefundRequest.appliedTierId = null`, `refundPercent = 100`, `isForceMajeure = true`, `reason = FORCE_MAJEURE` (enum `CancelReason`), `evidenceRefs[]` đính kèm (tuỳ chọn), **diễn giải văn bản ≥ 20 ký tự** ghi ở RefundRequest.reasonText và AuditLog.reason (BR-GEN-07), `refundFee = 0`, `penaltyAmount = 0`.
 Ví dụ: BK-B (`LONGSTAY14`, `paidAmount` 5.813.000) huỷ tại 100h — bình thường là bậc bắt tất (hoàn 0) → bất khả kháng → `refundAmount = 5.813.000`. Vì `netRefund` 5.813.000 > 5.000.000 nên vẫn phải **hai cấp** (BR-CANCEL-15). Mọi ca bất khả kháng phải vào báo cáo riêng, định nghĩa chỉ số theo **BR-REP-01** (`tỷ lệ huỷ`, doanh thu/hoàn cọc) — tài liệu này không định nghĩa lại chỉ số (BR-CANCEL-13, UC-REP-03).
 
 ### 9.2. Walk-out — chi tiết
@@ -382,7 +384,7 @@ Hai khoản chi **tách biệt**, không được cộng gộp vào một `Refun
 
 ### 9.3. Trả phòng sớm — chi tiết (BR-CANCEL-09)
 
-Cơ sở tính = **`min(paidAmount, tổng giá các đêm chưa ở theo PriceSnapshot)`**; hệ số hoàn lấy từ **`CancellationPolicy.earlyCheckoutRefundPct`** và ngưỡng báo trước từ **`earlyCheckoutFreeHours`** (không suy ra từ bậc): `FLEX7` 72h/50% · `SAVER3` 72h/50% · `LONGSTAY14` 168h/50% · `NONREF` `null`/0%. Báo muộn hơn ngưỡng hoặc không báo → 0%. Lý do ghi nhận `EARLY_CHECKOUT`. Ví dụ BK-A, khách ở 1 đêm (11/12) rồi trả phòng sớm, 2 đêm chưa ở = 1.066.000 + 889.000 = **1.955.000**:
+Cơ sở tính = **`min(paidAmount, tổng giá các đêm chưa ở theo PriceSnapshot)`**; hệ số hoàn lấy từ **`CancellationPolicy.earlyCheckoutRefundPct`** và ngưỡng báo trước từ **`earlyCheckoutFreeHours`** (không suy ra từ bậc): `FLEX7` 72h/50% · `SAVER3` 72h/50% · `LONGSTAY14` 168h/50% · `NONREF` `null`/0%. Báo muộn hơn ngưỡng hoặc không báo → 0%. Lý do ghi nhận `EARLY_CHECKOUT`. Ví dụ BK-A, khách ở 1 đêm (11/12) rồi trả phòng sớm, 2 đêm chưa ở = 1.066.000 + 889.000 = **1.955.000**: Mốc báo trước = thời điểm trả phòng sớm đề nghị trừ thời điểm nhận thông báo; lưu cả hai trong bằng chứng yêu cầu. Đêm chưa ở bắt đầu từ ngày trả sớm được chấp nhận, dùng snapshot sau khuyến mãi. Khách đã vào phòng đi UC-FO-02, giữ CHECKED_IN tới checkout; chốt nghĩa vụ/nợ và khoản phải hoàn riêng, không chuyển CANCELLED.
 
 | Biến thể | Báo trước | Cơ sở `min(paidAmount, đêm chưa ở)` | Hoàn 50% (làm tròn **xuống**) |
 |----------|-----------|-------------------------------------|--------------------------------|
@@ -398,23 +400,23 @@ Cơ sở tính = **`min(paidAmount, tổng giá các đêm chưa ở theo PriceS
 
 | Tình huống | Kết quả | Ghi chú |
 |------------|---------|---------|
-| Lần đầu, còn ≥ 168h, gói `FLEX7`/`SAVER3`/`LONGSTAY14` | Miễn phí; **không** tạo `RefundRequest` (BR-CANCEL-08); **giữ nguyên trạng thái**; giữ bản `PriceSnapshot.kind = ORIGINAL` và lưu thêm bản `kind = RESCHEDULE` (`seq` tăng), ghi `AuditLog` | Chênh lệch giá tính theo giá mới, ghi riêng vào `balanceDue` (BR-BOOK-12, BR-RATE-16) |
+| Lần đầu, còn ≥ 168h, gói `FLEX7`/`SAVER3`/`LONGSTAY14` | Miễn phí; **không** tạo `RefundRequest` (BR-CANCEL-08); **giữ nguyên trạng thái**; giữ bản `PriceSnapshot.kind = ORIGINAL` và lưu thêm bản `kind = RESCHEDULE` (`seq` tăng), ghi `AuditLog` | Chênh lệch giá tính theo giá mới, total mới = max(total cũ, giá kỳ mới), chênh tăng vào balanceDue (BR-BOOK-12, BR-RATE-16) |
 | Lần đầu, còn ≥ 168h, gói `NONREF` | Phí 10% × 3.179.000 = 317.900 → làm tròn **lên** **318.000** | BR-CANCEL-07, BR-BOOK-12; `Payment` loại `RESCHEDULE_FEE` |
 | Lần đầu, còn < 168h | Không miễn phí → xử lý như huỷ + đặt mới (áp bảng §3) | Tính lại toàn bộ theo bậc tại thời điểm đó |
 | Lần thứ hai trở đi | Luôn tính như huỷ + đặt mới | Đếm bằng `Booking.rescheduleCount`; tạo `RefundRequest` theo §5 |
-| Chênh lệch giá | Giá mới cao hơn → thu thêm vào `balanceDue`; thấp hơn → **không hoàn** | BR-BOOK-12 |
+| Chênh lệch giá | Giá mới cao hơn → thu thêm vào `balanceDue`; thấp hơn → không hạ total đã cam kết; không hoàn; giữ cọc/policy đã chốt theo BR-BOOK-12 | BR-BOOK-12 |
 | Booking `CHECKED_IN` | Không đổi ngày được; phải check-out rồi tạo booking mới | BR-BOOK-13 |
 
 ### 9.5. Huỷ một phần nhiều phòng (BR-CANCEL-19)
 
-Áp dụng khi `roomCount > 1` (BR-BOOK-10): booking được huỷ **một số** `BookingRoom`; các phòng bị huỷ tách thành booking con qua `RoomMove.moveType = SPLIT_ROOMS`. `refundBase` phân bổ **theo tỷ lệ giá của các phòng bị huỷ trên `totalAmount`**, rồi mới áp BR-CANCEL-05:
+Áp dụng BR-CANCEL-19: chọn BookingRoom ACTIVE, chỉ huỷ các đơn vị được chọn, không tách booking con và không dùng SPLIT_ROOMS. Đọc phân bổ tiền theo snapshot lúc thu; lần huỷ sau chỉ sử dụng phần còn lại chưa xử lý, không phân bổ lại tổng paidAmount trên total đã giảm.
 
 ```text
-refundBaseCancelled = paidAmount × (Σ giá các phòng bị huỷ / totalAmount)   # BR-CANCEL-19
+refundBaseCancelled = tổng tiền phòng đã phân bổ cho BookingRoom bị huỷ, chưa xử lý lần trước # BR-CANCEL-19
 refundAmount        = roundDown1000(refundBaseCancelled × tier.refundPercent / 100)   # BR-CANCEL-05
 ```
 
-Các phòng còn lại **giữ nguyên giá và `RoomAssignment`**; `totalAmount` giảm; hệ thống lưu thêm một `PriceSnapshot` điều chỉnh (`kind = PARTIAL_CANCEL`, `seq` tăng) và **giữ bản gốc** (`kind = ORIGINAL`) — BR-RATE-16. `penaltyAmount` (nếu bậc quy định) tính trên `firstNightPrice` của phần bị huỷ. Huỷ **hết** phòng → booking chuyển `CANCELLED` toàn phần theo §5. Ranh giới làm tròn duy nhất nằm ở BR-CANCEL-05 (làm tròn **xuống**); bước phân bổ không làm tròn để tránh sai lệch luỹ kế.
+Các phòng còn lại **giữ nguyên giá và `RoomAssignment`**; `totalAmount` giảm; hệ thống lưu thêm một `PriceSnapshot` điều chỉnh (`kind = PARTIAL_CANCEL`, `seq` tăng) và **giữ bản gốc** (`kind = ORIGINAL`) — BR-RATE-16. `penaltyAmount` (nếu bậc quy định) tính trên `firstNightPrice` của phần bị huỷ. Huỷ **hết** phòng → booking chuyển `CANCELLED` toàn phần theo §5. Phân bổ tiền nguyên VND theo BR-CANCEL-19, tổng phần phân bổ bằng tiền đã thu; làm tròn hoàn xuống 1.000 chỉ khi tính nghĩa vụ hoàn. Tiền giữ do huỷ không trả nợ phòng còn ở.
 
 ---
 
@@ -453,7 +455,7 @@ sequenceDiagram
 
     Note over RS,MG: Bước duyệt — người tạo KHÔNG được tự duyệt (BR-CANCEL-15)
     MG->>RS: POST /api/v1/refunds/{id}/approve (approvedAmount)
-    RS->>RS: kiểm tra: khác người tạo, vai trò >= MANAGER, approvedAmount<=refundableRemaining
+    RS->>RS: kiểm tra: khác người tạo, MANAGER hoặc OWNER, netRefund<=quỹ hoàn sau phần giữ khác
     RS->>AS: AuditLog quyết định + lý do — BR-CANCEL-16
     RS->>NS: thông báo kết quả duyệt
 
@@ -472,7 +474,7 @@ Hạn chi tiền: `approvedAt → paidAt` trong **3 ngày làm việc**, tối �
 ```mermaid
 stateDiagram-v2
     [*] --> PENDING: tạo yêu cầu (requestedAmount, appliedTierId, hoursBeforeCheckIn)
-    PENDING --> APPROVED: duyệt — khác người tạo, MANAGER+, approvedAmount <= refundableRemaining
+    PENDING --> APPROVED: MANAGER hoặc OWNER khác người tạo, đủ quỹ hoàn (maker-checker)
     PENDING --> REJECTED: từ chối — bắt buộc lý do, ghi AuditLog
     PENDING --> CANCELLED: rút/huỷ yêu cầu — người tạo hoặc MANAGER+, ghi lý do
     APPROVED --> PAID: chi tiền — Payment loại REFUND, về phương thức gốc (BR-PAY-08/09)
@@ -483,13 +485,13 @@ stateDiagram-v2
 
 | Chuyển | Bảo vệ (guard) | Actor | Tác dụng phụ bắt buộc | BR |
 |--------|----------------|-------|------------------------|-----|
-| → `PENDING` | Booking đã `CANCELLED`/`NO_SHOW`; `requestedAmount ≥ 0`; idempotent theo `Idempotency-Key` | ACT-01/02/03/04 | `AuditLog`, `OutboxEvent`, `Notification` | BR-GEN-07/08, BR-CANCEL-16 |
-| `PENDING` → `APPROVED` | `approvedBy ≠ requestedBy`; vai trò ≥ `MANAGER`; **`netRefund > 5.000.000`** ⇒ bắt buộc người duyệt khác người tạo và ≥ `MANAGER`; `approvedAmount ≤ netRefund` | ACT-04, ACT-05 | `AuditLog` kèm lý do; cập nhật `decidedAt` | BR-CANCEL-15/16, BR-RBAC-03 |
+| → `PENDING` | Sự kiện huỷ/huỷ một phần/check-out sớm/tiền thu muộn hợp lệ; netRefund > 0; idempotent theo `Idempotency-Key` | ACT-01/02/03/04 | `AuditLog`, `OutboxEvent`, `Notification` | BR-GEN-07/08, BR-CANCEL-16 |
+| `PENDING` → `APPROVED` | MANAGER hoặc OWNER có phạm vi, khác requestedBy; 0 ≤ approvedAmount ≤ requestedAmount; netRefund đủ quỹ theo BR-CANCEL-17. Hai cấp nghĩa là lập + duyệt ở mọi mức tiền | ACT-04, ACT-05 | AuditLog, approvedBy, decidedAt, khóa tiền gốc | BR-CANCEL-15/16, BR-RBAC-03 |
 | `PENDING` → `REJECTED` | Lý do bắt buộc | ACT-04, ACT-05 | `AuditLog`, thông báo khách | BR-CANCEL-16 |
-| `PENDING` → `CANCELLED` | Khách rút yêu cầu hoặc booking được khôi phục; chỉ **người tạo** hoặc `MANAGER`+; **không** được huỷ khi đã `APPROVED`/`PAID`; ghi lý do bắt buộc | ACT-01/02/03/04, ACT-04/05 | `AuditLog` kèm lý do | BR-CANCEL-18 |
-| `APPROVED` → `PAID` | Gateway/tiền mặt thành công; `Payment` loại `REFUND`; **không** sửa/xoá `Payment` gốc | ACT-06, ACT-04 | `Payment` REFUND, `PaidAt`, tăng `Booking.refundedAmount`, `AuditLog` | BR-PAY-09, BR-CANCEL-16 |
+| `PENDING` → `CANCELLED` | Khách rút yêu cầu ; không khôi phục booking; chỉ **người tạo** hoặc `MANAGER`+; **không** được huỷ khi đã `APPROVED`/`PAID`; ghi lý do bắt buộc | ACT-01/02/03/04, ACT-04/05 | `AuditLog` kèm lý do | BR-CANCEL-18 |
+| `APPROVED` → `PAID` | Gateway/chuyển khoản có chứng từ thành công; `Payment` loại `REFUND`; **không** sửa/xoá `Payment` gốc | ACT-06 | `Payment` REFUND, `PaidAt`, tăng `Booking.refundedAmount`, `AuditLog` | BR-PAY-09, BR-CANCEL-16 |
 
-Bất biến xuyên trạng thái: `Σ Payment.amount` loại `REFUND` của booking ≤ `Booking.paidAmount` (BR-CANCEL-17, BR-PAY-07, [NFR-COMP-03](../01-yeu-cau/yeu-cau-phi-chuc-nang.md)).
+Bất biến xuyên trạng thái: tổng REFUND SUCCEEDED + phần tiền đang giữ cho PENDING/APPROVED không vượt tiền gốc đủ điều kiện, kiểm theo từng Payment và booking; tiền COMPENSATION tách riêng. Chi timeout giữ APPROVED + lần chi PENDING, tra PSP trước retry cùng khóa. Không tăng refundedAmount trước bằng chứng chi thành công.
 
 ---
 
@@ -552,7 +554,7 @@ Xương sống đã hấp thụ các phát hiện của tài liệu này: **BR-C
 ## Tham chiếu
 
 - Nguồn chân lý nghiệp vụ: [02/quy-tac-nghiep-vu.md](quy-tac-nghiep-vu.md) — §1 BR-GEN, §4 BR-RATE, §5 BR-BOOK, §6 BR-CANCEL, §7 BR-PAY.
-- Bối cảnh, actor, enum, từ điển thực thể, danh mục 52 use case, 13 module: [00/00-tong-quan.md](../00-tong-quan.md).
+- Bối cảnh, actor, enum, từ điển thực thể, danh mục 53 use case, 13 module: [00/00-tong-quan.md](../00-tong-quan.md).
 - Chuyên đề liên quan: [Động giá](dong-gia.md) · [Quá tải – ghép & đổi phòng](qua-tai-ghep-doi-phong.md).
 - Phân tích: [03/Mô hình miền](../03-phan-tich/mo-hinh-mien.md) · [03/Mô hình động](../03-phan-tich/mo-hinh-dong.md).
 - Thiết kế: [04/Thiết kế lớp](../04-thiet-ke/thiet-ke-lop.md) · [04/Sequence Diagram](../04-thiet-ke/sequence-diagram.md) · [04/CSDL](../04-thiet-ke/csdl.md) · [04/API](../04-thiet-ke/api.md) · [04/Thiết kế màn hình](../04-thiet-ke/thiet-ke-man-hinh.md).

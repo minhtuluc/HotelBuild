@@ -1,6 +1,6 @@
 # 05 — Quản lý rủi ro
 
-> Sổ rủi ro của dự án **Hệ thống đặt phòng khách sạn – homestay Pine Hill** (3 cơ sở · 55 phòng · 7 kênh bán · 13 module · 52 use case · 136 quy tắc BR) trong 15 tuần thực hiện.
+> Sổ rủi ro của dự án **Hệ thống đặt phòng khách sạn – homestay Pine Hill** (3 cơ sở · 55 phòng · 7 kênh bán · 13 module · 53 use case · 139 quy tắc BR) trong 15 tuần thực hiện.
 > Mã rủi ro theo quy ước `RSK-nn` tại [00 §6](../00-tong-quan.md). Mọi giá trị nghiệp vụ trong tài liệu này **chỉ tham chiếu mã BR** tại [02/quy-tac-nghiep-vu](../02-nghiep-vu/quy-tac-nghiep-vu.md), không định nghĩa lại.
 
 ---
@@ -12,7 +12,7 @@
 | 1 | Mục đích | Nhận diện – định lượng – theo dõi – ứng phó rủi ro cho toàn bộ vòng đời 15 tuần, gắn mỗi rủi ro với một hành động **kiểm chứng được** và một người chịu trách nhiệm |
 | 2 | Phạm vi | Các hạng mục trong biên dự án [00 §3.1] |
 | 3 | Ngoài phạm vi | Hạng mục ngoài biên [00 §3.2]; rủi ro kinh doanh sau bàn giao; rủi ro pháp lý ngoài Nghị định 13/2023/NĐ-CP (BR-SYS-04) |
-| 4 | Nguồn chân lý | [02/quy-tac-nghiep-vu](../02-nghiep-vu/quy-tac-nghiep-vu.md) (136 BR) · [00 §6–§8](../00-tong-quan.md) (định danh · 13 module · 52 UC) · [lo-trinh](lo-trinh.md) (mốc M1–M8, cổng QG-0–QG-4, thang cắt giảm) |
+| 4 | Nguồn chân lý | [02/quy-tac-nghiep-vu](../02-nghiep-vu/quy-tac-nghiep-vu.md) (139 BR) · [00 §6–§8](../00-tong-quan.md) (định danh · 13 module · 53 UC) · [lo-trinh](lo-trinh.md) (mốc M1–M8, cổng QG-0–QG-4, thang cắt giảm) |
 | 5 | Chu kỳ rà soát | Hằng tuần vào thứ Sáu sau buổi demo; rà soát đầy đủ trước mỗi buổi **demo nghiệm thu sprint** ([lo-trinh §9](lo-trinh.md)); rà soát sâu tại mỗi cổng chất lượng QG-0…QG-4 |
 | 6 | Người sở hữu sổ | PO/BA (kiêm thư ký dự án); mỗi rủi ro có **một** người theo dõi nêu ở cột cuối §4 |
 | 7 | Công cụ | Bảng Markdown trong chính tài liệu này (diff được, không lệch khỏi mã — ADR-013); mọi cập nhật ghi vào §10 |
@@ -123,7 +123,7 @@ Quy ước: mỗi nhóm có **bảng A** (nhận diện – định lượng –
 | Mã | Mô tả rủi ro | Nguyên nhân gốc | P | I | Điểm | Chiến lược | Người theo dõi |
 |----|--------------|-----------------|---|---|-------|------------|----------------|
 | RSK-04 | Ràng buộc loại trừ chống trùng **đơn vị bán** không tồn tại trên môi trường thật → hai `RoomAssignment` cho cùng `(roomId, bedNo, đêm)`, phá bất biến cứng BR-INV-03 | Prisma 6 không sinh được `EXCLUDE USING gist` (ADR-003) nên phải viết migration SQL thủ công; dễ bị `prisma migrate` ghi đè/đánh dấu drift, hoặc thiếu ở CI và môi trường chấm; phụ thuộc extension `btree_gist` | 4 | 5 | **20** | Né tránh | Kiến trúc sư kiêm Backend |
-| RSK-08 | Giá hiển thị lệch giữa web khách, app Android và API → vi phạm BR-RATE-17, mất niềm tin và phát sinh tranh chấp giá | Xu hướng tính giá ở client cho nhanh (bản sao logic); phiên bản `packages/domain` ghim khác nhau giữa các app; đơn vị tiền hiển thị khác nhau (đồng vs nghìn đồng) | 4 | 4 | **16** | Né tránh | Frontend web + Mobile |
+| RSK-08 | Giá hiển thị lệch giữa 4 frontend, quầy và API → vi phạm BR-RATE-17, mất niềm tin và phát sinh tranh chấp giá | Xu hướng tính giá ở client cho nhanh (bản sao logic); contract/domain version ghim khác nhau giữa các app; đơn vị tiền hiển thị khác nhau (đồng vs nghìn đồng) | 4 | 4 | **16** | Né tránh | Frontend apps |
 | RSK-09 | Lỗi cài đặt mốc thời gian (múi giờ, biên so sánh `≥`/`>`) làm chọn sai bậc huỷ và sai mốc no-show | Lưu UTC nhưng so mốc theo giờ VN (BR-GEN-02/05); dễ dùng `>` thay vì `≥` tại đúng 168h00; `Property.checkInTime` bị hard-code thay vì đọc theo cơ sở (BR-GEN-04) | 3 | 4 | **12** | Giảm thiểu | Kiến trúc sư kiêm Backend |
 | RSK-15 | Dùng số thực hoặc làm tròn muộn → sai tiền tích luỹ và sai chiều làm tròn (lên với giá/cọc, xuống với hoàn) | `number` của TypeScript là dấu phẩy động; BR-GEN-01/03 quy định hai chiều làm tròn khác nhau; JSON/CSDL dễ trôi sang kiểu thập phân | 2 | 5 | **10** | Né tránh | QA/DevOps |
 | RSK-16 | Khoá bi quan theo `(roomTypeId, date)` gây nghẽn hoặc deadlock ở 200 yêu cầu đồng thời và ở job giải phóng hold | BR-INV-02 buộc kiểm tra tồn và giữ chỗ trong **một** transaction có `SELECT … FOR UPDATE`; job hold (BR-INV-04) chạy song song dễ chồng khoá; truy vấn theo từng đêm làm tăng số khoá | 3 | 4 | **12** | Giảm thiểu | QA/DevOps |
@@ -132,7 +132,7 @@ Quy ước: mỗi nhóm có **bảng A** (nhận diện – định lượng –
 | Mã | Hành động giảm thiểu (kiểm chứng được) | Dấu hiệu cảnh báo sớm (ngưỡng) | Kế hoạch dự phòng |
 |----|----------------------------------------|--------------------------------|-------------------|
 | RSK-04 | SQL thủ công trong `infra/sql` gồm `CREATE EXTENSION btree_gist` và `EXCLUDE USING gist (room_id WITH =, bed_no WITH =, valid_range WITH &&) WHERE (released_at IS NULL)` — `bed_no` NOT NULL mặc định `0` = "cả phòng", `1..bedCount` = giường DOR (BR-PROP-04), tuyệt đối không dùng khoá đơn kiểu `COALESCE(bed_no::text, room_id)` hay `sell_unit_id` vì sẽ va chạm giữa các phòng khác nhau; bước CI khẳng định `SELECT count(*) FROM pg_constraint WHERE contype='x'` = 1 trên Postgres 16 (Testcontainers); kịch bản 200 yêu cầu đồng thời (US-INF-02, NFR-REL-01) chạy trong CI: đúng 1 thành công, 199 nhận lỗi `E_INV_ROOM_TAKEN` (ánh xạ mã `23P01` của PostgreSQL) hoặc `E_INV_NO_AVAILABILITY` — cả hai HTTP 409, cấm nuốt lỗi rồi báo thành công; ca kiểm thử âm chèn trực tiếp 2 assignment chồng lấn: CSDL từ chối (`23P01`) và tầng ứng dụng chuyển thành `E_INV_ROOM_TAKEN` (BR-INV-03); ghi thứ tự migrate vào README | Bất kỳ môi trường nào có `count(*) … contype='x'` = 0; `prisma migrate diff` báo drift; kịch bản 200 đồng thời trả 2 thành công; ca chống trùng bị skip khỏi CI | Không cho M4 xanh; thêm khoá Redis theo `(roomTypeId, date)` như lớp tạm (BR-INV-02) nhưng vẫn phải có ràng buộc CSDL trước M8; nếu đã sinh dữ liệu trùng: khoanh vùng, làm sạch và backfill |
-| RSK-08 | Cấm tính giá ở client: luật lint cấm `apps/*` import động cơ giá (chỉ được import kiểu) + ca kiểm thử cấu trúc; mọi màn hình lấy giá từ `PriceQuote` của API; ca kiểm thử hợp đồng 3 nền tảng cùng đầu vào (Playwright + Maestro + Supertest) chạy ở M5; trả `engineVersion` trong `PriceQuote` ([00 §7.2–§7.3]) và hiển thị bảng giá từng đêm kèm hệ số | Ca đối chiếu 3 nền tảng đỏ; tìm thấy công thức giá trong `apps/mobile` hoặc `apps/web`; `engineVersion` khác nhau giữa các client; chênh giá ≥ 1.000 đ | Khoá phát hành app, buộc nâng cấp gói; nếu đã bán sai: hoàn/bù chênh lệch có duyệt ACT-04 và ghi `AuditLog` |
+| RSK-08 | Cấm tính giá ở client: luật lint cấm bốn frontend import động cơ giá (chỉ được import kiểu) + ca kiểm thử cấu trúc; mọi màn hình lấy giá từ `PriceQuote` của API; ca kiểm thử hợp đồng 5 nguồn cùng đầu vào (Playwright + Maestro + Supertest) chạy ở M5; trả `engineVersion` trong `PriceQuote` ([00 §7.2–§7.3]) và hiển thị bảng giá từng đêm kèm hệ số | Ca đối chiếu 5 nguồn đỏ; tìm thấy công thức/hệ số giá trong một frontend; `engineVersion` khác nhau giữa các client; chênh giá ≥ 1.000 đ | Khoá phát hành app, buộc nâng cấp gói; nếu đã bán sai: hoàn/bù chênh lệch có duyệt ACT-04 và ghi `AuditLog` |
 | RSK-09 | `CancellationPolicyEngine` thuần, nhận thời điểm hiện tại qua tham số (cổng `Clock`, không `Date.now()`); ca biên 168h00 · 167h59 · 72h00 · 72h01 · 24h00 · 23h59; ca bậc bắt tất `offsetHours = −1` phải áp cho **mọi** giá trị `hoursBeforeCheckIn < 24` kể cả số âm (no-show lúc 23:59 ≈ −9,98h) và hàm chọn bậc không bao giờ trả về rỗng (BR-CANCEL-01); ca no-show đúng 23:59 giờ VN (BR-CANCEL-10); ca cơ sở có `checkInTime` khác 14:00; kiểm thử thuộc tính khẳng định không có giờ mùa (BR-GEN-05) | Ca biên lệch đúng 1 giờ; kết quả khác nhau giữa máy dev và CI; số bậc chọn được khác bảng [02 §6.1] | Tra bậc thủ công bằng bảng tính tay và chặn chi hoàn trong thời gian sửa; bổ sung ca biên vào CI hồi quy trước khi mở lại luồng tự động |
 | RSK-15 | `Money` VO với `amount` là số nguyên VND, không có phép toán thập phân; ràng buộc CSDL cho các cột tiền đã chốt (`total_amount`, `deposit_amount`, `refunded_amount`) là bội 1.000; kiểm thử thuộc tính bội 1.000 và đúng chiều làm tròn; luật lint cấm `parseFloat`/`toFixed` trong `packages/domain` | DDL hoặc mã miền xuất hiện kiểu thập phân; lệch 1–999 đ khi đối chiếu tổng; payload JSON có phần thập phân | Đổi kiểu cột bằng migration và tính lại dữ liệu thử; bật kiểm tra tự động trong CI trước khi đóng băng API |
 | RSK-16 | Khoá các đêm theo thứ tự ngày tăng dần để tránh deadlock; chỉ mục GIST cho `room_assignments (room_id, bed_no, valid_range)`; ca hai tầng tồn khả dụng: tồn chung = `ACTIVE` − `RoomBlock` − `RoomAssignment` − hold chưa sinh assignment; tồn kênh = `min(tồn chung, allotment − used)` và allotment KHÔNG trừ vào tồn chung (BR-INV-01, BR-CHAN-01); đối chiếu tổng đơn vị bán 75 theo ma trận cơ sở × loại phòng (BR-PROP-03); ca kiểm thử tải bằng k6 với 200 VU (NFR-PERF-01, NFR-REL-01/02) đo p95 và tỷ lệ deadlock ở M4; kiểm tra hold được giải phóng ≤ 60 giây; khẳng định khoá `job.hold.releaseIntervalSeconds` = 30 trong `SystemSetting` (BR-SYS-02) và báo lỗi nếu bị cấu hình > 55 giây; job đối chiếu `Hold` ↔ `Booking.holdExpiresAt` mỗi 900 giây (`job.holdReconcile.intervalSeconds`) để không tồn tại hold mồ côi (NFR-REL-02) | p95 > 800 ms; tỷ lệ lỗi deadlock > 0,1%; hold còn hiệu lực sau 60 giây; hàng đợi khoá tăng liên tục | Thu hẹp phạm vi khoá, đưa bước kiểm tra nhanh sang Redis trước khi vào transaction; giảm tải kịch bản và ghi rõ giới hạn đo |
@@ -143,7 +143,7 @@ Quy ước: mỗi nhóm có **bảng A** (nhận diện – định lượng –
 | Mã | Mô tả rủi ro | Nguyên nhân gốc | P | I | Điểm | Chiến lược | Người theo dõi |
 |----|--------------|-----------------|---|---|-------|------------|----------------|
 | RSK-07 | Đội chưa từng tích hợp cổng thanh toán → callback sai chữ ký, xử lý không idempotent, hoặc vô tình lưu dữ liệu thẻ; trượt M6 | Không thành viên nào có kinh nghiệm VNPay/MoMo (ADR-009, sandbox); luồng IPN và return khác nhau; tài liệu PSP thay đổi theo phiên bản | 3 | 5 | **15** | Giảm thiểu | Backend/Frontend web |
-| RSK-10 | Trễ mốc M3 (đóng băng hợp đồng API) → web và mobile làm trên hợp đồng cũ, phát sinh việc sửa lại hai lần | GĐ-2 chỉ có 2 tuần cho 6 hạng mục WBS 3.1–3.6; thiết kế phụ thuộc BR còn mơ hồ; khối lượng 136 BR và 52 UC là lớn | 3 | 4 | **12** | Giảm thiểu | PO/BA |
+| RSK-10 | Trễ mốc M3 (đóng băng hợp đồng API) → web và mobile làm trên hợp đồng cũ, phát sinh việc sửa lại hai lần | GĐ-2 chỉ có 2 tuần cho 6 hạng mục WBS 3.1–3.6; thiết kế phụ thuộc BR còn mơ hồ; khối lượng 139 BR và 53 UC là lớn | 3 | 4 | **12** | Giảm thiểu | PO/BA |
 | RSK-11 | Một thành viên vắng dài (ốm/lịch thi) làm nghẽn đường găng | Nhóm 5 người, mỗi người giữ một mảng sâu ([lo-trinh §2]); đường găng đi qua các hạng mục chỉ một người làm (WBS 4.5, 5.1, 6.1) | 3 | 4 | **12** | Giảm thiểu | PO/BA |
 | RSK-14 | Ước lượng lệch làm nợ kỹ thuật dồn sang sprint sau | Sprint 1 là 31 SP và Sprint 3 là 36 SP so với định mức 25 SP/sprint; dự phòng hiện có 12 điểm (≈ 6% ngân sách điểm) | 4 | 3 | **12** | Chấp nhận | PO/BA |
 | RSK-18 | Bus factor = 1 cho `packages/domain` → mất một người là mất năng lực sửa lõi nghiệp vụ | Chỉ kiến trúc sư làm miền thuần (WBS 5.1, 6.1); miền đòi hỏi hiểu BR sâu và không có I/O để "đọc hành vi từ mã hạ tầng" | 3 | 4 | **12** | Giảm thiểu | Kiến trúc sư kiêm Backend |
@@ -173,7 +173,7 @@ Quy ước: mỗi nhóm có **bảng A** (nhận diện – định lượng –
 |----|----------------------------------------|--------------------------------|-------------------|
 | RSK-03 | Hợp đồng adapter bằng zod cho cả 3 kênh trong `packages/contracts` (`ChannelAdapter` + lớp chống tham nhũng) và ca kiểm thử hợp đồng riêng cho `BookingComAdapter`, `AgodaAdapter`, `AirbnbAdapter`; bộ mô phỏng nằm sau adapter nên đổi lớp mô phỏng không đổi lớp miền; ánh xạ loại phòng ↔ mã phòng OTA qua `ChannelMapping` (BR-CHAN-08); lưu fixture payload mẫu kèm nguồn và phiên bản; ca webhook lặp → 1 booking (NFR-REL-06); ca booking vượt tồn tạo `oversold = true` và mở `OverbookingCase` (BR-OVER-03) — **kể cả khi `overbookLimitPct = 0`**, theo miễn trừ tường minh của BR-CHAN-03; ca mỗi `OverbookingCase` chuyển `RESOLVED` trước T−24h hoặc bị đánh dấu `ESCALATED` (enum `OverbookingCaseStatus`, BR-OVER-04); ca case quá hạn ngày thiếu phòng không được tự đóng mà phải chuyển `ESCALATED` kèm lý do trễ (BR-OVER-16); ca vượt trần bán vượt trả `E_OVER_LIMIT_EXCEEDED` (BR-OVER-02); ca huỷ đến từ OTA lưu `Booking.channelPolicyCode` khi `cancelReason = OTA_CANCELLATION` để đối soát (BR-CHAN-04, UC-PAY-05); kịch bản bơm 60 booking ở M7 | < 3 payload mẫu khác nhau; phải sửa lớp miền khi đổi kênh (dấu hiệu ACL bị thủng); webhook lặp tạo 2 booking; không mô phỏng được trạng thái huỷ theo chính sách kênh | Giữ 2 OTA (cắt `OTA_AIRBNB` theo [lo-trinh §7] mục 2); trình bày mục "hợp đồng dự kiến vs thực tế" trong báo cáo; nếu chủ đầu tư cấp quyền truy cập: +16 giờ mỗi kênh |
 | RSK-20 | Đưa yêu cầu cấp sandbox vào biên bản họp với ACT-05 ngay W1 và nhắc lại mỗi 2 tuần; thiết kế sẵn `PaymentGatewayAdapter` với `VnpayAdapter`, `MomoAdapter` và một adapter mô phỏng cùng hợp đồng; chứng minh idempotency và trạng thái giao dịch trên adapter mô phỏng (BR-PAY-03/05) | Hết W4 chưa gửi hồ sơ; hết W6 chưa có sandbox; không có đầu mối kỹ thuật phía PSP | Dùng adapter mô phỏng nội bộ và ghi rõ giới hạn; nếu sandbox về muộn: dành 8 giờ ở W11 đấu nối một phương thức, phần còn lại đưa vào backlog |
-| RSK-22 | Gửi bảng câu hỏi kèm giá trị mặc định ngay W1, hạn trả lời ghi theo từng mã (§8); ghi cơ chế "im lặng sau hạn = chấp thuận mặc định" vào biên bản; đưa các giá trị trả lời vào `SystemSetting` khi có thể cấu hình (BR-SYS-02) để đổi mà không phải sửa mã | Hết W2 còn > 3 câu chưa trả lời; câu trả lời khác mặc định đang dùng; một câu trả lời thay đổi ≥ 2 lần | Nếu khác mặc định: đổi tham số/BR, chạy lại ca kiểm thử liên quan, ghi `AuditLog` lý do và báo ảnh hưởng phạm vi (dùng 12 điểm dự phòng) |
+| RSK-22 | Gửi câu hỏi kèm giả định đề xuất ngay W1; ghi người có thẩm quyền, hạn và bằng chứng xác nhận theo §8. **Im lặng không phải chấp thuận**; quá hạn giữ `OPEN`, báo PO/BA và chặn phần triển khai phụ thuộc. Chỉ dùng giả định có nhãn cho thiết kế/mô phỏng; giá trị cấu hình không tự trở thành quyết định nghiệp vụ | Tới hạn còn câu hỏi ảnh hưởng tiền, quyền hoặc tồn chưa có phản hồi tường minh; câu trả lời khác giả định; thay đổi ≥ 2 lần | Lập phiếu thay đổi, cập nhật BR/UC/API/UI/TC bị ảnh hưởng, chạy lại ca liên quan; tiếp tục phần độc lập. Chỉ mở cổng khi có văn bản xác nhận và bằng chứng kiểm thử tương ứng |
 | RSK-21 | `Notification` ghi trạng thái và gửi lại tối đa 3 lần cách nhau 5 phút (BR-SYS-06); hàng đợi bền, lỗi thông báo không chặn luồng đặt phòng; ca kiểm thử khẳng định booking vẫn `CONFIRMED` khi dịch vụ email lỗi (NFR-USE-02); email là kênh bắt buộc, SMS/Zalo OA là kênh phụ có thể cắt ([lo-trinh §7] mục 3) | Tỷ lệ gửi lỗi > 10%; số lần gửi lại trung bình > 1,5; hạn mức còn < 20% | Chỉ giữ email và chuyển sang gọi khách thủ công do ACT-02; ghi rõ hạn chế trong báo cáo |
 | RSK-23 | Ghi nhãn "giả định khảo sát" ở mọi trích dẫn số liệu ([00 §1]); lấy mốc so sánh trước/sau bằng chính hệ thống (số `OverbookingCase`, tỷ lệ huỷ, chênh giá) từ sprint 4; không dùng số khảo sát làm tiêu chí chấp nhận | Chủ đầu tư không xác nhận được số liệu ở M1; cùng một số liệu bị trích dẫn khác nhau giữa các tài liệu | Chuyển tiêu chí sang đo nội bộ (0 vụ trùng phòng, 0 ca quá tải xử lý sau T−24h) và ghi rõ giới hạn dữ liệu |
 | RSK-24 | CI tách hai tầng (nhanh: typecheck + unit; đêm: integration + E2E) theo ADR-012; cache pnpm và lớp Docker; kịch bản demo chạy cục bộ bằng `docker compose` để không phụ thuộc mạng; theo dõi số phút CI mỗi tuần | > 20% lượt chạy CI đỏ vì hạ tầng (không do mã); thời gian CI > 10 phút (NFR-MAIN-03); vượt hạn mức build EAS | Chuyển E2E sang chạy đêm và trước mốc; nếu hết hạn mức EAS: xuất APK cục bộ và cài trực tiếp lên máy thật |
@@ -428,7 +428,7 @@ ALTER TABLE room_assignments
 | Chuyển sang adapter mô phỏng (phương án B) | −8 | 0 | Mất bằng chứng tích hợp thật; giữ nguyên thiết kế adapter |
 | Hậu quả nếu lọt lỗi thanh toán | 4 – 8 | tới 2 × số tiền cọc | Đối soát + hoàn tiền + xử lý khiếu nại; rủi ro uy tín cao hơn tiền |
 
-### 6.8. RSK-08 — Lệch giá giữa web khách, app Android và API
+### 6.8. RSK-08 — Lệch giá giữa 4 frontend, quầy và API
 
 **Kịch bản xấu nhất.** Vì muốn màn hình đặt phòng phản hồi tức thì, một thành viên chép lại công thức giá vào app Android (bản rút gọn, thiếu `OccupancyModifier`). Cùng một truy vấn: web báo 2.904.000 (đúng), Android báo 2.498.000 (thiếu hệ số công suất 1,15). Khách đặt qua app và mang theo ảnh chụp giá; quầy buộc phải bán theo giá app hoặc huỷ booking — cả hai đều gây tranh chấp. BR-RATE-17 bị vi phạm, tiêu chí thành công số 3 ([00 §12]) không đạt ở đúng mốc M5, và bản sửa phải phát hành lại app (chậm hơn web nhiều vì phải build APK).
 
@@ -436,8 +436,8 @@ ALTER TABLE room_assignments
 
 | # | Điểm kích hoạt | Ngưỡng |
 |---|----------------|--------|
-| 1 | Ca đối chiếu 3 nền tảng đỏ | ≥ 1 tổ hợp lệch |
-| 2 | Tìm thấy công thức/hệ số giá trong `apps/mobile` hoặc `apps/web` | ≥ 1 lần khớp mẫu lint |
+| 1 | Ca đối chiếu 5 nguồn đỏ | ≥ 1 tổ hợp lệch |
+| 2 | Tìm thấy công thức/hệ số giá trong một frontend | ≥ 1 lần khớp mẫu lint |
 | 3 | `engineVersion` ([00 §7.2–§7.3]) khác nhau giữa API và app | ≥ 1 khác biệt |
 | 4 | Chênh giá giữa hai nền tảng cho cùng đầu vào | ≥ 1.000 đ |
 
@@ -447,7 +447,7 @@ ALTER TABLE room_assignments
 |------|-----------|-----------------|----------|-----------|
 | 1 | Thêm luật lint cấm `apps/*` import động cơ giá (chỉ được import kiểu) và ca kiểm thử cấu trúc tương ứng | Frontend web + Mobile | Trước M5 | CI xanh + ca cấu trúc |
 | 2 | Mọi màn hình lấy giá từ `PriceQuote` của API; cấm tính lại ở địa phương | Frontend web + Mobile | Trước M5 | Danh sách màn hình + kiểm tra mã |
-| 3 | Ca kiểm thử hợp đồng 3 nền tảng cùng đầu vào (Playwright + Maestro + Supertest) trong job đêm | QA/DevOps | Từ M5 | Báo cáo 3/3 khớp trong CI |
+| 3 | Ca kiểm thử hợp đồng 5 nguồn cùng đầu vào (Playwright + Maestro + Supertest) trong job đêm | QA/DevOps | Từ M5 | Báo cáo API + 4 frontend khớp trong CI |
 | 4 | Trả `engineVersion` trong `PriceQuote` và hiển thị bảng giá từng đêm kèm hệ số cho khách kiểm tra | Kiến trúc sư + Frontend | Trước M5 | Payload mẫu + ảnh màn hình |
 | 5 | Nếu đã bán lệch: hoàn/bù chênh lệch có duyệt ACT-04, ghi `AuditLog`; nếu app sai: khoá phát hành và buộc cập nhật | PO/BA | ≤ 2 giờ/booking | Bản ghi xử lý + `AuditLog` |
 
@@ -466,7 +466,7 @@ ALTER TABLE room_assignments
 | # | Giả định | Nơi dùng | Cách xác nhận | Hậu quả nếu sai |
 |---|----------|----------|---------------|-----------------|
 | A-01 | Số liệu hiện trạng (2–4 vụ quá tải/tháng, chênh giá 15–25%, 3–5 tranh chấp/tháng) là ước lượng khảo sát | [00 §1], tiêu chí thành công [00 §12], RSK-23 | Phỏng vấn ACT-05 + đối chiếu sổ/Excel 3 tháng (WBS 1.1) | Tiêu chí thành công không đo được khách quan; phải chuyển sang mốc đo nội bộ |
-| A-02 | Q-01…Q-12 sẽ được chủ đầu tư trả lời hoặc chấp thuận giá trị mặc định bằng văn bản trước hết W2 | Toàn bộ 136 BR, M1, RSK-22 | Biên bản họp 2 tuần/lần ([lo-trinh §9]) | Phải sửa BR + ca kiểm thử + luồng nghiệp vụ đã lập trình; dùng 12 điểm dự phòng |
+| A-02 | Q-01…Q-12 sẽ được chủ đầu tư trả lời hoặc chấp thuận giá trị mặc định bằng văn bản trước hết W2 | Toàn bộ 139 BR, M1, RSK-22 | Biên bản họp 2 tuần/lần ([lo-trinh §9]) | Phải sửa BR + ca kiểm thử + luồng nghiệp vụ đã lập trình; dùng 12 điểm dự phòng |
 | A-04 | PostgreSQL 16 và quyền `CREATE EXTENSION btree_gist` khả dụng ở dev, CI (Testcontainers) và máy chấm | BR-INV-03, ADR-003, RSK-04 | Bước CI khẳng định `pg_constraint` (W6) | Mất bất biến cứng ở tầng dữ liệu; phải dùng khoá phân tán Redis và ghi rõ giới hạn |
 | A-05 | Mỗi thành viên đầu tư ≈ 10 giờ/tuần → 750 giờ cho 15 tuần | Toàn bộ lộ trình, định mức 25 SP/sprint | Burndown + điểm danh stand-up hằng ngày | Kích hoạt thang cắt giảm [lo-trinh §7] sớm hơn dự kiến |
 | A-06 | Không có tích hợp OTA thật trong phạm vi môn học; chỉ dựng adapter + mô phỏng | CHAN, OVER, RSK-03 | Xác nhận với giảng viên/chủ đầu tư ở W1 | +16 giờ/kênh nếu được cấp quyền; lộ trình 750 giờ không còn đủ |
@@ -485,7 +485,7 @@ ALTER TABLE room_assignments
 
 ## 8. Câu hỏi mở Q-01 … Q-12 và chủ sở hữu trả lời
 
-Danh sách câu hỏi giữ nguyên theo [00 §11]; ba cột cuối là yêu cầu quản lý rủi ro của tài liệu này. Thời hạn mặc định: **hết W2 (trước M1)**, trừ các câu ghi rõ mốc sớm hơn.
+Danh sách câu hỏi giữ nguyên theo [00 §11]. Các giá trị dưới đây là **giả định thiết kế**, chưa phải xác nhận của stakeholder. Hạn mục tiêu để đạt M1 là **cuối W1**; W2 là hạn leo thang cho câu còn mở, **sau M1**, không phải lý do tự đánh dấu M1 đạt. Chưa có liên kết bằng chứng thì trạng thái là `OPEN`.
 
 | Mã | Câu hỏi | Chủ sở hữu | Hạn trả lời | Giá trị mặc định đang dùng | Mức ảnh hưởng nếu mặc định sai |
 |----|---------|-----------|-------------|----------------------------|-------------------------------|
@@ -504,17 +504,33 @@ Danh sách câu hỏi giữ nguyên theo [00 §11]; ba cột cuối là yêu c�
 
 ---
 
+### 8.1. Sổ quyết định và unknown chặn triển khai
+
+Mỗi Q-01…Q-12 và unknown dưới đây phải có hồ sơ: `id`, câu hỏi, phương án/giả định đang dùng, BR/UC/UI/TC bị ảnh hưởng, người trả lời có thẩm quyền, hạn, trạng thái (`OPEN`, `PROPOSED`, `CONFIRMED`, `REJECTED`, `SUPERSEDED`), liên kết biên bản/văn bản, người xác nhận và ngày hiệu lực. PO/BA quản lý hồ sơ; người viết tài liệu không tự xác nhận thay stakeholder. Tại revision này chưa đính kèm bằng chứng trả lời nên không đánh dấu mục nào `CONFIRMED`.
+
+Các mã `OPEN-*` là mã quản lý cục bộ, không cấp thêm BR/UC.
+
+| Mã / câu cần quyết định | Người trả lời / hạn | Phạm vi và bằng chứng cần có | Xử lý trong khi còn mở |
+|---|---|---|---|
+| OPEN-01: callback thanh toán thành công đến sau timeout/hold hết hạn, phòng đã bán lại: hoàn tự động hay đối soát thủ công; SLA và người xử lý? | ACT-06 + ACT-05; trước DoR PAY, muộn nhất M3 | BR-PAY-03/05, BR-INV-03; API/máy trạng thái thanh toán; `TC-PAY-22`; biên bản kế toán + hợp đồng PSP/sandbox | Mô phỏng nhánh đến muộn, không tự xác nhận booking hay yêu cầu khách trả lần hai; chưa nghiệm thu tích hợp tiền |
+| OPEN-02: thao tác nào được xếp hàng offline, dữ liệu nào được lưu trên máy, thời gian giữ và quy trình khi mất máy/thu hồi quyền? | ACT-04 + ACT-05, ARCH đánh giá bảo mật; trước DoR mobile | NFR-USE-03, BR-RBAC-02/05, BR-SYS-05; UI §8.3; `TC-FO-08`, `TC-AUTH-10`; danh sách thao tác được duyệt | Bản nháp/cache có nhãn; không giao phòng/chi tiền dựa vào thành công cục bộ; chặn phát hành thao tác offline chưa chốt |
+| OPEN-03: policy/rateplan có phiên bản và thời điểm hiệu lực nào; sửa chính sách áp booking cũ hay chỉ booking mới; ai duyệt và phục hồi? | ACT-05 + ACT-06; trước DoR RATE/CANCEL | BR-RATE-16/19, BR-CANCEL-01/02; `TC-RATE-27`; đối chiếu UC cấu hình rateplan/policy do nhóm nghiệp vụ cấp + API/DB | Không ghi đè snapshot hoặc sửa hồi tố để khớp cấu hình mới; giữ đặc tả cấu hình ở trạng thái chờ quyết định |
+| OPEN-04: cơ sở thực tế, bán kính điều chuyển và ngân sách walk-out có được xác nhận không? | ACT-05 + ACT-04 + ACT-06; trước M1, leo thang W2 | Q-04/05/10, BR-OVER-06/07/13/14; địa chỉ/bán kính + quy trình chi + mẫu đồng thuận | Dữ liệu giả chỉ demo bậc 1→2→4; không giả lập rằng ba cơ sở thực tế đủ gần để dùng bậc 3 |
+| OPEN-05: thời hạn lưu PII/audit, mẫu đồng thuận, yêu cầu xuất/xoá dữ liệu và người được xem PII? | ACT-05 + người phụ trách pháp lý/dữ liệu; trước DoR CRM/SYS | BR-SYS-04/05, NFR-COMP; văn bản được người có thẩm quyền rà soát theo bối cảnh triển khai | Không coi giả định pháp lý trong tài liệu là chứng nhận tuân thủ; dùng dữ liệu giả, chặn phát hành với dữ liệu thật khi chưa có quyết định |
+
+Unknown kỹ thuật do ARCH quyết định: version/điều kiện cập nhật đồng thời, tra cứu kết quả sau mất phản hồi, phạm vi khoá idempotency và giao thức replay, hợp đồng lỗi webhook, biểu diễn tồn giường. Cần ADR/API/DDL và kết quả test trước QG-2/QG-3; bảng kiểm thử §4.6 là đầu vào review.
+
 ## 9. Kế hoạch dự phòng theo mốc (phương án B)
 
 | Mốc | Điều kiện đạt (tóm tắt) | Dấu hiệu trượt | Phương án B | Công sức phát sinh | Ảnh hưởng phạm vi | Người quyết định |
 |-----|------------------------|----------------|-------------|--------------------|-------------------|------------------|
-| **M1** (W1) | Báo cáo khảo sát có số liệu; 136 BR soạn thảo; Q-01…Q-12 trả lời hoặc chấp thuận mặc định | Hết W1 còn > 3 câu chưa trả lời; không có biên bản chấp thuận mặc định | Gửi công văn chốt: "sau hạn 3 ngày không phản hồi = chấp thuận mặc định đã ghi"; tiếp tục thiết kế với cờ giả định, rà lại ở M3 | 4 giờ | Không đổi phạm vi; tăng rủi ro RSK-22 | PO/BA + ACT-05 |
-| **M2** (W3) | 52 UC có sơ đồ; đặc tả 12 UC rủi ro cao; mô hình miền không mơ hồ; 100% BR truy vết tới ≥ 1 UC | Hết W3 còn > 4 UC chưa có đặc tả; mô hình miền còn lớp chưa thống nhất | Giữ đủ 52 UC ở mức danh mục, đặc tả đầy đủ cho 8 UC gắn BT-1/BT-2/BT-3; phần còn lại ghi nợ tài liệu và hoàn thành trong W4–W5 | 12 giờ | Không cắt hạng mục nào; mốc M3 gánh thêm nợ tài liệu | PO/BA |
+| **M1** (W1) | Báo cáo khảo sát có số liệu; BR soạn thảo; Q-01…Q-12 trả lời hoặc giả định được người có thẩm quyền chấp thuận bằng văn bản | Đến hạn còn câu hỏi chặn chưa có bằng chứng xác nhận | Nhắc người sở hữu, leo thang ACT-05, ghi M1 `BLOCKED` đối với phạm vi phụ thuộc; tiếp tục thiết kế có nhãn giả định và công việc độc lập; hạn W2 không tạo chấp thuận | 4 giờ | Chưa được mở triển khai nghiệp vụ phụ thuộc; đánh giá lại lịch | PO/BA + ACT-05 |
+| **M2** (W3) | 53 UC có sơ đồ; đặc tả 12 UC rủi ro cao; mô hình miền không mơ hồ; 100% BR truy vết tới ≥ 1 UC | Hết W3 còn > 4 UC chưa có đặc tả; mô hình miền còn lớp chưa thống nhất | Giữ đủ 53 UC ở mức danh mục, đặc tả đầy đủ cho 8 UC gắn BT-1/BT-2/BT-3; phần còn lại ghi nợ tài liệu và hoàn thành trong W4–W5 | 12 giờ | Không cắt hạng mục nào; mốc M3 gánh thêm nợ tài liệu | PO/BA |
 | **M3** (W5) | Đóng băng hợp đồng API; DDL migrate sạch; 100% ràng buộc chống trùng có mặt; BR rủi ro cao có ca kiểm thử | Hết ngày thứ Tư W5 còn > 1 hạng mục WBS 3.x chưa xong | Đóng băng "v1 tối thiểu" cho INV/RATE/BOOK và hoãn hợp đồng của OVER/REP sang sprint 4; **không** hoãn ràng buộc chống trùng | 16 giờ | Cắt `OTA_AIRBNB` và `AGENCY` nếu vẫn chậm ([lo-trinh §7] mục 2) | Kiến trúc sư + PO/BA |
 | **M4** (W7) | API chạy trong Docker; 200 yêu cầu đồng thời chỉ 1 thành công; lịch tồn phòng hiển thị 55 phòng | Kịch bản đồng thời trả ≥ 2 thành công; `pg_constraint` không có ràng buộc loại trừ | Hạ `US-INV-01` xuống bản tối giản (đã nêu trong kế hoạch sprint), chuyển điểm sang `US-INF-02`; bổ sung khoá Redis như lớp tạm nhưng **không** được coi là đạt mốc | 12 giờ | Không cắt ràng buộc chống trùng (bất di bất dịch) | Kiến trúc sư + QA/DevOps |
 | **M5** (W9) | Đặt được booking từ web và từ quầy, giá khớp nhau và khớp bảng tính tay; hold hết hạn tự giải phóng | ≥ 1/24 tổ hợp giá lệch bảng tính tay; hold chưa giải phóng sau 60 giây | Chuyển `US-BOOK-03` (web khách) sang sprint 3; lấy bảng tính tay của PO làm nguồn chân lý và chỉ mở lại khi 24/24 tổ hợp khớp | 16 giờ | Cắt khuyến mãi nếu vẫn chậm ([lo-trinh §7] mục 4) | PO/BA |
 | **M6** (W11) | 100% ca bảng quyết định huỷ/hoàn đạt; hoàn > 5 triệu bị chặn nếu người duyệt trùng người tạo | 1 ca bảng quyết định trượt; tồn tại `RefundRequest` do chính người tạo duyệt | Cắt `US-CANCEL-04` rồi `US-CANCEL-03`; chặn tạm luồng huỷ tự động trên web, chỉ lễ tân huỷ có hiển thị số tiền hoàn | 12 giờ | Giữ nguyên phần BT-1 bắt buộc (huỷ thường, hai cấp duyệt) | PO/BA |
-| **M7** (W13) | Quá tải phát hiện trước T−24h trên dữ liệu mô phỏng; thang 4 bậc đúng thứ tự; app Android cài được trên máy thật | `OverbookingCase` được xử lý sau T−24h; thứ tự điều chuyển không tất định; không cài được APK | App Android: demo bằng trình giả lập + video. Thang điều chuyển: tự động chỉ bậc 1–2, bậc 3–4 cần ACT-04 duyệt tay (đã có BR-OVER-07) | 10 giờ | Cắt `US-CTRL-01` rồi `MERGE_CONNECTING` ([lo-trinh §7] mục 1) | Kiến trúc sư + PO/BA |
+| **M7** (W13) | Quá tải phát hiện trước T−24h trên dữ liệu mô phỏng; thang 4 bậc đúng thứ tự; operations Android cài được trên máy thật | `OverbookingCase` được xử lý sau T−24h; thứ tự điều chuyển không tất định; không cài được APK | Operations Android: demo bằng trình giả lập + video. Customer Android có smoke test booking. Thang điều chuyển: tự động chỉ bậc 1–2, bậc 3–4 cần ACT-04 duyệt tay (đã có BR-OVER-07) | 10 giờ | Cắt `US-CTRL-01` rồi `MERGE_CONNECTING` ([lo-trinh §7] mục 1) | Kiến trúc sư + PO/BA |
 | **M8** (W15) | Báo cáo hoàn chỉnh, ma trận truy vết đầy đủ, demo end-to-end 3 bài toán | Ma trận còn ô trống ở W15; tài liệu lệch mã; demo 3 bài toán chưa chạy được | Khoá tính năng mới, dành cả tuần cho tài liệu ↔ mã; ô chưa kiểm chứng **ghi rõ** "chưa kiểm chứng"; bảo vệ bằng demo 3 bài toán + mục "hạn chế & hướng phát triển" | 16 giờ | Không nhận việc phát triển mới trong W15 (đã nêu ở lo-trinh) | PO/BA + Kiến trúc sư |
 
 > Nguyên tắc bất di bất dịch khi áp phương án B: **không bao giờ cắt** ràng buộc chống trùng phòng, động cơ giá, chính sách huỷ, kiểm thử miền và nhật ký kiểm toán ([lo-trinh §7]).
@@ -560,7 +576,7 @@ Danh sách câu hỏi giữ nguyên theo [00 §11]; ba cột cuối là yêu c�
 
 ## 11. Đề xuất bổ sung
 
-Các mục dưới đây là điểm **chưa tồn tại hoặc chưa thống nhất** giữa tài liệu này với xương sống đã đóng băng (136 BR · 52 UC · 13 module · 40 NFR/8 nhóm). Đây là đề xuất, không phải định nghĩa đã chốt.
+Các mục dưới đây là điểm **chưa tồn tại hoặc chưa thống nhất** giữa tài liệu này với xương sống đã đóng băng (139 BR · 53 UC · 13 module · 40 NFR/8 nhóm). Đây là đề xuất, không phải định nghĩa đã chốt.
 
 | # | Đề xuất | Lý do phát hiện | Nơi cần sửa | Rủi ro liên quan |
 |---|---------|-----------------|-------------|------------------|
@@ -574,10 +590,10 @@ Các mục dưới đây là điểm **chưa tồn tại hoặc chưa thống nh
 
 ## Tham chiếu
 
-- [00 — Tổng quan dự án](../00-tong-quan.md) — bối cảnh, actor, 13 module, 52 use case, quy ước định danh, từ điển thực thể, Q-01…Q-12
+- [00 — Tổng quan dự án](../00-tong-quan.md) — bối cảnh, actor, 13 module, 53 use case, quy ước định danh, từ điển thực thể, Q-01…Q-12
 - [01 — Mô hình use case](../01-yeu-cau/mo-hinh-use-case.md) — mã UC dùng trong sổ rủi ro
 - [01 — Yêu cầu phi chức năng](../01-yeu-cau/yeu-cau-phi-chuc-nang.md) — mã NFR dùng cho ngưỡng cảnh báo
-- [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — 136 quy tắc BR (nguồn chân lý)
+- [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — 139 quy tắc BR (nguồn chân lý)
 - [02 — Chính sách huỷ & hoàn cọc](../02-nghiep-vu/chinh-sach-huy-hoan-coc.md) — bảng quyết định huỷ/hoàn
 - [04 — Thiết kế API](../04-thiet-ke/api.md) — nguồn chân lý 45 mã lỗi `E_*` (§4.2), dùng cho mọi hành động kiểm chứng ở §4 và §6
 - [03 — Mô hình động](../03-phan-tich/mo-hinh-dong.md) — máy trạng thái booking

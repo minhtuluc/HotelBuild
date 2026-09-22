@@ -2,8 +2,10 @@
 
 Tài liệu phân tích – thiết kế – kế hoạch triển khai cho đồ án môn **OOAD (Phân tích và Thiết kế Hướng đối tượng)**.
 
+**Bản rà soát thiết kế 22-09-2026.** Bắt đầu ở [hướng dẫn bàn giao thi công](07-ban-giao/huong-dan-thi-cong.md) để xem bất biến, các lỗi đã xử lý, thứ tự triển khai và cổng nghiệm thu. Repository chưa có ứng dụng; trạng thái tài liệu không phải bằng chứng nghiệp vụ đã được chủ đầu tư phê duyệt hoặc phần mềm đã qua UAT.
+
 - **Chủ đầu tư:** Chủ chuỗi 3 cơ sở lưu trú (Pine Hill)
-- **Phạm vi sản phẩm:** Web (khách đặt trực tiếp + back-office vận hành) và ứng dụng Android (lễ tân / quản lý cơ sở)
+- **Phạm vi sản phẩm:** Một backend + worker dùng chung; bốn frontend độc lập gồm customer web, customer Android, operations web và operations Android
 - **Quy mô nghiệp vụ:** 3 cơ sở – 55 phòng – 7 kênh bán
 - **Ba bài toán trọng tâm:** (1) chính sách huỷ & hoàn cọc theo mốc thời gian; (2) giá theo mùa cao điểm và theo kênh bán; (3) ghép – đổi phòng khi quá tải
 
@@ -28,31 +30,36 @@ Tài liệu phân tích – thiết kế – kế hoạch triển khai cho đồ
 | 04 | [Sequence Diagram](04-thiet-ke/sequence-diagram.md) | Tuần tự chi tiết cho các UC rủi ro cao | ✅ |
 | 04 | [Cơ sở dữ liệu](04-thiet-ke/csdl.md) | ERD, DDL, ràng buộc chống trùng phòng, chỉ mục | ✅ |
 | 04 | [API](04-thiet-ke/api.md) | Hợp đồng REST, mã lỗi, idempotency, webhook OTA | ✅ |
-| 04 | [Thiết kế màn hình](04-thiet-ke/thiet-ke-man-hinh.md) | Sitemap, wireframe, luồng Android | ✅ |
+| 04 | [Thiết kế màn hình](04-thiet-ke/thiet-ke-man-hinh.md) | Sitemap, wireframe, luồng customer/operations web và Android | ✅ |
 | 05 | [Lộ trình](05-ke-hoach/lo-trinh.md) | Lộ trình 15 tuần, mốc, WBS, Gantt | ✅ |
 | 05 | [Kế hoạch Sprint](05-ke-hoach/ke-hoach-sprint.md) | Backlog, user story, tiêu chí chấp nhận từng sprint | ✅ |
 | 05 | [Quy tắc kỹ thuật](05-ke-hoach/quy-tac-ky-thuat.md) | Chuẩn code, git, review, DoR/DoD, chính sách test | ✅ |
 | 05 | [Quy tắc nhóm](05-ke-hoach/quy-tac-nhom.md) | RACI, họp, quy trình đổi yêu cầu, sở hữu tài liệu | ✅ |
 | 05 | [Kế hoạch kiểm thử](05-ke-hoach/ke-hoach-kiem-thu.md) | Chiến lược test, test case trọng yếu, kiểm thử tải | ✅ |
 | 05 | [Quản lý rủi ro](05-ke-hoach/quan-ly-rui-ro.md) | Sổ rủi ro, giả định, câu hỏi mở | ✅ |
-| 06 | [Ma trận truy vết](06-truy-vet/ma-tran-truy-vet.md) | BR → UC → API → Entity → Test (136 hàng, 14 bảng con) | ✅ |
+| 06 | [Ma trận truy vết](06-truy-vet/ma-tran-truy-vet.md) | BR → FR → UC → API → Entity → Test; kiểm tra bằng script | ✅ |
+| 07 | [Bàn giao thi công](07-ban-giao/huong-dan-thi-cong.md) | Lỗi đã rà soát, thứ tự thi công, hợp đồng và giới hạn bằng chứng | ✅ |
+| 04 | [ADR](04-thiet-ke/adr/README.md) | Lý do chọn kiến trúc và các quyết định giao dịch, snapshot, thanh toán, sự kiện | ✅ |
 | — | `05-ke-hoach/nhat-ky/` | Biên bản họp (`BB-YYMMDD`), phiếu đổi yêu cầu (`CRF-nn`), nợ kỹ thuật (`TD-nn`), quyết định ngoài ADR (`QĐ-nn`) — thư mục được tạo khi dự án khởi động (GĐ-0) | 🔄 |
 
-**Quy mô bộ tài liệu:** 25 tệp Markdown · **14.898 dòng** · **78 sơ đồ Mermaid**. Nguồn chân lý nghiệp vụ: [02/quy tắc nghiệp vụ](02-nghiep-vu/quy-tac-nghiep-vu.md) — **136 quy tắc BR** · **52 use case** · **134 yêu cầu chức năng** · **40 yêu cầu phi chức năng** (8 nhóm) · **13 module**.
+**Nguồn thống kê:** công cụ kiểm tra đếm định nghĩa và sơ đồ trực tiếp từ tài liệu, không lấy số lượng ghi cứng làm bằng chứng độ phủ. Nguồn chân lý nghiệp vụ là [quy tắc nghiệp vụ](02-nghiep-vu/quy-tac-nghiep-vu.md); số mã, liên kết và coverage được báo mỗi lần chạy.
 
-**Đã kiểm chứng tự động** (script trong CI theo [05/quy tắc kỹ thuật](05-ke-hoach/quy-tac-ky-thuat.md) §12):
+**Kiểm chứng có thể chạy lại** từ thư mục gốc bằng `npm ci` rồi `npm run check`. Kết quả hiện hành phải lấy từ log của đúng commit; các con số kiểm chứng trước đợt rà soát không được dùng thay cho lần chạy mới.
 
-| Phép kiểm | Công cụ | Kết quả |
+| Phép kiểm | Công cụ/lệnh | Phạm vi |
 |-----------|---------|---------|
-| Cú pháp Mermaid | `mermaid.parse` (v11 + jsdom) trên **mọi** khối trong `docs/` | **78/78 hợp lệ, 0 lỗi** |
-| Tham chiếu chéo định danh | script đối chiếu tập mã dùng ↔ tập mã định nghĩa | BR 136/136 · UC 52/52 · ACT 12/12 · NFR 40/40 · **0 tham chiếu hỏng, 0 mã mồ côi** |
-| DDL + ràng buộc CSDL | PostgreSQL 16 thật, dựng từ chính DDL trong [04/csdl](04-thiet-ke/csdl.md) | 36 bảng, 34 chỉ mục, 8 trigger **chạy sạch**; **41/41 kịch bản ràng buộc đạt** |
-| Số học nghiệp vụ | tính lại từng dòng bảng của ví dụ giá và bảng quyết định huỷ | ví dụ động giá **30/30 dòng đúng**; bảng quyết định huỷ **34 hàng** khớp |
+| Liên kết nội bộ và anchor | `npm run check:links` | Đích file/heading tồn tại; không xác minh nội dung website ngoài |
+| Cú pháp Mermaid | `npm run check:mermaid` | Parse mọi sơ đồ; không kiểm bố cục render hay ngữ nghĩa nghiệp vụ |
+| Định danh/truy vết | `npm run check:ids` | BR/FR/UC/NFR và coverage trong ma trận; không thay review nội dung ca thử |
+| Công cụ trích và schema | `npm test` | Test công cụ và DDL §3 bằng PostgreSQL nhúng, không phải đo concurrency |
+| PostgreSQL 16 máy chủ | `npm run test:postgres` trong workflow | Cần DB test riêng; chỉ khẳng định đạt khi có log chạy, không suy từ máy nhúng |
+
+Các test ứng dụng/PSP thật, tải 200 yêu cầu, UAT và phục hồi thảm hoạ ở [kế hoạch kiểm thử](05-ke-hoach/ke-hoach-kiem-thu.md) vẫn là cổng cho giai đoạn thi công. Mục tiêu này không được đánh dấu đã đạt ở repo tài liệu.
 
 ## 2. Thứ tự đọc
 
 - **Chủ đầu tư / giảng viên chấm nghiệp vụ:** 00 → 02 → 01 → 05/lo-trinh
-- **Người phát triển:** 00 → 02/quy-tac-nghiep-vu → 03 → 04 → 05/quy-tac-ky-thuat
+- **Người phát triển:** 07 → 00 → 02/quy-tac-nghiep-vu → 03 → 04 → 05/quy-tac-ky-thuat
 - **Người kiểm thử:** 02 → 01/yeu-cau-chuc-nang → 05/ke-hoach-kiem-thu → 06
 
 ## 3. Quy ước chung
@@ -61,7 +68,7 @@ Tài liệu phân tích – thiết kế – kế hoạch triển khai cho đồ
 2. Sơ đồ vẽ bằng **Mermaid** trong chính file Markdown — có thể diff, review, không cần công cụ ngoài.
 3. Mọi con số nghiệp vụ chỉ được định nghĩa **một nơi duy nhất** (nguồn chân lý ở `02-nghiep-vu/quy-tac-nghiep-vu.md`); tài liệu khác tham chiếu mã BR, không chép lại giá trị.
 4. Ngôn ngữ: tài liệu tiếng Việt, định danh trong mã nguồn và CSDL tiếng Anh.
-5. Trạng thái tài liệu: ✅ đã chốt · 🔄 đang soạn · ⚠️ có câu hỏi mở chờ chủ đầu tư xác nhận (xem [00 §11](00-tong-quan.md)).
+5. Trạng thái tài liệu: ✅ có bản thiết kế để review · 🔄 dự kiến/đang soạn · ⚠️ có câu hỏi mở chờ chủ đầu tư xác nhận (xem [00 §11](00-tong-quan.md)). Việc xác nhận cần biên bản; im lặng không là chấp thuận.
 
 ## 4. Quy trình cập nhật
 

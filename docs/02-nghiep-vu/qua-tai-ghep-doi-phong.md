@@ -23,12 +23,12 @@
 
 ```mermaid
 flowchart LR
-    A["Số phòng ACTIVE<br/>của (cơ sở, loại phòng)"] --> M
-    B["− RoomBlock đang hiệu lực<br/>− RoomAssignment đang hoạt động<br/>− Hold chưa sinh RoomAssignment"] --> M
+    A["Số đơn vị bán ACTIVE<br/>của (cơ sở, loại phòng)"] --> M
+    B["Loại hợp tập block; trừ demand thương mại<br/>BookingRoom gồm hold mọi kênh và oversold chưa gán"] --> M
     M["Tồn chung (pool)<br/>(roomTypeId, date)"] --> S{"BR-INV-07<br/>mọi đêm đều còn phòng?"}
     S -->|không| O1["Từ chối 409<br/>E_INV_NO_AVAILABILITY + danh sách đêm thiếu"]
-    S -->|có| K{"Kênh có hạn mức riêng?<br/>(chỉ kênh OTA)"}
-    K -->|không: WEB / PHONE / WALKIN / AGENCY| O3["Tồn kênh = tồn chung"]
+    S -->|có| K{"Kênh có hạn mức riêng?<br/>(OTA và AGENCY)"}
+    K -->|không: WEB / PHONE / WALKIN| O3["Tồn kênh = tồn chung"]
     K -->|có| T["Tồn kênh = min(tồn chung, allotment − used)"]
     O3 --> L{"BR-CHAN-05<br/>tồn ≤ channel.lowInventoryThreshold?"}
     T --> L
@@ -43,8 +43,8 @@ flowchart LR
 `BR-INV-01` tính **hai tầng, không trừ dồn**:
 
 ```
-tồn chung (pool)  = ACTIVE − RoomBlock − RoomAssignment − hold chưa sinh RoomAssignment
-tồn của một kênh  = min(tồn chung, ChannelAllotment.allotment − ChannelAllotment.used)
+tồn chung (pool)  = supply − demand theo BR-INV-01; demand không cộng assignment lần nữa
+tồn của một kênh  = max(0, min(pool, allotment − used)); used gồm mọi hold hiệu lực của kênh
 ```
 
 Hai tính chất bắt buộc, kiểm thử được:
@@ -73,13 +73,13 @@ Kiểm tra số học: `7 + 5 + 4 + 2 + 1 = 19` ✔, `24 − 1 − 19 = 4` ✔, 
 | Hold (`Hold.status = ACTIVE`) | Booking ở trạng thái `HELD` | Loại phòng | Kênh | Hết hạn sau |
 |---|---|---|---|---|
 | H1 | BK-0002 | DLX | `WEB` | 12 phút |
-| H2 | BK-0003 | FAM | `OTA_AGODA` | 4 phút |
+| H2 | BK-0003 | FAM | `PHONE` | 4 phút |
 
-Công suất CS-01 ngày 30/04 theo định nghĩa `BR-RATE` §4.3: tử số = 19 phòng có `RoomAssignment` hoạt động + 2 hold còn hiệu lực = **21**; mẫu số = 24 phòng `ACTIVE` − 1 phòng bị `RoomBlock` = **23** (phòng bị block không vào cả tử số lẫn mẫu số) → `occupancyPct = 21/23 = 91,3%` (dòng tổng hợp cấp cơ sở của `OccupancySnapshot`: `roomTypeId` rỗng, `physicalRooms` = 23), rơi vào dải 80–94,99% (`pricing.occupancyMidPct` = 80, `pricing.occupancyHighPct` = 95 — `BR-SYS-02`) → **hệ số công suất 1,15** cho mọi đêm của ngày đó (không ảnh hưởng tồn phòng; ví dụ giá ở §8.3 nằm ở cơ sở khác và giả định công suất dưới 80%).
+Công suất CS-01 đêm 30/04 theo BR-RATE §4.3 tính bằng đơn vị bán: supply = 34 − 1 = 33; demand = 7 + 5 + 4 + 2 + 6 giường + 2 hold = 26; occupancy = 26/33 ≈ 78,79%, hệ số 1,00. Snapshot chỉ cho đêm đang xét; không áp cùng tỷ lệ cho toàn bộ kỳ. H1/H2 là nhu cầu thương mại chưa gán thêm, không được cộng nếu đã nằm trong số BookingRoom ở demand.
 
 ### 2.3. Tồn khả dụng cho từng kênh (cùng ngày, cùng cơ sở)
 
-**Tầng 1 — tồn chung** (`ACTIVE − RoomBlock − RoomAssignment − hold chưa sinh assignment`):
+**Tầng 1 — tồn chung** = supply − demand theo BR-INV-01; ví dụ nền không có giao block/assignment, không có oversold nên có thể kiểm bằng các thành phần rời sau:
 
 | Loại | ACTIVE | Số hạng bị trừ | Tồn chung | Ghi chú |
 |---|---|---|---|---|
@@ -88,9 +88,9 @@ Công suất CS-01 ngày 30/04 theo định nghĩa `BR-RATE` §4.3: tử số = 
 | DLX | 5 | 4 assign + 1 hold H1 | **0** | H1 chưa sinh `RoomAssignment` nên trừ ở tầng này |
 | FAM | 3 | 2 assign + 1 hold H2 | **0** | H2 chưa sinh `RoomAssignment` |
 | DOR | 12 giường | 6 giường assign | **6 giường** (1 phòng nguyên) | bán theo giường |
-| **Σ** | **24 phòng** | — | **2 đơn vị bán** | 1 phòng SUP + 1 phòng DOR |
+| **Σ** | **34 đơn vị bán** | 1 block + 26 demand | **7 đơn vị bán** | 1 phòng SUP + 6 giường DOR; không gọi 1 phòng DOR là 1 đơn vị bán |
 
-Hai hold H1/H2 bị trừ ở tầng tồn chung cho **mọi** kênh — `BR-INV-01` không còn phân biệt "hold của kênh khác", vì hold chưa sinh `RoomAssignment` thì chưa thuộc về ai.
+Hai hold H1/H2 thuộc kênh WEB và PHONE, đều tính một lần vào demand chung; trong hạn mức kênh có cấu hình, used cũng phải tính hold của chính kênh kể cả chưa có assignment.
 
 **Tầng 2 — tồn của kênh** = `min(tồn chung, allotment − used)`, chỉ áp cho kênh có hạn mức:
 
@@ -99,16 +99,16 @@ Hai hold H1/H2 bị trừ ở tầng tồn chung cho **mọi** kênh — `BR-INV
 | `WEB` | Không | 0 | 0 | 1 | — | **1** | Có |
 | `PHONE` | Không | 0 | 0 | 1 | — | **1** | Có |
 | `WALKIN` | Không | 0 | 0 | 1 | — | **1** | Có |
-| `AGENCY` | Không | 0 | 0 | 1 | — | **1** | Có |
+| `AGENCY` | Có; giả định allotment còn 1 | 0 | 0 | 1 | — | **1** | Có |
 | `OTA_BOOKING` | Có | 0 | 0 | 1 | 3 | **1** | **Không** (`BR-CHAN-05`) |
 | `OTA_AGODA` | Có | 0 | 0 | 1 | 3 | **1** | **Không** (`BR-CHAN-05`) |
 | `OTA_AIRBNB` | Có | 0 | 0 | 1 | 4 | **1** | **Không** (`BR-CHAN-05`) |
 
-Vì **mọi loại phòng** trong ngày đều có tồn ≤ 2 (STD 0 · SUP 1 · DLX 0 · FAM 0 · DOR 1 phòng = 6 giường) — ngưỡng `channel.lowInventoryThreshold` (`BR-SYS-02`) — `BR-CHAN-05` khoá cả 3 kênh OTA cho ngày 30/04, kênh trực tiếp vẫn bán. Đây là điểm khác biệt quan trọng: **tồn khả dụng theo công thức ≠ số bán được**. DOR cho thấy `BR-CHAN-05` phụ thuộc **đơn vị bán**: theo giường còn 6 > 2 nên về lý thuyết không khoá, nhưng cả 3 kênh OTA đã bị khoá vì các loại phòng khác trong cùng ngày.
+Đóng bán OTA theo **từng loại phòng và đêm**: STD/SUP/DLX/FAM có tồn ≤2 nên đóng; DOR còn 6 giường >2 vẫn có thể mở nếu allotment còn và không bị đóng thủ công. Không được vì STD thiếu mà đóng luôn DOR. Tồn tính toán khác tồn được phép công bố; đóng bán không chặn tiếp nhận booking OTA đã xác nhận.
 
 ### 2.4. Allotment & hệ quả phát tồn sai (CS-01, STD và SUP, 30/04/2026)
 
-`BR-CHAN-01`: hạn mức mặc định của **mỗi kênh OTA** = 80% số phòng vật lý của loại phòng. Ví dụ dùng làm tròn **xuống** (STD: 8 × 0,80 = 6,4 → 6; SUP: 6 × 0,80 = 4,8 → 4) — BR chưa định nghĩa quy tắc làm tròn, xem §11.2 điểm 2.
+`BR-CHAN-01`: mỗi kênh OTA có hạn mức 80% **đơn vị bán**, làm tròn xuống, tối thiểu 1 nếu supply nền >0; không có nguồn cung thì 0. STD 8 → 6; SUP 6 → 4; DOR 12 giường → 9.
 
 | Kênh OTA | Loại | `allotment` | `used` | Còn lại |
 |---|---|---|---|---|
@@ -131,17 +131,17 @@ Hệ quả bắt buộc: `allotment` còn lại 4–6 phòng STD nhưng **tồn 
 | 1 | H1 (DLX) và H2 (FAM) được xác nhận thành booking (`CONFIRMED`) | không đổi | 7 / 7 |
 | 2 | OTA đẩy tiếp 2 booking STD đã thu tiền (`OTA_COLLECT`) | `BR-CHAN-03` xác nhận tự động dù tồn = 0; `oversold = true` | **9 / 7** |
 
-Kết quả: `shortageCount = 9 − 7 = 2` → mở `OverbookingCase(CS-01, 2026-04-30, STD, shortage = 2)` (`BR-OVER-03`). Trạng thái toàn cơ sở sau bước 2: ACTIVE 24 · Block 1 · Assign 23 (STD 9 · SUP 5 · DLX 5 · FAM 3 · DOR 1 phòng) · trống ròng `24 − 1 − 23 = 0`, phân bổ theo loại: STD **−2** · SUP **+1** · DLX 0 · FAM 0 · DOR **+1** (`−2 + 1 + 0 + 0 + 1 = 0`). Chỗ trống ở SUP và 1 phòng DOR nguyên là hai chỗ đệm để xử lý — xem §10.1.
+Kết quả: STD demand 9/supply 7 → shortageCount = 2, mở case. **Assignment STD vẫn chỉ 7**, hai cam kết oversold chưa được gán; toàn cơ sở có 26 đơn vị đã gán (7+5+5+3+6), demand 28, supply 33, pool 5. Theo loại: STD −2, SUP +1, DOR +6 giường. Chỗ trống DOR không tự trở thành phòng hạng cao hơn STD; chuyển sang chia sẻ phải có điều kiện/đồng thuận BR-OVER-13/14.
 
 ### 2.6. Đối chiếu `BR-INV` → hệ quả thiết kế
 
 | Mã | Nội dung chốt | Hệ quả bắt buộc |
 |---|---|---|
-| `BR-INV-01` | Tồn tính **hai tầng**: tồn chung (không phụ thuộc kênh) và tồn kênh = `min(tồn chung, allotment − used)` | `AvailabilityCalculator` tách hai hàm: `pool(roomTypeId, date)` và `channelAvailability(..., channelCode)`; cấm cộng dồn hai tầng |
+| `BR-INV-01` | Tồn tính **hai tầng**: tồn chung (không phụ thuộc kênh) và tồn kênh = `max(0, min(pool, allotment − used))` | `AvailabilityCalculator` tách hai hàm: `pool(roomTypeId, date)` và `channelAvailability(..., channelCode)`; cấm cộng dồn hai tầng |
 | `BR-INV-02` | Kiểm tra tồn + giữ chỗ trong **một** transaction, khoá bi quan | `InventoryService.hold()` mở transaction, `SELECT … FOR UPDATE` theo `(roomTypeId, date)`; cấm mẫu "đọc rồi ghi" |
 | `BR-INV-03` | Bất biến `(đơn vị bán, đêm) ≤ 1` `RoomAssignment`: đơn vị bán = `bedNo = 0` (cả phòng) hoặc `1..bedCount` (giường DOR) | Ràng buộc loại trừ ba cột ở CSDL — xem §3; lỗi `23P01` PHẢI ánh xạ thành `E_INV_ROOM_TAKEN` (409), cấm nuốt lỗi |
 | `BR-INV-04` | Hold hết hạn giải phóng ≤ 60 giây | Job phát biến cố `HoldExpired` chạy theo `job.hold.releaseIntervalSeconds` = 30 (`BR-SYS-02`), phát qua outbox; chỉ tiêu [NFR-REL-02](../01-yeu-cau/yeu-cau-phi-chuc-nang.md) |
-| `BR-INV-05` | `allotment ≤` số phòng `ACTIVE` của loại | Kiểm tra khi tạo/sửa allotment **và** khi `RoomBlock` làm giảm quỹ |
+| `BR-INV-05` | `allotment ≤` số đơn vị bán ACTIVE của loại | Kiểm tra cấu hình allotment; RoomBlock giảm supply/pool, không cần sửa hạn mức hợp đồng nhưng phải tính lại tồn công bố |
 | `BR-INV-06` | `RoomBlock` chồng lấn assignment phải bị từ chối, trừ `MANAGER`+ có lý do | `FrontOfficeService`/`InventoryService` kiểm tra chồng lấn trước khi ghi block; khi override → mở `OverbookingCase` cho mọi booking bị ảnh hưởng |
 | `BR-INV-07` | Xét từng đêm riêng biệt | `StayPeriod` → `DateRange` nửa mở `[start, end)`; số đêm = hiệu ngày, không tính ngày trả phòng; thiếu bất kỳ đêm nào → `E_INV_NO_AVAILABILITY` (409) kèm danh sách đêm thiếu |
 
@@ -464,7 +464,7 @@ tổng chi của cơ sở = bồi thường + hỗ trợ đưa đón (hoàn ti�
 | Ràng buộc | Mã BR | Kiểm tra |
 |---|---|---|
 | Tổng hoàn lũy kế ≤ `paidAmount` | `BR-PAY-07`, `BR-CANCEL-17` | Bồi thường **không** tính là hoàn tiền; nó là khoản chi riêng |
-| Duyệt hai cấp khi `netRefund > 5.000.000 VND` | `BR-CANCEL-15`, `BR-CANCEL-05` | Mọi ngưỡng phê duyệt và báo cáo so trên `netRefund`, không so trên `refundAmount`; người duyệt khác người tạo và từ `MANAGER` trở lên |
+| Duyệt hai cấp khi `netRefund > 5.000.000 VND` | `BR-CANCEL-15`, `BR-CANCEL-05` | Mọi ngưỡng phê duyệt và báo cáo so trên `netRefund`, không so trên `refundAmount`; người duyệt khác người tạo và là MANAGER hoặc OWNER; hai cấp là lập + duyệt |
 | Booking ở `CANCELLED` không tạo công nợ | `BR-PAY-02` | `balanceDue = penaltyAmount` (không đòi phần `totalAmount − paidAmount`); walk-out miễn phụ thu nên `balanceDue` về 0 |
 | Hoàn về phương thức gốc | `BR-PAY-08` | Tiền mặt → chuyển khoản kèm ghi chú số tài khoản |
 | Không sửa/xoá `Payment` gốc | `BR-PAY-09` | Ghi `Payment` loại `REFUND` (bút toán đảo) |
@@ -575,10 +575,10 @@ Các định danh chuyên đề từng đề xuất nay **đã là canonical** �
 | # | Vấn đề | Mã BR | Đề nghị |
 |---|---|---|---|
 | 1 | `BR-OVER-12` là **ràng buộc ưu tiên** nhưng `BR-OVER-11` mô tả thứ tự thuần theo điểm → hai booking có thể cho hai kết quả khác nhau | `BR-OVER-11`, `BR-OVER-12` | Chốt thứ tự khoá: nhóm `BR-OVER-12` **trước**, rồi `keepScore` ↑ → `createdAt` ↓ → `Booking.seq` ↑ (§7.4) |
-| 2 | `BR-CHAN-01` không nói **quy tắc làm tròn** của hạn mức 80% (CS-01/STD: 8 × 0,80 = 6,4; DOR: 12 giường × 0,80 = 9,6) | `BR-CHAN-01` | Chốt `floor` (chặt hơn) hoặc `round`; thiếu quy tắc thì hai cơ sở có thể cấu hình ra hai hạn mức khác nhau cho cùng dữ liệu |
-| 3 | `BR-CHAN-01` không nói `AGENCY` thuộc nhóm có hạn mức hay chia sẻ tồn chung (chỉ liệt kê `WEB`/`PHONE`/`WALKIN`) | `BR-CHAN-01` | Bổ sung `AGENCY` vào nhóm không hạn mức (như ví dụ §2.3) hoặc cấp hạn mức theo hợp đồng đại lý |
+| 2 | Đã chốt làm tròn allotment | BR-CHAN-01 | floor, theo đơn vị bán; nguồn cung 0 → 0 |
+| 3 | Đã chốt AGENCY | BR-CHAN-01/08 | Có hạn mức riêng; thiếu cấu hình không hiểu là vô hạn |
 | 4 | `BR-CHAN-05` là cơ chế **chiều ra** (khoá đẩy tồn), không chặn được booking OTA **chiều vào** đã phát sinh trước khi khoá lan truyền | `BR-CHAN-05`, `BR-CHAN-02`, `BR-INV-01` | Bổ sung: giá trị đồng bộ PHẢI là `min(tồn chung, allotment − used)` của tầng 2 — nếu phát hạn mức thô, OTA vẫn thấy phòng để bán |
-| 5 | `BR-INV-05` chỉ so `allotment` với số phòng `ACTIVE`, bỏ qua `RoomBlock` đang hiệu lực | `BR-INV-05` | Khi `RoomBlock` thay đổi, hạn mức của các ngày liên quan PHẢI được tính lại (CS-01/STD: hạn mức 6 trong khi tồn chung ngày 30/04 chỉ còn 0) |
+| 5 | Đã phân biệt hạn mức và tồn công bố | BR-INV-01/05 | Block không tự sửa allotment nhưng giảm supply/pool; tồn công bố luôn kẹp cả hai tầng |
 
 ## Tham chiếu
 

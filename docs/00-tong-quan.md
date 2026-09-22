@@ -28,7 +28,7 @@ Hệ quả quan sát được:
 - Mốc được tính bằng **giờ trước thời điểm nhận phòng** (14:00 giờ Việt Nam), không theo "ngày" — tránh tranh chấp kiểu "huỷ sáng nay tính là 1 ngày".
 - Mức hoàn phụ thuộc **số tiền đã thực trả**, không phải tổng giá trị đặt phòng.
 - Phải xử lý được: huỷ thường, huỷ do bất khả kháng (dịch/thiên tai), trả phòng sớm, đổi ngày, không đến (no-show), và huỷ do khách sạn (walk-out).
-- Mọi khoản hoàn vượt ngưỡng phải có **phê duyệt hai cấp** và ghi nhật ký kiểm toán.
+- Mọi khoản hoàn tuân thủ maker–checker (người lập và một MANAGER/OWNER khác người lập duyệt); vượt ngưỡng được đánh dấu kiểm soát, ghi audit theo BR-CANCEL-15.
 
 ### BT-2 — Giá theo mùa cao điểm và theo kênh bán
 
@@ -64,7 +64,7 @@ Hệ quả quan sát được:
 | 11 | Thông báo (email/SMS/Zalo OA) cho xác nhận, huỷ, đổi phòng | |
 | 12 | Báo cáo: công suất, ADR/RevPAR, doanh thu theo kênh, huỷ & hoàn cọc, quá tải | Ban giám đốc |
 | 13 | Nhật ký kiểm toán, phân quyền, cấu hình tham số | Toàn hệ thống |
-| 14 | Web khách hàng (đặt phòng) + web back-office + ứng dụng Android cho lễ tân/quản lý | Nền tảng giao |
+| 14 | Một backend dùng chung + 4 frontend: customer web, customer Android, operations web, operations Android | Nền tảng giao |
 
 ### 3.2. Ngoài phạm vi
 
@@ -75,7 +75,7 @@ Hệ quả quan sát được:
 | 3 | Chương trình khách hàng thân thiết nâng cao (đổi điểm, đối tác) | Chỉ giữ tích điểm và phân hạng |
 | 4 | Kế toán tổng hợp, kê khai thuế, phát hành hoá đơn điện tử | Ngoài biên hệ thống; chỉ xuất dữ liệu |
 | 5 | Quản lý tài sản, kho, nhân sự và **xếp ca làm việc** | Không thuộc đề tài; hệ thống chỉ ghi người thu tiền và thời điểm để đối soát (BR-PAY-06) |
-| 6 | Ứng dụng iOS | Ưu tiên Android theo yêu cầu; mã nguồn React Native dùng lại được về sau |
+| 6 | Ứng dụng iOS | Chưa nằm trong blueprint đợt này; mã nguồn React Native có thể mở rộng về sau |
 | 7 | Doanh thu F&B, dịch vụ spa, tour | Chỉ ghi nhận phụ thu phát sinh đơn giản khi check-out |
 | 8 | Kênh đại lý/doanh nghiệp với hợp đồng giá riêng | Chỉ mức kênh `AGENCY` đơn giản |
 
@@ -89,14 +89,14 @@ Hệ quả quan sát được:
 | ACT-04 | Quản lý cơ sở (Property Manager) | Người | Duyệt ngoại lệ, xử lý quá tải, chốt giá cao điểm, xếp buồng phòng |
 | ACT-05 | Chủ chuỗi (Owner) | Người | Cấu hình mùa/giá/kênh/chính sách huỷ, xem báo cáo toàn chuỗi |
 | ACT-06 | Kế toán (Accountant) | Người | Đối soát cọc, hoàn tiền, hoa hồng OTA, công nợ |
-| ACT-07 | Nhân viên buồng phòng (Housekeeping) | Người | Nhận & cập nhật trạng thái dọn phòng (trên Android) |
+| ACT-07 | Nhân viên buồng phòng (Housekeeping) | Người | Nhận & cập nhật trạng thái dọn phòng (trên operations web/Android) |
 | ACT-08 | Cổng thanh toán (PSP) | Hệ thống ngoài | VNPay / MoMo: tạo giao dịch, callback kết quả |
 | ACT-09 | Kênh OTA | Hệ thống ngoài | Booking.com / Agoda / Airbnb: đẩy đặt phòng, kéo tồn phòng & giá |
 | ACT-10 | Dịch vụ thông báo | Hệ thống ngoài | Email (Resend), SMS, Zalo OA |
 | ACT-11 | Dịch vụ lập lịch (Scheduler) | Hệ thống nội bộ | Hết hạn hold, quét quá tải T−24h, đánh dấu no-show, đồng bộ kênh |
 | ACT-12 | Quản trị hệ thống (SysAdmin) | Người | Cấu hình tham số, phân quyền, sao lưu, xem nhật ký kiểm toán |
 
-Trong sơ đồ use case, ACT-08/09/10/11 là **actor phụ (secondary)**; các actor còn lại là **actor chính**.
+Vai trò chính/phụ phụ thuộc từng use case: OTA khởi phát tiếp nhận booking, scheduler khởi phát công việc nền; PSP/thông báo thường là actor hỗ trợ. Không suy quyền người dùng từ vị trí actor.
 
 ## 5. Sơ đồ module nghiệp vụ
 
@@ -164,26 +164,26 @@ Tên trường viết `camelCase` theo ngôn ngữ lập trình; cột CSDL là 
 
 | Thực thể | Trường chính |
 |----------|--------------|
-| `RatePlan` | `id`, `code`, `name`, `depositPercent`, `cancellationPolicyId`, `minNights`, `maxNights`, `losDiscountEnabled`, `rescheduleAllowed`, `fixedNightlyPrice` (rỗng = không dùng giá cố định), `status` |
-| `RateCalendar` | `id`, `roomTypeId`, `propertyId`, `date`, `price`, `source` (`BASE`/`SEASON`/`OVERRIDE`/`RATE_PLAN`), `priority`, `channelCode` (rỗng = mọi kênh), `seasonId`, `reason`, `createdBy`, `createdAt` — dòng có `priority` cao nhất khớp `(roomTypeId, date, channelCode)` thắng (BR-RATE-02) |
+| `RatePlan` | `id`, `code`, `name`, `depositPercent`, `cancellationPolicyId`, `minNights`, `maxNights`, `losDiscountEnabled`, `rescheduleAllowed`, `rescheduleMinHours`, `rescheduleFeePct`, `maxReschedules`, `fixedNightlyPrice` (rỗng = không dùng giá cố định), `status` |
+| `RateCalendar` | `id`, `roomTypeId`, `propertyId`, `date`, `ratePlanId` (bắt buộc với nguồn RATE_PLAN), `price`, `source` (`BASE`/`SEASON`/`OVERRIDE`/`RATE_PLAN`), `priority`, `channelCode` (rỗng = mọi kênh), `seasonId`, `reason`, `createdBy`, `createdAt` — dòng có `priority` cao nhất khớp `(roomTypeId, date, channelCode)` thắng (BR-RATE-02) |
 | `Season` | `id`, `code` (SE-NY, SE-TET, SE-REUN, SE-NAT, SE-SUM, SE-SHO, SE-LOW), `propertyId` (rỗng = toàn chuỗi), `name`, `startDate`, `endDate`, `multiplier`, `priority`, `weekendSurchargeEnabled`, `createdAt`, `status` |
 | `Channel` | `id`, `code`, `name`, `multiplier`, `commissionPct` (mặc định toàn chuỗi — BR-RATE-18), `holdMinutes`, `overbookAllowed`, `syncStatus` (`OK`/`DEGRADED`, BR-CHAN-07), `consecutiveSyncFailures`, `lastSyncAt`, `lastSyncError`, `status` |
 | `ChannelPropertySetting` | `id`, `channelId`, `propertyId`, `commissionPct`, `multiplierOverride` (rỗng = dùng hệ số chuỗi), `effectiveFrom` — ghi đè hoa hồng/hệ số theo từng cơ sở (BR-RATE-18) |
-| `ChannelAllotment` | `id`, `channelId`, `roomTypeId`, `date`, `allotment`, `used` |
+| `ChannelAllotment` | `id`, `channelId`, `roomTypeId`, `date`, `allotment`, `used`, `isClosed`, `closedAt` — used gồm mọi nhu cầu hiệu lực của kênh theo BR-INV-01; có thể vượt allotment khi tiếp nhận cam kết OTA |
 | `Promotion` | `id`, `code`, `name`, `type`, `value`, `minNights`, `channelScope`, `roomTypeScope`, `validFrom`, `validTo`, `maxUses`, `usedCount`, `stackable`, `status` |
-| `PriceQuote` | `id`, `propertyId`, `roomTypeId`, `ratePlanCode`, `channelCode`, `checkIn`, `checkOut`, `nights[]`, `subtotal`, `discountAmount`, `total`, `depositAmount`, `currency`, `quotedAt`, `expiresAt`, `engineVersion`. Mỗi phần tử `nights[]` = `{ date, basePrice, seasonMultiplier, weekendMultiplier, occupancyMultiplier, losMultiplier, channelMultiplier, clamped, nightlyPrice }`. `id` dùng để tra cứu lại báo giá trong 15 phút (BR-RATE-15) |
+| `PriceQuote` | `id`, `propertyId`, `roomTypeId`, `ratePlanCode`, `channelCode`, `checkIn`, `checkOut`, `nights[]`, `subtotal`, `discountAmount`, `total`, `depositAmount`, `currency`, `quotedAt`, `expiresAt`, `engineVersion`, `warnings[]`, `guestId` (chủ sở hữu quote), `roomCount`, `adults`, `children`, `childAges[]` (tuổi ở ngày checkIn, số phần tử bằng children). Mỗi phần tử `nights[]` = `{ date, basePrice, seasonMultiplier, weekendMultiplier, occupancyMultiplier, losMultiplier, channelMultiplier, clamped, nightlyPrice }`. `id` dùng để tra cứu lại báo giá trong 15 phút (BR-RATE-15) |
 | `ChannelMapping` | `id`, `channelId`, `roomTypeId`, `externalRoomCode`, `externalRatePlanCode`, `status` — ánh xạ loại phòng ↔ mã phòng của kênh ngoài (BR-CHAN-08) |
-| `OccupancySnapshot` | `id`, `propertyId`, `roomTypeId` (**rỗng = dòng tổng hợp cấp cơ sở — đây là dòng BR-RATE §4.3 đọc**), `date`, `physicalRooms` (= số phòng `ACTIVE` của cơ sở **sau khi trừ `RoomBlock` đang hiệu lực**), `soldRooms`, `occupancyPct`, `capturedAt` — ảnh chụp công suất, cập nhật mỗi 5 phút |
+| `OccupancySnapshot` | `id`, `propertyId`, `roomTypeId` (**rỗng = dòng tổng hợp cấp cơ sở — đây là dòng BR-RATE §4.3 đọc**), `date`, `physicalRooms` (tên legacy: supply theo đơn vị bán), `soldRooms` (demand theo BR-INV-01), `occupancyPct`, `capturedAt` — ảnh chụp công suất, cập nhật mỗi 5 phút |
 
 ### 7.3. Đặt phòng (BOOK)
 
 | Thực thể | Trường chính |
 |----------|--------------|
-| `Booking` | `id`, `seq` (số thứ tự tăng đơn điệu toàn hệ thống, dùng phá hoà BR-OVER-11), `code`, `guestId`, `propertyId`, `roomTypeId` (**loại phòng chủ đạo** — dùng cho tra cứu, báo cáo và booking một phòng; khi `roomCount > 1` nguồn chân lý là `BookingRoom.roomTypeId`), `ratePlanId`, `channelId`, `checkIn`, `checkOut`, `nights`, `adults`, `children`, `status`, `roomCount`, `totalAmount`, `depositPercent`, `depositAmount`, `paidAmount`, `refundedAmount`, `balanceDue`, `penaltyAmount`, `currency`, `holdExpiresAt`, `oversold`, `duplicateSuspected`, `rescheduleCount`, `channelPolicyCode` (mã chính sách huỷ của kênh ngoài, dùng khi `cancelReason = OTA_CANCELLATION`), `externalRef` (mã đặt phòng của kênh ngoài — khoá chống trùng và đối soát OTA, BR-CHAN-03/04), `priceLocked`, `note`, `createdBy`, `createdAt`, `cancelledAt`, `cancelReason` |
+| `Booking` | `id`, `seq` (số thứ tự tăng đơn điệu toàn hệ thống, dùng phá hoà BR-OVER-11), `code`, `guestId`, `propertyId`, `roomTypeId` (**loại phòng chủ đạo** — dùng cho tra cứu, báo cáo và booking một phòng; khi `roomCount > 1` nguồn chân lý là `BookingRoom.roomTypeId`), `ratePlanId`, `channelId`, `checkIn`, `checkOut`, `nights`, `adults`, `children`, `childAges[]` (tuổi tại checkIn; độ dài bằng children), `status`, `roomCount`, `totalAmount`, `depositPercent`, `depositAmount`, `paidAmount`, `refundedAmount`, `balanceDue`, `penaltyAmount`, `currency`, `holdExpiresAt`, `oversold`, `duplicateSuspected`, `rescheduleCount`, `channelPolicyCode` (mã chính sách huỷ của kênh ngoài, dùng khi `cancelReason = OTA_CANCELLATION`), `externalRef` (mã đặt phòng của kênh ngoài — khoá chống trùng và đối soát OTA, BR-CHAN-03/04), `priceLocked`, `note`, `createdBy`, `createdAt`, `cancelledAt`, `cancelReason` |
 | `BookingRoom` | `id`, `bookingId`, `roomTypeId`, `adults`, `children`, `pricePerNight`, `status` (`ACTIVE`/`CANCELLED`), `cancelledAt` (phục vụ huỷ một phần — BR-CANCEL-19) |
 | `RoomAssignment` | `id`, `bookingRoomId`, `roomId`, `bedNo` (**`0` = cả phòng** với loại bán theo phòng; `1..bedCount` với DOR — NOT NULL, mặc định 0), `startDate`, `endDate`, `validRange` (cột sinh), `releasedAt`. Khoá của ràng buộc loại trừ BR-INV-03 là bộ ba `(room_id, bed_no, valid_range)` |
 | `BookingStatusHistory` | `id`, `bookingId`, `fromStatus`, `toStatus`, `reason`, `actorId`, `at` |
-| `PriceSnapshot` | `id`, `bookingId`, `seq` (thứ tự tăng trong một booking), `kind` (`ORIGINAL`/`RESCHEDULE`/`PARTIAL_CANCEL` — BR-RATE-16, BR-CANCEL-19), `payloadJson`, `engineVersion`, `capturedAt` |
+| `PriceSnapshot` | `id`, `bookingId`, `seq` (thứ tự tăng trong một booking), `kind` (`ORIGINAL`/`RESCHEDULE`/`PARTIAL_CANCEL` — BR-RATE-16, BR-CANCEL-19), `payloadJson` (giá và phân bổ phòng–đêm), `policySnapshotJson` (điều kiện gói/policy/tier và giờ nhận đã chốt), `grossAmount`, `commissionAmount`, `engineVersion`, `capturedAt` |
 | `Hold` | `id`, `bookingId`, `channelId`, `expiresAt`, `status` (`ACTIVE`/`RELEASED`/`EXPIRED`), `releasedAt` — **bản ghi phụ trợ trong Redis để đếm nhanh; nguồn chân lý vẫn là `Booking.holdExpiresAt`** |
 
 ### 7.4. Điều chuyển phòng (OVER)
@@ -199,7 +199,7 @@ Tên trường viết `camelCase` theo ngôn ngữ lập trình; cột CSDL là 
 | Thực thể | Trường chính |
 |----------|--------------|
 | `Payment` | `id`, `bookingId`, `type`, `method`, `amount`, `status`, `providerTxnId`, `idempotencyKey`, `paidAt`, `createdBy`, `note` |
-| `RefundRequest` | `id`, `bookingId`, `paymentId`, `policyId`, `hoursBeforeCheckIn`, `appliedTierId`, `refundPercent`, `requestedAmount`, `approvedAmount`, `refundFee`, `netRefund` (cột sinh `refund_amount − refund_fee`, cơ sở mọi ngưỡng phê duyệt — BR-CANCEL-05/15), `status`, `isForceMajeure`, `evidenceRefs[]` (đường dẫn minh chứng bất khả kháng, BR-CANCEL-13), `reason` (**ràng buộc theo enum `CancelReason`**, không phải chuỗi tự do — BR-CANCEL-13/18 đối soát theo mã), `requestedBy`, `approvedBy`, `decidedAt`, `paidAt` |
+| `RefundRequest` | `id`, `bookingId`, `paymentId`, `policyId`, `hoursBeforeCheckIn`, `appliedTierId`, `refundPercent`, `requestedAmount`, `approvedAmount`, `refundFee`, `netRefund` (giá trị dẫn xuất `max(0, (approvedAmount ?? requestedAmount) − refundFee)`, cơ sở mọi ngưỡng phê duyệt — BR-CANCEL-05/15), `status`, `isForceMajeure`, `evidenceRefs[]` (đường dẫn minh chứng bất khả kháng, BR-CANCEL-13), `reasonText` (diễn giải ≥20 ký tự khi bất khả kháng), `reason` (**ràng buộc theo enum `CancelReason`**, không phải chuỗi tự do — BR-CANCEL-13/18 đối soát theo mã), `requestedBy`, `approvedBy`, `decidedAt`, `paidAt` |
 | `CancellationPolicy` | `id`, `code`, `name`, `isDefault`, `earlyCheckoutFreeHours` (FLEX7/SAVER3 = 72 · LONGSTAY14 = 168 · NONREF = null, BR-CANCEL-09), `earlyCheckoutRefundPct` (50 · NONREF = 0), `status` |
 | `CancellationTier` | `id`, `policyId`, `offsetHours`, `refundPercent`, `chargeFirstNight`, `label`, `sortOrder` |
 
@@ -258,11 +258,11 @@ LoyaltyTxnType    = EARN | REDEEM | EXPIRE | ADJUST
 MoveType          = SAME_TYPE_SAME_PROPERTY | UPGRADE_SAME_PROPERTY | SAME_TYPE_CROSS_PROPERTY
                   | UPGRADE_CROSS_PROPERTY | WALK_OUT | SPLIT_ROOMS | MERGE_SHARE | MERGE_CONNECTING
 LoyaltyTier       = GUEST | MEMBER | SILVER | GOLD | PLATINUM
-UserRole          = OWNER | MANAGER | FRONT_DESK | RESERVATION_AGENT | ACCOUNTANT | HOUSEKEEPING
+UserRole          = OWNER | MANAGER | FRONT_DESK | RESERVATION_AGENT | ACCOUNTANT | HOUSEKEEPING | SYSADMIN
 NotificationChannel = EMAIL | SMS | ZALO_OA | PUSH
 ```
 
-Quan hệ `BookingStatus` hợp lệ — xem [03/mô hình động](03-phan-tich/mo-hinh-dong.md) §2.
+Quan hệ BookingStatus chuẩn và guard: BR-BOOK-06/18 trong [02/quy tắc nghiệp vụ](02-nghiep-vu/quy-tac-nghiep-vu.md). Trạng thái kết thúc không tự khôi phục khi callback đến muộn.
 
 ## 8. Danh mục Use Case
 
@@ -280,11 +280,12 @@ Danh mục dưới đây là **nguồn chân lý về mã UC** cho ma trận tru
 | INV | UC-INV-01 | Xem lịch tồn phòng (grid theo ngày) | ACT-02, ACT-03, ACT-04 |
 | INV | UC-INV-02 | Kiểm tra phòng trống & báo giá | ACT-01, ACT-03, ACT-09 |
 | INV | UC-INV-03 | Quản lý allotment theo kênh | ACT-05, ACT-04 |
-| RATE | UC-RATE-01 | Cấu hình gói giá, chính sách huỷ, giá cơ bản & lịch giá | ACT-05 |
+| RATE | UC-RATE-01 | Cấu hình giá cơ bản & lịch giá | ACT-05 |
 | RATE | UC-RATE-02 | Cấu hình mùa & hệ số mùa | ACT-05 |
 | RATE | UC-RATE-03 | Cấu hình hệ số & hoa hồng theo kênh | ACT-05 |
 | RATE | UC-RATE-04 | Quản lý khuyến mãi | ACT-05, ACT-04 |
 | RATE | UC-RATE-05 | Xem trước báo giá đa kênh | ACT-04, ACT-05 |
+| RATE | UC-RATE-06 | Cấu hình gói giá & chính sách huỷ | ACT-05 |
 | BOOK | UC-BOOK-01 | Tạo đặt phòng trên web | ACT-01 |
 | BOOK | UC-BOOK-02 | Tạo đặt phòng tại quầy (khách vãng lai) | ACT-02 |
 | BOOK | UC-BOOK-03 | Tạo đặt phòng qua điện thoại | ACT-03 |
@@ -323,26 +324,26 @@ Danh mục dưới đây là **nguồn chân lý về mã UC** cho ma trận tru
 | SYS | UC-SYS-02 | Cấu hình tham số hệ thống | ACT-12, ACT-05 |
 | SYS | UC-SYS-03 | Sao lưu & phục hồi dữ liệu | ACT-12 |
 
-**Tổng: 52 use case** (3 AUTH · 4 PROP · 3 INV · 5 RATE · 8 BOOK · 5 PAY · 3 CHAN · 5 OVER · 4 FO · 3 CRM · 2 NOTI · 4 REP · 3 SYS).
+**Tổng: 53 use case** (3 AUTH · 4 PROP · 3 INV · 6 RATE · 8 BOOK · 5 PAY · 3 CHAN · 5 OVER · 4 FO · 3 CRM · 2 NOTI · 4 REP · 3 SYS).
 
 ## 9. Quyết định công nghệ đã chốt
 
 | Lớp | Lựa chọn | Lý do | ADR |
 |-----|----------|-------|-----|
-| Ngôn ngữ | TypeScript 5.x, `strict: true` | Chia sẻ miền nghiệp vụ giữa web, mobile và API | ADR-001 |
+| Ngôn ngữ | TypeScript 5.x, `strict: true` | Chia sẻ hợp đồng giữa backend và bốn frontend; miền nghiệp vụ authoritative nằm ở backend | ADR-001 |
 | API | NestJS 11 (Node 22 LTS) + Fastify adapter | DI + module rõ ràng, phù hợp trình diễn nguyên lý thiết kế hướng đối tượng | ADR-002 |
 | CSDL | PostgreSQL 16 | Cần ràng buộc loại trừ `btree_gist` để chống trùng phòng ở tầng dữ liệu | ADR-003 |
 | ORM | Prisma 6 + migration SQL thủ công cho ràng buộc đặc biệt | Sinh kiểu an toàn; migration thủ công cho phần Prisma chưa hỗ trợ | ADR-003 |
 | Cache & khoá | Redis 7 | Giữ chỗ, khoá phân tán, hàng đợi việc nền (BullMQ) | ADR-004 |
-| Web | Next.js 15 (App Router) + Tailwind + shadcn/ui | Một codebase cho cả trang khách và back-office | ADR-005 |
-| Mobile | Expo (React Native) + Expo Router, phát hành Android | Một mã nguồn, phát hành APK/EAS, không cần Xcode | ADR-006 |
-| Chia sẻ mã | `packages/domain` (thuần, không phụ thuộc I/O) + `packages/contracts` (zod) | Động cơ giá và chính sách huỷ phải cho cùng kết quả trên mọi giao diện | ADR-007 |
+| Customer/operations web | Next.js 15 (App Router) + Tailwind + shadcn/ui | Hai ứng dụng web deploy độc lập, dùng chung contract và design token; không trộn vùng khách/vận hành | ADR-005 |
+| Customer/operations Android | Expo (React Native) + Expo Router, phát hành Android | Hai ứng dụng Android deploy độc lập, dùng chung native token và API client; không cần Xcode | ADR-006 |
+| Chia sẻ mã | `packages/domain` (thuần, authoritative ở backend) + `packages/contracts`/`packages/api-client` | Một hợp đồng API và một nguồn tính giá/policy; frontend không tự tính lại nghiệp vụ | ADR-007 |
 | Giao tiếp API | REST/JSON + OpenAPI 3.1 sinh từ zod | Dễ vẽ sequence, dễ mô phỏng OTA, dễ chấm điểm. Quy ước bao hình danh sách (`data` + `meta{limit,nextCursor,hasMore,total}`), phân trang con trỏ, và toàn bộ 45 mã lỗi `E_*` do [04/api.md](04-thiet-ke/api.md) quy định | ADR-008 |
 | Thanh toán | VNPay + MoMo (sandbox) + tiền mặt/chuyển khoản | Thị trường Việt Nam | ADR-009 |
 | Xác thực | JWT (access 15 phút + refresh 7 ngày), RBAC + phạm vi cơ sở | Yêu cầu phân quyền theo cơ sở | ADR-010 |
-| Kiểm thử | Vitest + fast-check (miền), Testcontainers + Supertest (tích hợp), Playwright (web), Maestro (Android), **k6 (tải)** | Bao phủ bất biến quan trọng và chứng minh ngưỡng hiệu năng | ADR-011 |
+| Kiểm thử | Vitest + fast-check (miền), Testcontainers + Supertest (tích hợp), Playwright (2 web), Maestro (2 Android), **k6 (tải)** | Bao phủ bất biến quan trọng và chứng minh ngưỡng hiệu năng trên từng surface | ADR-011 |
 | Quan sát | Log JSON có mã tương quan, **OpenTelemetry + Prometheus + Grafana**, cảnh báo theo SLO | NFR-OBS-01…04 yêu cầu đo được 4 tín hiệu vàng và ngưỡng nghiệp vụ | ADR-012 |
-| CI/CD | GitHub Actions → Docker (API) + Vercel (web) + EAS Build (Android) | | ADR-012 |
+| CI/CD | GitHub Actions → Docker (API/worker) + Vercel (2 web) + EAS Build (2 Android) | Release độc lập nhưng cùng contract/version gate | ADR-012 |
 | Tài liệu | Mermaid trong Markdown, lưu cùng mã nguồn | Diff được, không lệch khỏi mã | ADR-013 |
 
 ## 10. Cấu trúc repository đích
@@ -352,13 +353,19 @@ ooad-homestay/
 ├── apps/
 │   ├── api/                     # NestJS: HTTP, use case, hạ tầng
 │   │   └── src/modules/{auth,prop,inv,rate,book,pay,chan,over,fo,crm,noti,rep,sys}/
-│   ├── web/                     # Next.js: (guest) đặt phòng + (admin) back-office
-│   └── mobile/                  # Expo: Android cho lễ tân / quản lý / buồng phòng
-│       └── src/{app,components,screens,hooks,api}/
+│   ├── worker/                  # Job nền, outbox relay, scheduler, đồng bộ kênh
+│   ├── customer-web/            # Next.js: tìm phòng, đặt, thanh toán, tự phục vụ
+│   ├── customer-android/        # Expo: app khách trên Android
+│   ├── operations-web/          # Next.js: back-office cho vận hành và quản trị
+│   └── operations-android/      # Expo: lễ tân / quản lý / buồng phòng
+│       └── src/{app,components,screens,hooks,api,storage}/
 ├── packages/
 │   ├── domain/                  # THUẦN: price-engine, cancellation-policy, availability,
 │   │                            #        overbooking-planner, value-objects, errors
 │   ├── contracts/               # zod schema + kiểu DTO + OpenAPI
+│   ├── api-client/              # client REST sinh từ contracts, retry/idempotency chuẩn
+│   ├── ui-web/                  # token/layout primitives web, không chứa luật nghiệp vụ
+│   ├── ui-native/               # token/native primitives Android, không chứa luật nghiệp vụ
 │   └── config/                  # tsconfig, eslint, prettier dùng chung
 ├── infra/
 │   ├── docker-compose.yml       # postgres, redis, mailhog
@@ -387,7 +394,11 @@ Chặn tiến độ nếu chưa trả lời trước **hết Tuần 2**. Giá tr
 | Q-09 | Thời hạn hoàn tiền cam kết với khách? | Xử lý trong 3 ngày làm việc, tối đa 7 ngày | BR-CANCEL-12 |
 | Q-10 | Ba cơ sở đặt tại địa điểm nào? | CS-01 Đà Lạt (24 phòng), CS-02 Vũng Tàu (18), CS-03 Phan Thiết (13) | Toàn bộ tài liệu |
 | Q-11 | Quy trình xử lý khi khách trả phòng sớm? | Cơ sở tính = `min(paidAmount, tổng giá các đêm chưa ở theo PriceSnapshot)`; `FLEX7` và `SAVER3` báo trước ≥ 72h → hoàn 50%; `LONGSTAY14` ≥ 168h → 50%; `NONREF` → 0%; dưới ngưỡng → 0%; lý do ghi nhận `EARLY_CHECKOUT` | BR-CANCEL-09 |
-| Q-12 | Có cho phép đổi ngày miễn phí không? | 1 lần miễn phí khi ≥168h với FLEX7/SAVER3/LONGSTAY14 | BR-BOOK-12 |
+| Q-12 | Có cho phép đổi ngày miễn phí không? | Một lần khi ≥168h với kỳ cũ; FLEX7/SAVER3/LONGSTAY14 miễn phí, NONREF phí 10%; giữ policy cũ và cọc cũ, chênh lệch/phí vào số dư thu trước nhận phòng | BR-BOOK-12 |
+| Q-13 | Hold chưa đủ cọc hết hạn, thu muộn, WALKIN chờ bao lâu? | Chờ WALKIN tối đa 15 phút; booking chưa xác nhận rút/hết hạn hoàn toàn bộ tiền đã thu, miễn phạt; thu muộn không phục hồi phòng, lập hoàn riêng. **Giả định chưa xác nhận.** | BR-BOOK-07/18, BR-PAY-11 |
+| Q-14 | “Hai cấp” có phải cần hai người duyệt không? | Giữ maker–checker: người tạo và một MANAGER/OWNER khác người tạo, mọi mức tiền; không thêm chuỗi MANAGER→OWNER. **Cần chủ đầu tư xác nhận cách hiểu.** | BR-CANCEL-15 |
+| Q-15 | Giá kỳ mới thấp hơn, phân bổ tiền huỷ một phần và cấu hình sửa sau đặt? | Giữ total không thấp hơn kỳ cũ khi đổi ngày; phân bổ tiền phòng bất biến; snapshot policy bảo toàn hợp đồng. **Giả định chưa xác nhận.** | BR-BOOK-12, BR-CANCEL-19, BR-RATE-20 |
+| Q-16 | Phụ thu check-in sớm đảo chiều; trẻ em 50% tính trên gì? | Giữ các mức số đã có, chưa suy diễn thêm đơn giá người lớn; phải xác nhận trước bật tự tính các nhánh này. | BR-FO-04, BR-BOOK-05 |
 
 ## 12. Tiêu chí thành công của dự án
 
@@ -395,8 +406,8 @@ Chặn tiến độ nếu chưa trả lời trước **hết Tuần 2**. Giá tr
 |---|----------|---------|
 | 1 | Không còn bán trùng phòng trên cùng một phòng cùng một đêm | Kiểm thử tải 200 yêu cầu đồng thời, 0 vụ trùng; ràng buộc CSDL từ chối mọi trường hợp |
 | 2 | Mọi khoản hoàn cọc tính đúng theo bậc mốc thời gian | 100% ca kiểm thử bảng quyết định ở [02/chính sách huỷ](02-nghiep-vu/chinh-sach-huy-hoan-coc.md) §6 đạt |
-| 3 | Giá báo cho khách trên web, mobile và quầy luôn khớp | Kiểm thử đối chiếu 3 nền tảng trên cùng đầu vào |
-| 4 | Quá tải được phát hiện trước 24 giờ | 100% ca quá tải có bản ghi `OverbookingCase` trước T−24h |
+| 3 | Giá báo trên customer web/Android, operations web/Android, API và quầy luôn khớp | Kiểm thử đối chiếu 5 nguồn trên cùng đầu vào |
+| 4 | Quá tải được phát hiện và xử lý đúng hạn | Case biết trước T−24h phải được xử lý trước hạn; sự cố/webhook đến sau hạn mở và leo thang ngay, không thể cam kết phát hiện trước khi phát sinh |
 | 5 | Thời gian lễ tân xử lý một khách vãng lai < 3 phút | Đo trên bản dựng thử với 20 lượt |
 | 6 | Ban giám đốc tự xem được báo cáo doanh thu theo kênh | UC-REP-02 hoạt động không cần hỗ trợ kỹ thuật |
 | 7 | Truy vết đầy đủ | 100% BR có ít nhất một UC và một ca kiểm thử trong [06/ma trận truy vết](06-truy-vet/ma-tran-truy-vet.md) |

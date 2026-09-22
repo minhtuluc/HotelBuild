@@ -1,7 +1,8 @@
 # 06 — Ma trận truy vết BR → UC → API → Entity → Test
 
 > Tài liệu truy vết của đồ án **Hệ thống đặt phòng khách sạn – homestay Pine Hill** (3 cơ sở · 55 phòng · 7 kênh bán).
-> Ma trận nối **136 quy tắc nghiệp vụ** ([02/quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) §14 + §15) với **134 mã yêu cầu chức năng** `FR-*`, **52 use case** ([00 §8](../00-tong-quan.md#8-danh-mục-use-case)), **81 endpoint trên 76 đường dẫn** ([04/api](../04-thiet-ke/api.md) §2 — 13 module), **43 thực thể** trong từ điển ([00 §7](../00-tong-quan.md#7-từ-điển-thực-thể-nguồn-chân-lý-về-định-danh)) và **205 ca kiểm thử** (`TC-*` do [05/kế hoạch kiểm thử](../05-ke-hoach/ke-hoach-kiem-thu.md) cấp mã, cộng dải `TC-CANCEL-01…55` của [02/chính sách huỷ](../02-nghiep-vu/chinh-sach-huy-hoan-coc.md)).
+> Ma trận nối danh mục quy tắc nghiệp vụ với yêu cầu chức năng, use case, API, thực thể và ca kiểm thử. Số lượng phải được đối chiếu từ tài liệu nguồn tại cùng một revision; không dùng số đếm trong phần giới thiệu làm bằng chứng độ phủ hoặc kết quả chạy. `TC-*` do [05/kế hoạch kiểm thử](../05-ke-hoach/ke-hoach-kiem-thu.md) cấp mã, riêng `TC-CANCEL-01…55` do [02/chính sách huỷ](../02-nghiep-vu/chinh-sach-huy-hoan-coc.md) cấp.
+> Trạng thái: **thiết kế tham chiếu, chưa phải biên bản nghiệm thu**. Một liên kết tồn tại chỉ chứng minh đã có đặc tả ca, không chứng minh ca đã được cài đặt hoặc chạy đạt.
 >
 > **Không định nghĩa lại giá trị nghiệp vụ.** Mọi con số nằm ở tài liệu nguồn; tài liệu này chỉ giữ **mã** và quan hệ truy vết.
 
@@ -34,7 +35,7 @@
 - **BR → UC là n-n.** Một BR được nhiều UC thực hiện (`BR-INV-02` có mặt ở `UC-INV-02`, `UC-BOOK-01`, `UC-BOOK-04`, `UC-BOOK-06`, `UC-CHAN-03`) và một UC thực hiện nhiều BR (`UC-BOOK-08` thực hiện `BR-CANCEL-01…07`, `BR-CANCEL-19`, `BR-BOOK-11`, `BR-BOOK-14`, `BR-BOOK-17`, `BR-PAY-02`).
 - **BR → API là n-n.** Một quy tắc chạm nhiều endpoint (`BR-INV-02` ở cả `GET /api/v1/inventory/availability` và `POST /api/v1/holds`); một endpoint mang nhiều quy tắc (`POST /api/v1/bookings` mang `BR-BOOK-01…16`).
 - **BR → Entity là n-n.** Một quy tắc điều phối nhiều thực thể (`BR-REP-01` đọc `Booking`, `Payment`, `RoomMove`, `RoomMerge`, `RoomBlock`, `IdempotencyKey`); một thực thể chịu nhiều quy tắc (`Booking` chịu `BR-BOOK-01…17` cùng `BR-PAY-*`, `BR-OVER-*`, `BR-FO-*`, `BR-CRM-04`).
-- **BR → FR** và **BR → TC** cũng n-n theo cùng cách; cột FR ở §2 lấy **nguyên văn** bảng §17.1 của tài liệu yêu cầu chức năng (136/136 quy tắc đều có FR).
+- **BR → FR** và **BR → TC** cũng n-n theo cùng cách; cột FR ở §2 lấy **nguyên văn** bảng §17.1 của tài liệu yêu cầu chức năng (139/139 quy tắc đều có FR).
 
 ### 1.4. Bốn điểm cần lưu ý khi đọc
 
@@ -45,7 +46,7 @@
 
 ---
 
-## 2. Ma trận chính — 136 quy tắc nghiệp vụ
+## 2. Ma trận chính — 139 quy tắc nghiệp vụ
 
 Mười bốn bảng con theo nhóm BR, đúng thứ tự bảng tra nhanh §14 và nhóm `BR-REP` §15 của [02/quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md). Cột *Tóm tắt* ngắn để định vị, không thay thế câu quy tắc.
 
@@ -54,10 +55,10 @@ Mười bốn bảng con theo nhóm BR, đúng thứ tự bảng tra nhanh §14 
 | Mã BR | Tóm tắt quy tắc (≤ 12 từ) | FR | UC | API | Entity | TC |
 |-------|---------------------------|----|----|-----|--------|----|
 | BR-GEN-01 | Tiền là số nguyên VND, cấm số thực ở mọi tầng | FR-SYS-06 | UC-BOOK-01 · UC-SYS-02 | — | Payment · IdempotencyKey · Money · StayPeriod · DateRange · ChannelContext · … | TC-RATE-22 |
-| BR-GEN-02 | Mốc thời gian lưu UTC, đổi giờ VN khi hiển thị | FR-SYS-07 | UC-CHAN-03 · UC-SYS-02 | — | — | — |
+| BR-GEN-02 | Mốc thời gian lưu UTC, đổi giờ VN khi hiển thị | FR-SYS-07 | UC-CHAN-03 · UC-SYS-02 | — | — | TC-BOOK-21 |
 | BR-GEN-03 | Làm tròn lên 1.000 cho giá bán, cọc; xuống cho hoàn | FR-RATE-03 · FR-PAY-01 · FR-PAY-08 | UC-RATE-05 · UC-BOOK-01 · UC-PAY-01 · UC-PAY-04 | /api/v1/quotes | Payment · IdempotencyKey · Money · StayPeriod · DateRange · ChannelContext · … | TC-PAY-01 · TC-RATE-12 |
 | BR-GEN-04 | Nhận phòng 14:00, trả phòng 12:00 giờ VN theo từng cơ sở | FR-PROP-07 | UC-PROP-01 · UC-BOOK-08 | /api/v1/properties/{propertyId} · /api/v1/bookings/{bookingId}/cancel | Property · Money · StayPeriod · DateRange · ChannelContext · PhoneNumber | TC-BOOK-02 |
-| BR-GEN-05 | Múi giờ nghiệp vụ duy nhất Asia/Ho_Chi_Minh | FR-SYS-07 | UC-BOOK-08 · UC-SYS-02 | — | Property | — |
+| BR-GEN-05 | Múi giờ nghiệp vụ duy nhất Asia/Ho_Chi_Minh | FR-SYS-07 | UC-BOOK-08 · UC-SYS-02 | — | Property | TC-BOOK-21 |
 | BR-GEN-06 | Mã đặt phòng PH-YYMMDD-5 ký tự, duy nhất toàn hệ thống | FR-BOOK-18 | UC-BOOK-01 · UC-BOOK-02 · UC-BOOK-07 | /api/v1/bookings | Booking | TC-BOOK-13 |
 | BR-GEN-07 | Thao tác ghi đổi Booking/Payment/RefundRequest/RoomMove/SystemSetting tạo AuditLog cùng transaction | FR-SYS-02 | UC-OVER-02 · UC-PROP-04 · UC-BOOK-02 · UC-BOOK-04 · UC-BOOK-06 · UC-BOOK-08 · … | /api/v1/refund-requests/{refundRequestId}/approve · /api/v1/system-settings/{key} | Booking · RoomMove · Payment · RefundRequest · User · Notification · … | TC-BOOK-24 · TC-PAY-18 · TC-SYS-02 · TC-SYS-03 |
 | BR-GEN-08 | Thao tác ghi mang Idempotency-Key, hiệu lực 24 giờ | FR-PAY-03 · FR-SYS-08 | UC-AUTH-03 · UC-BOOK-01 · UC-BOOK-02 · UC-BOOK-08 · UC-PAY-02 · UC-PAY-04 · … | — | Payment · IdempotencyKey | TC-BOOK-20 · TC-PAY-04 · TC-PAY-12 · TC-CHAN-09 |
@@ -105,11 +106,12 @@ Mười bốn bảng con theo nhóm BR, đúng thứ tự bảng tra nhanh §14 
 | BR-RATE-14 | Khuyến mãi hết hạn/hết lượt bị từ chối khi xác nhận | FR-RATE-13 | UC-RATE-04 · UC-BOOK-01 | /api/v1/quotes | Promotion | TC-RATE-18 |
 | BR-RATE-15 | PriceQuote có hiệu lực 15 phút, quá hạn phải tính lại | FR-RATE-14 | UC-INV-02 · UC-RATE-05 · UC-BOOK-01 | /api/v1/quotes | PriceQuote · PriceSnapshot | TC-RATE-19 |
 | BR-RATE-16 | PriceSnapshot bất biến được lưu ngay khi booking rời DRAFT | FR-RATE-15 | UC-BOOK-01 · UC-BOOK-02 · UC-BOOK-06 | /api/v1/quotes · /api/v1/bookings · /api/v1/bookings/{bookingId}/cancel | PriceQuote · Booking · PriceSnapshot | TC-RATE-20 · TC-BOOK-07 · TC-BOOK-16 · TC-BOOK-17 |
-| BR-RATE-17 | Cùng đầu vào cho cùng kết quả giá trên ba nền tảng | FR-RATE-16 | UC-INV-02 · UC-RATE-05 · UC-BOOK-01 · UC-BOOK-06 | /api/v1/inventory/availability · /api/v1/quotes | PriceQuote · PriceSnapshot | TC-RATE-17 · TC-RATE-20 · TC-RATE-21 |
+| BR-RATE-17 | Cùng đầu vào cho cùng kết quả giá trên API và bốn frontend | FR-RATE-16 | UC-INV-02 · UC-RATE-05 · UC-BOOK-01 · UC-BOOK-06 | /api/v1/inventory/availability · /api/v1/quotes | PriceQuote · PriceSnapshot | TC-RATE-17 · TC-RATE-20 · TC-RATE-21 |
 | BR-RATE-18 | Hoa hồng mặc định theo kênh, ghi đè theo (kênh, cơ sở) | FR-RATE-17 | UC-RATE-03 | /api/v1/channels/{channelId} | Channel · ChannelPropertySetting · ChannelMapping · PriceSnapshot · AuditLog | TC-RATE-10 · TC-RATE-23 |
 | BR-RATE-19 | LONGSTAY14 phải có giá riêng; ưu đãi gợi ý tối thiểu 5% | FR-RATE-18 | UC-RATE-01 | /api/v1/room-types/{roomTypeId}/rate-calendar | RatePlan · RateCalendar · Season | TC-RATE-25 · TC-CANCEL-27 · TC-CANCEL-28 · TC-CANCEL-29 · TC-CANCEL-30 · TC-CANCEL-31 · … |
+| BR-RATE-20 | Gói/policy có phiên bản; booking đọc snapshot bất biến | FR-RATE-19 | UC-RATE-06 · UC-BOOK-01 · UC-BOOK-08 | /api/v1/rate-plans/{ratePlanId} · /api/v1/cancellation-policies/{policyId} | RatePlan · CancellationPolicy · CancellationTier · PriceSnapshot · AuditLog · OutboxEvent | TC-RATE-27 · TC-SYS-11 · TC-AUTH-08 |
 
-### 2.5. BR-BOOK — Đặt phòng (17 quy tắc)
+### 2.5. BR-BOOK — Đặt phòng (18 quy tắc)
 
 | Mã BR | Tóm tắt quy tắc (≤ 12 từ) | FR | UC | API | Entity | TC |
 |-------|---------------------------|----|----|-----|--------|----|
@@ -130,6 +132,7 @@ Mười bốn bảng con theo nhóm BR, đúng thứ tự bảng tra nhanh §14 
 | BR-BOOK-15 | Khách trong danh sách đen không tạo được booking mới | FR-BOOK-16 | UC-BOOK-01 · UC-CRM-03 | /api/v1/bookings | Booking · Guest · GuestNote · LoyaltyTransaction | TC-BOOK-12 |
 | BR-BOOK-16 | Chống đặt trùng trong 24 giờ, trả booking cũ kèm cờ | FR-BOOK-17 | UC-BOOK-01 · UC-BOOK-02 · UC-CHAN-03 | /api/v1/bookings | Booking | TC-BOOK-11 |
 | BR-BOOK-17 | Xoá cứng booking phải ghi AuditLog beforeJson trước khi xoá | FR-BOOK-20 | UC-BOOK-05 · UC-BOOK-08 | /api/v1/bookings/{bookingId} | Booking · AuditLog | TC-BOOK-24 · TC-CANCEL-50 |
+| BR-BOOK-18 | Hết hạn theo giờ DB, tuần tự hoá thao tác booking | FR-BOOK-08 · FR-BOOK-09 · FR-BOOK-10 | UC-BOOK-04 · UC-PAY-02 | /api/v1/holds · /api/v1/bookings/{bookingId}/confirm | Booking · Hold · RoomAssignment · ChannelAllotment · RefundRequest | TC-BOOK-28 · TC-PAY-22 · TC-BOOK-21 |
 
 ### 2.6. BR-CANCEL — Huỷ phòng & hoàn cọc (19 quy tắc)
 
@@ -169,6 +172,7 @@ Mười bốn bảng con theo nhóm BR, đúng thứ tự bảng tra nhanh §14 
 | BR-PAY-08 | Hoàn về phương thức gốc; tiền mặt thì chuyển khoản | FR-PAY-13 | UC-PAY-04 | /api/v1/refund-requests/{refundRequestId}/pay | Payment · RefundRequest · IdempotencyKey | TC-PAY-07 · TC-CANCEL-52 |
 | BR-PAY-09 | Hoàn ghi bằng Payment loại REFUND, không sửa hay xoá Payment gốc | FR-PAY-14 | UC-BOOK-08 · UC-PAY-04 | /api/v1/refund-requests/{refundRequestId}/pay | Payment · RefundRequest · IdempotencyKey | TC-PAY-08 · TC-CANCEL-52 |
 | BR-PAY-10 | Đối soát cuối ngày theo cặp (người thu, ngày VN) | FR-PAY-15 | UC-PAY-01 · UC-PAY-04 · UC-PAY-05 · UC-REP-02 | /api/v1/reconciliation/daily/close | Payment · IdempotencyKey | TC-PAY-10 |
+| BR-PAY-11 | Thu muộn không hồi sinh booking; chi tiền phải đối soát | FR-PAY-03 · FR-PAY-04 · FR-PAY-12 | UC-PAY-02 · UC-PAY-04 | /api/v1/payments · /api/v1/refund-requests | Payment · Booking · RefundRequest · IdempotencyKey | TC-PAY-22 · TC-PAY-23 |
 
 ### 2.8. BR-CHAN — Kênh bán (8 quy tắc)
 
@@ -231,7 +235,7 @@ Mười bốn bảng con theo nhóm BR, đúng thứ tự bảng tra nhanh §14 
 
 | Mã BR | Tóm tắt quy tắc (≤ 12 từ) | FR | UC | API | Entity | TC |
 |-------|---------------------------|----|----|-----|--------|----|
-| BR-RBAC-01 | Sáu vai trò: OWNER, MANAGER, FRONT_DESK, RESERVATION_AGENT, ACCOUNTANT, HOUSEKEEPING | FR-AUTH-02 | UC-AUTH-01 · UC-AUTH-02 | /api/v1/users/{userId}/access | User · Notification · AuditLog · SystemSetting | — |
+| BR-RBAC-01 | Bảy vai trò: OWNER, MANAGER, FRONT_DESK, RESERVATION_AGENT, ACCOUNTANT, HOUSEKEEPING, SYSADMIN | FR-AUTH-02 | UC-AUTH-01 · UC-AUTH-02 | /api/v1/users/{userId}/access | User · Notification · AuditLog · SystemSetting | TC-AUTH-08 |
 | BR-RBAC-02 | propertyScope giới hạn dữ liệu thấy và thao tác; OWNER toàn chuỗi | FR-AUTH-03 | UC-AUTH-01 · UC-AUTH-02 · UC-INV-01 · UC-BOOK-02 · UC-BOOK-07 · UC-FO-01 | /api/v1/users/{userId}/access · /api/v1/bookings · /api/v1/overbooking-cases | User · Notification · AuditLog · SystemSetting | TC-AUTH-04 · TC-AUTH-05 |
 | BR-RBAC-03 | Quyền tối thiểu theo từng thao tác | FR-AUTH-04 | UC-AUTH-02 · UC-BOOK-02 · UC-PAY-04 · UC-FO-01 | /api/v1/overbooking-cases | User · Notification · AuditLog · SystemSetting | TC-PAY-16 · TC-PAY-20 · TC-AUTH-06 · TC-AUTH-07 · TC-AUTH-08 |
 | BR-RBAC-04 | Thay đổi giá vượt ±20% cần OWNER xác nhận lại | FR-AUTH-05 | UC-RATE-01 | /api/v1/room-types/{roomTypeId}/rate-calendar | User · Notification · AuditLog · SystemSetting | TC-AUTH-09 |
@@ -257,43 +261,35 @@ Mười bốn bảng con theo nhóm BR, đúng thứ tự bảng tra nhanh §14 
 
 ## 3. Thống kê độ phủ
 
-Đếm theo nhóm BR: một quy tắc được coi là **có phủ** khi ô tương ứng ở §2 khác `—`.
+Đếm theo nhóm BR: một quy tắc được coi là **có liên kết thiết kế** khi ô tương ứng ở §2 khác `—`. Đây không phải độ phủ mã hay tỷ lệ test pass. Các ca journey bổ sung được truy vết riêng tại §7 để giữ được quan hệ tới UI và cổng triển khai.
 
 | Nhóm BR | Số BR | ≥ 1 FR | ≥ 1 UC | ≥ 1 API | ≥ 1 Entity | ≥ 1 TC | Bài toán |
 |---------|-------|--------|--------|---------|------------|--------|----------|
-| BR-GEN | 8 | 8 | 8 | 4 | 7 | 6 | Nền tảng chung |
+| BR-GEN | 8 | 8 | 8 | 4 | 7 | 8 | Nền tảng chung |
 | BR-PROP | 6 | 6 | 6 | 6 | 6 | 6 | — |
 | BR-INV | 7 | 7 | 7 | 7 | 7 | 7 | BT-3 |
-| BR-RATE | 19 | 19 | 19 | 19 | 19 | 19 | BT-2 |
-| BR-BOOK | 17 | 17 | 17 | 17 | 17 | 17 | BT-1, BT-3 |
+| BR-RATE | 20 | 20 | 20 | 20 | 20 | 20 | BT-2 |
+| BR-BOOK | 18 | 18 | 18 | 18 | 18 | 18 | BT-1, BT-3 |
 | BR-CANCEL | 19 | 19 | 19 | 19 | 19 | 19 | BT-1 |
-| BR-PAY | 10 | 10 | 10 | 10 | 10 | 10 | BT-1 |
+| BR-PAY | 11 | 11 | 11 | 11 | 11 | 11 | BT-1 |
 | BR-CHAN | 8 | 8 | 8 | 8 | 8 | 8 | BT-3 |
 | BR-OVER | 16 | 16 | 16 | 16 | 16 | 16 | BT-3 |
 | BR-FO | 7 | 7 | 7 | 7 | 7 | 7 | — |
 | BR-CRM | 6 | 6 | 6 | 6 | 6 | 6 | — |
-| BR-RBAC | 6 | 6 | 6 | 6 | 6 | 5 | — |
+| BR-RBAC | 6 | 6 | 6 | 6 | 6 | 6 | — |
 | BR-SYS | 6 | 6 | 6 | 5 | 5 | 6 | — |
 | BR-REP | 1 | 1 | 1 | 1 | 1 | 1 | — |
-| **Tổng** | **136** | **136** | **136** | **131** | **134** | **133** | |
+| **Tổng** | **139** | **139** | **139** | **134** | **137** | **139** | |
 
-**Kết luận.** Trong 136 quy tắc: **toàn bộ 136** quy tắc có ≥ 1 FR và ≥ 1 UC; cột endpoint còn ô `—` ở **5** quy tắc, cột thực thể ở **2** quy tắc, cột ca kiểm thử ở **3** quy tắc (đối chiếu dòng **Tổng** của bảng trên và danh sách đầy đủ ở §6). Nhóm `BR-GEN` là nhóm duy nhất chưa đủ ở cả ba cột — đúng với bản chất quy tắc nền áp xuyên suốt hệ thống.
+Trong §2, 139 BR có liên kết FR, UC và TC; còn 5 ô API và 2 ô Entity cần đọc cùng giải thích ở §6. Ba liên kết từng bị thiếu đã được sửa hai chiều: `BR-GEN-02/05 ↔ TC-BOOK-21`, `BR-RBAC-01 ↔ TC-AUTH-08`. Múi giờ có thể làm sai tiền hoàn/no-show; phân quyền có thể làm lộ dữ liệu hoặc cho phép chi tiền trái quyền, nên không hạ mức rủi ro chỉ vì đây là quy tắc nền. Bằng chứng thực thi cần có kết quả ca biên thời gian và ma trận vai trò × thao tác, theo [kế hoạch kiểm thử §4.1, §4.5](../05-ke-hoach/ke-hoach-kiem-thu.md); hiện chưa có kết quả chạy được ghi nhận tại đây.
 
-Như vậy còn **3 BR chưa có ca kiểm thử**: BR-GEN-02, BR-GEN-05, BR-RBAC-01 — kỳ vọng là **0** vì `TC-SYS-06` (script đối chiếu BR ↔ TC chạy trong CI, gắn với RSK-19) chặn ma trận có ô trống. Cả ba đều **không phải quy tắc rủi ro cao**: chúng là quy tắc nền về múi giờ và quy tắc liệt kê vai trò. Việc cần làm để đưa về 0 nêu ở §6 — chỉ cần **bổ sung mã BR vào ô "Mã BR" của ca đã tồn tại**, không cần viết ca mới:
-
-| BR chưa có TC | Ca đã kiểm chứng hành vi tương đương | Việc cần làm |
-|---------------|--------------------------------------|--------------|
-| BR-RBAC-01 | `TC-AUTH-08` (sáu vai trò × 8 thao tác trong bảng quyền) | Bổ sung `BR-RBAC-01` vào cột *Mã BR* của `TC-AUTH-08` |
-| BR-GEN-02 | `TC-BOOK-21`, `TC-CANCEL-35…43` (biên múi giờ UTC ↔ giờ VN) | Bổ sung `BR-GEN-02` vào cột *Mã BR* của `TC-BOOK-21` |
-| BR-GEN-05 | `TC-BOOK-21`, `TC-CANCEL-35…43` (biên múi giờ UTC ↔ giờ VN) | Bổ sung `BR-GEN-05` vào cột *Mã BR* của `TC-BOOK-21` |
-
-Đối chiếu phạm vi mã: 136 mã BR đúng bằng cột *Số lượng* của bảng §14 cộng thêm quy tắc `BR-REP-01` ở §15 (8+6+7+19+17+19+10+8+16+7+6+6+6 quy tắc trong 13 nhóm, cộng 1 quy tắc nhóm BR-REP).
+Đối chiếu phạm vi mã: 139 mã BR đúng bằng cột *Số lượng* của bảng §14 cộng thêm quy tắc `BR-REP-01` ở §15 (8+6+7+20+18+19+11+8+16+7+6+6+6 quy tắc trong 13 nhóm, cộng 1 quy tắc nhóm BR-REP).
 
 ---
 
 ## 4. Truy vết ngược
 
-### 4.1. Use case → BR (đủ 52 UC)
+### 4.1. Use case → BR (đủ 53 UC)
 
 Mỗi dòng liệt kê **mọi** quy tắc mà use case đó thực hiện, hợp nhất từ cột *BR chính* (§4) và dòng *BR áp dụng* (§6) của [01/mô hình use case](../01-yeu-cau/mo-hinh-use-case.md). Tên UC giữ nguyên theo [00 §8](../00-tong-quan.md#8-danh-mục-use-case).
 
@@ -310,11 +306,12 @@ Mỗi dòng liệt kê **mọi** quy tắc mà use case đó thực hiện, hợ
 | 9 | UC-INV-01 | Xem lịch tồn phòng (grid theo ngày) | BR-INV-01 · BR-INV-07 · BR-RBAC-02 | 3 |
 | 10 | UC-INV-02 | Kiểm tra phòng trống & báo giá | BR-INV-01 · BR-INV-02 · BR-INV-07 · BR-RATE-17 | 4 |
 | 11 | UC-INV-03 | Quản lý allotment theo kênh | BR-INV-05 · BR-CHAN-01 · BR-CHAN-08 | 3 |
-| 12 | UC-RATE-01 | Cấu hình gói giá, chính sách huỷ, giá cơ bản & lịch giá | BR-RATE-02 · BR-RATE-03 · BR-RATE-04 · BR-RATE-19 · BR-RBAC-04 | 5 |
+| 12 | UC-RATE-01 | Cấu hình giá cơ bản & lịch giá | BR-RATE-02 · BR-RATE-03 · BR-RATE-04 · BR-RATE-19 · BR-RBAC-04 | 5 |
 | 13 | UC-RATE-02 | Cấu hình mùa & hệ số mùa | BR-RATE-05 · BR-RATE-06 | 2 |
 | 14 | UC-RATE-03 | Cấu hình hệ số & hoa hồng theo kênh | BR-RATE-07 · BR-RATE-09 · BR-RATE-18 · BR-CHAN-06 | 4 |
 | 15 | UC-RATE-04 | Quản lý khuyến mãi | BR-RATE-10 · BR-RATE-11 · BR-RATE-12 · BR-RATE-13 · BR-RATE-14 | 5 |
 | 16 | UC-RATE-05 | Xem trước báo giá đa kênh | BR-RATE-01 · BR-RATE-08 · BR-RATE-15 · BR-RATE-17 | 4 |
+| 53 | UC-RATE-06 | Cấu hình gói giá & chính sách huỷ | BR-RATE-20 · BR-RATE-16 · BR-CANCEL-01 · BR-CANCEL-02 · BR-CANCEL-09 · BR-BOOK-12 · BR-RBAC-03 | 7 |
 | 17 | UC-BOOK-01 | Tạo đặt phòng trên web | BR-GEN-01 · BR-GEN-03 · BR-GEN-06 · BR-GEN-08 · BR-INV-01 · BR-INV-02 · BR-INV-03 · BR-INV-07 · BR-RATE-01 · BR-RATE-10 · BR-RATE-11 · BR-RATE-12 · BR-RATE-13 · BR-RATE-14 · BR-RATE-15 · BR-RATE-16 · BR-RATE-17 · BR-BOOK-01 · BR-BOOK-02 · BR-BOOK-03 · BR-BOOK-04 · BR-BOOK-05 · BR-BOOK-07 · BR-BOOK-08 · BR-BOOK-09 · BR-BOOK-10 · BR-BOOK-15 · BR-BOOK-16 · BR-CHAN-06 · BR-CRM-01 · BR-SYS-06 | 31 |
 | 18 | UC-BOOK-02 | Tạo đặt phòng tại quầy (khách vãng lai) | BR-GEN-06 · BR-GEN-07 · BR-GEN-08 · BR-RATE-03 · BR-RATE-04 · BR-RATE-07 · BR-RATE-16 · BR-BOOK-01 · BR-BOOK-02 · BR-BOOK-03 · BR-BOOK-04 · BR-BOOK-05 · BR-BOOK-09 · BR-BOOK-10 · BR-BOOK-16 · BR-PAY-01 · BR-PAY-02 · BR-PAY-06 · BR-CRM-01 · BR-CRM-04 · BR-RBAC-02 · BR-RBAC-03 | 22 |
 | 19 | UC-BOOK-03 | Tạo đặt phòng qua điện thoại | BR-RATE-07 · BR-BOOK-01 · BR-BOOK-07 · BR-BOOK-09 | 4 |
@@ -352,7 +349,7 @@ Mỗi dòng liệt kê **mọi** quy tắc mà use case đó thực hiện, hợ
 | 51 | UC-SYS-02 | Cấu hình tham số hệ thống | BR-CANCEL-11 · BR-SYS-02 | 2 |
 | 52 | UC-SYS-03 | Sao lưu & phục hồi dữ liệu | BR-SYS-03 · BR-SYS-04 | 2 |
 
-**Kiểm tra:** 52/52 use case có ≥ 1 mã BR thật; 0 UC rỗng.
+**Kiểm tra:** 52/53 use case có ≥ 1 mã BR thật; 0 UC rỗng.
 
 ### 4.2. Thực thể → BR (các thực thể chính ở [00 §7](../00-tong-quan.md#7-từ-điển-thực-thể-nguồn-chân-lý-về-định-danh))
 
@@ -479,7 +476,7 @@ Chuỗi BR-RATE-01…19 (§14 ghi BT-2) cộng BR-GEN-03 (làm tròn lên theo �
 | BR-RATE-14 | Khuyến mãi hết hạn/hết lượt bị từ chối khi xác nhận | UC-RATE-04 · UC-BOOK-01 | /api/v1/quotes | Promotion | TC-RATE-18 |
 | BR-RATE-15 | PriceQuote có hiệu lực 15 phút, quá hạn phải tính lại | UC-INV-02 · UC-RATE-05 · UC-BOOK-01 | /api/v1/quotes | PriceQuote · PriceSnapshot | TC-RATE-19 |
 | BR-RATE-16 | PriceSnapshot bất biến được lưu ngay khi booking rời DRAFT | UC-BOOK-01 · UC-BOOK-02 · UC-BOOK-06 | /api/v1/quotes · /api/v1/bookings · /api/v1/bookings/{bookingId}/cancel | PriceQuote · Booking · PriceSnapshot | TC-RATE-20 · TC-BOOK-07 · TC-BOOK-16 · TC-BOOK-17 |
-| BR-RATE-17 | Cùng đầu vào cho cùng kết quả giá trên ba nền tảng | UC-INV-02 · UC-RATE-05 · UC-BOOK-01 · UC-BOOK-06 | /api/v1/inventory/availability · /api/v1/quotes | PriceQuote · PriceSnapshot | TC-RATE-17 · TC-RATE-20 · TC-RATE-21 |
+| BR-RATE-17 | Cùng đầu vào cho cùng kết quả giá trên API và bốn frontend | UC-INV-02 · UC-RATE-05 · UC-BOOK-01 · UC-BOOK-06 | /api/v1/inventory/availability · /api/v1/quotes | PriceQuote · PriceSnapshot | TC-RATE-17 · TC-RATE-20 · TC-RATE-21 |
 | BR-RATE-18 | Hoa hồng mặc định theo kênh, ghi đè theo (kênh, cơ sở) | UC-RATE-03 | /api/v1/channels/{channelId} | Channel · ChannelPropertySetting · ChannelMapping · PriceSnapshot · AuditLog | TC-RATE-10 · TC-RATE-23 |
 | BR-RATE-19 | LONGSTAY14 phải có giá riêng; ưu đãi gợi ý tối thiểu 5% | UC-RATE-01 | /api/v1/room-types/{roomTypeId}/rate-calendar | RatePlan · RateCalendar · Season | TC-RATE-25 · TC-CANCEL-27 · TC-CANCEL-28 · TC-CANCEL-29 · TC-CANCEL-30 · TC-CANCEL-31 · … |
 | BR-GEN-03 | Làm tròn lên 1.000 cho giá bán, cọc; xuống cho hoàn | UC-RATE-05 · UC-BOOK-01 · UC-PAY-01 · UC-PAY-04 | /api/v1/quotes | Payment · IdempotencyKey · Money · StayPeriod · DateRange · ChannelContext · … | TC-PAY-01 · TC-RATE-12 |
@@ -537,7 +534,7 @@ Ba nhóm BR-INV, BR-CHAN, BR-OVER (§14 ghi BT-3) cộng các quy tắc BOOK đi
 
 ## 6. Lỗ hổng truy vết
 
-Toàn bộ ô `—` của ma trận §2: **0** ô ở cột FR · **0** ở cột UC · **5** ở cột API · **2** ở cột Entity · **3** ở cột TC. Mỗi dòng dưới đây nêu lý do chấp nhận được hoặc việc cần làm; **không ô `—` nào là lỗi định dạng**.
+Toàn bộ ô `—` của ma trận §2: **0** ô ở cột FR · **0** ở cột UC · **5** ở cột API · **2** ở cột Entity · **0** ở cột TC. Các ngoại lệ dưới đây là giải thích thiết kế, cần chủ trì review phạm vi và bằng chứng; không tự coi là đã được stakeholder nghiệm thu. Cổng truy vết chặn liên kết thiếu không có giải thích, không bắt tạo endpoint/thực thể giả để lấp ô.
 
 | # | Ô trống | BR | Vì sao không có mã | Việc cần làm |
 |---|---------|----|--------------------|--------------|
@@ -548,9 +545,6 @@ Toàn bộ ô `—` của ma trận §2: **0** ô ở cột FR · **0** ở cộ
 | 5 | API | BR-SYS-04 | Quy tắc lưu trữ dữ liệu (10 năm với booking/thanh toán, 5 năm với nhật ký) là chính sách vòng đời dữ liệu, không có bề mặt HTTP; 04/api §6.1 chỉ ràng buộc quyền trên các endpoint hiện có. | **Chấp nhận**: quy tắc xuyên suốt, được cưỡng chế bằng kiểm thử hợp đồng (T4) chứ không bằng một endpoint. Không cần sửa xương sống. |
 | 6 | Entity | BR-GEN-02 | Quy tắc nền về mốc thời gian: áp cho cột thời gian của **mọi** thực thể, không thuộc riêng thực thể nào. | **Chấp nhận.** Muốn hết ô trống thì phải bổ sung một dòng hạ tầng/dữ liệu vào §8 của 03/mô hình miền — đây là thay đổi xương sống, cần chủ trì tài liệu quyết. Giá trị nghiệp vụ của BR-GEN-02 vẫn được kiểm bằng `TC-BOOK-21`. |
 | 7 | Entity | BR-SYS-03 | Quy tắc sao lưu/phục hồi (PITR, RPO ≤ 15 phút, RTO ≤ 4 giờ) là thuộc tính hạ tầng dữ liệu; 00 §7 không có thực thể miền nào tương ứng. | **Chấp nhận**: BR-SYS-03 được kiểm chứng bằng ca vận hành (`TC-SYS-*`), không cần thực thể miền. |
-| 8 | TC | BR-GEN-02 | Hành vi đã được kiểm chứng gián tiếp nhưng **không ca nào khai mã BR này** ở cột *Mã BR*. | **Cần sửa** để `TC-SYS-06` xanh: bổ sung `BR-GEN-02` vào cột *Mã BR* của `TC-BOOK-21` (ca biên múi giờ) — một dòng sửa, không viết ca mới. |
-| 9 | TC | BR-GEN-05 | Hành vi đã được kiểm chứng gián tiếp nhưng **không ca nào khai mã BR này** ở cột *Mã BR*. | **Cần sửa** để `TC-SYS-06` xanh: bổ sung `BR-GEN-05` vào cột *Mã BR* của `TC-BOOK-21` (ca biên múi giờ) — một dòng sửa, không viết ca mới. |
-| 10 | TC | BR-RBAC-01 | Hành vi đã được kiểm chứng gián tiếp nhưng **không ca nào khai mã BR này** ở cột *Mã BR*. | **Cần sửa** để `TC-SYS-06` xanh: bổ sung `BR-RBAC-01` vào cột *Mã BR* của `TC-AUTH-08` (sáu vai trò × 8 thao tác) — một dòng sửa, không viết ca mới. |
 
 ### 6.1. Ô không phải `—` nhưng vẫn là **suy diễn** cần biết
 
@@ -570,13 +564,36 @@ Toàn bộ ô `—` của ma trận §2: **0** ô ở cột FR · **0** ở cộ
 
 ---
 
+## 7. Truy vết journey tới UI, hợp đồng và evidence
+
+Đây là phần bổ sung của ma trận chính, cùng nguồn với [kế hoạch kiểm thử §4.6](../05-ke-hoach/ke-hoach-kiem-thu.md). Mỗi hàng là yêu cầu kiểm chứng, trạng thái ban đầu **NOT_RUN**. API chi tiết do [04/api](../04-thiet-ke/api.md) quản lý; không suy rằng một URL bao phủ mọi method hoặc webhook. Mã BR/NFR đầy đủ và oracle nằm ở hàng TC chủ; bảng này nối tới bề mặt và cổng triển khai.
+
+| TC | UC / BR hoặc NFR chính | UI | Hợp đồng / dữ liệu cần main đối chiếu | Gate |
+|---|---|---|---|---|
+| TC-BOOK-28 | UC-BOOK-01/04, UC-PAY-02; BR-BOOK-18, BR-INV-03 | SCR-02/06/24/32 | Hold giờ DB, khoá booking, inventory/allotment, xác nhận không tạo assignment thứ hai | QG-2/3 |
+| TC-BOOK-27 | UC-BOOK-06/08; BR-CANCEL-19, BR-RATE-16 | SCR-12/35/36/69 | Phân bổ snapshot, khoản hoàn đang giữ, chuyển kỳ nguyên tử, If-Match | QG-2/3 |
+| TC-PAY-22 | UC-PAY-02; BR-PAY-11, BR-BOOK-18 | SCR-06/10/32/39 | Webhook PSP/inbox, unique providerTxnId, tiền đến muộn/hoàn do SYSTEM | QG-2/3 |
+| TC-PAY-23 | UC-PAY-04; BR-PAY-11, BR-CANCEL-17 | SCR-38/39 | Khoá chi, giữ hạn mức hoàn, nhiều khoản thu gốc, trạng thái chưa rõ và đối soát PSP | QG-2/3 |
+| TC-INV-11 | UC-INV-02/03; BR-INV-03/05 | SCR-24/25 | DOR theo giường, khóa tổ hợp, miền bedNo, allotment từng kênh | QG-2/3 |
+| TC-OVER-18 | UC-OVER-02/03; BR-OVER-13/14 | SCR-43/44/45/63 | Recheck consent/version/tồn ở execute; rollback giữ phòng nguồn | QG-2/3 |
+| TC-AUTH-10 | UC-AUTH-01/02; BR-RBAC-02/03/05 | SCR-14/57 | Quyền hiện tại trước replay; cache theo chủ phiên, thu hồi scope | QG-3 |
+| TC-FO-08 | UC-FO-01/02; BR-GEN-08, NFR-USE-03 | SCR-57/58/59/61 | Queue, TTL key, đối soát, PIN và version; OPEN-02 chặn phạm vi chưa chốt | QG-2/3 |
+| TC-RATE-27 | UC-RATE-06; BR-RATE-20 | SCR-70/04/36 | FR-RATE-19; PUT rateplan/policy; policySnapshotJson, tier validation, audit/outbox | QG-2/3 |
+| TC-SYS-09 | UC-SYS-01/03; BR-GEN-07, BR-SYS-03 | Back-office, không cần màn restore mới | Migration/PITR; đối soát DB–audit–outbox sau recovery | QG-4 |
+| TC-SYS-10 | NFR-USE-03/04/05 | SCR-02/06/24/36/38/43/57/70 | UI §8/9, trạng thái lỗi/conflict, keyboard/TalkBack/zoom | QG-3/4 |
+| TC-SYS-11 | UC-RATE-06; BR-GEN-08, BR-RATE-20 | SCR-70/26 | If-Match 412/428, replay cùng key/payload, conflict giữ nhập | QG-2/3 |
+
+Truy vết ngược bổ sung cho §4: UC-BOOK-04 và UC-PAY-02 nhận BR-BOOK-18; UC-PAY-02/04 nhận BR-PAY-11; RatePlan/CancellationPolicy/CancellationTier/PriceSnapshot/AuditLog/OutboxEvent nhận BR-RATE-20; Booking/Hold/RoomAssignment/ChannelAllotment/RefundRequest nhận BR-BOOK-18; Payment/Booking/RefundRequest/IdempotencyKey nhận BR-PAY-11. Danh sách §4 cần đọc cùng phần này; số lượng lịch sử ở từng hàng không tính quan hệ bổ sung.
+
+Checker cần phân biệt **định nghĩa** với **tham chiếu** TC, mở rộng dải mã, kiểm BR/NFR tồn tại và tính nhất quán hai chiều; không tính một mã được nhắc trong văn xuôi là test thực thi. Evidence cần đường dẫn test, tên case, build/run và kết quả; chưa có thì `NOT_RUN`. Ba BR mới không được rơi khỏi bảng tổng dù chưa có code.
+
 ## Tham chiếu
 
-- [00 — Tổng quan dự án](../00-tong-quan.md) — §2 ba bài toán trọng tâm · §4 actor · §6 quy ước định danh · §7 từ điển thực thể · §8 danh mục 52 use case · §12 tiêu chí thành công
+- [00 — Tổng quan dự án](../00-tong-quan.md) — §2 ba bài toán trọng tâm · §4 actor · §6 quy ước định danh · §7 từ điển thực thể · §8 danh mục 53 use case · §12 tiêu chí thành công
 - [01 — Yêu cầu chức năng](../01-yeu-cau/yeu-cau-chuc-nang.md) — §17.1 truy vết ngược đầy đủ BR → FR
 - [01 — Mô hình use case](../01-yeu-cau/mo-hinh-use-case.md) — §4 cột *BR chính* · §6 đặc tả kèm dòng *BR áp dụng*
 - [01 — Yêu cầu phi chức năng](../01-yeu-cau/yeu-cau-phi-chuc-nang.md) — 40 NFR trong 8 nhóm
-- [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — 136 quy tắc, bảng tra nhanh §14 và nhóm BR-REP §15
+- [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — 139 quy tắc, bảng tra nhanh §14 và nhóm BR-REP §15
 - [02 — Chính sách huỷ & hoàn cọc](../02-nghiep-vu/chinh-sach-huy-hoan-coc.md) — dải `TC-CANCEL-01…55` và bảng BR ↔ ca kiểm thử ở §1
 - [02 — Động giá](../02-nghiep-vu/dong-gia.md) — ví dụ vàng và ma trận biên của BT-2
 - [03 — Mô hình miền](../03-phan-tich/mo-hinh-mien.md) — §7 mô hình miền cho ba bài toán · §8 truy vết thực thể → quy tắc nghiệp vụ
