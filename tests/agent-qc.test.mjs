@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 import test from 'node:test';
 import { captureGitState, hasChanged } from '../scripts/agent-qc/git-state.mjs';
 import { runCodexReview } from '../scripts/agent-qc/reviewer.mjs';
+import { createQcLoop } from '../scripts/agent-qc/loop.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -219,4 +220,114 @@ test('reviewer rejects an aborted signal before returning a parsed PASS', async 
     });
     await assert.rejects(runCodexReview({ repoDir, baseSha, changedPaths: [], codexBin, signal }), /abort/i);
   });
+});
+
+function snapshot(fingerprint, changedPaths = []) {
+  return { head: baseSha, fingerprint, changedPaths };
+}
+
+function nextSnapshots(...snapshots) {
+  let index = 0;
+  return async () => snapshots[Math.min(index++, snapshots.length - 1)];
+}
+
+const blockingReview = {
+  status: 'NEEDS_CHANGES',
+  summary: 'Fix the blocking issue',
+  findings: [{ path: 'src/a.js', line: 7, severity: 'blocking', message: 'blocking issue' }],
+};
+
+test('unchanged task skips review', async () => {
+  let calls = 0;
+  const entries = [];
+  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('before')),
+    review: async () => { calls++; return passReview; }, report: (entry) => entries.push(entry) });
+  await qc.begin();
+  assert.equal(await qc.stop({}), undefined);
+  assert.equal(calls, 0);
+  assert.deepEqual(entries, []);
+});
+
+test('blocking feedback continues OMP and an unchanged next stop blocks', async () => {
+  const entries = [];
+  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
+    review: async () => blockingReview, report: (entry) => entries.push(entry) });
+  await qc.begin();
+  assert.match((await qc.stop({})).additionalContext, /blocking issue/);
+  assert.equal(await qc.stop({}), undefined);
+  assert.equal(qc.status, 'BLOCKED');
+  assert.deepEqual(entries.map((entry) => entry.status), ['NEEDS_CHANGES', 'BLOCKED']);
+});
+
+test('PASS ends the task after reviewing the current diff', async () => {
+  const entries = [];
+  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
+    review: async (options) => { assert.equal(options.baseSha, baseSha); assert.deepEqual(options.changedPaths, ['src/a.js']); return passReview; },
+    report: (entry) => entries.push(entry) });
+  await qc.begin();
+  assert.equal(await qc.stop({}), undefined);
+  assert.equal(qc.status, 'PASS');
+  assert.equal(entries[0].status, 'PASS');
+});
+
+test('third blocking review reaches the round cap without another continuation', async () => {
+  const entries = [];
+  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('one', ['src/a.js']), snapshot('one', ['src/a.js']),
+    snapshot('two', ['src/a.js']), snapshot('two', ['src/a.js']), snapshot('three', ['src/a.js']), snapshot('three', ['src/a.js'])),
+    review: async () => blockingReview, report: (entry) => entries.push(entry) });
+  await qc.begin();
+  assert.equal((await qc.stop({})).continue, true);
+  assert.equal((await qc.stop({})).continue, true);
+  assert.equal(await qc.stop({}), undefined);
+  assert.equal(qc.status, 'BLOCKED');
+  assert.deepEqual(entries.map((entry) => entry.status), ['NEEDS_CHANGES', 'NEEDS_CHANGES', 'BLOCKED']);
+});
+
+test('diff changed during review is blocked rather than accepted', async () => {
+  const entries = [];
+  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('reviewed', ['src/a.js']), snapshot('newer', ['src/a.js'])),
+    review: async () => passReview, report: (entry) => entries.push(entry) });
+  await qc.begin();
+  assert.equal(await qc.stop({}), undefined);
+  assert.equal(qc.status, 'BLOCKED');
+  assert.equal(entries[0].status, 'BLOCKED');
+  assert.match(entries[0].summary, /changed|stale/i);
+});
+
+test('reviewer error blocks and is reported', async () => {
+  const entries = [];
+  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
+    review: async () => { throw new Error('Codex unavailable'); }, report: (entry) => entries.push(entry) });
+  await qc.begin();
+  assert.equal(await qc.stop({}), undefined);
+  assert.equal(qc.status, 'BLOCKED');
+  assert.equal(entries[0].status, 'BLOCKED');
+  assert.match(entries[0].summary, /Codex unavailable/);
+});
+
+test('cancellation during the post-review snapshot cannot accept PASS', async () => {
+  const entries = [];
+  let qc;
+  let captures = 0;
+  qc = createQcLoop({ repoDir: '/repo', capture: async () => {
+    captures++;
+    if (captures === 3) qc.cancel();
+    return captures === 1 ? snapshot('before') : snapshot('changed', ['src/a.js']);
+  }, review: async () => passReview, report: (entry) => entries.push(entry) });
+  await qc.begin();
+  assert.equal(await qc.stop({}), undefined);
+  assert.equal(qc.status, 'BLOCKED');
+  assert.match(entries[0].summary, /cancel/i);
+});
+
+test('a new task resets the previous blocking fingerprint', async () => {
+  const entries = [];
+  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('one', ['src/a.js']), snapshot('one', ['src/a.js']),
+    snapshot('one'), snapshot('two', ['src/a.js']), snapshot('two', ['src/a.js'])),
+    review: async () => blockingReview, report: (entry) => entries.push(entry) });
+  await qc.begin();
+  assert.equal((await qc.stop({})).continue, true);
+  await qc.begin();
+  assert.equal((await qc.stop({})).continue, true);
+  assert.equal(qc.status, 'PENDING');
 });
