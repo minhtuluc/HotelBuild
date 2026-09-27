@@ -36,7 +36,7 @@ export function registerQcExtension(pi: ExtensionApi, { repoDir, capture, review
   pi.on('before_agent_start', async (_event, ctx) => {
     if (ctx.agent.kind !== 'main') return;
     ui = ctx.ui;
-    await qc.begin();
+    if (qc.status !== 'PENDING') await qc.begin();
   });
   pi.on('session_stop', async (event, ctx) => {
     if (ctx.agent.kind !== 'main') return;

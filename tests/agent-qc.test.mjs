@@ -257,6 +257,29 @@ test('extension registers main-agent hooks and returns continuation on repeated 
   assert.match(notifications.at(-1)[0], /BLOCKED/);
 });
 
+test('extension retains a pending review across another start, then begins a fresh completed task', async () => {
+  const handlers = new Map();
+  const reports = [];
+  let reviews = 0;
+  registerQcExtension({ on: (name, handler) => handlers.set(name, handler) }, {
+    repoDir: '/repo',
+    capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js']), snapshot('changed', ['src/a.js']),
+      snapshot('changed', ['src/a.js']), snapshot('changed', ['src/a.js']),
+      snapshot('newer', ['src/a.js']), snapshot('newer', ['src/a.js'])),
+    review: async () => (++reviews === 1 ? blockingReview : passReview),
+    report: (entry) => reports.push(entry),
+  });
+  const ctx = { agent: { kind: 'main' }, ui: { notify: () => {} } };
+  await handlers.get('before_agent_start')({}, ctx);
+  assert.equal((await handlers.get('session_stop')({}, ctx)).continue, true);
+  await handlers.get('before_agent_start')({}, ctx);
+  assert.equal(await handlers.get('session_stop')({ stop_hook_active: true }, ctx), undefined);
+  assert.deepEqual(reports.map((entry) => entry.status), ['NEEDS_CHANGES', 'BLOCKED']);
+  await handlers.get('before_agent_start')({}, ctx);
+  assert.equal(await handlers.get('session_stop')({}, ctx), undefined);
+  assert.deepEqual(reports.map((entry) => entry.status), ['NEEDS_CHANGES', 'BLOCKED', 'PASS']);
+});
+
 test('extension ignores subagents and shows PASS for a reviewed main task', async () => {
   const handlers = new Map();
   const notifications = [];
