@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, rm, symlink, unlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, readFile, rm, symlink, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import test from 'node:test';
 import { captureGitState, hasChanged } from '../scripts/agent-qc/git-state.mjs';
+import { runCodexReview } from '../scripts/agent-qc/reviewer.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -97,5 +98,85 @@ test('untracked symlinks hash link text, including broken targets', async () => 
     const brokenTarget = await captureGitState(repo);
     assert.notEqual(brokenTarget.fingerprint, first.fingerprint);
     assert.deepEqual(brokenTarget.changedPaths, ['pointer']);
+  });
+});
+
+async function withFakeCodex({ output, exitCode = 0, delayMs = 0, stdout = '' }, run) {
+  const repoDir = await mkdtemp(join(tmpdir(), 'agent-qc-review-'));
+  const codexBin = join(repoDir, 'fake-codex');
+  const argsPath = join(repoDir, 'args.json');
+  const script = `#!/usr/bin/env node
+const fs = require('node:fs');
+const args = process.argv.slice(2);
+fs.writeFileSync(${JSON.stringify(argsPath)}, JSON.stringify(args));
+setTimeout(() => {
+  const outputPath = args[args.indexOf('-o') + 1];
+  fs.writeFileSync(outputPath, ${JSON.stringify(output)});
+  if (${stdout.length} > 0) fs.writeSync(1, ${JSON.stringify(stdout)});
+  process.exit(${exitCode});
+}, ${delayMs});
+`;
+  try {
+    await writeFile(codexBin, script);
+    await chmod(codexBin, 0o755);
+    await run({ repoDir, codexBin, argsPath });
+  } finally {
+    await rm(repoDir, { recursive: true, force: true });
+  }
+}
+
+const baseSha = 'a'.repeat(40);
+const passReview = { status: 'PASS', summary: 'No issues found', findings: [] };
+
+test('reviewer invokes read-only Codex and returns a valid PASS', async () => {
+  await withFakeCodex({ output: JSON.stringify(passReview) }, async ({ repoDir, codexBin, argsPath }) => {
+    const result = await runCodexReview({ repoDir, baseSha, changedPaths: ['src/a.js'], codexBin });
+    assert.deepEqual(result, passReview);
+    const args = JSON.parse(await readFile(argsPath, 'utf8'));
+    assert.deepEqual(args.slice(0, 5), ['exec', '-C', repoDir, '--sandbox', 'read-only']);
+    assert.equal(args[5], '--output-schema');
+    assert.equal(args[7], '-o');
+    assert.match(args[9], /src\/a\.js/);
+    assert.match(args[9], new RegExp(baseSha));
+  });
+});
+
+test('reviewer rejects PASS with a blocking finding', async () => {
+  const output = JSON.stringify({ status: 'PASS', summary: 'ok', findings: [{ path: 'x', line: 1, severity: 'blocking', message: 'bug' }] });
+  await withFakeCodex({ output }, async ({ repoDir, codexBin }) => {
+    await assert.rejects(runCodexReview({ repoDir, baseSha, changedPaths: ['x'], codexBin }), /blocking findings/);
+  });
+});
+
+test('reviewer rejects NEEDS_CHANGES without a blocking finding', async () => {
+  const output = JSON.stringify({ status: 'NEEDS_CHANGES', summary: 'suggestion only', findings: [{ path: 'x', line: null, severity: 'suggestion', message: 'style' }] });
+  await withFakeCodex({ output }, async ({ repoDir, codexBin }) => {
+    await assert.rejects(runCodexReview({ repoDir, baseSha, changedPaths: ['x'], codexBin }), /blocking finding/);
+  });
+});
+
+test('reviewer rejects malformed JSON and invalid fields', async () => {
+  for (const output of ['{', JSON.stringify({ status: 'BLOCKED', summary: '', findings: [] }), JSON.stringify({ ...passReview, extra: true })]) {
+    await withFakeCodex({ output }, async ({ repoDir, codexBin }) => {
+      await assert.rejects(runCodexReview({ repoDir, baseSha, changedPaths: [], codexBin }));
+    });
+  }
+});
+
+test('reviewer rejects nonzero Codex exit', async () => {
+  await withFakeCodex({ output: JSON.stringify(passReview), exitCode: 2 }, async ({ repoDir, codexBin }) => {
+    await assert.rejects(runCodexReview({ repoDir, baseSha, changedPaths: [], codexBin }), /exit|code/i);
+  });
+});
+
+test('reviewer times out a stalled Codex process', async () => {
+  await withFakeCodex({ output: JSON.stringify(passReview), delayMs: 1000 }, async ({ repoDir, codexBin }) => {
+    await assert.rejects(runCodexReview({ repoDir, baseSha, changedPaths: [], codexBin, timeoutMs: 50 }), /timed out/i);
+  });
+});
+
+test('reviewer rejects oversized process output', async () => {
+  await withFakeCodex({ output: JSON.stringify(passReview), stdout: 'x'.repeat(1_100_000) }, async ({ repoDir, codexBin }) => {
+    await assert.rejects(runCodexReview({ repoDir, baseSha, changedPaths: [], codexBin }), /output.*large/i);
   });
 });

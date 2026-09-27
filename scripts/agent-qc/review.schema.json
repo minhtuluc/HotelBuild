@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "properties": {
+    "status": { "type": "string", "enum": ["PASS", "NEEDS_CHANGES", "BLOCKED"] },
+    "summary": { "type": "string" },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "line": { "type": ["integer", "null"] },
+          "severity": { "type": "string", "enum": ["blocking", "suggestion"] },
+          "message": { "type": "string" }
+        },
+        "required": ["path", "line", "severity", "message"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["status", "summary", "findings"],
+  "additionalProperties": false
+}
