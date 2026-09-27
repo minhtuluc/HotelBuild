@@ -8,22 +8,23 @@
 
 Khi người dùng giao một tác vụ sửa repo cho phiên OMP tương tác, OMP hoàn tất phần việc rồi Codex tự kiểm thay đổi. Nếu Codex tìm lỗi chặn, feedback trở lại cùng phiên OMP để sửa; Codex kiểm lại cho đến khi đạt hoặc chạm điều kiện dừng. Người dùng không phải gọi Codex hay chuyển feedback thủ công giữa các vòng.
 
-Phạm vi đầu tiên là repo `OOAD` và phiên OMP chạy với `cwd` là thư mục repo. Extension của dự án được tự nạp từ `OOAD/.omp/extensions/`. Vòng kiểm áp dụng cho thay đổi mã, cấu hình, kiểm thử và tài liệu trong repo. Nó không tự commit, merge, push hoặc triển khai.
+Phạm vi đầu tiên là repo `OOAD`. Người dùng thường mở OMP với `cwd` là thư mục cha `BUILDHOTEL`, còn Git root nằm ở `BUILDHOTEL/OOAD`. Mã extension được theo dõi trong `OOAD/.omp/extensions/`; bước cài đặt một lần tạo liên kết tại `BUILDHOTEL/.omp/extensions/` để OMP tự nạp khi khởi chạy từ thư mục cha. Vòng kiểm áp dụng cho thay đổi mã, cấu hình, kiểm thử và tài liệu trong repo. Nó không tự commit, merge, push hoặc triển khai.
 
 ## Cách tiếp cận
 
 | Cách | Ưu điểm | Hạn chế |
 | --- | --- | --- |
-| Extension OMP dùng `session_stop` **(chọn)** | Tự kích hoạt đúng khi phiên OMP sắp dừng; feedback tiếp tục trong cùng ngữ cảnh | Cần OMP hỗ trợ stop hook và nạp extension từ đúng `cwd` |
+| Extension OMP dùng `session_stop` **(chọn)** | Tự kích hoạt đúng khi phiên OMP sắp dừng; feedback tiếp tục trong cùng ngữ cảnh | Cần OMP hỗ trợ stop hook và liên kết extension ở `cwd` thật |
 | Script bao ngoài chạy hai CLI tuần tự | Dễ kiểm soát tiến trình batch | Phải bắt đầu tác vụ qua script; không gắn trực tiếp vào phiên OMP tương tác hiện có |
 | OMP tự gọi lệnh Codex theo prompt | Ít mã phụ trợ | Phụ thuộc OMP nhớ làm; khó giới hạn vòng và kiểm tra lỗi hệ thống |
 
 ## Thành phần và giao diện
 
-1. `OOAD/.omp/extensions/codex-qc.ts`: đăng ký `session_stop` cho phiên chính. Extension chụp trạng thái Git trước tác vụ, chỉ gọi QC nếu trạng thái repo thay đổi, chuyển feedback thành `additionalContext`, và trả `{ continue: true }` khi cần sửa.
-2. Module điều phối trong `OOAD/scripts/agent-qc/`: lấy dấu vân tay của `HEAD`, diff và file chưa theo dõi; gọi Codex bằng `codex exec` với sandbox `read-only`, giới hạn thời gian và dung lượng đầu ra; kiểm tra phản hồi theo JSON schema cố định.
-3. Trạng thái phiên giữ số vòng, dấu vân tay đã kiểm, và các lỗi chặn trước đó. Nhật ký mỗi vòng nằm trong thư mục bị Git bỏ qua để người dùng tra lại. Không đưa nhật ký vào diff cần review.
-4. Codex trả `PASS`, `NEEDS_CHANGES` kèm vị trí/lý do cụ thể, hoặc `BLOCKED` khi không thể xác minh. OMP chỉ nhận feedback của đúng dấu vân tay vừa được kiểm.
+1. `OOAD/.omp/extensions/codex-qc.ts`: đăng ký `session_stop` cho phiên chính. Extension chụp trạng thái Git của `OOAD` trước tác vụ, chỉ gọi QC nếu trạng thái repo thay đổi, chuyển feedback thành `additionalContext`, và trả `{ continue: true }` khi cần sửa.
+2. Bước cài đặt trong `OOAD/scripts/agent-qc/` tạo liên kết `BUILDHOTEL/.omp/extensions/codex-qc.ts` trỏ đến extension được Git theo dõi. Vì OMP chỉ tự tìm extension tại `cwd`, liên kết này giúp phiên khởi chạy từ `BUILDHOTEL` nạp đúng module mà không phải sao chép mã.
+3. Module điều phối trong `OOAD/scripts/agent-qc/`: xác định Git root `OOAD` từ vị trí extension, lấy dấu vân tay của `HEAD`, diff và file chưa theo dõi; gọi Codex với `-C OOAD`, sandbox `read-only`, giới hạn thời gian và dung lượng đầu ra; kiểm tra phản hồi theo JSON schema cố định.
+4. Trạng thái phiên giữ số vòng, dấu vân tay đã kiểm, và các lỗi chặn trước đó. Nhật ký mỗi vòng nằm trong thư mục bị Git bỏ qua để người dùng tra lại. Không đưa nhật ký vào diff cần review.
+5. Codex trả `PASS`, `NEEDS_CHANGES` kèm vị trí/lý do cụ thể, hoặc `BLOCKED` khi không thể xác minh. OMP chỉ nhận feedback của đúng dấu vân tay vừa được kiểm.
 
 ## Luồng xử lý
 
@@ -49,4 +50,4 @@ Giới hạn mặc định là 3 vòng Codex cho một tác vụ, thấp hơn gi
 
 ## Cách sử dụng
 
-Mở hoặc nạp lại OMP từ `OOAD`. Sau đó giao tác vụ như thường lệ; khi OMP kết thúc lượt có thay đổi, QC tự chạy. Nhật ký cung cấp lý do dừng và kết quả từng vòng. Có thể tạm tắt extension qua cấu hình OMP nếu cần làm việc không có QC.
+Chạy bước cài đặt liên kết một lần, rồi mở hoặc nạp lại OMP từ `BUILDHOTEL` như hiện tại. Sau đó giao tác vụ như thường lệ; khi OMP kết thúc lượt có thay đổi trong `OOAD`, QC tự chạy. Nhật ký cung cấp lý do dừng và kết quả từng vòng. Có thể tạm tắt extension qua cấu hình OMP nếu cần làm việc không có QC.
