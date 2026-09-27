@@ -331,3 +331,26 @@ test('a new task resets the previous blocking fingerprint', async () => {
   assert.equal((await qc.stop({})).continue, true);
   assert.equal(qc.status, 'PENDING');
 });
+
+test('a new task reviews independently while an old stop is still pending', async () => {
+  const entries = [];
+  let releaseOldReview;
+  let reviews = 0;
+  const oldReview = new Promise((resolve) => { releaseOldReview = resolve; });
+  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(
+    snapshot('before-one'), snapshot('changed-one', ['src/a.js']),
+    snapshot('before-two'), snapshot('changed-two', ['src/b.js']), snapshot('changed-two', ['src/b.js'])),
+  review: async () => (++reviews === 1 ? oldReview : passReview), report: (entry) => entries.push(entry) });
+
+  await qc.begin();
+  const oldStop = qc.stop({});
+  await Promise.resolve();
+  await qc.begin();
+  const newStop = qc.stop({});
+  releaseOldReview(blockingReview);
+  assert.equal(await newStop, undefined);
+  assert.equal(await oldStop, undefined);
+  assert.equal(reviews, 2);
+  assert.equal(qc.status, 'PASS');
+  assert.deepEqual(entries.map((entry) => entry.status), ['PASS']);
+});
