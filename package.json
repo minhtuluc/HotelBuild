@@ -22,7 +22,7 @@
     "check:ids": "node scripts/check-ids.mjs",
     "extract:sql": "node scripts/extract-sql.mjs",
     "test": "npm run test:tooling && npm run test:db",
-    "test:tooling": "node --test tests/tooling.test.mjs",
+    "test:tooling": "node --test tests/tooling.test.mjs tests/agent-qc.test.mjs",
     "test:db": "node --test --test-concurrency=1 tests/database.test.mjs",
     "test:postgres": "node scripts/test-postgres.mjs",
     "typecheck": "pnpm -r typecheck",

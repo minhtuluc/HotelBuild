@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { chmod, mkdtemp, readFile, rm, symlink, unlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, mkdir, readFile, realpath, rm, symlink, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -9,6 +9,8 @@ import test from 'node:test';
 import { captureGitState, hasChanged } from '../scripts/agent-qc/git-state.mjs';
 import { runCodexReview } from '../scripts/agent-qc/reviewer.mjs';
 import { createQcLoop } from '../scripts/agent-qc/loop.mjs';
+import { installLink } from '../scripts/agent-qc/install.mjs';
+import { registerQcExtension, repoDirFromExtension, writeQcReport } from '../.omp/extensions/codex-qc.ts';
 
 const execFileAsync = promisify(execFile);
 
@@ -236,6 +238,79 @@ const blockingReview = {
   summary: 'Fix the blocking issue',
   findings: [{ path: 'src/a.js', line: 7, severity: 'blocking', message: 'blocking issue' }],
 };
+
+test('extension registers main-agent hooks and returns continuation on repeated stop', async () => {
+  const handlers = new Map();
+  const notifications = [];
+  const reports = [];
+  const pi = { on: (name, handler) => handlers.set(name, handler) };
+  registerQcExtension(pi, { repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
+    review: async () => blockingReview, report: (entry) => reports.push(entry) });
+  assert.deepEqual([...handlers.keys()], ['before_agent_start', 'session_stop', 'session_shutdown']);
+  const ctx = { agent: { kind: 'main' }, ui: { notify: (...args) => notifications.push(args) } };
+  await handlers.get('before_agent_start')({}, ctx);
+  const continuation = await handlers.get('session_stop')({ stop_hook_active: false }, ctx);
+  assert.equal(continuation.continue, true);
+  assert.match(continuation.additionalContext, /blocking issue/);
+  assert.equal(await handlers.get('session_stop')({ stop_hook_active: true }, ctx), undefined);
+  assert.deepEqual(reports.map((entry) => entry.status), ['NEEDS_CHANGES', 'BLOCKED']);
+  assert.match(notifications.at(-1)[0], /BLOCKED/);
+});
+
+test('extension ignores subagents and shows PASS for a reviewed main task', async () => {
+  const handlers = new Map();
+  const notifications = [];
+  let captures = 0;
+  registerQcExtension({ on: (name, handler) => handlers.set(name, handler) }, {
+    repoDir: '/repo', capture: async () => { captures++; return captures === 1 ? snapshot('before') : snapshot('changed', ['src/a.js']); },
+    review: async () => passReview, report: () => {},
+  });
+  const subagent = { agent: { kind: 'subagent' }, ui: { notify: (...args) => notifications.push(args) } };
+  await handlers.get('before_agent_start')({}, subagent);
+  await handlers.get('session_stop')({}, subagent);
+  await handlers.get('session_shutdown')({}, subagent);
+  assert.equal(captures, 0);
+  const main = { agent: { kind: 'main' }, ui: subagent.ui };
+  await handlers.get('before_agent_start')({}, main);
+  await handlers.get('session_stop')({}, main);
+  assert.match(notifications.at(-1)[0], /PASS/);
+});
+
+test('extension source resolves its OOAD repository independent of process cwd', async () => {
+  assert.equal(await realpath(repoDirFromExtension()), await realpath(new URL('..', import.meta.url).pathname));
+});
+
+test('each review round appends one JSONL report in the repository', async () => {
+  const repo = await mkdtemp(join(tmpdir(), 'agent-qc-report-'));
+  try {
+    writeQcReport(repo, { status: 'NEEDS_CHANGES', round: 1, summary: 'fix', findings: [] });
+    writeQcReport(repo, { status: 'PASS', round: 2, summary: 'clear', findings: [] });
+    const lines = (await readFile(join(repo, '.agent-qc', 'reviews.jsonl'), 'utf8')).trim().split('\n');
+    assert.equal(lines.length, 2);
+    assert.deepEqual(lines.map((line) => JSON.parse(line).status), ['NEEDS_CHANGES', 'PASS']);
+    assert.deepEqual(lines.map((line) => JSON.parse(line).round), [1, 2]);
+  } finally {
+    await rm(repo, { recursive: true, force: true });
+  }
+});
+
+test('installer links from parent OMP directory without replacing another file', async () => {
+  const temp = await mkdtemp(join(tmpdir(), 'agent-qc-install-'));
+  const parentDir = join(temp, 'parent');
+  const conflictingParent = join(temp, 'conflict');
+  const extensionPath = new URL('../.omp/extensions/codex-qc.ts', import.meta.url).pathname;
+  try {
+    await mkdir(parentDir);
+    await mkdir(join(conflictingParent, '.omp', 'extensions'), { recursive: true });
+    const target = await installLink({ parentDir, extensionPath });
+    assert.equal(await realpath(target), await realpath(extensionPath));
+    assert.equal(await installLink({ parentDir, extensionPath }), target);
+    await writeFile(join(conflictingParent, '.omp', 'extensions', 'codex-qc.ts'), 'other');
+    await assert.rejects(installLink({ parentDir: conflictingParent, extensionPath }), /already exists/);
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+});
 
 test('unchanged task skips review', async () => {
   let calls = 0;
