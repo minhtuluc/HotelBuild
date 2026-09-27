@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { sqlBlocks } from '../scripts/lib/docs.mjs';
 import { anchors } from '../scripts/check-links.mjs';
 import { acceptedExemptions, cancellationCases, definitions, referencedIds } from '../scripts/check-ids.mjs';
+import { compareContracts } from '../scripts/lib/openapi-diff.mjs';
 
 test('DDL extraction uses only §3 SQL fences, in document order', () => {
   const source = '# DB\n## 2. Diagram\n```sql\nOUTSIDE;\n```\n## 3. DDL\n### 3.1. Foundation\n```sql\nFIRST;\n```\n```text\nIGNORE;\n```\n### 3.2. Tables\n```sql\nSECOND;\n```\n## 4. Repeated snippets\n```sql\nFIRST;\n```';
@@ -56,4 +57,144 @@ test('accepted exemptions use named columns with optional condition and reordere
 test('accepted exemption distinguishes no correction needed from an unresolved correction', () => {
   const source = '## 6. Exceptions\n\n| BR | Ô trống | Việc cần làm | Vì sao không có mã |\n|---|---|---|---|\n| BR-GEN-01 | API | **Chấp nhận**. Không cần sửa xương sống. | Cross-cutting |\n| BR-GEN-02 | API | Chấp nhận; cần sửa hợp đồng. | Unresolved |';
   assert.deepEqual([...acceptedExemptions(source)], [['BR-GEN-01:API', 'Cross-cutting']]);
+});
+
+test('contract diff flags breaking changes and ignores compatible ones', () => {
+  const schema = (properties, required = []) => ({ type: 'object', properties, required });
+  const operation = (overrides = {}) => ({
+    request: { body: { content: { 'application/json': { schema: schema({ username: { type: 'string' } }, ['username']) } } } },
+    responses: { 200: { content: { 'application/json': { schema: schema({ accessToken: { type: 'string' } }, ['accessToken']) } } } },
+    ...overrides,
+  });
+  const baseline = {
+    info: { version: '1.0.0' },
+    paths: {
+      '/api/v1/auth/login': { post: operation() },
+      '/api/v1/system/health': { get: { responses: { 200: { description: 'ok' } } } },
+    },
+  };
+
+  assert.deepEqual(compareContracts(baseline, baseline).breaking, []);
+
+  const removedPath = { ...baseline, paths: { '/api/v1/auth/login': baseline.paths['/api/v1/auth/login'] } };
+  assert.match(compareContracts(baseline, removedPath).breaking.join('\n'), /bỏ path \/api\/v1\/system\/health/);
+
+  const removedMethod = {
+    ...baseline,
+    paths: { ...baseline.paths, '/api/v1/auth/login': { get: { responses: { 200: { description: 'x' } } } } },
+  };
+  assert.match(compareContracts(baseline, removedMethod).breaking.join('\n'), /bỏ phương thức POST \/api\/v1\/auth\/login/);
+
+  const extraRequiredRequest = {
+    ...baseline,
+    paths: {
+      ...baseline.paths,
+      '/api/v1/auth/login': {
+        post: operation({
+          request: {
+            body: {
+              content: {
+                'application/json': {
+                  schema: schema({ username: { type: 'string' }, propertyId: { type: 'string' } }, ['username', 'propertyId']),
+                },
+              },
+            },
+          },
+        }),
+      },
+    },
+  };
+  assert.match(compareContracts(baseline, extraRequiredRequest).breaking.join('\n'), /thêm trường bắt buộc "propertyId"/);
+
+  const removedResponseProperty = {
+    ...baseline,
+    paths: {
+      ...baseline.paths,
+      '/api/v1/auth/login': {
+        post: operation({
+          responses: { 200: { content: { 'application/json': { schema: schema({ refreshToken: { type: 'string' } }, ['refreshToken']) } } } },
+        }),
+      },
+    },
+  };
+  assert.match(compareContracts(baseline, removedResponseProperty).breaking.join('\n'), /bỏ thuộc tính "accessToken"/);
+
+  const newlyRequiredParameter = {
+    ...baseline,
+    paths: {
+      ...baseline.paths,
+      '/api/v1/auth/login': { post: { ...operation(), parameters: [{ in: 'header', name: 'X-Tenant', required: true }] } },
+    },
+  };
+  assert.match(compareContracts(baseline, newlyRequiredParameter).breaking.join('\n'), /thêm tham số bắt buộc "X-Tenant"/);
+
+  const enumBaseline = {
+    ...baseline,
+    paths: {
+      ...baseline.paths,
+      '/api/v1/channels/{channelId}': {
+        get: {
+          responses: {
+            200: { content: { 'application/json': { schema: { type: 'object', properties: { syncStatus: { type: 'string', enum: ['OK', 'DEGRADED'] } } } } } },
+          },
+        },
+      },
+    },
+  };
+  const enumShrink = {
+    ...enumBaseline,
+    paths: {
+      ...enumBaseline.paths,
+      '/api/v1/channels/{channelId}': {
+        get: {
+          responses: {
+            200: { content: { 'application/json': { schema: { type: 'object', properties: { syncStatus: { type: 'string', enum: ['OK'] } } } } } },
+          },
+        },
+      },
+    },
+  };
+  assert.match(compareContracts(enumBaseline, enumShrink).breaking.join('\n'), /thu hẹp enum/);
+  const enumGrow = {
+    ...enumBaseline,
+    paths: {
+      ...enumBaseline.paths,
+      '/api/v1/channels/{channelId}': {
+        get: {
+          responses: {
+            200: { content: { 'application/json': { schema: { type: 'object', properties: { syncStatus: { type: 'string', enum: ['OK', 'DEGRADED', 'PAUSED'] } } } } } },
+          },
+        },
+      },
+    },
+  };
+  const enumGrowResult = compareContracts(enumBaseline, enumGrow);
+  assert.deepEqual(enumGrowResult.breaking, []);
+  assert.match(enumGrowResult.additive.join('\n'), /thêm giá trị enum/);
+
+  const compatible = {
+    ...baseline,
+    paths: {
+      ...baseline.paths,
+      '/api/v1/auth/login': {
+        post: operation({
+          request: {
+            body: {
+              content: {
+                'application/json': { schema: schema({ username: { type: 'string' }, tenant: { type: 'string' } }, ['username']) },
+              },
+            },
+          },
+          responses: {
+            200: { content: { 'application/json': { schema: schema({ accessToken: { type: 'string' }, scope: { type: 'string' } }, ['accessToken']) } } },
+            429: { description: 'rate limited' },
+          },
+        }),
+      },
+      '/api/v1/auth/logout': { post: { responses: { 204: { description: 'ok' } } } },
+    },
+  };
+  const compatibleResult = compareContracts(baseline, compatible);
+  assert.deepEqual(compatibleResult.breaking, []);
+  assert.ok(compatibleResult.additive.length >= 3);
 });

@@ -1,10 +1,19 @@
 {
-  "name": "pine-hill-ooad-docs",
+  "name": "pine-hill-ooad",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Executable checks for the OOAD documentation; no production application",
-  "engines": { "node": ">=22.13" },
+  "description": "Pine Hill — workspace thi công (API/worker + 4 frontend) và công cụ kiểm tài liệu OOAD",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "packageManager": "pnpm@10.34.5",
+  "prettier": "@pinehill/config/prettier.json",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
   "scripts": {
     "check": "npm run check:docs && npm test",
     "check:docs": "npm run check:links && npm run check:mermaid && npm run check:ids",
@@ -15,14 +24,36 @@
     "test": "npm run test:tooling && npm run test:db",
     "test:tooling": "node --test tests/tooling.test.mjs",
     "test:db": "node --test --test-concurrency=1 tests/database.test.mjs",
-    "test:postgres": "node scripts/test-postgres.mjs"
+    "test:postgres": "node scripts/test-postgres.mjs",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint . --max-warnings 0",
+    "format:check": "prettier --check \"apps/**/*.{ts,tsx,mjs,js,json,css}\" \"packages/**/*.{ts,tsx,mjs,js,json}\"",
+    "products:test": "pnpm -r test",
+    "products:test:coverage": "pnpm -r test:coverage",
+    "products:build": "pnpm -r build",
+    "openapi:generate": "pnpm --filter @pinehill/contracts openapi:generate",
+    "check:openapi": "node scripts/check-openapi-drift.mjs",
+    "check:imports": "node scripts/check-frontend-imports.mjs",
+    "ci": "pnpm check:openapi && pnpm check:contract && pnpm check:imports && pnpm typecheck && pnpm typecheck:e2e && pnpm lint && pnpm format:check && pnpm products:test:coverage && pnpm products:build",
+    "typecheck:e2e": "tsc --noEmit -p tests/e2e/tsconfig.json",
+    "test:e2e": "playwright test -c tests/e2e/playwright.config.ts",
+    "openapi:baseline": "node scripts/set-openapi-baseline.mjs",
+    "check:contract": "node scripts/check-openapi-breaking.mjs"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@electric-sql/pglite": "^0.3.14",
+    "@pinehill/config": "workspace:*",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.20.4",
+    "eslint": "^9.39.5",
     "github-slugger": "^2.0.0",
     "jsdom": "^26.1.0",
     "markdown-it": "^14.1.0",
     "mermaid": "^11.12.0",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "prettier": "^3.9.9",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.1"
   }
 }

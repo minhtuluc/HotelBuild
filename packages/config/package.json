@@ -1,0 +1,15 @@
+{
+  "name": "@pinehill/config",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "tsconfig/eslint/prettier dùng chung cho toàn workspace",
+  "exports": {
+    "./eslint/base.mjs": "./eslint/base.mjs",
+    "./eslint/frontend.mjs": "./eslint/frontend.mjs",
+    "./prettier.json": "./prettier.json"
+  },
+  "dependencies": {
+    "typescript-eslint": "^8.70.1"
+  }
+}

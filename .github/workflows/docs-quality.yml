@@ -10,13 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - run: npm run check:docs
-      - run: npm test
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run check:docs
+      - run: pnpm run test
   postgres16:
     runs-on: ubuntu-latest
     services:
@@ -36,9 +37,10 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ooad_ci
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - run: npm run test:postgres
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run test:postgres

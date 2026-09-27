@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality gate (typecheck, lint, test, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Contract drift (OpenAPI sinh từ zod)
+        run: pnpm check:openapi
+      - name: Thay đổi hợp đồng phá vỡ so với bản nền
+        run: pnpm check:contract
+      - name: Ranh giới frontend (ADR-018)
+        run: pnpm check:imports
+      - name: Typecheck (6 gói + 4 app)
+        run: pnpm typecheck
+      - name: Typecheck E2E harness
+        run: pnpm typecheck:e2e
+      - name: Lint (type-aware, 0 cảnh báo)
+        run: pnpm lint
+      - name: Format check
+        run: pnpm format:check
+      - name: Unit + contract test kèm ngưỡng coverage
+        run: pnpm products:test:coverage
+      - name: Build hai web app
+        run: pnpm products:build

@@ -2,6 +2,7 @@
 
 > Lộ trình cho **nhóm 5 người**, học kỳ 15 tuần, bắt đầu **21/09/2026** (Tuần 1) — kết thúc **03/01/2027** (hết Tuần 15).
 > Đơn vị công sức: 1 người × 1 tuần ≈ **10 giờ** → tổng ngân sách ≈ **750 giờ**.
+> Phần giao diện (customer web, customer Android, operations web, operations Android) được tách thành các pha bàn giao tại [lộ trình thi công web & Android](lo-trinh-thi-cong-web-android.md).
 
 ---
 

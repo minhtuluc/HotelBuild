@@ -9,6 +9,9 @@ build/
 out/
 .expo/
 *.tsbuildinfo
+coverage/
+.eas/
+expo-env.d.ts
 
 # Môi trường & bí mật — KHÔNG BAO GIỜ commit (BR-SYS / NFR-SEC-06)
 .env
@@ -27,6 +30,10 @@ dump.sql
 .vscode/
 .idea/
 *.swp
+
+# Kết quả kiểm thử E2E
+playwright-report/
+test-results/
 
 # Nhật ký
 *.log

@@ -1,0 +1,37 @@
+name: E2E nightly (web)
+
+on:
+  schedule:
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web-e2e:
+    name: Playwright + axe (customer web, operations web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm products:build
+      - run: pnpm exec playwright install --with-deps chromium webkit
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+# Nhánh Maestro (2 Android) chạy ở đây khi các màn hình Android của F1–F7 có mặt;
+# F0 mới chỉ có khung app và typecheck, chưa có luồng để chạy trên thiết bị/emulator.

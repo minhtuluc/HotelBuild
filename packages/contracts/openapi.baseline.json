@@ -1,0 +1,963 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Pine Hill Booking API",
+    "version": "1.0.0",
+    "description": "Hợp đồng REST /api/v1. Nguồn chân lý thiết kế: docs/04-thiet-ke/api.md (F0: AUTH + system/health)."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "ErrorBody": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^E_[A-Z]+_[A-Z_]+$"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "timestamp": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "issue": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "field",
+                "issue"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "traceId",
+          "timestamp",
+          "path"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "authLogin",
+        "summary": "Đăng nhập nội bộ — trả cặp access/refresh (UC-AUTH-01)",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 64
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "username",
+                  "password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cặp token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tokenType": {
+                      "type": "string",
+                      "enum": [
+                        "Bearer"
+                      ]
+                    },
+                    "accessToken": {
+                      "type": "string",
+                      "minLength": 16
+                    },
+                    "expiresInSeconds": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "refreshToken": {
+                      "type": "string",
+                      "minLength": 16
+                    },
+                    "refreshExpiresInSeconds": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "required": [
+                    "tokenType",
+                    "accessToken",
+                    "expiresInSeconds",
+                    "refreshToken",
+                    "refreshExpiresInSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "E_GEN_VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E_AUTH_INVALID_CREDENTIALS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "E_GEN_SERVICE_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "authRefresh",
+        "summary": "Luân chuyển refresh token; dùng lại token cũ thu hồi cả họ (UC-AUTH-01)",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "minLength": 16
+                  }
+                },
+                "required": [
+                  "refreshToken"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cặp token mới",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tokenType": {
+                      "type": "string",
+                      "enum": [
+                        "Bearer"
+                      ]
+                    },
+                    "accessToken": {
+                      "type": "string",
+                      "minLength": 16
+                    },
+                    "expiresInSeconds": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "refreshToken": {
+                      "type": "string",
+                      "minLength": 16
+                    },
+                    "refreshExpiresInSeconds": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "required": [
+                    "tokenType",
+                    "accessToken",
+                    "expiresInSeconds",
+                    "refreshToken",
+                    "refreshExpiresInSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E_AUTH_INVALID_CREDENTIALS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/pin/verify": {
+      "post": {
+        "operationId": "authPinVerify",
+        "summary": "Xác minh PIN 6 số cho thao tác tài chính, trả pinToken dùng một lần (BR-RBAC-05)",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pin": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  },
+                  "bookingId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "pin"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "pinToken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pinToken": {
+                      "type": "string",
+                      "minLength": 16
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "pinToken",
+                    "expiresAt"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E_AUTH_PIN_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "authLogout",
+        "summary": "Thu hồi phiên và họ refresh token (UC-AUTH-01)",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Đã thu hồi phiên"
+          },
+          "401": {
+            "description": "E_AUTH_INVALID_CREDENTIALS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/guest-auth/register": {
+      "post": {
+        "operationId": "guestRegister",
+        "summary": "Khách tự đăng ký; nhận diện duy nhất theo số điện thoại chuẩn hoá (UC-AUTH-03)",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+84\\d{9}$"
+                  },
+                  "fullName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  },
+                  "consentMarketing": {
+                    "type": "boolean"
+                  },
+                  "consentVersion": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "phone",
+                  "fullName",
+                  "password",
+                  "consentMarketing",
+                  "consentVersion"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Hồ sơ khách đã tạo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tokenType": {
+                      "type": "string",
+                      "enum": [
+                        "Bearer"
+                      ]
+                    },
+                    "accessToken": {
+                      "type": "string",
+                      "minLength": 16
+                    },
+                    "expiresInSeconds": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "refreshToken": {
+                      "type": "string",
+                      "minLength": 16
+                    },
+                    "refreshExpiresInSeconds": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "required": [
+                    "tokenType",
+                    "accessToken",
+                    "expiresInSeconds",
+                    "refreshToken",
+                    "refreshExpiresInSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_CRM_PHONE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/guest-auth/login": {
+      "post": {
+        "operationId": "guestLogin",
+        "summary": "Khách đăng nhập (UC-AUTH-03)",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+84\\d{9}$"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "phone",
+                  "password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cặp token khách",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tokenType": {
+                      "type": "string",
+                      "enum": [
+                        "Bearer"
+                      ]
+                    },
+                    "accessToken": {
+                      "type": "string",
+                      "minLength": 16
+                    },
+                    "expiresInSeconds": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "refreshToken": {
+                      "type": "string",
+                      "minLength": 16
+                    },
+                    "refreshExpiresInSeconds": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "required": [
+                    "tokenType",
+                    "accessToken",
+                    "expiresInSeconds",
+                    "refreshToken",
+                    "refreshExpiresInSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E_AUTH_INVALID_CREDENTIALS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/guest-auth/refresh": {
+      "post": {
+        "operationId": "guestRefresh",
+        "summary": "Luân chuyển refresh token khách; dùng lại token cũ thu hồi cả họ (UC-AUTH-03)",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "minLength": 16
+                  }
+                },
+                "required": [
+                  "refreshToken"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cặp token khách mới",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tokenType": {
+                      "type": "string",
+                      "enum": [
+                        "Bearer"
+                      ]
+                    },
+                    "accessToken": {
+                      "type": "string",
+                      "minLength": 16
+                    },
+                    "expiresInSeconds": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "refreshToken": {
+                      "type": "string",
+                      "minLength": 16
+                    },
+                    "refreshExpiresInSeconds": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "required": [
+                    "tokenType",
+                    "accessToken",
+                    "expiresInSeconds",
+                    "refreshToken",
+                    "refreshExpiresInSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E_AUTH_INVALID_CREDENTIALS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{userId}/access": {
+      "put": {
+        "operationId": "usersAccessUpdate",
+        "summary": "Gán vai trò/phạm vi cơ sở/trạng thái người dùng (UC-AUTH-02, BR-RBAC-01/02)",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Phiên bản cấu hình; thiếu → 428, lệch → 412 (api.md §1.6)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "OWNER",
+                      "MANAGER",
+                      "FRONT_DESK",
+                      "RESERVATION_AGENT",
+                      "ACCOUNTANT",
+                      "HOUSEKEEPING",
+                      "SYSADMIN"
+                    ]
+                  },
+                  "propertyScope": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "role",
+                  "propertyScope",
+                  "isActive"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Người dùng đã cập nhật"
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "E_GEN_VERSION_CONFLICT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "E_GEN_PRECONDITION_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/health": {
+      "get": {
+        "operationId": "systemHealth",
+        "summary": "Kiểm tra sống; chỉ trả {status:\"ok\"} (api.md §2, SYS)",
+        "tags": [
+          "system"
+        ],
+        "responses": {
+          "200": {
+            "description": "Dịch vụ sống"
+          },
+          "503": {
+            "description": "E_GEN_SERVICE_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

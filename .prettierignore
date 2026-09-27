@@ -1,0 +1,18 @@
+# Artefact sinh tự động — không định dạng lại (so khớp byte-level với bộ sinh).
+packages/contracts/openapi.json
+packages/contracts/openapi.baseline.json
+
+# Phụ thuộc & kết quả dựng
+node_modules/
+pnpm-lock.yaml
+.next/
+.expo/
+dist/
+coverage/
+test-results/
+playwright-report/
+
+# Tài liệu được chuẩn hoá bởi công cụ kiểm riêng (scripts/*.mjs), không dùng Prettier.
+docs/
+scripts/
+tests/

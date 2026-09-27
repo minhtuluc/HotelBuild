@@ -1,0 +1,32 @@
+{
+  "name": "@pinehill/operations-android",
+  "version": "1.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "description": "Operations Android — tác nghiệp tại hiện trường: check-in/out, thu tiền, buồng phòng, đổi phòng (Expo + Expo Router)",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "^57.0.16",
+    "@pinehill/api-client": "workspace:*",
+    "@pinehill/contracts": "workspace:*",
+    "@pinehill/ui-native": "workspace:*",
+    "expo": "^57.0.25",
+    "expo-router": "^57.0.23",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "expo-crypto": "~15.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.4",
+    "babel-preset-expo": "^57.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  }
+}

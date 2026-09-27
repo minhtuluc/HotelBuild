@@ -1,0 +1,30 @@
+{
+  "name": "@pinehill/ui-native",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Token và primitive trình bày cho Android (Expo/React Native)",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@pinehill/contracts": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=19.2.0 <20.0.0",
+    "react-native": ">=0.86.0 <0.88.0"
+  },
+  "devDependencies": {
+    "@pinehill/ui-web": "workspace:*",
+    "@types/react": "~19.2.4",
+    "@vitest/coverage-v8": "^3.2.7",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "vitest": "^3.2.7"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@pinehill/customer-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Customer Web — khách tìm phòng, đặt, thanh toán, tra cứu (Next.js 15 App Router)",
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "e2e": "playwright test -c ../../tests/e2e/playwright.config.ts"
+  },
+  "dependencies": {
+    "@pinehill/api-client": "workspace:*",
+    "@pinehill/contracts": "workspace:*",
+    "@pinehill/ui-web": "workspace:*",
+    "next": "^15.5.26",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.20.4",
+    "@types/react": "~19.2.4",
+    "@types/react-dom": "~19.2.7",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  }
+}

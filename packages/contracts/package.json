@@ -1,0 +1,25 @@
+{
+  "name": "@pinehill/contracts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Hợp đồng API: zod schema, mã lỗi E_*, OpenAPI 3.1 sinh tự động",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "openapi:generate": "tsx src/openapi/generate.ts"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^9.1.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.7",
+    "tsx": "^4.23.15",
+    "vitest": "^3.2.7"
+  }
+}
