@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { lstat, readFile, readlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 
@@ -19,6 +19,13 @@ function pathsFromGit(output) {
   return output.toString('utf8').split('\0').filter(Boolean);
 }
 
+function updateFramed(hash, bytes) {
+  const length = Buffer.allocUnsafe(8);
+  length.writeBigUInt64BE(BigInt(bytes.length));
+  hash.update(length);
+  hash.update(bytes);
+}
+
 export async function captureGitState(repoDir, baseSha) {
   const head = (await git(repoDir, ['rev-parse', 'HEAD'])).toString('utf8').trim();
   const base = baseSha ?? head;
@@ -34,10 +41,14 @@ export async function captureGitState(repoDir, baseSha) {
   hash.update(diff);
   const untracked = pathsFromGit(untrackedPaths);
   for (const path of untracked) {
-    hash.update('\0');
-    hash.update(path);
-    hash.update('\0');
-    hash.update(await readFile(join(repoDir, path)));
+    const fullPath = join(repoDir, path);
+    const isLink = (await lstat(fullPath)).isSymbolicLink();
+    const contents = isLink
+      ? await readlink(fullPath, { encoding: 'buffer' })
+      : await readFile(fullPath);
+    updateFramed(hash, Buffer.from(path));
+    hash.update(isLink ? 'l' : 'f');
+    updateFramed(hash, contents);
   }
 
   return {
