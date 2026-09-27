@@ -30,6 +30,8 @@ dump.sql
 .vscode/
 .idea/
 *.swp
+.worktrees/
+.superpowers/
 
 # Kết quả kiểm thử E2E
 playwright-report/
