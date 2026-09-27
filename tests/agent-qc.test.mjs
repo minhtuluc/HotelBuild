@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { chmod, mkdtemp, readFile, rm, symlink, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -101,25 +102,29 @@ test('untracked symlinks hash link text, including broken targets', async () => 
   });
 });
 
-async function withFakeCodex({ output, exitCode = 0, delayMs = 0, stdout = '' }, run) {
+async function withFakeCodex({ output, exitCode = 0, delayMs = 0, stdout = '', inheritedPipeMs = 0 }, run) {
   const repoDir = await mkdtemp(join(tmpdir(), 'agent-qc-review-'));
   const codexBin = join(repoDir, 'fake-codex');
   const argsPath = join(repoDir, 'args.json');
+  const donePath = join(repoDir, 'done');
   const script = `#!/usr/bin/env node
 const fs = require('node:fs');
+const { spawn } = require('node:child_process');
 const args = process.argv.slice(2);
 fs.writeFileSync(${JSON.stringify(argsPath)}, JSON.stringify(args));
+if (${inheritedPipeMs} > 0) spawn(process.execPath, ['-e', 'setTimeout(() => {}, ${inheritedPipeMs})'], { stdio: ['ignore', 'inherit', 'inherit'] });
 setTimeout(() => {
   const outputPath = args[args.indexOf('-o') + 1];
   fs.writeFileSync(outputPath, ${JSON.stringify(output)});
   if (${stdout.length} > 0) fs.writeSync(1, ${JSON.stringify(stdout)});
+  fs.writeFileSync(${JSON.stringify(donePath)}, 'done');
   process.exit(${exitCode});
 }, ${delayMs});
 `;
   try {
     await writeFile(codexBin, script);
     await chmod(codexBin, 0o755);
-    await run({ repoDir, codexBin, argsPath });
+    await run({ repoDir, codexBin, argsPath, donePath });
   } finally {
     await rm(repoDir, { recursive: true, force: true });
   }
@@ -178,5 +183,40 @@ test('reviewer times out a stalled Codex process', async () => {
 test('reviewer rejects oversized process output', async () => {
   await withFakeCodex({ output: JSON.stringify(passReview), stdout: 'x'.repeat(1_100_000) }, async ({ repoDir, codexBin }) => {
     await assert.rejects(runCodexReview({ repoDir, baseSha, changedPaths: [], codexBin }), /output.*large/i);
+  });
+});
+
+async function rejectsBeforeInheritedPipeCloses(review, expected) {
+  const outcome = await Promise.race([
+    review.then(() => 'resolved', (error) => error),
+    new Promise((resolve) => setTimeout(() => resolve('still pending'), 400)),
+  ]);
+  assert.match(String(outcome), expected);
+}
+
+test('reviewer timeout rejects while a descendant retains stdout', async () => {
+  await withFakeCodex({ output: JSON.stringify(passReview), delayMs: 1000, inheritedPipeMs: 1000 }, async ({ repoDir, codexBin }) => {
+    await rejectsBeforeInheritedPipeCloses(runCodexReview({ repoDir, baseSha, changedPaths: [], codexBin, timeoutMs: 150 }), /timed out/i);
+  });
+});
+
+test('reviewer output limit rejects while a descendant retains stdout', async () => {
+  await withFakeCodex({ output: JSON.stringify(passReview), stdout: 'x'.repeat(1_100_000), inheritedPipeMs: 1000 }, async ({ repoDir, codexBin }) => {
+    await rejectsBeforeInheritedPipeCloses(runCodexReview({ repoDir, baseSha, changedPaths: [], codexBin }), /output.*large/i);
+  });
+});
+
+test('reviewer rejects an aborted signal before returning a parsed PASS', async () => {
+  await withFakeCodex({ output: JSON.stringify(passReview) }, async ({ repoDir, codexBin, donePath }) => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+    const originalAborted = Object.getOwnPropertyDescriptor(AbortSignal.prototype, 'aborted').get;
+    Object.defineProperty(signal, 'aborted', {
+      get() {
+        if (existsSync(donePath)) controller.abort();
+        return originalAborted.call(this);
+      },
+    });
+    await assert.rejects(runCodexReview({ repoDir, baseSha, changedPaths: [], codexBin, signal }), /abort/i);
   });
 });

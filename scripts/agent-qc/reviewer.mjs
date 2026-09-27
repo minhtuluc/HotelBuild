@@ -39,32 +39,31 @@ function reviewPrompt(baseSha, changedPaths) {
 async function runProcess(codexBin, args, repoDir, signal, timeoutMs) {
   const child = spawn(codexBin, args, { cwd: repoDir, stdio: ['ignore', 'pipe', 'pipe'], signal });
   let outputBytes = 0;
-  let oversized = false;
-  let timedOut = false;
-  const timer = setTimeout(() => {
-    timedOut = true;
-    child.kill('SIGKILL');
-  }, timeoutMs);
-  try {
-    const exitCode = await new Promise((resolve, reject) => {
-      const onData = (chunk) => {
-        outputBytes += chunk.length;
-        if (outputBytes > MAX_OUTPUT_BYTES) {
-          oversized = true;
-          child.kill('SIGKILL');
-        }
-      };
-      child.stdout.on('data', onData);
-      child.stderr.on('data', onData);
-      child.once('error', reject);
-      child.once('close', resolve);
-    });
-    if (timedOut) throw new Error('Codex review timed out');
-    if (oversized) throw new Error('Codex process output too large');
-    if (exitCode !== 0) throw new Error(`Codex review exited with code ${exitCode}`);
-  } finally {
-    clearTimeout(timer);
-  }
+  await new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) {
+        child.kill('SIGKILL');
+        child.stdout.destroy();
+        child.stderr.destroy();
+        reject(error);
+      } else {
+        resolve();
+      }
+    };
+    const onData = (chunk) => {
+      outputBytes += chunk.length;
+      if (outputBytes > MAX_OUTPUT_BYTES) finish(new Error('Codex process output too large'));
+    };
+    child.stdout.on('data', onData);
+    child.stderr.on('data', onData);
+    child.once('error', finish);
+    child.once('close', (code) => finish(code === 0 ? null : new Error(`Codex review exited with code ${code}`)));
+    const timer = setTimeout(() => finish(new Error('Codex review timed out')), timeoutMs);
+  });
 }
 
 export async function runCodexReview({ repoDir, baseSha, changedPaths, signal, codexBin = 'codex', timeoutMs = 600_000 }) {
@@ -81,7 +80,9 @@ export async function runCodexReview({ repoDir, baseSha, changedPaths, signal, c
     } catch (error) {
       throw new Error('Malformed Codex review JSON', { cause: error });
     }
-    return validateReview(result);
+    const review = validateReview(result);
+    if (signal?.aborted) throw signal.reason ?? new DOMException('Review aborted', 'AbortError');
+    return review;
   } finally {
     await rm(outputDir, { recursive: true, force: true });
   }
