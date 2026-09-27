@@ -76,6 +76,7 @@ F0 ở trạng thái **sẵn sàng để QC nghiệm thu lại** với các mụ
 
 ## 6. Revision và cách tái lập
 
-- Revision nộp: **`REVISION_SHA`** (commit F0). Bản bằng chứng này nằm trong commit kế tiếp chỉ sửa `docs/`; mã nguồn và cổng không đổi giữa hai commit.
+- **Revision nộp: `97a1b86c1d616da4c62810be87e026bf365dc6f0`** (`feat(inf): nền tảng thi công F0 cho 4 frontend (US-INF-01)`) — cây làm việc sạch (`git status --porcelain` rỗng) tại thời điểm chạy cổng.
+- Log trên đúng revision đó: `pnpm run ci` → exit 0; `pnpm test:e2e` → 36/36 PASS; `pnpm run check` → PASS (9 test công cụ + 30 test DDL, 1 SKIP nhúng). Bản bằng chứng này nằm trong commit kế tiếp **chỉ sửa `docs/`**; mã nguồn và cổng không đổi giữa hai commit.
 - Tái lập đầy đủ: `pnpm install --frozen-lockfile && pnpm run ci && pnpm run check && pnpm test:e2e`.
 - Điều kiện sang F1: QC chấp thuận các mục F0-01…F0-08, hoặc nêu phát hiện mới; `Q-01…Q-16` cần chốt trước các pha phụ thuộc.
