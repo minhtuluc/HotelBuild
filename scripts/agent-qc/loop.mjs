@@ -11,11 +11,23 @@ export function createQcLoop({ repoDir, capture = captureGitState, review = runC
   let task;
   let status = 'IDLE';
 
+  function publish(currentTask, entry) {
+    try {
+      report(entry);
+      return true;
+    } catch {
+      // Reporting failed; do not retry the same failing sink or accept PASS.
+      status = 'BLOCKED';
+      currentTask.active = false;
+      return false;
+    }
+  }
+
   function finish(currentTask, entry) {
     if (task !== currentTask) return;
     status = entry.status;
     currentTask.active = false;
-    report(entry);
+    publish(currentTask, entry);
   }
 
   async function runStop(currentTask, signal) {
@@ -57,7 +69,7 @@ export function createQcLoop({ repoDir, capture = captureGitState, review = runC
       if (!hasChanged(current, after)) {
         if (result.status === 'NEEDS_CHANGES' && currentTask.rounds < maxRounds) {
           currentTask.lastReviewedFingerprint = current.fingerprint;
-          report({ ...result, round: currentTask.rounds });
+          if (!publish(currentTask, { ...result, round: currentTask.rounds })) return undefined;
           return { continue: true, additionalContext: `Codex QC found blocking issues:\n${formatFindings(result.findings)}` };
         }
         if (result.status === 'PASS') finish(currentTask, { ...result, round: currentTask.rounds });
@@ -78,10 +90,15 @@ export function createQcLoop({ repoDir, capture = captureGitState, review = runC
       const currentTask = { baseline: undefined, lastReviewedFingerprint: undefined, rounds: 0,
         controller: new AbortController(), active: false, inFlight: undefined };
       task = currentTask;
-      currentTask.baseline = await capture(repoDir);
-      if (task !== currentTask) return;
-      currentTask.active = true;
       status = 'PENDING';
+      try {
+        currentTask.baseline = await capture(repoDir);
+        if (task !== currentTask) return;
+        currentTask.active = true;
+      } catch (error) {
+        finish(currentTask, { status: 'BLOCKED', round: 0,
+          summary: `Could not capture Git baseline: ${error instanceof Error ? error.message : String(error)}. Check repository access before retrying.` });
+      }
     },
     stop({ signal } = {}) {
       const currentTask = task;
@@ -89,7 +106,8 @@ export function createQcLoop({ repoDir, capture = captureGitState, review = runC
       if (currentTask.inFlight) return currentTask.inFlight;
       const pending = runStop(currentTask, signal);
       currentTask.inFlight = pending;
-      void pending.finally(() => { if (currentTask.inFlight === pending) currentTask.inFlight = undefined; });
+      const clearPending = () => { if (currentTask.inFlight === pending) currentTask.inFlight = undefined; };
+      void pending.then(clearPending, clearPending);
       return pending;
     },
     cancel() { task?.controller.abort(); },

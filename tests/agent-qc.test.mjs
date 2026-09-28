@@ -452,3 +452,59 @@ test('a new task reviews independently while an old stop is still pending', asyn
   assert.equal(qc.status, 'PASS');
   assert.deepEqual(entries.map((entry) => entry.status), ['PASS']);
 });
+
+
+test('failed baseline capture reports BLOCKED and a later stop settles', async () => {
+  const handlers = new Map();
+  const reports = [];
+  const notifications = [];
+  const qc = registerQcExtension({ on: (name, handler) => handlers.set(name, handler) }, {
+    repoDir: '/repo', capture: async () => { throw new Error('git permission denied'); },
+    report: (entry) => reports.push(entry),
+  });
+  const ctx = { agent: { kind: 'main' }, ui: { notify: (...args) => notifications.push(args) } };
+  await handlers.get('before_agent_start')({}, ctx);
+  assert.equal(await handlers.get('session_stop')({}, ctx), undefined);
+  assert.equal(qc.status, 'BLOCKED');
+  assert.deepEqual(reports.map((entry) => entry.status), ['BLOCKED']);
+  assert.match(notifications.at(-1)[0], /BLOCKED.*baseline.*git permission denied/i);
+  assert.equal(notifications.at(-1)[1], 'warning');
+});
+
+test('throwing reporter blocks without retrying or leaking an unhandled rejection', async () => {
+  let reports = 0;
+  const qc = createQcLoop({ repoDir: '/repo',
+    capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
+    review: async () => passReview,
+    report: () => { reports++; throw new Error('report unavailable'); },
+  });
+  await qc.begin();
+  assert.equal(await qc.stop(), undefined);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(qc.status, 'BLOCKED');
+  assert.equal(reports, 1);
+  assert.equal(await qc.stop(), undefined);
+});
+
+test('failed log write still notifies BLOCKED and settles the stop hook', async () => {
+  const repo = await mkdtemp(join(tmpdir(), 'agent-qc-log-failure-'));
+  try {
+    await writeFile(join(repo, '.agent-qc'), 'prevents log directory creation');
+    const handlers = new Map();
+    const notifications = [];
+    const qc = registerQcExtension({ on: (name, handler) => handlers.set(name, handler) }, {
+      repoDir: repo, capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
+      review: async () => passReview,
+    });
+    const ctx = { agent: { kind: 'main' }, ui: { notify: (...args) => notifications.push(args) } };
+    await handlers.get('before_agent_start')({}, ctx);
+    assert.equal(await handlers.get('session_stop')({}, ctx), undefined);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(qc.status, 'BLOCKED');
+    assert.equal(notifications.length, 1);
+    assert.match(notifications[0][0], /BLOCKED.*report.*\.agent-qc/i);
+    assert.equal(notifications[0][1], 'warning');
+  } finally {
+    await rm(repo, { recursive: true, force: true });
+  }
+});

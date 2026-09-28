@@ -27,7 +27,12 @@ export function registerQcExtension(pi: ExtensionApi, { repoDir, capture, review
   // The JavaScript loop's default callback is inferred as zero-argument by TypeScript.
   // @ts-expect-error The loop calls report(entry) for every review outcome.
   const qc = createQcLoop({ repoDir: selectedRepoDir, capture, review, report: (entry: ReportEntry) => {
-    (report ?? ((result: ReportEntry) => writeQcReport(selectedRepoDir, result)))(entry);
+    try {
+      (report ?? ((result: ReportEntry) => writeQcReport(selectedRepoDir, result)))(entry);
+    } catch (error) {
+      ui?.notify(`Codex QC BLOCKED: Could not write QC report: ${error instanceof Error ? error.message : String(error)}. Check report path permissions before retrying.`, 'warning');
+      throw error;
+    }
     if (entry.status === 'PASS' || entry.status === 'BLOCKED') {
       ui?.notify(`Codex QC ${entry.status}: ${entry.summary}`, entry.status === 'PASS' ? 'info' : 'warning');
     }
