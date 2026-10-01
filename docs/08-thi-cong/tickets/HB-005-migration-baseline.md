@@ -10,6 +10,7 @@ allow:
   - apps/api/test/migration/**
   - apps/api/src/infrastructure/prisma/**
   - scripts/migrate.mjs
+  - infra/README.md # AC5; HB-002 đã merge
   - pnpm-lock.yaml
 unlock:
   - package.json
@@ -38,7 +39,7 @@ Vế thứ hai của US-INF-01: `pnpm migrate` chạy sạch trên CSDL trống,
    - CSDL trống → migrate xanh → đủ 42 bảng; ba truy vấn csdl §8.3 cho kết quả kỳ vọng;
    - so sánh schema dựng từ migration với schema dựng trực tiếp từ csdl §3 (bảng, cột, kiểu, ràng buộc, chỉ mục, trigger, quyền) → không khác;
    - kết nối bằng `app_rw`: `UPDATE`/`DELETE` trên `audit_logs` bị từ chối (TC-SYS-01); chèn trùng `room_assignments` bằng SQL thô bị từ chối với SQLSTATE `23P01`.
-5. Mật khẩu login cho `app_rw` **không** nằm trong migration: script dev `db:dev-roles` đặt mật khẩu từ biến môi trường cho CSDL local; ghi rõ trong `infra/README.md` là chỉ dùng cho dev (sửa README ở PR riêng nếu HB-002 chưa merge — không thêm `infra/**` vào ticket này).
+5. Mật khẩu login cho `app_rw` **không** nằm trong migration: script dev `db:dev-roles` đặt mật khẩu từ biến môi trường cho CSDL local; ghi rõ trong `infra/README.md` là chỉ dùng cho dev, và cập nhật ghi chú "role `app_rw` chưa tồn tại" trong README cho đúng sau migration.
 6. csdl §8.1: thay bảng 0001–0009 bằng mô tả theo QĐ-02 (0001 baseline từ §3; sau đó migration tiến kèm sửa §3), sửa "36 bảng" thành 42. Không sửa §3.
 7. `pnpm run ci` và `npm run check` xanh.
 
