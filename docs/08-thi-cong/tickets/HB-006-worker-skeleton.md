@@ -3,7 +3,7 @@ id: HB-006
 title: Khung apps/worker (BullMQ) + Dockerfile api/worker
 risk: R1
 owner: deepseek
-max_lines: 550 # +3 điểm hoàn thiện apps/api phát hiện khi lead review HB-004
+max_lines: 750 # worker mới + 2 Dockerfile + 3 điểm hoàn thiện apps/api; lead nâng từ 550 (PR #12)
 allow:
   - apps/worker/**
   - docker/**
