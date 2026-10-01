@@ -1,0 +1,27 @@
+{
+  "name": "@pinehill/worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Worker nền dùng chung — BullMQ (Pine Hill)",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "bullmq": "^5.81.5",
+    "pino": "^10.3.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "@vitest/coverage-v8": "^3.2.7",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  }
+}

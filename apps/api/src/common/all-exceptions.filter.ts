@@ -6,6 +6,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { CLOCK, ID_GENERATOR } from '../infrastructure/ports.js';
 import { AppError } from './app-error.js';
+import { resolveCorrelationId } from './request-id.js';
 
 const HTTP_ERRORS: Record<number, { code: ErrorCode; message: string }> = {
   400: { code: 'E_GEN_VALIDATION_FAILED', message: 'Yêu cầu không hợp lệ.' },
@@ -23,9 +24,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const request = host.switchToHttp().getRequest<FastifyRequest>();
     const reply = host.switchToHttp().getResponse<FastifyReply>();
-    const incoming = request.headers['x-correlation-id'];
-    const correlationId =
-      typeof incoming === 'string' && incoming.length > 0 ? incoming : this.ids.generate();
+    const correlationId = resolveCorrelationId(request.headers['x-correlation-id'], this.ids);
     request.id = correlationId;
     request.headers['x-correlation-id'] = correlationId;
     reply.header('X-Trace-Id', correlationId);

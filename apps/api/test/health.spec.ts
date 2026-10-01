@@ -16,6 +16,7 @@ const testConfig: ApiConfig = {
   IDEMPOTENCY_TTL_HOURS: 24,
   LOG_LEVEL: 'silent',
   PORT: 0,
+  HOST: '127.0.0.1',
 };
 
 const up = (name: string): HealthProbe => ({ name, check: () => Promise.resolve(true) });
@@ -104,5 +105,29 @@ describe('GET /api/v1/system/health', () => {
     expect(res.status).toBe(404);
     expect(parsed.traceId).toMatch(/^[0-9a-f-]{36}$/);
     expect(res.headers['x-trace-id']).toBe(parsed.traceId);
+  });
+  it('mã tương quan dài 129 ký tự → sinh mới', async () => {
+    const server = await start([up('postgres'), down('redis')]);
+    const tooLong = 'a'.repeat(129);
+    const res = await request(server).get('/api/v1/system/health').set('X-Correlation-Id', tooLong);
+    const parsed = errorBodySchema.parse(res.body);
+    expect(parsed.traceId).not.toBe(tooLong);
+    expect(parsed.traceId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(res.headers['x-trace-id']).toBe(parsed.traceId);
+  });
+  it('mã tương quan có khoảng trắng → sinh mới', async () => {
+    const server = await start([up('postgres'), down('redis')]);
+    const res = await request(server)
+      .get('/api/v1/system/health')
+      .set('X-Correlation-Id', 'bad id with space');
+    const parsed = errorBodySchema.parse(res.body);
+    expect(parsed.traceId).not.toBe('bad id with space');
+    expect(res.headers['x-trace-id']).toBe(parsed.traceId);
+  });
+  it('mã tương quan hợp lệ (128 ký tự) → giữ nguyên', async () => {
+    const server = await start([up('postgres'), down('redis')]);
+    const ok = 'a'.repeat(128);
+    const res = await request(server).get('/api/v1/system/health').set('X-Correlation-Id', ok);
+    expect(errorBodySchema.parse(res.body).traceId).toBe(ok);
   });
 });

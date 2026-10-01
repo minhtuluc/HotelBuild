@@ -17,6 +17,8 @@ describe('loadConfig', () => {
     expect(cfg.IDEMPOTENCY_TTL_HOURS).toBe(24);
     expect(cfg.LOG_LEVEL).toBe('info');
     expect(cfg.PORT).toBe(3000);
+    expect(cfg.HOST).toBe('127.0.0.1');
+    expect(loadConfig({ ...validEnv, HOST: '0.0.0.0' }).HOST).toBe('0.0.0.0');
   });
   it('thiếu biến bắt buộc → ConfigError nêu tên biến', () => {
     let caught: unknown;
