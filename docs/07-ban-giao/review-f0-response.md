@@ -23,7 +23,7 @@ Phần **web** đã xong và có bằng chứng (biên lỗi, `/access-denied`, 
 
 ## Việc còn lại (không tự nhận đạt)
 
-1. **Log CI từ xa trên commit F0**: cần đẩy nhánh và để GitHub Actions chạy; trong môi trường hiện tại chỉ có log chạy cục bộ trên đúng revision.
-2. **WebKit/Safari (NFR-USE-04)**: `e2e-nightly.yml` đã khai `chromium webkit`; chưa có log chạy WebKit.
+1. ~~Log CI từ xa trên commit F0~~ — **đã đóng 01/10/2026**, xem [bằng chứng F0 §2](bang-chung-f0.md#2-chưa-chạy-not_run-và-bị-chặn-blocked).
+2. ~~WebKit/Safari (NFR-USE-04)~~ — **đã đóng 02/10/2026**: 36 ca WebKit xanh, xem [bằng chứng F0 §2](bang-chung-f0.md#2-chưa-chạy-not_run-và-bị-chặn-blocked).
 3. **Maestro (2 Android)**: chỉ có ý nghĩa khi F1–F7 có luồng nghiệp vụ; hiện chưa đăng ký luồng nào.
 4. **`Q-01…Q-16`** vẫn `OPEN` như ghi ở [bang-chung-f0.md](bang-chung-f0.md) §5.
