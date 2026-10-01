@@ -16,6 +16,8 @@ const forbidden = [
   'fs',
 ];
 const selectors = [
+  "CallExpression[callee.name='Date']",
+  "CallExpression[callee.object.name='globalThis']:matches([callee.property.name='Date'], [callee.property.value='Date'])",
   "NewExpression[callee.object.name='globalThis'][arguments.length=0]:matches([callee.property.name='Date'], [callee.property.value='Date'])",
   "MemberExpression[object.object.name='globalThis']:matches([object.property.name='Date'], [object.property.value='Date'], [object.property.name='performance'], [object.property.value='performance']):matches([property.name='now'], [property.value='now'])",
   "MemberExpression[object.object.name='globalThis']:matches([object.property.name='Math'], [object.property.value='Math']):matches([property.name='random'], [property.value='random'])",

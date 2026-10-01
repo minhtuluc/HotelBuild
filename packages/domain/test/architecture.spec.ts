@@ -50,6 +50,12 @@ test.each(imports)('root preset rejects import %s', async (dependency) => {
   expect(await rules(`import '${dependency}';`)).toContain('no-restricted-imports');
 });
 const constructs = [
+  'Date()',
+  'Date(0)',
+  'globalThis.Date()',
+  'globalThis.Date(0)',
+  'globalThis["Date"]()',
+  'globalThis["Date"](0)',
   'Date.now()',
   'Date["now"]()',
   'new Date()',

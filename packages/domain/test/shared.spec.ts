@@ -19,3 +19,12 @@ test('ports accept injected deterministic time and identifiers', () => {
   expect(clock.now().toISOString()).toBe('2026-01-01T00:00:00.000Z');
   expect(ids.generate()).toBe('injected-id');
 });
+
+test('port modules expose no runtime implementations', async () => {
+  const [clock, ids] = await Promise.all([
+    import('../src/shared/clock.js'),
+    import('../src/shared/ids.js'),
+  ]);
+  expect(Object.keys(clock)).toEqual([]);
+  expect(Object.keys(ids)).toEqual([]);
+});
