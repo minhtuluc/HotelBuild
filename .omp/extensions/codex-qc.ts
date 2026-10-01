@@ -2,6 +2,7 @@ import { appendFileSync, mkdirSync, realpathSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createQcLoop } from '../../scripts/agent-qc/loop.mjs';
+import { ticketGate } from '../../scripts/agent-qc/gate.mjs';
 
 type ReportEntry = { status: string; summary: string; round: number; findings?: unknown[] };
 type AgentContext = { agent: { kind: string }; ui: { notify: (message: string, level: 'info' | 'warning') => void } };
@@ -9,7 +10,7 @@ type StopEvent = { signal?: AbortSignal; stop_hook_active?: boolean };
 type Handler = (event: StopEvent, ctx: AgentContext) => Promise<unknown> | void;
 type ExtensionApi = { on: (event: string, handler: Handler) => void };
 type LoopOptions = Parameters<typeof createQcLoop>[0];
-type QcOptions = { repoDir?: string; capture?: LoopOptions['capture']; review?: LoopOptions['review']; report?: (entry: ReportEntry) => void };
+type QcOptions = { repoDir?: string; capture?: LoopOptions['capture']; review?: LoopOptions['review']; gate?: (input: { repoDir: string }) => Promise<{ review: boolean; summary?: string }>; report?: (entry: ReportEntry) => void };
 
 export function repoDirFromExtension() {
   return resolve(dirname(realpathSync(fileURLToPath(import.meta.url))), '../..');
@@ -21,12 +22,12 @@ export function writeQcReport(repoDir: string, entry: ReportEntry) {
   appendFileSync(join(reportDir, 'reviews.jsonl'), `${JSON.stringify({ at: new Date().toISOString(), ...entry })}\n`);
 }
 
-export function registerQcExtension(pi: ExtensionApi, { repoDir, capture, review, report }: QcOptions = {}) {
+export function registerQcExtension(pi: ExtensionApi, { repoDir, capture, review, gate = ticketGate, report }: QcOptions = {}) {
   const selectedRepoDir = repoDir ?? repoDirFromExtension();
   let ui: AgentContext['ui'] | undefined;
   // The JavaScript loop's default callback is inferred as zero-argument by TypeScript.
   // @ts-expect-error The loop calls report(entry) for every review outcome.
-  const qc = createQcLoop({ repoDir: selectedRepoDir, capture, review, report: (entry: ReportEntry) => {
+  const qc = createQcLoop({ repoDir: selectedRepoDir, capture, review, gate, report: (entry: ReportEntry) => {
     try {
       (report ?? ((result: ReportEntry) => writeQcReport(selectedRepoDir, result)))(entry);
     } catch (error) {

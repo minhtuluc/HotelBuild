@@ -4,13 +4,18 @@ import { existsSync } from 'node:fs';
 import { chmod, mkdtemp, mkdir, readFile, realpath, rm, symlink, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import test from 'node:test';
 import { captureGitState, hasChanged } from '../scripts/agent-qc/git-state.mjs';
 import { runCodexReview } from '../scripts/agent-qc/reviewer.mjs';
 import { createQcLoop } from '../scripts/agent-qc/loop.mjs';
 import { installLink } from '../scripts/agent-qc/install.mjs';
+import { ticketGate } from '../scripts/agent-qc/gate.mjs';
 import { registerQcExtension, repoDirFromExtension, writeQcReport } from '../.omp/extensions/codex-qc.ts';
+
+// Kiểm vòng lặp độc lập với cổng hạng rủi ro (cổng có test riêng ở cuối file).
+const reviewAll = async () => ({ review: true });
 
 const execFileAsync = promisify(execFile);
 
@@ -244,7 +249,7 @@ test('extension registers main-agent hooks and returns continuation on repeated 
   const notifications = [];
   const reports = [];
   const pi = { on: (name, handler) => handlers.set(name, handler) };
-  registerQcExtension(pi, { repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
+  registerQcExtension(pi, { repoDir: '/repo', gate: reviewAll, capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
     review: async () => blockingReview, report: (entry) => reports.push(entry) });
   assert.deepEqual([...handlers.keys()], ['before_agent_start', 'session_stop', 'session_shutdown']);
   const ctx = { agent: { kind: 'main' }, ui: { notify: (...args) => notifications.push(args) } };
@@ -262,7 +267,7 @@ test('extension retains a pending review across another start, then begins a fre
   const reports = [];
   let reviews = 0;
   registerQcExtension({ on: (name, handler) => handlers.set(name, handler) }, {
-    repoDir: '/repo',
+    repoDir: '/repo', gate: reviewAll,
     capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js']), snapshot('changed', ['src/a.js']),
       snapshot('changed', ['src/a.js']), snapshot('changed', ['src/a.js']),
       snapshot('newer', ['src/a.js']), snapshot('newer', ['src/a.js'])),
@@ -285,7 +290,7 @@ test('extension ignores subagents and shows PASS for a reviewed main task', asyn
   const notifications = [];
   let captures = 0;
   registerQcExtension({ on: (name, handler) => handlers.set(name, handler) }, {
-    repoDir: '/repo', capture: async () => { captures++; return captures === 1 ? snapshot('before') : snapshot('changed', ['src/a.js']); },
+    repoDir: '/repo', gate: reviewAll, capture: async () => { captures++; return captures === 1 ? snapshot('before') : snapshot('changed', ['src/a.js']); },
     review: async () => passReview, report: () => {},
   });
   const subagent = { agent: { kind: 'subagent' }, ui: { notify: (...args) => notifications.push(args) } };
@@ -300,7 +305,7 @@ test('extension ignores subagents and shows PASS for a reviewed main task', asyn
 });
 
 test('extension source resolves its OOAD repository independent of process cwd', async () => {
-  assert.equal(await realpath(repoDirFromExtension()), await realpath(new URL('..', import.meta.url).pathname));
+  assert.equal(await realpath(repoDirFromExtension()), await realpath(fileURLToPath(new URL('..', import.meta.url))));
 });
 
 test('each review round appends one JSONL report in the repository', async () => {
@@ -321,7 +326,8 @@ test('installer links from parent OMP directory without replacing another file',
   const temp = await mkdtemp(join(tmpdir(), 'agent-qc-install-'));
   const parentDir = join(temp, 'parent');
   const conflictingParent = join(temp, 'conflict');
-  const extensionPath = new URL('../.omp/extensions/codex-qc.ts', import.meta.url).pathname;
+  // fileURLToPath giải mã %20 — URL.pathname làm hỏng đường dẫn có dấu cách/ký tự Unicode.
+  const extensionPath = fileURLToPath(new URL('../.omp/extensions/codex-qc.ts', import.meta.url));
   try {
     await mkdir(parentDir);
     await mkdir(join(conflictingParent, '.omp', 'extensions'), { recursive: true });
@@ -338,7 +344,7 @@ test('installer links from parent OMP directory without replacing another file',
 test('unchanged task skips review', async () => {
   let calls = 0;
   const entries = [];
-  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('before')),
+  const qc = createQcLoop({ repoDir: '/repo', gate: reviewAll, capture: nextSnapshots(snapshot('before'), snapshot('before')),
     review: async () => { calls++; return passReview; }, report: (entry) => entries.push(entry) });
   await qc.begin();
   assert.equal(await qc.stop({}), undefined);
@@ -348,7 +354,7 @@ test('unchanged task skips review', async () => {
 
 test('blocking feedback continues OMP and an unchanged next stop blocks', async () => {
   const entries = [];
-  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
+  const qc = createQcLoop({ repoDir: '/repo', gate: reviewAll, capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
     review: async () => blockingReview, report: (entry) => entries.push(entry) });
   await qc.begin();
   assert.match((await qc.stop({})).additionalContext, /blocking issue/);
@@ -359,7 +365,7 @@ test('blocking feedback continues OMP and an unchanged next stop blocks', async 
 
 test('PASS ends the task after reviewing the current diff', async () => {
   const entries = [];
-  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
+  const qc = createQcLoop({ repoDir: '/repo', gate: reviewAll, capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
     review: async (options) => { assert.equal(options.baseSha, baseSha); assert.deepEqual(options.changedPaths, ['src/a.js']); return passReview; },
     report: (entry) => entries.push(entry) });
   await qc.begin();
@@ -370,7 +376,7 @@ test('PASS ends the task after reviewing the current diff', async () => {
 
 test('third blocking review reaches the round cap without another continuation', async () => {
   const entries = [];
-  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('one', ['src/a.js']), snapshot('one', ['src/a.js']),
+  const qc = createQcLoop({ repoDir: '/repo', gate: reviewAll, capture: nextSnapshots(snapshot('before'), snapshot('one', ['src/a.js']), snapshot('one', ['src/a.js']),
     snapshot('two', ['src/a.js']), snapshot('two', ['src/a.js']), snapshot('three', ['src/a.js']), snapshot('three', ['src/a.js'])),
     review: async () => blockingReview, report: (entry) => entries.push(entry) });
   await qc.begin();
@@ -383,7 +389,7 @@ test('third blocking review reaches the round cap without another continuation',
 
 test('diff changed during review is blocked rather than accepted', async () => {
   const entries = [];
-  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('reviewed', ['src/a.js']), snapshot('newer', ['src/a.js'])),
+  const qc = createQcLoop({ repoDir: '/repo', gate: reviewAll, capture: nextSnapshots(snapshot('before'), snapshot('reviewed', ['src/a.js']), snapshot('newer', ['src/a.js'])),
     review: async () => passReview, report: (entry) => entries.push(entry) });
   await qc.begin();
   assert.equal(await qc.stop({}), undefined);
@@ -394,7 +400,7 @@ test('diff changed during review is blocked rather than accepted', async () => {
 
 test('reviewer error blocks and is reported', async () => {
   const entries = [];
-  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
+  const qc = createQcLoop({ repoDir: '/repo', gate: reviewAll, capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
     review: async () => { throw new Error('Codex unavailable'); }, report: (entry) => entries.push(entry) });
   await qc.begin();
   assert.equal(await qc.stop({}), undefined);
@@ -407,7 +413,7 @@ test('cancellation during the post-review snapshot cannot accept PASS', async ()
   const entries = [];
   let qc;
   let captures = 0;
-  qc = createQcLoop({ repoDir: '/repo', capture: async () => {
+  qc = createQcLoop({ repoDir: '/repo', gate: reviewAll, capture: async () => {
     captures++;
     if (captures === 3) qc.cancel();
     return captures === 1 ? snapshot('before') : snapshot('changed', ['src/a.js']);
@@ -420,7 +426,7 @@ test('cancellation during the post-review snapshot cannot accept PASS', async ()
 
 test('a new task resets the previous blocking fingerprint', async () => {
   const entries = [];
-  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('one', ['src/a.js']), snapshot('one', ['src/a.js']),
+  const qc = createQcLoop({ repoDir: '/repo', gate: reviewAll, capture: nextSnapshots(snapshot('before'), snapshot('one', ['src/a.js']), snapshot('one', ['src/a.js']),
     snapshot('one'), snapshot('two', ['src/a.js']), snapshot('two', ['src/a.js'])),
     review: async () => blockingReview, report: (entry) => entries.push(entry) });
   await qc.begin();
@@ -435,14 +441,19 @@ test('a new task reviews independently while an old stop is still pending', asyn
   let releaseOldReview;
   let reviews = 0;
   const oldReview = new Promise((resolve) => { releaseOldReview = resolve; });
-  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(
+  let oldReviewStarted;
+  const started = new Promise((resolve) => { oldReviewStarted = resolve; });
+  const qc = createQcLoop({ repoDir: '/repo', gate: reviewAll, capture: nextSnapshots(
     snapshot('before-one'), snapshot('changed-one', ['src/a.js']),
     snapshot('before-two'), snapshot('changed-two', ['src/b.js']), snapshot('changed-two', ['src/b.js'])),
-  review: async () => (++reviews === 1 ? oldReview : passReview), report: (entry) => entries.push(entry) });
+  review: async () => {
+    if (++reviews === 1) { oldReviewStarted(); return oldReview; }
+    return passReview;
+  }, report: (entry) => entries.push(entry) });
 
   await qc.begin();
   const oldStop = qc.stop({});
-  await Promise.resolve();
+  await started; // chờ lượt cũ thật sự đang review, không phụ thuộc số microtask
   await qc.begin();
   const newStop = qc.stop({});
   releaseOldReview(blockingReview);
@@ -459,7 +470,7 @@ test('failed baseline capture reports BLOCKED and a later stop settles', async (
   const reports = [];
   const notifications = [];
   const qc = registerQcExtension({ on: (name, handler) => handlers.set(name, handler) }, {
-    repoDir: '/repo', capture: async () => { throw new Error('git permission denied'); },
+    repoDir: '/repo', gate: reviewAll, capture: async () => { throw new Error('git permission denied'); },
     report: (entry) => reports.push(entry),
   });
   const ctx = { agent: { kind: 'main' }, ui: { notify: (...args) => notifications.push(args) } };
@@ -473,7 +484,7 @@ test('failed baseline capture reports BLOCKED and a later stop settles', async (
 
 test('throwing reporter blocks without retrying or leaking an unhandled rejection', async () => {
   let reports = 0;
-  const qc = createQcLoop({ repoDir: '/repo',
+  const qc = createQcLoop({ repoDir: '/repo', gate: reviewAll,
     capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
     review: async () => passReview,
     report: () => { reports++; throw new Error('report unavailable'); },
@@ -504,6 +515,51 @@ test('failed log write still notifies BLOCKED and settles the stop hook', async 
     assert.equal(notifications.length, 1);
     assert.match(notifications[0][0], /BLOCKED.*report.*\.agent-qc/i);
     assert.equal(notifications[0][1], 'warning');
+  } finally {
+    await rm(repo, { recursive: true, force: true });
+  }
+});
+
+test('QC gate: SKIPPED không gọi Codex và ghi một báo cáo; gate lỗi thành BLOCKED', async () => {
+  const entries = [];
+  let reviews = 0;
+  const qc = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
+    gate: async () => ({ review: false, summary: 'HB-001 hạng R1' }), review: async () => { reviews++; return passReview; },
+    report: (entry) => entries.push(entry) });
+  await qc.begin();
+  assert.equal(await qc.stop({}), undefined);
+  assert.equal(reviews, 0);
+  assert.equal(qc.status, 'SKIPPED');
+  assert.deepEqual(entries, [{ status: 'SKIPPED', summary: 'HB-001 hạng R1', round: 0 }]);
+
+  const broken = createQcLoop({ repoDir: '/repo', capture: nextSnapshots(snapshot('before'), snapshot('changed', ['src/a.js'])),
+    gate: async () => { throw new Error('not a git repository'); }, review: async () => passReview, report: () => {} });
+  await broken.begin();
+  await broken.stop({});
+  assert.equal(broken.status, 'BLOCKED');
+});
+
+test('ticketGate: chỉ ticket R2 gọi Codex; đặc tả thiếu/hỏng thì chạy cho an toàn; AGENT_QC ghi đè', async () => {
+  const repo = await mkdtemp(join(tmpdir(), 'agent-qc-gate-'));
+  const git = (...args) => promisify(execFile)('git', args, { cwd: repo });
+  const ticket = (id, risk) => `---\nid: ${id}\nrisk: ${risk}\nallow:\n  - apps/**\n---\n`;
+  const gateOn = async (branch, env = {}) => { await git('switch', '-q', '-C', branch); return ticketGate({ repoDir: repo, env }); };
+  try {
+    await mkdir(join(repo, 'docs/08-thi-cong/tickets'), { recursive: true });
+    await writeFile(join(repo, 'docs/08-thi-cong/tickets/HB-001-ui.md'), ticket('HB-001', 'R1'));
+    await writeFile(join(repo, 'docs/08-thi-cong/tickets/HB-002-ton.md'), ticket('HB-002', 'R2'));
+    await writeFile(join(repo, 'docs/08-thi-cong/tickets/HB-003-hong.md'), 'không có front matter');
+    await git('init', '-q', '-b', 'main');
+    await git('add', '.');
+    await git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'base');
+
+    assert.equal((await gateOn('ticket/HB-001-ui')).review, false);
+    assert.equal((await gateOn('ticket/HB-002-ton')).review, true);
+    assert.equal((await gateOn('ticket/HB-003-hong')).review, true);
+    assert.equal((await gateOn('ticket/HB-004-chua-co')).review, true);
+    assert.equal((await gateOn('lead/x')).review, false);
+    assert.equal((await gateOn('lead/x', { AGENT_QC: 'always' })).review, true);
+    assert.equal((await gateOn('ticket/HB-002-ton', { AGENT_QC: 'never' })).review, false);
   } finally {
     await rm(repo, { recursive: true, force: true });
   }

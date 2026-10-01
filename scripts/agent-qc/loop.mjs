@@ -7,7 +7,13 @@ function formatFindings(findings) {
     .join('\n');
 }
 
-export function createQcLoop({ repoDir, capture = captureGitState, review = runCodexReview, maxRounds = 3, report = () => {} }) {
+/**
+ * Cổng mặc định: luôn review. Extension OMP truyền `ticketGate` (chỉ ticket R2).
+ * @type {(input: { repoDir: string }) => Promise<{ review: boolean, summary?: string }>}
+ */
+const reviewEverything = async () => ({ review: true });
+
+export function createQcLoop({ repoDir, capture = captureGitState, review = runCodexReview, gate = reviewEverything, maxRounds = 3, report = () => {} }) {
   let task;
   let status = 'IDLE';
 
@@ -50,6 +56,18 @@ export function createQcLoop({ repoDir, capture = captureGitState, review = runC
       if (current.fingerprint === currentTask.lastReviewedFingerprint) {
         finish(currentTask, { status: 'BLOCKED', summary: 'No changes after blocking feedback', round: currentTask.rounds });
         return undefined;
+      }
+
+      if (currentTask.rounds === 0) {
+        // Codex đắt: chỉ ticket cần (R2) mới vào vòng kiểm; R0/R1 do Gemini review ở PR.
+        const decision = await gate({ repoDir });
+        if (task !== currentTask) return undefined;
+        if (!decision.review) {
+          status = 'SKIPPED';
+          currentTask.active = false;
+          publish(currentTask, { status: 'SKIPPED', summary: decision.summary ?? 'QC gate skipped review', round: 0 });
+          return undefined;
+        }
       }
 
       currentTask.rounds++;

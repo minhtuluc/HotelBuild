@@ -8,6 +8,7 @@ export const ignoredPatterns = [
   '**/.next/**',
   '**/.expo/**',
   '**/coverage/**',
+  '**/.worktrees/**',
   'docs/**',
   'scripts/**',
   'tests/**',

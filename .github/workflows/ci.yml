@@ -20,6 +20,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # check:scope cần merge-base với origin/main
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -27,6 +29,8 @@ jobs:
           cache: pnpm
       - name: Install (frozen lockfile)
         run: pnpm install --frozen-lockfile
+      - name: Phạm vi ticket (docs/08-thi-cong)
+        run: pnpm check:scope
       - name: Contract drift (OpenAPI sinh từ zod)
         run: pnpm check:openapi
       - name: Thay đổi hợp đồng phá vỡ so với bản nền
