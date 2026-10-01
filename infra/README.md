@@ -29,11 +29,14 @@ Mọi cổng chỉ bind vào loopback, không phơi ra mạng LAN.
 
 ## Kết nối `psql`
 
-Máy có sẵn `psql`:
+Máy có sẵn `psql` — nạp `.env` vào shell trước, vì `cp` và compose không tự đưa biến vào tiến trình gọi lệnh:
 
 ```sh
+set -a; . ./.env; set +a          # nạp .env vào shell hiện tại
 psql "$DATABASE_MIGRATION_URL" -c "select version()"
 ```
+
+> Shell chưa nạp `.env` thì `$DATABASE_MIGRATION_URL` là chuỗi rỗng và `psql` sẽ dùng thông số mặc định — không phải cụm PostgreSQL dev. Không muốn nạp thì truyền URI tường minh: `psql "postgresql://pinehill:pinehill_dev@127.0.0.1:5432/pinehill" -c "select version()"`.
 
 Máy không có `psql` (hoặc muốn chắc chắn đi qua đúng container), dùng client trong image:
 
