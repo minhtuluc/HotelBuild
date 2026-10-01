@@ -338,7 +338,7 @@ Danh mục dưới đây là **nguồn chân lý về mã UC** cho ma trận tru
 | Customer/operations web | Next.js 15 (App Router) + Tailwind + shadcn/ui | Hai ứng dụng web deploy độc lập, dùng chung contract và design token; không trộn vùng khách/vận hành | ADR-005 |
 | Customer/operations Android | Expo (React Native) + Expo Router, phát hành Android | Hai ứng dụng Android deploy độc lập, dùng chung native token và API client; không cần Xcode | ADR-006 |
 | Chia sẻ mã | `packages/domain` (thuần, authoritative ở backend) + `packages/contracts`/`packages/api-client` | Một hợp đồng API và một nguồn tính giá/policy; frontend không tự tính lại nghiệp vụ | ADR-007 |
-| Giao tiếp API | REST/JSON + OpenAPI 3.1 sinh từ zod | Dễ vẽ sequence, dễ mô phỏng OTA, dễ chấm điểm. Quy ước bao hình danh sách (`data` + `meta{limit,nextCursor,hasMore,total}`), phân trang con trỏ, và toàn bộ 45 mã lỗi `E_*` do [04/api.md](04-thiet-ke/api.md) quy định | ADR-008 |
+| Giao tiếp API | REST/JSON + OpenAPI 3.1 sinh từ zod | Dễ vẽ sequence, dễ mô phỏng OTA, dễ chấm điểm. Quy ước bao hình danh sách (`data` + `meta{limit,nextCursor,hasMore,total}`), phân trang con trỏ, và toàn bộ 54 mã lỗi `E_*` do [04/api.md](04-thiet-ke/api.md) quy định | ADR-008 |
 | Thanh toán | VNPay + MoMo (sandbox) + tiền mặt/chuyển khoản | Thị trường Việt Nam | ADR-009 |
 | Xác thực | JWT (access 15 phút + refresh 7 ngày), RBAC + phạm vi cơ sở | Yêu cầu phân quyền theo cơ sở | ADR-010 |
 | Kiểm thử | Vitest + fast-check (miền), Testcontainers + Supertest (tích hợp), Playwright (2 web), Maestro (2 Android), **k6 (tải)** | Bao phủ bất biến quan trọng và chứng minh ngưỡng hiệu năng trên từng surface | ADR-011 |

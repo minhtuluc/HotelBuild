@@ -82,8 +82,8 @@ flowchart TD
 | 3.1.5 | `parseFloat`, số thực (`float`/`number` thập phân) cho tiền | Vi phạm BR-GEN-01 | `LINT` — `no-restricted-globals` + `no-restricted-syntax` cấm `MemberExpression[property.name='toFixed']` |
 
 ```js
-// packages/config/eslint/domain.cjs — override riêng cho packages/domain/**
-module.exports = {
+// packages/config/eslint/domain.mjs — override riêng cho packages/domain/**
+export default {
   files: ['packages/domain/**'],
   rules: {
     'no-restricted-imports': ['error', {
@@ -136,7 +136,7 @@ module.exports = {
 | # | Quy tắc | Cưỡng chế |
 |---|---------|-----------|
 | 5.1 | Mọi thay đổi **tồn phòng / booking / thanh toán / hoàn tiền** PHẢI nằm trong **một giao dịch** Prisma (`$transaction`), kể cả kiểm tra tồn + giữ chỗ (BR-INV-02), huỷ + giải phóng phòng (BR-BOOK-08/11), và xoá cứng `DRAFT`/`HELD` phải ghi `AuditLog` đầy đủ `beforeJson` **trước khi** xoá (BR-BOOK-17 — nghĩa vụ ghi vết của BR-GEN-07 không được miễn trừ bởi xoá cứng). | `ARCH` — `apps/api/test/architecture/transaction-guard.spec.ts` quét AST: mọi method ghi công khai của `InventoryService`, `BookingService`, `PaymentService`, `RefundService`, `OverbookingService` phải bọc trong `$transaction` thông qua cổng `UnitOfWork` đã chốt ở [04/kien-truc](../04-thiet-ke/kien-truc.md). |
-| 5.2 | **Thứ tự khoá cố định** để tránh bế tắc: khoá hàng tồn theo `(room_type_id, date)` **trước**, rồi mới khoá `booking` theo `id`. Khoá nhiều dòng bằng một câu `SELECT … FOR UPDATE … ORDER BY room_type_id, date` — thứ tự `ORDER BY` khiến mọi giao dịch khoá cùng thứ tự, triệt tiêu deadlock. | `ARCH` — mọi `SELECT … FOR UPDATE` phải đi qua helper `LockOrder.acquire(...)` duy nhất (xem `## Đề xuất bổ sung`); kiểm thử tích hợp hai giao dịch đan chéo để xác nhận không deadlock. |
+| 5.2 | **Thứ tự khoá cố định** để tránh bế tắc, theo [ADR-014](../04-thiet-ke/adr/ADR-014-giao-dich-ton-phong.md): operation idempotency/inbox → bookings theo ID tăng dần → properties theo ID tăng dần (tuần tự hoá oversell) → room_types theo ID tăng dần → rooms theo ID tăng dần → quota/promotion theo ID tăng dần → Payment thu gốc theo ID tăng dần → RefundRequest theo ID tăng dần. | `ARCH` — mọi `SELECT … FOR UPDATE` phải đi qua helper `LockOrder.acquire(...)` duy nhất (xem `## Đề xuất bổ sung`); kiểm thử tích hợp hai giao dịch đan chéo để xác nhận không deadlock. |
 | 5.3 | **Bắt buộc bắt mã lỗi `23P01`** (`exclusion_violation` — vi phạm ràng buộc loại trừ BR-INV-03) tại tầng dịch vụ và trả HTTP 409 với mã `E_INV_ROOM_TAKEN` (quy định tại BR-INV-03). Phân biệt với `E_INV_NO_AVAILABILITY` (BR-INV-07) — hết phòng ở tầng kiểm tra tồn, cũng HTTP 409. Đồng thời xử lý `40001` (serialization_failure → thử lại 3 lần) và `23505` (unique_violation → replay idempotency BR-PAY-03); callback cổng thanh toán gửi lại cùng khoá idempotency đã xử lý trả về kết quả cũ với mã `E_PAY_CALLBACK_DUPLICATE` (BR-PAY-03), không tạo `Payment` mới. | `ARCH` — mọi nhánh `catch` của driver DB phải đọc `error.code` và route qua đúng một `PgErrorMapper`; kiểm thử tích hợp bắn 2 yêu cầu giữ cùng một **đơn vị bán** `(roomId, bedNo, đêm)` xác nhận đúng 1 thành công (US-INF-02; bất biến ba cột `room_id` + `bed_no` + `valid_range` theo BR-INV-03). |
 | 5.4 | **Cấm bắt lỗi rồi bỏ qua** (swallow): không `catch {}` rỗng, không `.catch(() => {})`, không biến lỗi thành `null`/`false` im lặng. | `LINT` — `no-empty: ["error", { allowEmptyCatch: false }]`, `@typescript-eslint/no-floating-promises: "error"`, `no-useless-catch: "error"`; `REV`. |
 | 5.5 | Mọi `// eslint-disable`/`// @ts-ignore` PHẢI kèm lý do dạng `-- <mã BR/US>`, nếu không CI từ chối. | `CI` — script `scripts/check-disable-reasons.mjs` duyệt mọi dòng disable; thiếu lý do → fail. |
@@ -360,7 +360,7 @@ Mỗi story/gate lưu `revision/build`, phạm vi BR/UC/TC, người chạy/revi
 | Cột CSDL | `snake_case`; khoá ngoại `<bảng_số_ít>_id`; thời gian `created_at`/`updated_at` | `booking_id`, `refunded_amount` | `CI` — `sqlfluff` |
 | Chỉ mục / ràng buộc | `idx_<bảng>_<cột>`, `uq_<bảng>_<cột>`, ràng buộc loại trừ `excl_room_assignment_no_overlap` | `idx_room_assignments_valid_range` | `CI` — migration review |
 | Endpoint REST | `/api/v1/<tài-nguyên-số-nhiều>/<id>/<sub>`; kebab-case; webhook `/api/v1/integrations/ota/{channel}/bookings` | `/api/v1/bookings/{id}/cancel` | `CI` — OpenAPI diff, `REV` |
-| Mã lỗi | `E_<MOD>_<TÊN>` UPPER_SNAKE | `E_BOOK_MISSING_FIELD`, `E_OVER_NO_CONSENT`, `E_RATE_BELOW_FLOOR` | `CI` — đối chiếu registry mã lỗi; nguồn chân lý đầy đủ 45 mã `E_*` tại [04/api §4.2](../04-thiet-ke/api.md) |
+| Mã lỗi | `E_<MOD>_<TÊN>` UPPER_SNAKE | `E_BOOK_MISSING_FIELD`, `E_OVER_NO_CONSENT`, `E_RATE_BELOW_FLOOR` | `CI` — đối chiếu registry mã lỗi; nguồn chân lý đầy đủ 54 mã `E_*` tại [04/api §4.2](../04-thiet-ke/api.md) |
 | File | `kebab-case`; use case hậu tố `.use-case.ts`; strategy `.strategy.ts`; test `.spec.ts`/`.e2e-spec.ts`/`.property.spec.ts` | `create-booking.use-case.ts`, `season-modifier.strategy.ts` | `LINT` — `unicorn/filename-case`, `REV` |
 | Nhánh | `feat|fix|chore|docs|refactor|test/<mã US|BR|NFR|ADR>-<mô tả>` | `feat/US-RATE-01-pricing-engine` | `HOOK` (§6.1.1) |
 | Commit | `type(scope): subject` + mã `US/BR/NFR/ADR` | `feat(rate): US-RATE-01 engine giá (BR-RATE-01, BR-RATE-06)` | `HOOK` (§6.1.2) |

@@ -595,7 +595,7 @@ Các mục dưới đây là điểm **chưa tồn tại hoặc chưa thống nh
 - [01 — Yêu cầu phi chức năng](../01-yeu-cau/yeu-cau-phi-chuc-nang.md) — mã NFR dùng cho ngưỡng cảnh báo
 - [02 — Quy tắc nghiệp vụ](../02-nghiep-vu/quy-tac-nghiep-vu.md) — 139 quy tắc BR (nguồn chân lý)
 - [02 — Chính sách huỷ & hoàn cọc](../02-nghiep-vu/chinh-sach-huy-hoan-coc.md) — bảng quyết định huỷ/hoàn
-- [04 — Thiết kế API](../04-thiet-ke/api.md) — nguồn chân lý 45 mã lỗi `E_*` (§4.2), dùng cho mọi hành động kiểm chứng ở §4 và §6
+- [04 — Thiết kế API](../04-thiet-ke/api.md) — nguồn chân lý 54 mã lỗi `E_*` (§4.2), dùng cho mọi hành động kiểm chứng ở §4 và §6
 - [03 — Mô hình động](../03-phan-tich/mo-hinh-dong.md) — máy trạng thái booking
 - [05 — Lộ trình triển khai](lo-trinh.md) — mốc M1…M8, cổng chất lượng QG-0…QG-4, thang cắt giảm phạm vi
 - [05 — Kế hoạch sprint](ke-hoach-sprint.md) — user story, điểm, rủi ro trọng yếu từng sprint
