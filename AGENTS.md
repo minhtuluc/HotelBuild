@@ -17,6 +17,7 @@
 - Tiền là VND số nguyên; thời gian và ID truyền qua tham số trong `packages/domain`.
 - Không commit bí mật, dữ liệu khách thật, `.env`. Không push lên remote `nen-ooad` (repo nền chỉ để tham chiếu).
 - Không merge, không force-push, không sửa lịch sử `main`.
+- Không tạo nhánh `lead/*` và không sửa file trong `docs/08-thi-cong/`. Ticket thiếu `allow`/`unlock` hoặc sai đặc tả: dừng, ghi rõ file + dòng + diff đề xuất vào PR, chờ lead sửa ticket.
 
 ## 3. Định nghĩa "xong"
 
