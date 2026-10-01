@@ -20,6 +20,8 @@ export async function createApp(
   app.useLogger(app.get(Logger));
   app.flushLogs();
   app.setGlobalPrefix('api/v1');
+  // SIGTERM/SIGINT → đóng server + kết nối rồi thoát 0 (AC7; useProcessExit để log pino kịp flush).
+  app.enableShutdownHooks([], { useProcessExit: true });
   await app.init();
   await app.getHttpAdapter().getInstance().ready();
   return app;
@@ -34,7 +36,7 @@ export async function run(env?: NodeJS.ProcessEnv): Promise<number> {
     return 1;
   }
   const app = await createApp(config);
-  await app.listen({ port: config.PORT, host: '127.0.0.1' });
+  await app.listen({ port: config.PORT, host: config.HOST });
   return 0;
 }
 
