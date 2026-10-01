@@ -21,7 +21,12 @@ const FORBIDDEN_BACKEND_IMPORTS = [
 /** Chặn import backend/CSDL/quy tắc nghiệp vụ trong mọi bề mặt giao diện. */
 export const frontendRestrictions = [
   {
-    files: ['apps/**/*.{ts,tsx}'],
+    files: [
+      'apps/customer-web/**/*.{ts,tsx}',
+      'apps/operations-web/**/*.{ts,tsx}',
+      'apps/customer-android/**/*.{ts,tsx}',
+      'apps/operations-android/**/*.{ts,tsx}',
+    ],
     rules: { 'no-restricted-imports': ['error', { paths: FORBIDDEN_BACKEND_IMPORTS }] },
   },
   {
