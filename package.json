@@ -11,7 +11,10 @@
   "prettier": "@pinehill/config/prettier.json",
   "pnpm": {
     "onlyBuiltDependencies": [
-      "esbuild"
+      "esbuild",
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma"
     ]
   },
   "scripts": {
@@ -41,7 +44,10 @@
     "typecheck:e2e": "tsc --noEmit -p tests/e2e/tsconfig.json",
     "test:e2e": "playwright test -c tests/e2e/playwright.config.ts",
     "openapi:baseline": "node scripts/set-openapi-baseline.mjs",
-    "check:contract": "node scripts/check-openapi-breaking.mjs"
+    "check:contract": "node scripts/check-openapi-breaking.mjs",
+    "db:dev-roles": "node apps/api/prisma/dev-roles.mjs",
+    "migrate": "node scripts/migrate.mjs",
+    "db:drift": "node apps/api/prisma/drift.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

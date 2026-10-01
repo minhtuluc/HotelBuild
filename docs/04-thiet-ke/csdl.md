@@ -1980,17 +1980,12 @@ Lưu trữ: nhật ký giữ **5 năm**, booking/thanh toán **10 năm** (BR-SYS
 
 ### 8.1. Thứ tự migration
 
-| # | Tên file (`infra/sql`, `apps/api/prisma/migrations`) | Nội dung | Nguồn |
-|---|-----------------------------------------------------|----------|-------|
-| 0001 | `init_extensions` | `btree_gist`, `pgcrypto`, `SEQUENCE bookings_seq`, hàm `fn_current_role()` | Thủ công |
-| 0002 | `baseline_tables` | 36 bảng §3.2 + khoá chính/ngoáI/`CHECK` cơ bản | Prisma |
-| 0003 | `room_assignment_exclusion` | Cột sinh `valid_range`, `EXCLUDE USING gist (room_id, bed_no, valid_range)` | **Thủ công** |
-| 0004 | `generated_columns` | `bookings.nights`, `refund_requests.net_refund`; `balance_due` là projection ledger | **Thủ công** |
-| 0005 | `invariant_triggers` | `bed_no`, `bed_count`, khoá phòng, allotment, `updated_at`, chuỗi băm nhật ký | **Thủ công** |
-| 0006 | `partial_indexes` | Toàn bộ chỉ mục §3.4 | **Thủ công** |
-| 0007 | `audit_append_only` | Trigger append-only + `REVOKE` cho vai trò ứng dụng | **Thủ công** |
-| 0008 | `seed_reference_data` | 3 cơ sở · 55 phòng · 75 đơn vị bán · 5 loại phòng · 7 kênh · 4 gói giá · 4 chính sách huỷ + 11 bậc · khoá `SystemSetting` (BR-SYS-02) | Prisma seed |
-| 0009 | `audit_retention_partition` | Chuyển `audit_logs` sang bảng phân mảnh theo tháng (khi > 20 triệu bản ghi) | **Thủ công** |
+| Thứ tự | Migration | Nội dung | Nguồn |
+|--------|-----------|----------|-------|
+| 0001 | `0001_baseline` | Toàn bộ §3: 42 bảng, extension, sequence, hàm, khoá, `CHECK`, `EXCLUDE`, cột sinh, chỉ mục, trigger và quyền `app_rw` | Đầu ra `extract:sql` từ SHA nguồn ghi trong SQL; đóng băng sau khi tạo (QĐ-02) |
+| Sau baseline | Migration tiến mới | Mỗi thay đổi schema có file migration mới **và** cập nhật §3 trong cùng PR; Prisma Migrate áp SQL và ghi lịch sử, `schema.prisma` sinh bằng `prisma db pull` | QĐ-02 mục 2–3 |
+
+Seed dữ liệu tham chiếu thuộc HB-018; phân mảnh `audit_logs` là công việc tương lai, không nằm trong baseline.
 
 ### 8.2. Quy tắc migration (chỉ tiến, không lùi)
 
