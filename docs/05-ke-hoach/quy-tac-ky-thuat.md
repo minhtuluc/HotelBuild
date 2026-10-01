@@ -153,24 +153,23 @@ module.exports = {
 ```mermaid
 gitGraph
   commit id: "init"
-  branch feat/US-INF-01-monorepo
-  commit id: "feat(inf): US-INF-01 scaffold"
-  commit id: "feat(inf): US-INF-01 CI"
+  branch lead/HB-004-dac-ta
+  commit id: "docs(thi-cong): đặc tả HB-004"
   checkout main
-  merge feat/US-INF-01-monorepo tag: "v2026.10.0"
-  branch fix/BR-RATE-01-clamp
-  commit id: "fix(rate): BR-RATE-01 clamp order"
+  merge lead/HB-004-dac-ta
+  branch ticket/HB-004-api-skeleton
+  commit id: "feat(inf): HB-004 khung api (US-INF-01)"
   checkout main
-  merge fix/BR-RATE-01-clamp
+  merge ticket/HB-004-api-skeleton tag: "v2026.10.0"
 ```
 
 | # | Quy tắc | Cưỡng chế |
 |---|---------|-----------|
-| 6.1.1 | Đặt tên nhánh `feat/<mã US>-<mô tả>` (hoặc `fix`/`chore`/`docs`/`refactor`/`test` + mã `BR`/`NFR`/`ADR`). Ví dụ `feat/US-RATE-01-pricing-engine`. | `HOOK` — pre-push kiểm regex `^(feat|fix|chore|docs|refactor|test|perf)\/(US|BR|NFR|ADR|CHORE)-[A-Z0-9-]+-[a-z0-9-]+$`. |
-| 6.1.2 | Thông điệp commit theo **Conventional Commits** và **bắt buộc kèm mã truy vết** `US-*`/`BR-*`/`NFR-*`/`ADR-*` ở subject hoặc body. | `HOOK` — `commitlint` với scope theo 13 module + inf/ci/docs; body phải khớp `/(US|BR|NFR)-[A-Z]+-\d+|ADR-\d+/`. |
-| 6.1.3 | PR **tối đa 400 dòng thay đổi** (không tính lockfile, fixture, file sinh). Vượt ngưỡng → tách PR; ngoại lệ phải gắn nhãn `size-exception` + **2 người** duyệt. | `CI` — `scripts/pr-size.mjs` chạy trong pipeline, fail nếu > 400 mà không có nhãn. |
-| 6.1.4 | **1 người duyệt** là đủ để gộp; người duyệt phải khác người viết. | `CI` — branch protection `required_pull_request_reviews = 1`. |
-| 6.1.5 | **Cấm tự gộp PR của mình** (self-merge). | `CI` — workflow `prevent-self-merge.yml` so `actor == pr.user.login` khi sự kiện merge → huỷ. |
+| 6.1.1 | Nhánh thi công `ticket/HB-<nnn>-<mô tả>` — một nhánh cho một ticket trong [docs/08-thi-cong/tickets](../08-thi-cong/tickets/_mau.md). Nhánh của lead (đặc tả, test khoá, công cụ, sửa tài liệu thiết kế) là `lead/<mô tả>`. Mã US/BR/NFR/ADR nằm trong ticket và commit, không nằm trong tên nhánh. Nguồn: [quy trình thi công](../08-thi-cong/README.md). | `CI` — `pnpm check:scope` nhận ticket từ tên nhánh `ticket/*` và đọc đặc tả từ `main`. Người làm (agent thi công) **không** tạo nhánh `lead/*`. |
+| 6.1.2 | Thông điệp commit theo **Conventional Commits**, subject chứa mã ticket `HB-<nnn>` (trừ nhánh `lead/*` không gắn ticket) và **kèm mã truy vết** `US-*`/`BR-*`/`NFR-*`/`ADR-*` ở subject hoặc body khi thay đổi có căn cứ nghiệp vụ. | `REV` — chưa cài hook; `commitlint` dưới đây là cấu hình đích. |
+| 6.1.3 | PR **tối đa 400 dòng thay đổi** (không tính `pnpm-lock.yaml`, `openapi.json` sinh). Ticket có thể đặt `max_lines` khác khi lead chấp thuận và ghi lý do (vd. migration sinh tự động). Vượt ngưỡng → tách ticket. | `CI` — `pnpm check:scope` (giới hạn `max_lines` của ticket). |
+| 6.1.4 | Người duyệt khác người viết: model/agent viết không tự duyệt. Số tầng duyệt theo hạng rủi ro R0–R2 ([quy trình §2](../08-thi-cong/README.md#2-hạng-rủi-ro)). | `REV` — kết quả `PASS`/`NEEDS_CHANGES` ghi trong PR. |
+| 6.1.5 | Agent thi công **không** merge, kể cả PR của nhánh `lead/*`. Chỉ người dùng hoặc lead merge, sau khi đủ tầng duyệt. | `REV` — mọi agent dùng chung tài khoản GitHub nên không cưỡng chế được bằng `actor`; vi phạm được ghi nhận và hoàn tác. |
 | 6.1.6 | **Cấm force-push** lên `main`; nhánh nhánh feature cho phép rebase trước khi mở PR nhưng không sau khi có người duyệt. | `CI` — `allow_force_pushes: false` trên `main`; `REV`. |
 
 ```js
@@ -362,8 +361,8 @@ Mỗi story/gate lưu `revision/build`, phạm vi BR/UC/TC, người chạy/revi
 | Endpoint REST | `/api/v1/<tài-nguyên-số-nhiều>/<id>/<sub>`; kebab-case; webhook `/api/v1/integrations/ota/{channel}/bookings` | `/api/v1/bookings/{id}/cancel` | `CI` — OpenAPI diff, `REV` |
 | Mã lỗi | `E_<MOD>_<TÊN>` UPPER_SNAKE | `E_BOOK_MISSING_FIELD`, `E_OVER_NO_CONSENT`, `E_RATE_BELOW_FLOOR` | `CI` — đối chiếu registry mã lỗi; nguồn chân lý đầy đủ 45 mã `E_*` tại [04/api §4.2](../04-thiet-ke/api.md) |
 | File | `kebab-case`; use case hậu tố `.use-case.ts`; strategy `.strategy.ts`; test `.spec.ts`/`.e2e-spec.ts`/`.property.spec.ts` | `create-booking.use-case.ts`, `season-modifier.strategy.ts` | `LINT` — `unicorn/filename-case`, `REV` |
-| Nhánh | `feat|fix|chore|docs|refactor|test/<mã US|BR|NFR|ADR>-<mô tả>` | `feat/US-RATE-01-pricing-engine` | `HOOK` (§6.1.1) |
-| Commit | `type(scope): subject` + mã `US/BR/NFR/ADR` | `feat(rate): US-RATE-01 engine giá (BR-RATE-01, BR-RATE-06)` | `HOOK` (§6.1.2) |
+| Nhánh | `ticket/HB-<nnn>-<mô tả>`; nhánh lead `lead/<mô tả>` | `ticket/HB-004-api-skeleton` | `CI` (§6.1.1) |
+| Commit | `type(scope): HB-<nnn> subject` + mã `US/BR/NFR/ADR` khi có | `feat(inf): HB-004 khung api (US-INF-01)` | `REV` (§6.1.2) |
 | Biến môi trường | `UPPER_SNAKE_CASE`, tiền tố theo app `WEB_`/`API_`/`MOBILE_` | `API_DATABASE_URL`, `WEB_NEXT_PUBLIC_API_BASE` | `REV` |
 
 Cưỡng chế `LINT` cụ thể: `@typescript-eslint/naming-convention` với 4 khối (typeLike, function, variable, enumMember) đặt trong `packages/config/eslint/base.cjs`; tên CSDL do `sqlfluff` + migration review (owner: Kiến trúc sư).
@@ -439,9 +438,9 @@ Cưỡng chế: branch protection + workflow `.github/workflows/ci.yml`, `e2e-ni
 | Không bắt `23P01` → lỗi 500 | `error-mapper-guard` | Route qua `PgErrorMapper` → HTTP 409 `E_INV_ROOM_TAKEN` |
 | `catch (e) {}` bỏ qua lỗi | `no-empty` (allowEmptyCatch:false) | Log + xử lý, hoặc rethrow có ngữ cảnh |
 | Commit thiếu mã `US`/`BR` | `commitlint` + `trace-ref` | Thêm `US-*/BR-*` vào subject/body |
-| Tên nhánh sai mẫu | pre-push regex | Đổi tên nhánh `feat/<mã>-<mô tả>` |
-| PR 800 dòng | `pr-size.mjs` | Tách PR nhỏ hơn hoặc nhãn `size-exception` + 2 duyệt |
-| Tự gộp PR của mình | `prevent-self-merge.yml` | Nhờ người khác duyệt + gộp |
+| Tên nhánh sai mẫu | `pnpm check:scope` bỏ qua cổng phạm vi → lead từ chối PR | Đổi tên nhánh `ticket/HB-<nnn>-<mô tả>` |
+| PR 800 dòng | `pnpm check:scope` (`max_lines`) | Tách ticket |
+| Agent tự merge hoặc tự nới phạm vi ticket | Review của lead | Hoàn tác merge; thay đổi phạm vi đi qua lead |
 | Force-push lên `main` | branch protection | Làm lại bằng commit mới (revert), không viết lại lịch sử |
 | Test dùng `toMatchSnapshot` nội bộ | `no-restricted-syntax` trong `*.spec.ts` | Khẳng định giá trị quan sát được |
 | Sửa BR nhưng không đổi docs | `docs-guard.mjs` | Kèm diff `docs/02-nghiep-vu/**` cùng PR |
