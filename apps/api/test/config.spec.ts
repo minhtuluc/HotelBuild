@@ -18,7 +18,6 @@ describe('loadConfig', () => {
     expect(cfg.LOG_LEVEL).toBe('info');
     expect(cfg.PORT).toBe(3000);
   });
-
   it('thiếu biến bắt buộc → ConfigError nêu tên biến', () => {
     let caught: unknown;
     try {
@@ -32,7 +31,6 @@ describe('loadConfig', () => {
       expect(caught.message).toContain('JWT_ACCESS_SECRET');
     }
   });
-
   it('không in giá trị bí mật trong thông điệp lỗi', () => {
     let caught: unknown;
     try {
@@ -48,6 +46,11 @@ describe('loadConfig', () => {
     const message = caught instanceof ConfigError ? caught.message : '';
     expect(message).toContain('JWT_ACCESS_SECRET');
     expect(message).not.toContain('topsecret-value');
+  });
+  it('từ chối URL/protocol sai và timezone sai', () => {
+    expect(() => loadConfig({ ...validEnv, DATABASE_URL: 'not-a-url' })).toThrow(ConfigError);
+    expect(() => loadConfig({ ...validEnv, REDIS_URL: 'redis:not-a-url' })).toThrow(ConfigError);
+    expect(() => loadConfig({ ...validEnv, BUSINESS_TIMEZONE: 'Not/AZone' })).toThrow(ConfigError);
   });
 });
 

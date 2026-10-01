@@ -1,7 +1,7 @@
 import { connect } from 'node:net';
 import type { HealthProbe } from './health-probe.js';
 
-/** Kiểm tra Redis bằng lệnh `PING`/`+PONG` qua socket thô (không kéo client Redis — ngoài phạm vi HB-004). */
+/** Kiểm tra Redis bằng `PING`/`+PONG` qua socket thô (không kéo client Redis). */
 export class RedisHealthProbe implements HealthProbe {
   readonly name = 'redis';
 
@@ -24,6 +24,8 @@ export class RedisHealthProbe implements HealthProbe {
       socket.on('data', (chunk) => finish(chunk.toString().startsWith('+PONG')));
       socket.on('error', () => finish(false));
       socket.on('timeout', () => finish(false));
+      socket.on('end', () => finish(false));
+      socket.on('close', () => finish(false));
     });
   }
 

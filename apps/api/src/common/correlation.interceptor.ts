@@ -5,10 +5,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { Observable } from 'rxjs';
 import { ID_GENERATOR } from '../infrastructure/ports.js';
 
-/**
- * Nhận `X-Correlation-Id`, sinh mới nếu thiếu, trả lại ở header `X-Trace-Id` (api.md §1.3)
- * và gắn vào request để filter/logger dùng chung một mã tương quan.
- */
+/** Nhận/ sinh mã tương quan, trả lại ở X-Trace-Id và gắn vào request (api.md §1.3). */
 @Injectable()
 export class CorrelationInterceptor implements NestInterceptor {
   constructor(@Inject(ID_GENERATOR) private readonly ids: IdGenerator) {}

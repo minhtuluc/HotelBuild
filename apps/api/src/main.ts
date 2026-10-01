@@ -25,7 +25,7 @@ export async function createApp(
   return app;
 }
 
-export async function run(env: NodeJS.ProcessEnv = process.env): Promise<number> {
+export async function run(env?: NodeJS.ProcessEnv): Promise<number> {
   let config: ApiConfig;
   try {
     config = loadConfig(env);

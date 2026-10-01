@@ -1,7 +1,6 @@
 import { defineConfig } from 'vitest/config';
 
-// esbuild không phát `emitDecoratorMetadata`; code dùng `@Inject(token)` tường minh nên
-// không cần reflection. Chỉ cần bật legacy decorators cho vitest (tsc build vẫn phát metadata).
+// vitest dùng esbuild (không phát emitDecoratorMetadata) → code dùng @Inject tường minh.
 export default defineConfig({
   esbuild: {
     tsconfigRaw: {
@@ -11,5 +10,10 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['test/**/*.spec.ts'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**'],
+      thresholds: { lines: 80, statements: 80, functions: 80, branches: 75 },
+    },
   },
 });
