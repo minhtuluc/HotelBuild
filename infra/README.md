@@ -81,3 +81,11 @@ Mặc định trong `docker-compose.yml` khớp với `.env.example` ở gốc, 
 ## Ngoài phạm vi tệp này
 
 Dockerfile cho `api`/`worker` (HB-006), job CI backend (HB-007).
+
+### Migration và kiểm lệch
+
+Sau khi đặt `DATABASE_MIGRATION_URL` cho role chủ và `DATABASE_URL` cho `app_rw`, chạy `pnpm migrate`, rồi `pnpm db:dev-roles`. Migration từ chối thiếu role chủ hoặc trùng danh tính runtime; không dùng URL runtime để áp DDL.
+
+`pnpm --filter @pinehill/api db:pull` introspect CSDL đã migrate; `pnpm --filter @pinehill/api db:generate` sinh client trong `node_modules` (không commit). `pnpm db:drift` so migration với datamodel bằng Prisma 6, tạo và xoá một shadow database tạm riêng; role chủ cần quyền tạo CSDL. Lệnh trả mã khác 0 khi có lệch hoặc lỗi và không dùng CSDL đích làm shadow.
+
+`DATABASE_MIGRATION_URL` bật kiểm thử migration PG16 qua `pnpm --filter @pinehill/api test test/migration`; thiếu biến này thì các test PG16 thông báo bỏ qua. Các file test chạy tuần tự vì mật khẩu role `app_rw` dùng chung trong cluster; dùng cluster test riêng để không đổi mật khẩu runtime local.
