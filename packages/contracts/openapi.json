@@ -62,6 +62,10 @@
               ],
               "additionalProperties": false
             }
+          },
+          "retryAfterSeconds": {
+            "type": "integer",
+            "minimum": 1
           }
         },
         "required": [
@@ -119,6 +123,13 @@
                     "type": "string",
                     "minLength": 8,
                     "maxLength": 128
+                  },
+                  "clientSurface": {
+                    "type": "string",
+                    "enum": [
+                      "OPS_WEB",
+                      "OPS_ANDROID"
+                    ]
                   }
                 },
                 "required": [
@@ -159,6 +170,9 @@
                     "refreshExpiresInSeconds": {
                       "type": "integer",
                       "exclusiveMinimum": 0
+                    },
+                    "mustChangePassword": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -183,7 +197,17 @@
             }
           },
           "401": {
-            "description": "E_AUTH_INVALID_CREDENTIALS",
+            "description": "E_AUTH_INVALID_CREDENTIALS, E_AUTH_ACCOUNT_LOCKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "E_GEN_RATE_LIMITED",
             "content": {
               "application/json": {
                 "schema": {
@@ -281,6 +305,9 @@
                     "refreshExpiresInSeconds": {
                       "type": "integer",
                       "exclusiveMinimum": 0
+                    },
+                    "mustChangePassword": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -399,7 +426,7 @@
             }
           },
           "403": {
-            "description": "E_RBAC_FORBIDDEN",
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_PIN_LOCKED",
             "content": {
               "application/json": {
                 "schema": {
@@ -562,6 +589,9 @@
                     "refreshExpiresInSeconds": {
                       "type": "integer",
                       "exclusiveMinimum": 0
+                    },
+                    "mustChangePassword": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -571,6 +601,16 @@
                     "refreshToken",
                     "refreshExpiresInSeconds"
                   ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_AUTH_PHONE_REGISTERED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             }
@@ -630,6 +670,13 @@
                     "type": "string",
                     "minLength": 8,
                     "maxLength": 128
+                  },
+                  "clientSurface": {
+                    "type": "string",
+                    "enum": [
+                      "GUEST_WEB",
+                      "GUEST_ANDROID"
+                    ]
                   }
                 },
                 "required": [
@@ -670,6 +717,9 @@
                     "refreshExpiresInSeconds": {
                       "type": "integer",
                       "exclusiveMinimum": 0
+                    },
+                    "mustChangePassword": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -684,7 +734,17 @@
             }
           },
           "401": {
-            "description": "E_AUTH_INVALID_CREDENTIALS",
+            "description": "E_AUTH_INVALID_CREDENTIALS, E_AUTH_ACCOUNT_LOCKED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "E_GEN_RATE_LIMITED",
             "content": {
               "application/json": {
                 "schema": {
@@ -772,6 +832,9 @@
                     "refreshExpiresInSeconds": {
                       "type": "integer",
                       "exclusiveMinimum": 0
+                    },
+                    "mustChangePassword": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -892,7 +955,7 @@
             "description": "Người dùng đã cập nhật"
           },
           "403": {
-            "description": "E_RBAC_FORBIDDEN",
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
             "content": {
               "application/json": {
                 "schema": {
@@ -947,6 +1010,802 @@
           },
           "503": {
             "description": "E_GEN_SERVICE_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "operationId": "usersList",
+        "summary": "Danh sách người dùng nội bộ cho SCR-15 (UC-AUTH-02, BR-RBAC-01)",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OWNER",
+                "MANAGER",
+                "FRONT_DESK",
+                "RESERVATION_AGENT",
+                "ACCOUNTANT",
+                "HOUSEKEEPING",
+                "SYSADMIN"
+              ]
+            },
+            "required": false,
+            "name": "role",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "propertyId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách người dùng",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "username": {
+                            "type": "string",
+                            "minLength": 3,
+                            "maxLength": 64
+                          },
+                          "fullName": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "OWNER",
+                              "MANAGER",
+                              "FRONT_DESK",
+                              "RESERVATION_AGENT",
+                              "ACCOUNTANT",
+                              "HOUSEKEEPING",
+                              "SYSADMIN"
+                            ]
+                          },
+                          "propertyScope": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "lockedUntil": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "hasPin": {
+                            "type": "boolean"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "username",
+                          "fullName",
+                          "role",
+                          "propertyScope",
+                          "isActive",
+                          "lockedUntil",
+                          "hasPin",
+                          "version"
+                        ]
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "limit",
+                        "nextCursor",
+                        "hasMore",
+                        "total"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "E_GEN_VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "usersCreate",
+        "summary": "Tạo người dùng nội bộ với mật khẩu tạm (UC-AUTH-02, QĐ-03 quyết định 7)",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 64
+                  },
+                  "fullName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+84\\d{9}$"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "OWNER",
+                      "MANAGER",
+                      "FRONT_DESK",
+                      "RESERVATION_AGENT",
+                      "ACCOUNTANT",
+                      "HOUSEKEEPING",
+                      "SYSADMIN"
+                    ]
+                  },
+                  "propertyScope": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "temporaryPassword": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "username",
+                  "fullName",
+                  "role",
+                  "propertyScope",
+                  "temporaryPassword"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Người dùng đã tạo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "username": {
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 64
+                    },
+                    "fullName": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "OWNER",
+                        "MANAGER",
+                        "FRONT_DESK",
+                        "RESERVATION_AGENT",
+                        "ACCOUNTANT",
+                        "HOUSEKEEPING",
+                        "SYSADMIN"
+                      ]
+                    },
+                    "propertyScope": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "lockedUntil": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "username",
+                    "fullName",
+                    "role",
+                    "propertyScope",
+                    "isActive",
+                    "lockedUntil",
+                    "hasPin",
+                    "version"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "E_GEN_VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_AUTH_USERNAME_TAKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password": {
+      "post": {
+        "operationId": "authPasswordChange",
+        "summary": "Đổi mật khẩu của chính mình (UC-AUTH-01, QĐ-03 quyết định 8)",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentPassword": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "currentPassword",
+                  "newPassword"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Đã đổi mật khẩu"
+          },
+          "400": {
+            "description": "E_GEN_VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E_AUTH_INVALID_CREDENTIALS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/pin": {
+      "put": {
+        "operationId": "authPinSet",
+        "summary": "Đặt PIN cho chính mình (UC-AUTH-01, QĐ-03 quyết định 5)",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pin": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  },
+                  "currentPassword": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "pin",
+                  "currentPassword"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Đã đặt PIN"
+          },
+          "400": {
+            "description": "E_GEN_VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E_AUTH_INVALID_CREDENTIALS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{userId}/pin": {
+      "delete": {
+        "operationId": "usersPinDelete",
+        "summary": "Xoá PIN để người dùng đặt lại (UC-AUTH-02, QĐ-03 quyết định 5)",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Đã xoá PIN"
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/guest-auth/password-reset/request": {
+      "post": {
+        "operationId": "guestPasswordResetRequest",
+        "summary": "Yêu cầu đặt lại mật khẩu; luôn trả 202 để không lộ SĐT tồn tại (QĐ-03 T7)",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+84\\d{9}$"
+                  }
+                },
+                "required": [
+                  "phone"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Đã ghi nhận yêu cầu (không tiết lộ SĐT có tồn tại)"
+          },
+          "422": {
+            "description": "E_CRM_PHONE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "E_GEN_RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/guest-auth/password-reset/confirm": {
+      "post": {
+        "operationId": "guestPasswordResetConfirm",
+        "summary": "Đặt lại mật khẩu bằng token một lần (QĐ-03 T7)",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "token",
+                  "newPassword"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Đã đặt lại mật khẩu; mọi phiên của khách bị thu hồi"
+          },
+          "400": {
+            "description": "E_AUTH_RESET_TOKEN_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "E_GEN_RATE_LIMITED",
             "content": {
               "application/json": {
                 "schema": {

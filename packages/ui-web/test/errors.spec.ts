@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { actionMessageKey, expectedHttpStatus, mapErrorToUiAction } from '../src/errors.js';
+import {
+  actionMessageKey,
+  expectedHttpStatus,
+  mapErrorToUiAction,
+  waitMessage,
+} from '../src/errors.js';
 import { viCatalog } from '../src/messages.js';
 
 describe('ánh xạ mã lỗi sang hành động UI', () => {
@@ -34,6 +39,29 @@ describe('ánh xạ mã lỗi sang hành động UI', () => {
     expect(expectedHttpStatus('E_PAY_CALLBACK_DUPLICATE')).toBeNull();
     expect(expectedHttpStatus('E_FUTURE_UNKNOWN')).toBeNull();
   });
+
+  it('mã lỗi F1 có hành động riêng theo QĐ-03', () => {
+    expect(mapErrorToUiAction({ code: 'E_AUTH_ACCOUNT_LOCKED', status: 401 })).toBe('retry-after');
+    expect(mapErrorToUiAction({ code: 'E_AUTH_PIN_LOCKED', status: 403 })).toBe('retry-after');
+    expect(mapErrorToUiAction({ code: 'E_GEN_RATE_LIMITED', status: 429 })).toBe('retry-after');
+    expect(mapErrorToUiAction({ status: 429 })).toBe('retry-after');
+    expect(mapErrorToUiAction({ code: 'E_AUTH_PASSWORD_CHANGE_REQUIRED', status: 403 })).toBe(
+      'change-password',
+    );
+    expect(mapErrorToUiAction({ code: 'E_AUTH_USERNAME_TAKEN', status: 409 })).toBe('fix-fields');
+    expect(mapErrorToUiAction({ code: 'E_AUTH_PHONE_REGISTERED', status: 409 })).toBe(
+      'contact-support',
+    );
+    expect(mapErrorToUiAction({ code: 'E_AUTH_RESET_TOKEN_INVALID', status: 400 })).toBe(
+      'request-new-link',
+    );
+    expect(waitMessage('E_GEN_RATE_LIMITED', 30)).toBe(
+      'Bạn đã gửi quá nhiều yêu cầu. Thử lại sau 1 phút.',
+    );
+    expect(waitMessage('E_AUTH_ACCOUNT_LOCKED', 900)).toContain('15 phút');
+    expect(waitMessage('E_AUTH_ACCOUNT_LOCKED', 61)).toContain('2 phút');
+    expect(waitMessage('E_INV_ROOM_TAKEN', 60)).toBeUndefined();
+  });
 });
 
 describe('câu chữ hướng dẫn theo hành động', () => {
@@ -41,6 +69,8 @@ describe('câu chữ hướng dẫn theo hành động', () => {
     const actions = [
       'enter-pin',
       'reauth',
+      'change-password',
+      'request-new-link',
       'request-access',
       'not-found',
       'new-idempotency-key',

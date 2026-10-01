@@ -34,7 +34,7 @@ function hasParameterNamed(operation: unknown, name: string): boolean {
   );
 }
 
-type Method = 'get' | 'post' | 'put';
+type Method = 'get' | 'post' | 'put' | 'delete';
 
 /** Bảng phân loại công khai/cần token theo api.md §2.1 và §6.1. */
 const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])[] = [
@@ -47,23 +47,21 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['post', '/api/v1/auth/pin/verify', 'bearer'],
   ['post', '/api/v1/auth/logout', 'bearer'],
   ['put', '/api/v1/users/{userId}/access', 'bearer'],
+  ['get', '/api/v1/users', 'bearer'],
+  ['post', '/api/v1/users', 'bearer'],
+  ['delete', '/api/v1/users/{userId}/pin', 'bearer'],
+  ['post', '/api/v1/auth/password', 'bearer'],
+  ['put', '/api/v1/auth/pin', 'bearer'],
+  ['post', '/api/v1/guest-auth/password-reset/request', 'public'],
+  ['post', '/api/v1/guest-auth/password-reset/confirm', 'public'],
 ];
 
-const WRITE_TARGETS: readonly (readonly ['post' | 'put', string])[] = [
-  ['post', '/api/v1/auth/login'],
-  ['post', '/api/v1/auth/refresh'],
-  ['post', '/api/v1/auth/logout'],
-  ['post', '/api/v1/auth/pin/verify'],
-  ['post', '/api/v1/guest-auth/login'],
-  ['post', '/api/v1/guest-auth/register'],
-  ['post', '/api/v1/guest-auth/refresh'],
-  ['put', '/api/v1/users/{userId}/access'],
-];
+const WRITE_TARGETS = AUTH_OPERATIONS.filter(([method]) => method !== 'get');
 
 describe('OpenAPI 3.1 sinh từ zod', () => {
   const document = buildDocument();
 
-  function operationAt(method: 'get' | 'post' | 'put', path: string): unknown {
+  function operationAt(method: Method, path: string): unknown {
     const item = document.paths?.[path];
     if (item === undefined) return undefined;
     return item[method];
@@ -74,18 +72,24 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 9 path của F0 (8 AUTH + system/health)', () => {
+  it('có đủ 15 path của F0 + F1 (14 AUTH/guest-auth/users + system/health)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
         '/api/v1/auth/logout',
+        '/api/v1/auth/password',
+        '/api/v1/auth/pin',
         '/api/v1/auth/pin/verify',
         '/api/v1/auth/refresh',
         '/api/v1/guest-auth/login',
+        '/api/v1/guest-auth/password-reset/confirm',
+        '/api/v1/guest-auth/password-reset/request',
         '/api/v1/guest-auth/refresh',
         '/api/v1/guest-auth/register',
         '/api/v1/system/health',
+        '/api/v1/users',
         '/api/v1/users/{userId}/access',
+        '/api/v1/users/{userId}/pin',
       ].sort(),
     );
   });
@@ -107,7 +111,10 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
 
   it('phản hồi lỗi của login trỏ đúng mã trong danh mục', () => {
     const login = document.paths?.['/api/v1/auth/login']?.post;
-    expect(login?.responses?.['401']).toMatchObject({ description: 'E_AUTH_INVALID_CREDENTIALS' });
+    expect(login?.responses?.['401']).toMatchObject({
+      description: 'E_AUTH_INVALID_CREDENTIALS, E_AUTH_ACCOUNT_LOCKED',
+    });
+    expect(login?.responses?.['429']).toMatchObject({ description: 'E_GEN_RATE_LIMITED' });
     expect(login?.responses?.['400']).toMatchObject({ description: 'E_GEN_VALIDATION_FAILED' });
   });
 

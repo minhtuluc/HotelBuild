@@ -24,6 +24,8 @@ export const viCatalog = {
   'state.success': 'Máy chủ đã xác nhận',
   'action.enterPin': 'Nhập lại PIN',
   'action.reauth': 'Đăng nhập lại',
+  'action.changePassword': 'Đổi mật khẩu',
+  'action.requestNewLink': 'Yêu cầu liên kết mới',
   'action.requestAccess': 'Yêu cầu quyền',
   'action.notFound': 'Về danh sách',
   'action.newKey': 'Gửi lại với khoá mới',
@@ -35,6 +37,8 @@ export const viCatalog = {
   'action.retryLater': 'Thử lại sau',
   'action.contactSupport': 'Liên hệ hỗ trợ',
   'error.boundary.title': 'Màn hình gặp lỗi không mong đợi',
+  'error.accountLocked': 'Tài khoản đang tạm khoá. Thử lại sau {minutes} phút.',
+  'error.rateLimited': 'Bạn đã gửi quá nhiều yêu cầu. Thử lại sau {minutes} phút.',
   'error.boundary.body':
     'Không hiển thị chi tiết kỹ thuật. Thử lại; nếu vẫn lỗi, gửi mã tham chiếu cho hỗ trợ.',
   'error.boundary.retry': 'Thử lại',
