@@ -543,7 +543,7 @@ Xương sống đã hấp thụ các phát hiện của tài liệu này: **BR-C
 
 | # | Loại | Đề xuất | Vì sao cần | Liên quan |
 |---|------|---------|------------|-----------|
-| 1 | Lỗi API | `E_CANCEL_INVALID_STATE`, `E_CANCEL_POLICY_MISSING`, `E_CANCEL_REFUND_EXCEEDS_PAID`, `E_CANCEL_SELF_APPROVAL`, `E_CANCEL_FORCE_MAJEURE_REASON` | Mã lỗi cho các nhánh từ chối ở §4.1, §5, §10.2 (quy ước `E_<MOD>_<TÊN>`; 00 §6 trỏ [04/api](../04-thiet-ke/api.md) §4.2 là nơi định nghĩa đầy đủ 45 mã) | §1, §5, §10.2 |
+| 1 | Lỗi API | `E_CANCEL_INVALID_STATE`, `E_CANCEL_POLICY_MISSING`, `E_CANCEL_REFUND_EXCEEDS_PAID`, `E_CANCEL_SELF_APPROVAL`, `E_CANCEL_FORCE_MAJEURE_REASON` | Mã lỗi cho các nhánh từ chối ở §4.1, §5, §10.2 (quy ước `E_<MOD>_<TÊN>`; 00 §6 trỏ [04/api](../04-thiet-ke/api.md) §4.2 là nơi định nghĩa đầy đủ 54 mã) | §1, §5, §10.2 |
 | 2 | API | `DELETE /api/v1/bookings/{id}` · `GET /api/v1/bookings/{id}/cancellation-quote` · `POST /api/v1/refunds` · `POST /api/v1/refunds/{id}/approve` · `POST /api/v1/refunds/{id}/reject` · `POST /api/v1/refunds/{id}/payout` · `POST /api/v1/bookings/{id}/reschedule` | Hợp đồng REST cho luồng §10.1 | §10.1 |
 | 3 | Cấu hình | `SystemSetting` khoá `cancel.forceMajeure.minReasonLength` = 20 (phí hoàn dùng khoá `refund.feeAmount` đã có ở BR-SYS-02) | BR-CANCEL-13 nêu ngưỡng 20 ký tự nhưng chưa có khoá cấu hình | §4.3, §9.1 |
 | 4 | Xung đột cần chốt | `RefundRequest.reason` ràng buộc theo enum `CancelReason` (00 §7.5) nhưng BR-CANCEL-13 yêu cầu **lý do văn bản ≥ 20 ký tự** → đề xuất: diễn giải ghi ở `AuditLog.reason` (đã bắt buộc bởi BR-GEN-07), `RefundRequest.reason` giữ enum | Không thể thoả cả hai yêu cầu trên cùng một trường | §9.1, §10.2 |
