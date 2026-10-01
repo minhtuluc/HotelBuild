@@ -45,7 +45,18 @@ docker compose -f infra/docker-compose.yml exec postgres \
   psql -U pinehill -d pinehill -c "select version()"
 ```
 
-> Role runtime `app_rw` (`DATABASE_URL`) **chưa tồn tại** ở bước này — migration baseline tạo role đó (HB-005). Trước HB-005, kiểm tra kết nối bằng `DATABASE_MIGRATION_URL` (role chủ).
+## Migration và mật khẩu runtime (chỉ dev)
+
+Baseline tạo role `app_rw` cùng quyền runtime. Sau khi nạp `.env`, chạy migration bằng role chủ rồi đặt mật khẩu login local:
+
+```sh
+set -a; . ./.env; set +a
+pnpm migrate
+pnpm db:dev-roles
+psql "$DATABASE_URL" -c "select current_user"
+```
+
+`db:dev-roles` lấy mật khẩu đã giải mã từ `DATABASE_URL`, yêu cầu role `app_rw` đã tồn tại và kết nối bằng `DATABASE_MIGRATION_URL`. Mật khẩu không nằm trong migration. Lệnh chỉ dành cho dev: từ chối `NODE_ENV=production`, host ngoài loopback, runtime khác `app_rw`, hoặc hai URL khác endpoint/CSDL. Nếu đổi mật khẩu runtime trong `.env`, chạy lại lệnh này; không cần xoá volume.
 
 ## Xoá dữ liệu
 
@@ -69,4 +80,4 @@ Mặc định trong `docker-compose.yml` khớp với `.env.example` ở gốc, 
 
 ## Ngoài phạm vi tệp này
 
-Tạo role/bảng (HB-005), Dockerfile cho `api`/`worker` (HB-006), job CI backend (HB-007).
+Dockerfile cho `api`/`worker` (HB-006), job CI backend (HB-007).
