@@ -3,7 +3,7 @@ id: HB-011
 title: Hợp đồng F1 — endpoint, mã lỗi và client bổ sung theo QĐ-03
 risk: R2
 owner: deepseek
-max_lines: 700
+max_lines: 800 # 7 endpoint + 7 mã lỗi + client + 2 bề mặt UI; lead nâng từ 700 (PR #19)
 allow:
   - packages/contracts/src/**
   - packages/contracts/test/**
