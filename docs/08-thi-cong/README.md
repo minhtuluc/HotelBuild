@@ -1,6 +1,6 @@
 # 08 — Quy trình thi công đa model
 
-Áp dụng từ F1. Luật ngắn cho agent nằm ở [AGENTS.md](../../AGENTS.md); trang này là phần lý do và quy trình cho người điều phối.
+Áp dụng từ F1. Luật ngắn cho agent nằm ở [AGENTS.md](../../AGENTS.md); trang này là phần lý do và quy trình cho người điều phối. Đường tới deploy: [lộ trình](lo-trinh-den-deploy.md); người thay vai lead đọc [sổ tay lead](so-tay-lead.md).
 
 Nguyên tắc: model đắt chỉ làm những việc ít khối lượng nhưng quyết định chất lượng (đặc tả, test khoá, duyệt); model rẻ làm phần khối lượng lớn. Không model nào tự duyệt việc của chính mình. "Xong" là cổng tự động xanh, không phải lời agent tự báo.
 
