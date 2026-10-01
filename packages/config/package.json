@@ -7,6 +7,7 @@
   "exports": {
     "./eslint/base.mjs": "./eslint/base.mjs",
     "./eslint/frontend.mjs": "./eslint/frontend.mjs",
+    "./eslint/domain.mjs": "./eslint/domain.mjs",
     "./prettier.json": "./prettier.json"
   },
   "dependencies": {
