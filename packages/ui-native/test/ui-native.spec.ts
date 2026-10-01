@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { formatDateTimeVn as formatDateTimeVnWeb } from '@pinehill/ui-web';
+import {
+  formatDateTimeVn as formatDateTimeVnWeb,
+  waitMessage as waitMessageWeb,
+} from '@pinehill/ui-web';
 import { makeTranslate as makeWebTranslate, viCatalog } from '@pinehill/ui-web/messages';
 import { formatDateTimeVn } from '../src/format.js';
 import { color, gridStatus, radius, space, touchTargetDp, typography } from '../src/tokens.js';
 import { makeTranslate } from '../src/translate.js';
-import { offlineQueueMessages, stateMessages } from '../src/stateMessages.js';
+import { offlineQueueMessages, stateMessages, waitMessage } from '../src/stateMessages.js';
 
 function relativeLuminance(hex: string): number {
   const value = hex.replace('#', '');
@@ -69,6 +72,15 @@ describe('câu chữ dùng chung giữa web và Android', () => {
       'confirmed',
       'needsAttention',
     ]);
+  });
+
+  it('câu chữ thời gian chờ khớp web cho hai mã F1', () => {
+    expect(waitMessage('E_GEN_RATE_LIMITED', 90)).toBe(waitMessageWeb('E_GEN_RATE_LIMITED', 90));
+    expect(waitMessage('E_AUTH_ACCOUNT_LOCKED', 900)).toBe(
+      waitMessageWeb('E_AUTH_ACCOUNT_LOCKED', 900),
+    );
+    expect(waitMessage('E_GEN_RATE_LIMITED', 90)).toContain('2 phút');
+    expect(waitMessage('E_INV_ROOM_TAKEN', 60)).toBeUndefined();
   });
 });
 

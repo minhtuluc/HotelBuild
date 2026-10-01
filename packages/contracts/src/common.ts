@@ -35,11 +35,28 @@ export const errorBodySchema = z.object({
   details: z
     .array(z.strictObject({ field: z.string().min(1), issue: z.string().min(1) }))
     .optional(),
+  /** Số giây phải chờ trước khi thử lại (QĐ-03 T5): `E_AUTH_ACCOUNT_LOCKED`, `E_GEN_RATE_LIMITED`. */
+  retryAfterSeconds: z.number().int().min(1).optional(),
 });
 
 export type ErrorBody = z.infer<typeof errorBodySchema>;
 
-export function listResponseSchema<T extends z.ZodTypeAny>(item: T) {
+/** Phân trang con trỏ dùng chung (api.md §1.4) — tên kiểu để tham số hàm không phải suy từ schema. */
+export interface ListMeta {
+  readonly limit: number;
+  readonly nextCursor: string | null;
+  readonly hasMore: boolean;
+  readonly total: number;
+}
+
+export interface ListPage<T> {
+  readonly data: readonly T[];
+  readonly meta: ListMeta;
+}
+
+export function listResponseSchema<T extends z.ZodTypeAny>(
+  item: T,
+): z.ZodType<ListPage<z.infer<T>>> {
   return z.object({
     data: z.array(item),
     meta: z.strictObject({

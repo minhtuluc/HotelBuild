@@ -11,9 +11,9 @@ import { bookingStatusSchema, paymentMethodSchema, userRoleSchema } from '../src
 import { errorCatalogue, errorCodePattern, errorCodes, isErrorCode } from '../src/errors.js';
 
 describe('danh mục mã lỗi (api.md §4.2)', () => {
-  it('có đúng 54 mã, không trùng', () => {
-    expect(errorCodes).toHaveLength(54);
-    expect(new Set(errorCodes).size).toBe(54);
+  it('có đúng 61 mã, không trùng', () => {
+    expect(errorCodes).toHaveLength(61);
+    expect(new Set(errorCodes).size).toBe(61);
     for (const code of errorCodes) expect(code).toMatch(errorCodePattern);
   });
 
@@ -28,16 +28,17 @@ describe('danh mục mã lỗi (api.md §4.2)', () => {
       return acc;
     }, {});
     expect(histogram).toEqual({
-      '400': 3,
-      '401': 4,
-      '403': 6,
+      '400': 4,
+      '401': 5,
+      '403': 8,
       '404': 1,
       '405': 1,
-      '409': 22,
+      '409': 24,
       '410': 1,
       '412': 1,
       '422': 9,
       '428': 1,
+      '429': 1,
       '502': 2,
       '503': 1,
       '504': 1,
@@ -85,6 +86,16 @@ describe('bao lỗi', () => {
   it('từ chối mốc thời gian không phải UTC', () => {
     expect(isoUtcTimestampSchema.safeParse('2026-10-01T03:00:00+07:00').success).toBe(false);
     expect(isoUtcTimestampSchema.safeParse('2026-10-01T03:00:00Z').success).toBe(true);
+  });
+
+  it('nhận retryAfterSeconds nguyên ≥ 1 cho lỗi khoá tài khoản / quá nhiều yêu cầu (QĐ-03 T5)', () => {
+    expect(
+      errorBodySchema.parse({ ...valid, code: 'E_GEN_RATE_LIMITED', retryAfterSeconds: 60 })
+        .retryAfterSeconds,
+    ).toBe(60);
+    expect(errorBodySchema.safeParse({ ...valid, retryAfterSeconds: 0 }).success).toBe(false);
+    expect(errorBodySchema.safeParse({ ...valid, retryAfterSeconds: 1.5 }).success).toBe(false);
+    expect(errorBodySchema.safeParse(valid).success).toBe(true);
   });
 });
 

@@ -4,14 +4,22 @@
  * Ghi chú quyết định (docs/05-ke-hoach/nhat-ky/QD-01-nen-tang-f0.md):
  * bảng §4.2 có 54 dòng, trong khi ba tài liệu khác ghi "45 mã". Bản thi công bám theo
  * bảng §4.2 (đúng 54 mã) để không bỏ sót mã; ba tài liệu kia phải được cập nhật.
+ * QĐ-03 (T5) thêm 7 mã F1 → bảng §4.2 thành 61 mã.
  *
  * `httpStatus = null` nghĩa là mã không đi ra như một lỗi HTTP nghiệp vụ (ACK theo giao thức provider).
  */
 export const errorCatalogue = {
   E_GEN_VALIDATION_FAILED: { httpStatus: 400, module: 'GEN' },
+  E_GEN_RATE_LIMITED: { httpStatus: 429, module: 'GEN' },
   E_SYS_IDEMPOTENCY_KEY_REUSED: { httpStatus: 409, module: 'SYS' },
   E_AUTH_INVALID_CREDENTIALS: { httpStatus: 401, module: 'AUTH' },
   E_AUTH_PIN_REQUIRED: { httpStatus: 401, module: 'AUTH' },
+  E_AUTH_ACCOUNT_LOCKED: { httpStatus: 401, module: 'AUTH' },
+  E_AUTH_PIN_LOCKED: { httpStatus: 403, module: 'AUTH' },
+  E_AUTH_PASSWORD_CHANGE_REQUIRED: { httpStatus: 403, module: 'AUTH' },
+  E_AUTH_USERNAME_TAKEN: { httpStatus: 409, module: 'AUTH' },
+  E_AUTH_PHONE_REGISTERED: { httpStatus: 409, module: 'AUTH' },
+  E_AUTH_RESET_TOKEN_INVALID: { httpStatus: 400, module: 'AUTH' },
   E_RBAC_FORBIDDEN: { httpStatus: 403, module: 'RBAC' },
   E_AUTH_OUT_OF_SCOPE: { httpStatus: 403, module: 'AUTH' },
   E_INV_NO_AVAILABILITY: { httpStatus: 409, module: 'INV' },

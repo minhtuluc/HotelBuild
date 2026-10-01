@@ -1,5 +1,5 @@
 import { errorCatalogue, isErrorCode } from '@pinehill/contracts';
-import type { MessageKey } from './messages.js';
+import { makeTranslate, viCatalog, type MessageKey } from './messages.js';
 
 /**
  * Hành vi UI suy ra từ mã lỗi — UI **chỉ** suy từ `code`, không từ `message` (§8.1).
@@ -8,6 +8,8 @@ import type { MessageKey } from './messages.js';
 export type UiAction =
   | 'enter-pin'
   | 'reauth'
+  | 'change-password'
+  | 'request-new-link'
   | 'request-access'
   | 'not-found'
   | 'new-idempotency-key'
@@ -21,6 +23,13 @@ export type UiAction =
 
 const BY_CODE: Readonly<Record<string, UiAction>> = {
   E_AUTH_PIN_REQUIRED: 'enter-pin',
+  E_AUTH_ACCOUNT_LOCKED: 'retry-after',
+  E_AUTH_PIN_LOCKED: 'retry-after',
+  E_AUTH_PASSWORD_CHANGE_REQUIRED: 'change-password',
+  E_AUTH_USERNAME_TAKEN: 'fix-fields',
+  E_AUTH_PHONE_REGISTERED: 'contact-support',
+  E_AUTH_RESET_TOKEN_INVALID: 'request-new-link',
+  E_GEN_RATE_LIMITED: 'retry-after',
   E_SYS_IDEMPOTENCY_KEY_REUSED: 'new-idempotency-key',
   E_SYS_REQUEST_IN_PROGRESS: 'retry-after',
   E_INV_ROOM_TAKEN: 'reload-and-reselect',
@@ -49,6 +58,7 @@ const BY_STATUS: Readonly<Record<number, UiAction>> = {
   412: 'reload-and-diff',
   422: 'fix-fields',
   428: 'reload-and-diff',
+  429: 'retry-after',
   502: 'retry-later',
   503: 'retry-later',
   504: 'retry-later',
@@ -76,6 +86,8 @@ export function mapErrorToUiAction(signal: ErrorSignal): UiAction {
 const ACTION_MESSAGES: Readonly<Record<UiAction, MessageKey>> = {
   'enter-pin': 'action.enterPin',
   reauth: 'action.reauth',
+  'change-password': 'action.changePassword',
+  'request-new-link': 'action.requestNewLink',
   'request-access': 'action.requestAccess',
   'not-found': 'action.notFound',
   'new-idempotency-key': 'action.newKey',
@@ -96,4 +108,22 @@ export function actionMessageKey(action: UiAction): MessageKey {
 /** Mã lỗi đã biết thì lấy mã HTTP chuẩn của danh mục, tránh UI tự đoán. */
 export function expectedHttpStatus(code: string): number | null {
   return isErrorCode(code) ? errorCatalogue[code].httpStatus : null;
+}
+
+const translate = makeTranslate(viCatalog);
+
+/** Mã có thời gian chờ hiển thị cho người dùng (QĐ-03 T5). */
+const WAIT_MESSAGES: Readonly<Record<string, MessageKey>> = {
+  E_AUTH_ACCOUNT_LOCKED: 'error.accountLocked',
+  E_GEN_RATE_LIMITED: 'error.rateLimited',
+};
+
+/**
+ * Câu chữ kèm thời gian chờ suy từ `retryAfterSeconds` của body lỗi (§4.1).
+ * Trả `undefined` khi mã không phải dạng chờ được — UI giữ nguyên hành động mặc định.
+ */
+export function waitMessage(code: string, retryAfterSeconds: number): string | undefined {
+  const key = WAIT_MESSAGES[code];
+  if (key === undefined) return undefined;
+  return translate(key, { minutes: Math.max(1, Math.ceil(retryAfterSeconds / 60)) });
 }

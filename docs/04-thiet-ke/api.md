@@ -87,14 +87,21 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |
 |--------|-----------|-------|-------------------|---------------|----|----|
-| POST | `/api/v1/auth/login` | Đăng nhập nội bộ, trả cặp access/refresh | — | `username`, `password` | UC-AUTH-01 | BR-RBAC-06 |
+| POST | `/api/v1/auth/login` | Đăng nhập nội bộ, trả cặp access/refresh | — | `username`, `password`, `clientSurface?` (T10) | UC-AUTH-01 | BR-RBAC-06 |
 | POST | `/api/v1/auth/refresh` | Xoay refresh token | — | `refreshToken` | UC-AUTH-01 | BR-RBAC-05 |
 | POST | `/api/v1/auth/pin/verify` | Xác thực PIN 6 số, trả `pinToken` | FRONT_DESK | `pin` | UC-AUTH-01 | BR-RBAC-05 |
 | PUT | `/api/v1/users/{userId}/access` | Gán vai trò, phạm vi cơ sở, trạng thái; chống tự nâng quyền và không vô hiệu OWNER cuối | OWNER/SYSADMIN | `role`, `propertyScope[]`, `isActive` | UC-AUTH-02 | BR-RBAC-01,02 |
 | POST | `/api/v1/guest-auth/register` | Khách đăng ký tài khoản | — | `fullName`, `phone`, `email`, `password`, `consentMarketing` | UC-AUTH-03 | BR-CRM-01 |
-| POST | `/api/v1/guest-auth/login` | Khách đăng nhập | — | `phone`, `password` | UC-AUTH-03 | BR-CRM-01 |
+| POST | `/api/v1/guest-auth/login` | Khách đăng nhập | — | `phone`, `password`, `clientSurface?` (T10) | UC-AUTH-03 | BR-CRM-01 |
 | POST | `/api/v1/auth/logout` | Thu hồi phiên và refresh family, hết quyền trên mọi client của phiên | Đã đăng nhập | — | UC-AUTH-01, UC-AUTH-03 | BR-RBAC-05 |
 | POST | `/api/v1/guest-auth/refresh` | Xoay refresh của khách; phát hiện reuse thì thu hồi cả family | GUEST session | `refreshToken` | UC-AUTH-03 | BR-RBAC-05 |
+| GET | `/api/v1/users` | Danh sách người dùng nội bộ cho SCR-15 | MANAGER | `cursor`, `limit`, `role`, `propertyId`, `q` | UC-AUTH-02 | BR-RBAC-01,02 |
+| POST | `/api/v1/users` | Tạo người dùng với mật khẩu tạm (buộc đổi ở lần đăng nhập đầu) | OWNER/SYSADMIN | `username`, `fullName`, `phone?`, `role`, `propertyScope[]`, `temporaryPassword` | UC-AUTH-02 | BR-RBAC-01,02 |
+| POST | `/api/v1/auth/password` | Đổi mật khẩu của chính mình | Đã đăng nhập | `currentPassword`, `newPassword` (8–128) | UC-AUTH-01 | BR-RBAC-05 |
+| PUT | `/api/v1/auth/pin` | Đặt PIN 6 số cho chính mình | Đã đăng nhập | `pin` (6 số), `currentPassword` | UC-AUTH-01 | BR-RBAC-05 |
+| DELETE | `/api/v1/users/{userId}/pin` | Xoá PIN để người dùng đặt lại | MANAGER/SYSADMIN | — | UC-AUTH-02 | BR-RBAC-05 |
+| POST | `/api/v1/guest-auth/password-reset/request` | Yêu cầu đặt lại mật khẩu; **luôn 202** dù SĐT có tồn tại hay không | — | `phone` | UC-AUTH-03 | BR-CRM-01 |
+| POST | `/api/v1/guest-auth/password-reset/confirm` | Đặt lại mật khẩu bằng token một lần; thu hồi mọi phiên của khách | — | `token`, `newPassword` (8–128) | UC-AUTH-03 | BR-CRM-01 |
 
 ### 2.2. PROP — Cơ sở & buồng phòng (4 UC)
 
@@ -578,6 +585,7 @@ Response 201:
 | `traceId` | string | ✔ | Trùng header `X-Trace-Id`; dùng tra log (NFR-OBS-01,03) |
 | `timestamp`, `path` | string | ✔ | UTC ISO 8601; đường dẫn bị từ chối |
 | `details[]` | array | Không | Lỗi theo trường; vắng khi lỗi không gắn trường cụ thể |
+| `retryAfterSeconds` | number | Không | Số giây phải chờ trước khi thử lại; có ở `E_AUTH_ACCOUNT_LOCKED` và `E_GEN_RATE_LIMITED` (QĐ-03 T5) |
 | `details[].field` | string | ✔ | Tên trường theo từ điển thực thể, hỗ trợ đường dẫn lồng `guest.phone` |
 | `details[].issue` | string | ✔ | `REQUIRED`, `OUT_OF_RANGE`, `OVER_CAPACITY`, `IMMUTABLE`, … |
 
@@ -588,9 +596,16 @@ Lỗi 5xx **PHẢI** có `traceId` và được ghi log JSON cùng mã đó, **k
 | Mã | HTTP | Thông điệp cho người dùng | Nguyên nhân | Cách xử lý |
 |----|------|---------------------------|-------------|-----------|
 | `E_GEN_VALIDATION_FAILED` | 400 | Dữ liệu gửi lên không hợp lệ. | Sai kiểu, thiếu định dạng, `limit` > 100 | Sửa theo `details[]` rồi gửi lại |
+| `E_GEN_RATE_LIMITED` | 429 | Bạn đã gửi quá nhiều yêu cầu. | Vượt 10 lần/phút/IP cho đăng nhập và các tuyến có giới hạn (QĐ-03 quyết định 3) | Chờ `retryAfterSeconds` rồi thử lại; header `Retry-After` cùng giá trị |
 | `E_SYS_IDEMPOTENCY_KEY_REUSED` | 409 | Khoá chống trùng đã dùng cho một yêu cầu khác. | Cùng `Idempotency-Key`, khác payload | Sinh khoá mới (BR-GEN-08) |
 | `E_AUTH_INVALID_CREDENTIALS` | 401 | Tên đăng nhập hoặc mật khẩu không đúng. | Sai thông tin đăng nhập | Nhập lại; 5 lần sai bị khoá 15 phút (BR-RBAC-06) |
 | `E_AUTH_PIN_REQUIRED` | 401 | Cần xác thực PIN cho thao tác tài chính. | Thiếu hoặc hết hạn `pinToken` | Gọi `/auth/pin/verify` rồi thử lại (BR-RBAC-05) |
+| `E_AUTH_ACCOUNT_LOCKED` | 401 | Tài khoản đang tạm khoá. | 5 lần đăng nhập sai liên tiếp trong 15 phút — cả nhân viên lẫn khách (QĐ-03 quyết định 3) | Chờ `retryAfterSeconds` rồi đăng nhập lại, hoặc nhờ quản lý mở khoá (BR-RBAC-06) |
+| `E_AUTH_PIN_LOCKED` | 403 | PIN đang tạm khoá. | 3 lần nhập sai PIN liên tiếp (QĐ-03 quyết định 4) | Chờ 15 phút hoặc nhờ MANAGER/SYSADMIN xoá PIN để đặt lại |
+| `E_AUTH_PASSWORD_CHANGE_REQUIRED` | 403 | Phải đổi mật khẩu trước khi dùng hệ thống. | Tài khoản tạo bằng mật khẩu tạm chưa đổi (QĐ-03 quyết định 8) | Gọi `POST /auth/password` rồi tiếp tục |
+| `E_AUTH_USERNAME_TAKEN` | 409 | Tên đăng nhập đã được dùng. | Trùng `User.username` khi tạo tài khoản | Chọn tên đăng nhập khác |
+| `E_AUTH_PHONE_REGISTERED` | 409 | Số điện thoại đã có hồ sơ khách. | SĐT trùng hồ sơ do lễ tân tạo (QĐ-03 T11) | Hiện "liên hệ lễ tân" để gắn tài khoản ở pha sau |
+| `E_AUTH_RESET_TOKEN_INVALID` | 400 | Liên kết đặt lại mật khẩu không hợp lệ hoặc đã dùng. | Token sai, hết 30 phút, hoặc đã dùng một lần (QĐ-03 T7) | Yêu cầu liên kết mới bằng `POST /guest-auth/password-reset/request` |
 | `E_RBAC_FORBIDDEN` | 403 | Bạn không có quyền thực hiện thao tác này. | Không thuộc tập permission của thao tác | Dùng tài khoản được cấp đúng quyền và phạm vi (BR-RBAC-02,03) |
 | `E_AUTH_OUT_OF_SCOPE` | 403 | Bạn không được truy cập dữ liệu của cơ sở này. | Ngoài `User.propertyScope` | Chỉ thao tác trên cơ sở được giao (BR-RBAC-02) |
 | `E_INV_NO_AVAILABILITY` | 409 | Loại phòng đã hết trong khoảng ngày đã chọn. | Tồn khả dụng bằng 0 ở ít nhất một đêm — tầng nghiệp vụ | Chọn ngày/loại phòng khác (BR-INV-07) |

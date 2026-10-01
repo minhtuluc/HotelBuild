@@ -2,6 +2,8 @@
  * Danh mục câu chữ trạng thái cho Android — cùng khoá với `@pinehill/ui-web` (NFR-LOC-01).
  * Test đối chiếu khoá giữa hai nền tảng để không lệch câu chữ.
  */
+import { makeTranslate } from './translate.js';
+
 export const stateMessages = {
   'common.skipToContent': 'Bỏ qua tới nội dung chính',
   'state.loading': 'Đang tải…',
@@ -23,6 +25,8 @@ export const stateMessages = {
   'state.success': 'Máy chủ đã xác nhận',
   'action.enterPin': 'Nhập lại PIN',
   'action.reauth': 'Đăng nhập lại',
+  'action.changePassword': 'Đổi mật khẩu',
+  'action.requestNewLink': 'Yêu cầu liên kết mới',
   'action.requestAccess': 'Yêu cầu quyền',
   'action.notFound': 'Về danh sách',
   'action.newKey': 'Gửi lại với khoá mới',
@@ -34,6 +38,8 @@ export const stateMessages = {
   'action.retryLater': 'Thử lại sau',
   'action.contactSupport': 'Liên hệ hỗ trợ',
   'error.boundary.title': 'Màn hình gặp lỗi không mong đợi',
+  'error.accountLocked': 'Tài khoản đang tạm khoá. Thử lại sau {minutes} phút.',
+  'error.rateLimited': 'Bạn đã gửi quá nhiều yêu cầu. Thử lại sau {minutes} phút.',
   'error.boundary.body':
     'Không hiển thị chi tiết kỹ thuật. Thử lại; nếu vẫn lỗi, gửi mã tham chiếu cho hỗ trợ.',
   'error.boundary.retry': 'Thử lại',
@@ -47,6 +53,21 @@ export const stateMessages = {
 } as const satisfies Record<string, string>;
 
 export type StateMessageKey = keyof typeof stateMessages;
+
+const nativeTranslate = makeTranslate(stateMessages);
+
+/** Mã có thời gian chờ hiển thị, cùng khoá với web (QĐ-03 T5). */
+const WAIT_MESSAGES: Readonly<Record<string, StateMessageKey>> = {
+  E_AUTH_ACCOUNT_LOCKED: 'error.accountLocked',
+  E_GEN_RATE_LIMITED: 'error.rateLimited',
+};
+
+/** Câu chữ kèm thời gian chờ suy từ `retryAfterSeconds`; `undefined` nếu mã không chờ được. */
+export function waitMessage(code: string, retryAfterSeconds: number): string | undefined {
+  const key = WAIT_MESSAGES[code];
+  if (key === undefined) return undefined;
+  return nativeTranslate(key, { minutes: Math.max(1, Math.ceil(retryAfterSeconds / 60)) });
+}
 
 /** Trạng thái hàng đợi ngoại tuyến là trạng thái UI cục bộ (§8.3), không phải trạng thái nghiệp vụ. */
 export type OfflineQueueState =

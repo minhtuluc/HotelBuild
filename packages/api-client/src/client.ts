@@ -34,6 +34,8 @@ export interface RequestBase {
   pinProtected?: boolean;
   correlationId?: string;
   signal?: AbortSignal;
+  /** Ghi đè số lần gửi tối đa của client; `1` = không tự gửi lại (vd. `POST /users`). */
+  maxAttempts?: number;
 }
 
 export interface RequestSpec<T> extends RequestBase {
@@ -170,12 +172,13 @@ export class ApiClient {
     const idempotencyKey = isWrite ? (spec.idempotencyKey ?? this.createId()) : undefined;
     const bodyText = await this.buildBody(spec);
     let lastError: ApiError = new ApiError({ kind: 'network', message: 'Chưa gửi được yêu cầu' });
+    const maxAttempts = Math.max(1, spec.maxAttempts ?? this.maxAttempts);
 
-    for (let attempt = 1; attempt <= this.maxAttempts; attempt += 1) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       const outcome = await this.attempt(spec, correlationId, idempotencyKey, bodyText, decode);
       if (outcome.kind === 'ok') return { ...outcome.value, status: outcome.status };
       lastError = outcome.error;
-      if (!outcome.error.retryable || attempt === this.maxAttempts) throw outcome.error;
+      if (!outcome.error.retryable || attempt === maxAttempts) throw outcome.error;
       const delay =
         outcome.retryAfterMs ??
         Math.min(this.maxRetryDelayMs, this.baseRetryDelayMs * 2 ** (attempt - 1));

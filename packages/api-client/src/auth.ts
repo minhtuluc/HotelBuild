@@ -3,15 +3,23 @@
  * để 4 frontend không tự viết lại (ADR-018).
  */
 import {
+  changePasswordRequestSchema,
   guestLoginRequestSchema,
   guestRegisterRequestSchema,
   loginRequestSchema,
+  passwordResetConfirmRequestSchema,
+  passwordResetRequestSchema,
   pinTokenSchema,
+  setPinRequestSchema,
   tokenPairSchema,
   userAccessUpdateRequestSchema,
+  type ChangePasswordRequest,
   type GuestRegisterRequest,
   type LoginRequest,
+  type PasswordResetConfirmRequest,
+  type PasswordResetRequest,
   type PinToken,
+  type SetPinRequest,
   type TokenPair,
   type UserAccessUpdateRequest,
 } from '@pinehill/contracts';
@@ -30,6 +38,10 @@ export interface AuthApi {
     input: UserAccessUpdateRequest,
     ifMatch?: string,
   ): Promise<ApiResponse<undefined>>;
+  changePassword(input: ChangePasswordRequest): Promise<ApiResponse<undefined>>;
+  setPin(input: SetPinRequest): Promise<ApiResponse<undefined>>;
+  passwordResetRequest(input: PasswordResetRequest): Promise<ApiResponse<undefined>>;
+  passwordResetConfirm(input: PasswordResetConfirmRequest): Promise<ApiResponse<undefined>>;
 }
 
 export function createAuthApi(client: ApiClient): AuthApi {
@@ -83,6 +95,30 @@ export function createAuthApi(client: ApiClient): AuthApi {
         path: `/users/${encodeURIComponent(userId)}/access`,
         body: userAccessUpdateRequestSchema.parse(input),
         ...(ifMatch === undefined ? {} : { ifMatch }),
+      }),
+    changePassword: (input) =>
+      client.requestVoid({
+        method: 'POST',
+        path: '/auth/password',
+        body: changePasswordRequestSchema.parse(input),
+      }),
+    setPin: (input) =>
+      client.requestVoid({
+        method: 'PUT',
+        path: '/auth/pin',
+        body: setPinRequestSchema.parse(input),
+      }),
+    passwordResetRequest: (input) =>
+      client.requestVoid({
+        method: 'POST',
+        path: '/guest-auth/password-reset/request',
+        body: passwordResetRequestSchema.parse(input),
+      }),
+    passwordResetConfirm: (input) =>
+      client.requestVoid({
+        method: 'POST',
+        path: '/guest-auth/password-reset/confirm',
+        body: passwordResetConfirmRequestSchema.parse(input),
       }),
   };
 }
