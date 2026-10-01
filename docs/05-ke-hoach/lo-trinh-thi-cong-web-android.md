@@ -46,7 +46,7 @@
 | Use case phủ bởi giao diện | 53 (toàn bộ; một số chỉ có bề mặt operations) | [00 §8](../00-tong-quan.md) |
 | Yêu cầu chức năng | 135 FR trong đó **101 Must** | [yêu cầu chức năng](../01-yeu-cau/yeu-cau-chuc-nang.md) §15 |
 | Endpoint hợp đồng | 91 endpoint trong §2 + 3 webhook + 1 endpoint trạng thái tác vụ bất đồng bộ | [api.md](../04-thiet-ke/api.md) §2, §5, §6 |
-| Mã lỗi nghiệp vụ phải render | 54 dòng trong bảng `E_*` (tài liệu khác ghi "45 mã" — xem §4) | [api.md](../04-thiet-ke/api.md) §4.2 |
+| Mã lỗi nghiệp vụ phải render | 54 dòng trong bảng `E_*` — chênh lệch 45/54 đã đóng theo [QĐ-02](nhat-ky/QD-02-nen-tang-backend.md) | [api.md](../04-thiet-ke/api.md) §4.2 |
 | Trạng thái UI bắt buộc cho **mọi** màn hình có tải dữ liệu | 9 hàng hợp đồng trạng thái (loading, refresh/stale, empty, 400/422, 401/403, 409/412/428, quote/hold hết hạn, timeout, success) + trạng thái offline Android | [thiết kế màn hình](../04-thiet-ke/thiet-ke-man-hinh.md) §8.1, §8.3 |
 | Luồng Android có chỉ tiêu chạm/thời gian | 4 (check-in 3 chạm ≤60 s; check-out 4 chạm ≤90 s; đổi phòng 5 chạm ≤30 s; no-show 4 chạm ≤45 s) | [thiết kế màn hình](../04-thiet-ke/thiet-ke-man-hinh.md) §5 |
 | Màn hình rủi ro cao có hợp đồng trạng thái riêng | 5 nhóm (`SCR-06`; `SCR-11/36/69`; `SCR-38`; `SCR-35/44/45/63`; `SCR-70`) | [thiết kế màn hình](../04-thiet-ke/thiet-ke-man-hinh.md) §8.2 |
@@ -62,7 +62,7 @@
 | 1 | Sinh **OpenAPI 3.1 từ zod** trong `packages/contracts`, đóng băng theo mốc M3 | Mọi màn hình đọc DTO từ đây; chưa có hợp đồng sinh tự động thì F1 trở đi đều `BLOCKED` | `NOT_RUN` — [lo-trinh](lo-trinh.md) QG-2 |
 | 2 | Chốt **cơ chế pnpm workspace** thay `package-lock.json` | Quyết định cấu trúc build/CI của cả 4 app | Mâu thuẫn tài liệu vs repo; cần ARCH quyết định + ghi ADR/`QĐ-nn` |
 | 3 | Chốt **cơ chế gate phiên bản hợp đồng** cho từng frontend | [ADR-018](../04-thiet-ke/adr/ADR-018-backend-chung-bon-frontend.md) cổng 4 yêu cầu release gate chặn khi contract version/cửa sổ tương thích không đạt | `NOT_RUN` |
-| 4 | Đối chiếu **số mã lỗi**: bảng §4.2 có 54 dòng, ba tài liệu khác ghi "45 mã" | Bộ chuyển `E_*` → thông điệp + hành động UI phải đủ; thiếu mã là lỗi hiển thị | Chênh lệch tài liệu, phải sửa trước F1 |
+| 4 | Đối chiếu **số mã lỗi**: bảng §4.2 có 54 dòng, ba tài liệu khác ghi 45 | Bộ chuyển `E_*` → thông điệp + hành động UI phải đủ; thiếu mã là lỗi hiển thị | Chênh lệch 45/54 **đã đóng theo [QĐ-02](nhat-ky/QD-02-nen-tang-backend.md)** |
 | 5 | Chốt **`OPEN-02`**: thao tác nào được xếp hàng offline, dữ liệu nào lưu trên máy, TTL, quy trình mất máy/thu hồi quyền | Chặn DoR của mọi màn hình ghi trên Android ([sổ rủi ro](quan-ly-rui-ro.md) §OPEN-02). Mặc định an toàn khi chưa chốt: **không** coi thu/hoàn tiền, xác nhận booking, giao/đổi phòng là đã thực hiện khi offline | `OPEN` |
 | 6 | Chốt **`Q-01…Q-16`** (đặc biệt Q-01 cọc, Q-04 bán vượt, Q-05 ghép khác giới, Q-08 giờ nhận phòng, Q-14 maker–checker) | Đổi số tiền/mốc hiển thị trên `SCR-04/05/06/11/36/38/45/47/70/77/81` | `OPEN` — im lặng không là chấp thuận |
 | 7 | Chốt **`Q-10`** địa điểm 3 cơ sở | Chọn cơ sở trên `SCR-01/72`, bậc 3 của thang điều chuyển trên `SCR-44` | `OPEN` |
@@ -154,7 +154,7 @@ flowchart LR
 
 | Hạng mục | Nội dung |
 |---|---|
-| Workspace | Dựng workspace pnpm + `packages/config` (`tsconfig.base.json` strict, eslint preset kể cả `packages/config/eslint/domain.cjs`, prettier); giữ script kiểm tài liệu hiện có chạy được |
+| Workspace | Dựng workspace pnpm + `packages/config` (`tsconfig.base.json` strict, eslint preset kể cả `packages/config/eslint/domain.mjs`, prettier); giữ script kiểm tài liệu hiện có chạy được |
 | Hợp đồng | `packages/contracts`: zod schema cho DTO + enum canonical + bảng `E_*`; sinh OpenAPI 3.1; bước `openapi-diff` trong CI |
 | Client | `packages/api-client`: base URL theo app, `X-Correlation-Id`, `Idempotency-Key`, `If-Match`, chuẩn hoá lỗi `E_*` → kiểu lỗi có thể phân nhánh trong UI, retry an toàn |
 | UI | Token hoá §7 thiết kế màn hình vào `packages/ui-web`/`packages/ui-native`; bộ primitive + khung 9 trạng thái; danh mục i18n `vi-VN` rỗng nhưng có sẵn cơ chế |

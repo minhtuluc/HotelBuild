@@ -541,6 +541,6 @@ Mọi bổ sung mới (nếu phát sinh) PHẢI ghi vào danh sách trên, **kh�
 - [03 — Mô hình động](../03-phan-tich/mo-hinh-dong.md) — luồng báo giá và chốt giá
 - [04 — Thiết kế lớp](../04-thiet-ke/thiet-ke-lop.md) — `PricingRuleChain`, `PricingModifier`, `PriceQuoteBuilder`
 - [04 — Cơ sở dữ liệu](../04-thiet-ke/csdl.md) — `rate_calendars`, `seasons`, `channels`, `promotions`, `occupancy_snapshots`, `price_snapshots`
-- [04 — API](../04-thiet-ke/api.md) — `QuotePriceUseCase`, `Idempotency-Key`; §4.2 là **nguồn chân lý** của toàn bộ 45 mã `E_*` (tài liệu này chỉ dùng `E_RATE_BELOW_FLOOR`, `E_INV_NO_AVAILABILITY`, `E_INV_ROOM_TAKEN`)
+- [04 — API](../04-thiet-ke/api.md) — `QuotePriceUseCase`, `Idempotency-Key`; §4.2 là **nguồn chân lý** của toàn bộ 54 mã `E_*` (tài liệu này chỉ dùng `E_RATE_BELOW_FLOOR`, `E_INV_NO_AVAILABILITY`, `E_INV_ROOM_TAKEN`)
 - [05 — Kế hoạch kiểm thử](../05-ke-hoach/ke-hoach-kiem-thu.md) — mã `TC-*` cho các ca ở §8
 - [06 — Ma trận truy vết](../06-truy-vet/ma-tran-truy-vet.md) — BR-RATE → UC → API → Entity → Test
