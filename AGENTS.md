@@ -25,7 +25,7 @@ Một ticket chỉ xong khi các lệnh dưới đây chạy **thật** và xanh
 
 ```sh
 pnpm check:scope
-pnpm ci            # contract, imports, typecheck, lint, format, coverage, build
+pnpm run ci        # contract, imports, typecheck, lint, format, coverage, build
 npm run check      # tài liệu + tooling + DB (khi ticket đụng docs/scripts/DDL)
 ```
 
