@@ -9,11 +9,12 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 COPY packages ./packages
 COPY apps/api ./apps/api
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter @pinehill/api...
-RUN pnpm --filter @pinehill/api build && pnpm --filter @pinehill/api deploy --legacy --prod /prod/api
+RUN pnpm --filter @pinehill/api... build && pnpm --filter @pinehill/api deploy --legacy --prod /prod/api
 
 FROM node:22-slim AS runtime
 # HOST=0.0.0.0 để nhận kết nối từ ngoài container (mặc định dev 127.0.0.1 — AC6)
-ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000
+# pinehill-dist: runtime Node đọc dist/ của @pinehill/contracts + @pinehill/domain (frontend/typecheck vẫn đọc src)
+ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000 NODE_OPTIONS=--conditions=pinehill-dist
 WORKDIR /app
 COPY --from=build --chown=node:node /prod/api ./
 USER node

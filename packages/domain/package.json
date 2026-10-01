@@ -3,11 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Pure domain foundation",
+  "description": "Pure domain foundation. exports điều kiện: cờ `pinehill-dist` → dist/ (runtime Node trong image api/worker); mặc định → src TS cho typecheck/dev.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "pinehill-dist": "./dist/index.js",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"

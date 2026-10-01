@@ -9,10 +9,11 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 COPY packages ./packages
 COPY apps/worker ./apps/worker
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter @pinehill/worker...
-RUN pnpm --filter @pinehill/worker build && pnpm --filter @pinehill/worker deploy --legacy --prod /prod/worker
+RUN pnpm --filter @pinehill/worker... build && pnpm --filter @pinehill/worker deploy --legacy --prod /prod/worker
 
 FROM node:22-slim AS runtime
-ENV NODE_ENV=production
+# pinehill-dist: đọc dist/ của gói dùng chung khi worker import chúng
+ENV NODE_ENV=production NODE_OPTIONS=--conditions=pinehill-dist
 WORKDIR /app
 COPY --from=build --chown=node:node /prod/worker ./
 USER node
