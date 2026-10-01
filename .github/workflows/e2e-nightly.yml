@@ -24,6 +24,8 @@ jobs:
       - run: pnpm products:build
       - run: pnpm exec playwright install --with-deps chromium webkit
       - run: pnpm test:e2e
+        env:
+          E2E_BROWSERS: chromium,webkit # NFR-USE-04: phủ Safari/WebKit
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
