@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "tsc -p tsconfig.build.json",
-    "start": "node dist/main.js",
+    "start": "node --conditions=pinehill-dist dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
