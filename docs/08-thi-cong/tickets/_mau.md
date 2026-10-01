@@ -39,7 +39,7 @@ unlock: # file được bảo vệ mà ticket này được sửa — chỉ lead
 
 ## Cổng phải xanh
 
-`pnpm check:scope` · `pnpm ci` · <`npm run check` nếu đụng docs/scripts> · <`pnpm test:e2e` nếu có màn hình>
+`pnpm check:scope` · `pnpm run ci` · <`npm run check` nếu đụng docs/scripts> · <`pnpm test:e2e` nếu có màn hình>
 
 ## Ghi chú cho người làm
 

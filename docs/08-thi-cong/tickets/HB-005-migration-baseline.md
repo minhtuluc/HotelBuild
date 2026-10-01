@@ -40,7 +40,7 @@ Vế thứ hai của US-INF-01: `pnpm migrate` chạy sạch trên CSDL trống,
    - kết nối bằng `app_rw`: `UPDATE`/`DELETE` trên `audit_logs` bị từ chối (TC-SYS-01); chèn trùng `room_assignments` bằng SQL thô bị từ chối với SQLSTATE `23P01`.
 5. Mật khẩu login cho `app_rw` **không** nằm trong migration: script dev `db:dev-roles` đặt mật khẩu từ biến môi trường cho CSDL local; ghi rõ trong `infra/README.md` là chỉ dùng cho dev (sửa README ở PR riêng nếu HB-002 chưa merge — không thêm `infra/**` vào ticket này).
 6. csdl §8.1: thay bảng 0001–0009 bằng mô tả theo QĐ-02 (0001 baseline từ §3; sau đó migration tiến kèm sửa §3), sửa "36 bảng" thành 42. Không sửa §3.
-7. `pnpm ci` và `npm run check` xanh.
+7. `pnpm run ci` và `npm run check` xanh.
 
 ## Ngoài phạm vi
 
@@ -48,4 +48,4 @@ Vế thứ hai của US-INF-01: `pnpm migrate` chạy sạch trên CSDL trống,
 
 ## Cổng phải xanh
 
-`pnpm check:scope` · `pnpm ci` · `npm run check` · test mục 4 trên `pnpm infra:up`
+`pnpm check:scope` · `pnpm run ci` · `npm run check` · test mục 4 trên `pnpm infra:up`

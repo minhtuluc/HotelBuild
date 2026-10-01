@@ -35,4 +35,4 @@ Tiêu chí US-INF-02: bắn 200 yêu cầu giữ cùng một phòng/đêm, đún
 
 ## Cổng phải xanh
 
-`pnpm check:scope` · `pnpm ci` · `pnpm test:integration` · CI job `backend`
+`pnpm check:scope` · `pnpm run ci` · `pnpm test:integration` · CI job `backend`

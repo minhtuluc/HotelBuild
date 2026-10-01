@@ -35,7 +35,7 @@ Có gói `@pinehill/domain` rỗng nghiệp vụ nhưng đủ hàng rào: lint c
 4. `frontend.mjs`: glob `apps/**` đổi thành 4 app giao diện (`apps/customer-web`, `apps/operations-web`, `apps/customer-android`, `apps/operations-android`), để `apps/api` và `apps/worker` import được `@prisma/client`, `@nestjs/*`, `zod`, `@pinehill/domain`. Không nới luật nào khác.
 5. Test kiến trúc trong `packages/domain/test/`: (a) chạy ESLint với preset trên các fixture vi phạm, mỗi luật ở mục 3 có ít nhất một fixture bị bắt; (b) quét mọi file `src/**` bằng AST, chỉ cho import tương đối trong gói.
 6. Chứng minh mục 4: một fixture `apps/api/...` ảo (trong test, không tạo thư mục thật) import `@prisma/client` không bị luật frontend bắt, còn fixture `apps/customer-web/...` vẫn bị bắt.
-7. `pnpm ci` xanh.
+7. `pnpm run ci` xanh.
 
 ## Ngoài phạm vi
 
@@ -43,7 +43,7 @@ Có gói `@pinehill/domain` rỗng nghiệp vụ nhưng đủ hàng rào: lint c
 
 ## Cổng phải xanh
 
-`pnpm check:scope` · `pnpm ci` · `npm run test:tooling`
+`pnpm check:scope` · `pnpm run ci` · `npm run test:tooling`
 
 ## Ghi chú cho người làm
 

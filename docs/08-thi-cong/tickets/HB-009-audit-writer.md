@@ -35,7 +35,7 @@ Hạ tầng để mọi use case ghi `audit_logs` **trong cùng transaction** v�
 2. `ActorContext` tối thiểu trong `src/common/actor/` (id, role, ip, correlationId) — mở rộng ở HB-014.
 3. Che PII theo danh sách trường cấu hình trong code (một chỗ), có unit test riêng ngoài test khoá.
 4. Thời gian lấy từ `Clock`; không gọi `new Date()` trực tiếp.
-5. Test khoá xanh trong job `backend`; `pnpm ci` xanh.
+5. Test khoá xanh trong job `backend`; `pnpm run ci` xanh.
 
 ## Ngoài phạm vi
 
@@ -43,4 +43,4 @@ Hạ tầng để mọi use case ghi `audit_logs` **trong cùng transaction** v�
 
 ## Cổng phải xanh
 
-`pnpm check:scope` · `pnpm ci` · `pnpm test:integration`
+`pnpm check:scope` · `pnpm run ci` · `pnpm test:integration`

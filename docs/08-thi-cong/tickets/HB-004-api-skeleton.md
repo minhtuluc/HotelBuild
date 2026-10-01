@@ -3,7 +3,7 @@ id: HB-004
 title: Khung apps/api (NestJS 11 + Fastify) với config, log, lỗi, health
 risk: R1
 owner: deepseek
-max_lines: 450
+max_lines: 700 # khung ~20 file + 6 nhóm test AC5; lead nâng từ 450 (PR #8)
 allow:
   - apps/api/**
   - pnpm-lock.yaml
@@ -32,7 +32,7 @@ Tiến trình API khởi động được, đọc cấu hình đã validate, log
 4. `GET /api/v1/system/health`: body khớp schema response trong `openapi.json`; kiểm Postgres và Redis qua cổng có thể mock; một phụ thuộc chết → mã/trạng thái đúng như hợp đồng.
 5. Test Supertest (không cần DB thật, phụ thuộc được mock): health ok, health phụ thuộc chết, correlation id được giữ/sinh, lỗi lạ không lộ chi tiết, config thiếu biến thì thoát. Response được parse bằng schema từ `@pinehill/contracts`.
 6. Log là JSON một dòng, có `level`, `time`, `correlationId`, `msg`; không log header `Authorization`.
-7. `pnpm ci` xanh (typecheck/lint/coverage/build nhận gói mới).
+7. `pnpm run ci` xanh (typecheck/lint/coverage/build nhận gói mới).
 
 ## Ngoài phạm vi
 
@@ -40,7 +40,7 @@ Tiến trình API khởi động được, đọc cấu hình đã validate, log
 
 ## Cổng phải xanh
 
-`pnpm check:scope` · `pnpm ci`
+`pnpm check:scope` · `pnpm run ci`
 
 ## Ghi chú cho người làm
 

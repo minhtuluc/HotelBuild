@@ -28,7 +28,7 @@ Worker khởi động, đăng ký đủ hàng đợi theo kiến trúc với han
 3. SIGTERM/SIGINT: ngừng nhận job, chờ job đang chạy tối đa N giây (cấu hình), đóng kết nối, thoát 0. Có test.
 4. Test với Redis thật nếu có `REDIS_URL` (bỏ qua có thông báo nếu thiếu): job đẩy vào `q.outbox-relay` được handler nhận đúng một lần.
 5. `docker/api.Dockerfile`, `docker/worker.Dockerfile`: multi-stage, `node:22-slim`, chạy user không phải root, `pnpm deploy`/prune chỉ gói cần. `docker build` cả hai thành công (log trong PR).
-6. `pnpm ci` xanh.
+6. `pnpm run ci` xanh.
 
 ## Ngoài phạm vi
 
@@ -36,4 +36,4 @@ Worker khởi động, đăng ký đủ hàng đợi theo kiến trúc với han
 
 ## Cổng phải xanh
 
-`pnpm check:scope` · `pnpm ci` · bằng chứng mục 5
+`pnpm check:scope` · `pnpm run ci` · bằng chứng mục 5
