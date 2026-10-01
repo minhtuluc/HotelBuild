@@ -1,0 +1,58 @@
+# Hạ tầng phát triển local — PostgreSQL 16, Redis 7, Mailpit.
+# Chạy: pnpm infra:up · Dừng mà giữ dữ liệu: pnpm infra:down · Xoá sạch dữ liệu: thêm -v (xem infra/README.md).
+# Không có bí mật thật trong tệp này: mọi giá trị đều có mặc định dành cho DEV (AC2, NFR-SEC-06).
+
+name: pinehill-dev
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pinehill}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pinehill_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-pinehill}
+      # Lưu UTC trong CSDL, chỉ chuyển giờ VN ở biên hiển thị (BR-GEN-02, BR-GEN-05)
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      # Chỉ mở trên loopback: không phơi CSDL dev ra mạng LAN
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+  # SMTP giả cho dev: SMTP ở 1025, hộp thư xem tại http://127.0.0.1:8025 (QĐ-02 mục 10)
+  mailpit:
+    image: axllent/mailpit:v1
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8025/livez"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+volumes:
+  postgres-data:
+    name: pinehill-postgres-data
