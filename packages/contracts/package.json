@@ -3,11 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Hợp đồng API: zod schema, mã lỗi E_*, OpenAPI 3.1 sinh tự động",
+  "description": "Hợp đồng API: zod schema, mã lỗi E_*, OpenAPI sinh tự động. exports điều kiện: cờ `pinehill-dist` → dist/ (runtime Node trong image api/worker, CMD truyền `--conditions=pinehill-dist`); mặc định → src TS cho typecheck và 4 frontend nên dev không cần build trước.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "pinehill-dist": "./dist/index.js",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
