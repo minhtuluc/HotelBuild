@@ -29,7 +29,12 @@ export const PROTECTED = [
 ];
 
 /** Không tính vào giới hạn kích thước diff (sinh tự động). */
-export const SIZE_EXEMPT = ['pnpm-lock.yaml', 'packages/contracts/openapi.json'];
+export const SIZE_EXEMPT = [
+  'pnpm-lock.yaml',
+  'packages/contracts/openapi.json',
+  // Sinh bằng `prisma db pull`, CI kiểm không lệch với migration (QĐ-02 mục 2).
+  'apps/api/prisma/schema.prisma',
+];
 
 export function globToRegExp(glob) {
   let source = '';

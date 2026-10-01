@@ -60,6 +60,7 @@ test('phạm vi: ngoài allow, file khoá, file bảo vệ và diff quá lớn �
   const ticket = parseTicket(ticketText('max_lines: 50\nunlock:\n  - packages/contracts/openapi.baseline.json\n'));
   const change = (path, added = 1) => ({ path, added, deleted: 0 });
   assert.deepEqual(evaluateScope({ ticket, changes: [change('apps/operations-web/src/a.tsx'), change('pnpm-lock.yaml', 999)] }).errors, []);
+  assert.equal(evaluateScope({ ticket, changes: [change('apps/api/prisma/schema.prisma', 999)] }).lines, 0, 'schema.prisma sinh tự động không tính vào max_lines');
   const { errors } = evaluateScope({ ticket, changes: [
     change('apps/customer-web/src/a.tsx'),
     change('apps/operations-web/test/locked.spec.ts'),
