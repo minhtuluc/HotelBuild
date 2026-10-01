@@ -34,6 +34,7 @@ Tài liệu phân tích – thiết kế – kế hoạch triển khai cho đồ
 | 05 | [Lộ trình](05-ke-hoach/lo-trinh.md) | Lộ trình 15 tuần, mốc, WBS, Gantt | ✅ |
 | 05 | [Lộ trình thi công Web & Android](05-ke-hoach/lo-trinh-thi-cong-web-android.md) | Chia 4 frontend thành 10 pha F0–F9: màn hình `SCR-`, hợp đồng chặn, cổng hoàn tất, rủi ro nhân lực | ✅ |
 | 05 | [QĐ-01 — Nền tảng F0](05-ke-hoach/nhat-ky/QD-01-nen-tang-f0.md) | Quyết định thi công F0: workspace pnpm, hợp đồng sinh tự động, header, tương thích bundler | ✅ |
+| 05 | [QĐ-02 — Nền tảng backend](05-ke-hoach/nhat-ky/QD-02-nen-tang-backend.md) | Logger, migration baseline từ csdl §3, role migration/runtime, 54 mã lỗi, đề xuất F1 (phiên, BFF cookie, PIN) | ✅ |
 | 05 | [Kế hoạch Sprint](05-ke-hoach/ke-hoach-sprint.md) | Backlog, user story, tiêu chí chấp nhận từng sprint | ✅ |
 | 05 | [Quy tắc kỹ thuật](05-ke-hoach/quy-tac-ky-thuat.md) | Chuẩn code, git, review, DoR/DoD, chính sách test | ✅ |
 | 05 | [Quy tắc nhóm](05-ke-hoach/quy-tac-nhom.md) | RACI, họp, quy trình đổi yêu cầu, sở hữu tài liệu | ✅ |
@@ -43,7 +44,7 @@ Tài liệu phân tích – thiết kế – kế hoạch triển khai cho đồ
 | 07 | [Bàn giao thi công](07-ban-giao/huong-dan-thi-cong.md) | Lỗi đã rà soát, thứ tự thi công, hợp đồng và giới hạn bằng chứng | ✅ |
 | 07 | [Bằng chứng thi công F0](07-ban-giao/bang-chung-f0.md) | Kết quả chạy pha F0: cổng hợp đồng/ranh giới/kiểu/lint/test/build/E2E và bundle Android; danh mục NOT_RUN/BLOCKED | ✅ |
 | 07 | [Rà soát F0](07-ban-giao/review-f0.md) · [Phản hồi rà soát](07-ban-giao/review-f0-response.md) | Phát hiện của QC và trạng thái xử lý F0-01…F0-08 kèm bằng chứng | ✅ |
-| 08 | [Quy trình thi công đa model](08-thi-cong/README.md) · [Mẫu ticket](08-thi-cong/tickets/_mau.md) | Vai trò DeepSeek/Gemini/Codex/Opus, hạng rủi ro R0–R2, vòng đời ticket `HB-nnn`, cổng `check:scope` | ✅ |
+| 08 | [Quy trình thi công đa model](08-thi-cong/README.md) · [Backlog](08-thi-cong/backlog.md) · [Mẫu ticket](08-thi-cong/tickets/_mau.md) | Vai trò DeepSeek/Gemini/Codex/Opus, hạng rủi ro R0–R2, vòng đời ticket `HB-nnn`, cổng `check:scope` | ✅ |
 | 04 | [ADR](04-thiet-ke/adr/README.md) | Lý do chọn kiến trúc và các quyết định giao dịch, snapshot, thanh toán, sự kiện | ✅ |
 | — | `05-ke-hoach/nhat-ky/` | Biên bản họp (`BB-YYMMDD`), phiếu đổi yêu cầu (`CRF-nn`), nợ kỹ thuật (`TD-nn`), quyết định ngoài ADR (`QĐ-nn`) — thư mục được tạo khi dự án khởi động (GĐ-0) | 🔄 |
 
