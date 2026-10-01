@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Pine Hill \u2014 workspace thi c\u00f4ng (API/worker + 4 frontend) v\u00e0 c\u00f4ng c\u1ee5 ki\u1ec3m t\u00e0i li\u1ec7u OOAD",
+  "description": "Pine Hill — workspace thi công (API/worker + 4 frontend) và công cụ kiểm tài liệu OOAD",
   "engines": {
     "node": ">=22.13"
   },

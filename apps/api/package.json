@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Backend API d\u00f9ng chung \u2014 NestJS 11 + Fastify (Pine Hill)",
+  "description": "Backend API dùng chung — NestJS 11 + Fastify (Pine Hill)",
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "tsc -p tsconfig.build.json",
