@@ -236,6 +236,9 @@ importers:
       '@pinehill/ui-native':
         specifier: workspace:*
         version: link:../../packages/ui-native
+      '@react-native-community/netinfo':
+        specifier: ^12.0.1
+        version: 12.0.1(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       expo:
         specifier: ^57.0.25
         version: 57.0.25(@babel/core@7.29.7)(@expo/dom-webview@57.0.1)(@expo/metro-runtime@57.0.16)(expo-router@57.0.23)(react-native-worklets@0.13.0(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@5.9.3)
@@ -245,6 +248,9 @@ importers:
       expo-router:
         specifier: ^57.0.23
         version: 57.0.23(18807fd45f06230fde11dcc1846a623e)
+      expo-secure-store:
+        specifier: ~15.0.0
+        version: 15.0.8(expo@57.0.25)
       react:
         specifier: 19.2.3
         version: 19.2.3
