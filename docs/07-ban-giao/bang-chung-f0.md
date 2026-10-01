@@ -32,9 +32,9 @@ Phạm vi: pha **F0** của [lộ trình thi công 4 frontend](../05-ke-hoach/lo
 | Maestro trên 2 app Android | **BLOCKED** | Chưa có luồng nghiệp vụ để chạy (F1–F7); chỉ có ý nghĩa khi F1 có màn hình |
 | APK qua EAS + 2 application ID | **BLOCKED** | Cần `EXPO_TOKEN`, liên kết project và `eas.json`; theo lộ trình là việc của F9 |
 | Tải 200 người dùng đồng thời (k6) và cạnh tranh CSDL qua ứng dụng | **NOT_RUN** | Cần API nghiệp vụ; cổng của F9 |
-| WebKit/Safari (NFR-USE-04) | **NOT_RUN** | `e2e-nightly.yml` đã khai `chromium webkit`; chưa có log chạy WebKit |
+| WebKit/Safari (NFR-USE-04) | **PASS — 02/10/2026** | Nightly trước đó chỉ chạy Chromium dù có cài WebKit (config thiếu project). Sau khi sửa bằng `E2E_BROWSERS` ở PR #14: [run 36902488210](https://github.com/minhtuluc/HotelBuild/actions/runs/36902488210) **72/72**, gồm 36 ca `*-webkit` (Desktop Safari) trên 2 web app |
 | Render component `ui-native` bằng trình render RN trong CI | **NOT_RUN** | Chưa dựng runner RN (jest-expo) trong F0; parity câu chữ/định dạng đã kiểm ở mức hàm thuần |
-| CI từ xa trên commit F0 | **NOT_RUN** | Cần đẩy nhánh lên GitHub; hiện chỉ có log cục bộ trên đúng revision |
+| CI từ xa trên commit F0 | **PASS — 01/10/2026** | Repo HotelBuild, commit `e7f90f0` (cùng nội dung F0): [CI](https://github.com/minhtuluc/HotelBuild/actions/runs/36847919351) và [Documentation quality](https://github.com/minhtuluc/HotelBuild/actions/runs/36847919363) xanh |
 | Màn hình nghiệp vụ và UAT | **NOT_RUN** | Thuộc F1–F9 |
 
 ## 3. Lỗi phát hiện trong F0 và cách xử lý

@@ -46,6 +46,6 @@ Theo [lộ trình §7.3](../05-ke-hoach/lo-trinh-thi-cong-web-android.md#73-f1--
 
 | Việc | Làm | Ghi chú |
 |---|---|---|
-| Chạy `e2e-nightly` WebKit lấy log (NFR-USE-04) | Gemini | Có thể chạy tay qua `workflow_dispatch` |
+| Chạy `e2e-nightly` WebKit lấy log (NFR-USE-04) | Gemini → lead | **Xong 02/10**: Gemini phát hiện config thiếu project WebKit; PR #14 sửa, run 36902488210 xanh 72/72 |
 | Smoke Android trên emulator/thiết bị | Người dùng | Emulator máy hiện tại crash (xem review-f0-response) |
 | Log CI từ xa trên commit F0 | — | Đã có: CI xanh trên `e7f90f0` ở repo HotelBuild |

@@ -12,16 +12,35 @@ const APPS = [
 
 const fakeApiBaseUrl = process.env.E2E_API_BASE_URL ?? 'http://127.0.0.1:4000/api/v1';
 
+/**
+ * Trình duyệt chạy E2E. Mặc định chỉ Chromium (dev chỉ cài Chromium);
+ * nightly đặt `E2E_BROWSERS=chromium,webkit` để phủ Safari (NFR-USE-04).
+ */
+const BROWSERS = {
+  chromium: devices['Desktop Chrome'],
+  webkit: devices['Desktop Safari'],
+} as const;
+type BrowserName = keyof typeof BROWSERS;
+const isBrowserName = (value: string): value is BrowserName => Object.hasOwn(BROWSERS, value);
+
+const requested = (process.env.E2E_BROWSERS ?? 'chromium').split(',').map((value) => value.trim());
+const unknown = requested.filter((value) => !isBrowserName(value));
+if (unknown.length > 0) throw new Error(`E2E_BROWSERS không hợp lệ: ${unknown.join(', ')}`);
+const browsers = requested.filter(isBrowserName);
+
 export default defineConfig({
   testDir: '.',
   fullyParallel: true,
   timeout: 60_000,
   expect: { timeout: 10_000 },
   reporter: [['list']],
-  projects: APPS.map((app) => ({
-    name: app.name,
-    use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${app.port}` },
-  })),
+  // Tên project giữ nguyên cho Chromium để log/lệnh cũ không đổi; trình duyệt khác thêm hậu tố.
+  projects: browsers.flatMap((browser) =>
+    APPS.map((app) => ({
+      name: browser === 'chromium' ? app.name : `${app.name}-${browser}`,
+      use: { ...BROWSERS[browser], baseURL: `http://127.0.0.1:${app.port}` },
+    })),
+  ),
   webServer: APPS.map((app) => ({
     command: `pnpm --filter ${app.filter} start`,
     cwd: root,
