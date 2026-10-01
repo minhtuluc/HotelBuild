@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { chmod, mkdtemp, mkdir, readFile, realpath, rm, symlink, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import test from 'node:test';
 import { captureGitState, hasChanged } from '../scripts/agent-qc/git-state.mjs';
@@ -300,7 +301,7 @@ test('extension ignores subagents and shows PASS for a reviewed main task', asyn
 });
 
 test('extension source resolves its OOAD repository independent of process cwd', async () => {
-  assert.equal(await realpath(repoDirFromExtension()), await realpath(new URL('..', import.meta.url).pathname));
+  assert.equal(await realpath(repoDirFromExtension()), await realpath(fileURLToPath(new URL('..', import.meta.url))));
 });
 
 test('each review round appends one JSONL report in the repository', async () => {
@@ -321,7 +322,8 @@ test('installer links from parent OMP directory without replacing another file',
   const temp = await mkdtemp(join(tmpdir(), 'agent-qc-install-'));
   const parentDir = join(temp, 'parent');
   const conflictingParent = join(temp, 'conflict');
-  const extensionPath = new URL('../.omp/extensions/codex-qc.ts', import.meta.url).pathname;
+  // fileURLToPath giải mã %20 — URL.pathname làm hỏng đường dẫn có dấu cách/ký tự Unicode.
+  const extensionPath = fileURLToPath(new URL('../.omp/extensions/codex-qc.ts', import.meta.url));
   try {
     await mkdir(parentDir);
     await mkdir(join(conflictingParent, '.omp', 'extensions'), { recursive: true });

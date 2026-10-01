@@ -1,6 +1,6 @@
 # Pine Hill — Thiết kế OOAD hệ thống đặt phòng
 
-Bộ yêu cầu, phân tích và thiết kế cho chuỗi khách sạn–homestay. Repository hiện chứa **tài liệu thiết kế và công cụ kiểm tra tài liệu**, chưa chứa ứng dụng vận hành.
+Bộ yêu cầu, phân tích, thiết kế và workspace thi công cho chuỗi khách sạn–homestay. Repository chứa **tài liệu thiết kế, công cụ kiểm tra** và **nền tảng thi công F0** (4 shell frontend + `packages/contracts`, `api-client`, `ui-web`, `ui-native`, `config`). Backend (`apps/api`, `apps/worker`) và `packages/domain` chưa được dựng; chưa có ứng dụng vận hành.
 
 - [Bản đồ tài liệu](docs/README.md)
 - [Hướng dẫn bàn giao cho đội thi công](docs/07-ban-giao/huong-dan-thi-cong.md)
