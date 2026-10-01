@@ -35,6 +35,7 @@ Tài liệu phân tích – thiết kế – kế hoạch triển khai cho đồ
 | 05 | [Lộ trình thi công Web & Android](05-ke-hoach/lo-trinh-thi-cong-web-android.md) | Chia 4 frontend thành 10 pha F0–F9: màn hình `SCR-`, hợp đồng chặn, cổng hoàn tất, rủi ro nhân lực | ✅ |
 | 05 | [QĐ-01 — Nền tảng F0](05-ke-hoach/nhat-ky/QD-01-nen-tang-f0.md) | Quyết định thi công F0: workspace pnpm, hợp đồng sinh tự động, header, tương thích bundler | ✅ |
 | 05 | [QĐ-02 — Nền tảng backend](05-ke-hoach/nhat-ky/QD-02-nen-tang-backend.md) | Logger, migration baseline từ csdl §3, role migration/runtime, 54 mã lỗi, đề xuất F1 (phiên, BFF cookie, PIN) | ✅ |
+| 05 | [QĐ-03 — Định danh, phiên F1](05-ke-hoach/nhat-ky/QD-03-dinh-danh-phien-f1.md) | 10 quyết định phỏng vấn người dùng (cookie BFF, idle, khoá, PIN, gán vai trò, OWNER đầu tiên, quên mật khẩu email) + quyết định kỹ thuật F1 | ✅ |
 | 05 | [Kế hoạch Sprint](05-ke-hoach/ke-hoach-sprint.md) | Backlog, user story, tiêu chí chấp nhận từng sprint | ✅ |
 | 05 | [Quy tắc kỹ thuật](05-ke-hoach/quy-tac-ky-thuat.md) | Chuẩn code, git, review, DoR/DoD, chính sách test | ✅ |
 | 05 | [Quy tắc nhóm](05-ke-hoach/quy-tac-nhom.md) | RACI, họp, quy trình đổi yêu cầu, sở hữu tài liệu | ✅ |

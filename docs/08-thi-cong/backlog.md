@@ -18,29 +18,32 @@ Thứ tự và phân công. Chỉ ticket có file trong [tickets/](tickets/) m�
 
 Song song ngay: HB-001, HB-002, HB-003 (phạm vi `allow` không chồng nhau). Gemini review cấp 1 mọi PR; QA trình duyệt chưa cần ở B0.
 
-## Đợt F1 — định danh, phiên, phân quyền (chưa đặc tả)
+## Đợt F1 — định danh, phiên, phân quyền
 
-Theo [lộ trình §7.3](../05-ke-hoach/lo-trinh-thi-cong-web-android.md#73-f1--định-danh-phiên-và-phân-quyền). Backend trước, giao diện sau.
+Quyết định: [QĐ-03](../05-ke-hoach/nhat-ky/QD-03-dinh-danh-phien-f1.md) (người dùng chốt 02/10/2026). Theo [lộ trình §7.3](../05-ke-hoach/lo-trinh-thi-cong-web-android.md#73-f1--định-danh-phiên-và-phân-quyền). Frontend làm song song với backend trên hợp đồng HB-011 + API giả.
 
-| Ticket | Việc | Hạng | Làm |
-|---|---|---|---|
-| HB-010 | Bảng phiên/credential (QĐ-02 F1-a): csdl §3 + migration + test DB | R2 | Codex |
-| HB-011 | Hợp đồng: `403 E_AUTH_OUT_OF_SCOPE` trên endpoint có phạm vi (F1-d) | R1 | DeepSeek |
-| HB-012 | Test khoá auth lõi: TC-AUTH-01, TC-AUTH-02, TC-AUTH-04…08 | R2 | Codex |
-| HB-013 | Auth lõi: login/refresh/logout, Argon2id, khoá 5 lần/15 phút, rate limit, idle 15 phút | R2 | DeepSeek |
-| HB-014 | RBAC: `ActorContext`, guard xác thực → vai trò → phạm vi → trạng thái, ma trận quyền | R2 | Codex |
-| HB-015 | PIN + `pinToken` dùng một lần (TC-AUTH-03, giả định F1-c) | R2 | Codex (test) → DeepSeek |
-| HB-016 | `PUT /users/{id}/access`: If-Match, chống tự nâng quyền, thu hồi phiên, audit | R2 | Codex (test) → DeepSeek |
-| HB-017 | Guest auth: đăng ký/đăng nhập theo SĐT chuẩn hoá, consent | R2 | Codex (test) → DeepSeek |
-| HB-018 | Seed dữ liệu tham chiếu (csdl §8.1 mục 0008) + 7 tài khoản giả | R1 | DeepSeek |
-| HB-019 | BFF cookie cho 2 web app (QĐ-02 F1-b) | R2 | Codex |
-| HB-020 | SCR-14 đăng nhập nội bộ + chọn cơ sở (operations web) | R1 | DeepSeek |
-| HB-021 | SCR-15 người dùng/vai trò/phạm vi (operations web) | R1 | DeepSeek |
-| HB-022 | SCR-56 đăng nhập + PIN + secure storage (operations Android) | R1 | DeepSeek |
-| HB-023 | SCR-08 đăng ký/đăng nhập khách (customer web) | R1 | DeepSeek |
-| HB-024 | SCR-71 đăng ký/đăng nhập khách (customer Android) | R1 | DeepSeek |
-| HB-025 | QA F1 trên trình duyệt (Chromium + WebKit, axe) + kịch bản Maestro | R0 | Gemini |
-| HB-026 | Nghiệm thu F1, cập nhật bằng chứng | — | Opus |
+| Ticket | Việc | Hạng | Làm | Phụ thuộc |
+|---|---|---|---|---|
+| [HB-011](tickets/HB-011-hop-dong-f1.md) | Hợp đồng F1: 7 endpoint, 7 mã lỗi, client, thông điệp UI | R2 | DeepSeek | — |
+| [HB-027](tickets/HB-027-goi-chung-runtime.md) | Gói dùng chung nạp được ở runtime Node (image) | R1 | DeepSeek | — |
+| [HB-010](tickets/HB-010-bang-phien-credential.md) | Bảng phiên/credential/PIN/reset: csdl §3 + migration 0002 | R2 | Codex | HB-005 |
+| [HB-018](tickets/HB-018-seed-bootstrap.md) | Seed tham chiếu + 7 tài khoản dev + `owner:bootstrap` | R1 | DeepSeek | HB-010 |
+| [HB-013](tickets/HB-013-auth-loi.md) | Auth lõi nhân viên: login/refresh/logout/đổi mật khẩu, khoá, rate limit, idle | R2 | Codex (test khoá) → DeepSeek | HB-007, HB-009, HB-010, HB-011, HB-027 |
+| [HB-014](tickets/HB-014-rbac.md) | RBAC: ma trận quyền, phạm vi cơ sở, deny mặc định | R2 | Codex | HB-013 |
+| [HB-015](tickets/HB-015-pin.md) | PIN + `pinToken` dùng một lần | R2 | Codex (test khoá) → DeepSeek | HB-014 |
+| [HB-016](tickets/HB-016-quan-ly-nguoi-dung.md) | `GET/POST /users`, `PUT access`, thu hồi phiên | R2 | Codex (test khoá) → DeepSeek | HB-014 |
+| [HB-017](tickets/HB-017-guest-auth.md) | Guest auth | R2 | Codex (test khoá) → DeepSeek | HB-014 |
+| [HB-028](tickets/HB-028-quen-mat-khau-email.md) | Khách quên mật khẩu qua email | R2 | Codex (test khoá) → DeepSeek | HB-017 |
+| [HB-019](tickets/HB-019-bff-phien-web.md) | BFF cookie cho 2 web app + API giả dùng chung cho E2E | R2 | Codex | HB-011 |
+| [HB-020](tickets/HB-020-scr14-dang-nhap-ops-web.md) | SCR-14 đăng nhập + chọn cơ sở (operations web) | R1 | DeepSeek | HB-019 |
+| [HB-021](tickets/HB-021-scr15-nguoi-dung.md) | SCR-15 người dùng/vai trò/phạm vi | R1 | DeepSeek | HB-020 |
+| [HB-022](tickets/HB-022-scr56-android-ops.md) | SCR-56 đăng nhập + PIN (operations Android) | R1 | DeepSeek | HB-011 |
+| [HB-023](tickets/HB-023-scr08-khach-web.md) | SCR-08 khách web + quên mật khẩu | R1 | DeepSeek | HB-019 |
+| [HB-024](tickets/HB-024-scr71-khach-android.md) | SCR-71 khách Android | R1 | DeepSeek | HB-011 |
+| [HB-025](tickets/HB-025-qa-f1.md) | QA F1 trên API thật, Chromium + WebKit, Maestro | R0 | Gemini | tất cả ở trên |
+| HB-026 | Nghiệm thu F1 | — | Opus | HB-025 |
+
+HB-012 (test khoá gộp) đã bỏ: mỗi ticket R2 tự có giai đoạn A viết test khoá. Codex là nút thắt (B0 + F1 có 12 việc); nếu Codex chậm, Opus nhận giai đoạn A của HB-013/HB-015/HB-016/HB-017.
 
 ## Nợ F0 còn mở
 
