@@ -187,6 +187,13 @@ describe('real PostgreSQL 16 migration certification', () => {
         ).rows;
         expect(history).toHaveLength(1);
         expect(history[0]!.migration_name).toBe('0001_baseline');
+        expect(
+          (
+            await deployed.query(
+              "SELECT has_table_privilege('app_rw','public._prisma_migrations','SELECT') s, has_table_privilege('app_rw','public._prisma_migrations','INSERT') i, has_table_privilege('app_rw','public._prisma_migrations','UPDATE') u, has_table_privilege('app_rw','public._prisma_migrations','DELETE') d",
+            )
+          ).rows,
+        ).toEqual([{ s: false, i: false, u: false, d: false }]);
         const second = migrate(url);
         expect(second.status, second.stderr).toBe(0);
         expect(await snapshot(deployed)).toEqual(before);
