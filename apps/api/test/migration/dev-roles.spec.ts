@@ -20,6 +20,40 @@ const run = (env: Record<string, string>) =>
     timeout: 10000,
   });
 
+const helperPath = fileURLToPath(new URL('../../prisma/connections.mjs', import.meta.url));
+function isMigrationHelpers(value: unknown): value is {
+  requireMigrationUrl: (env: Record<string, string>) => string;
+} {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'requireMigrationUrl' in value &&
+    typeof value.requireMigrationUrl === 'function'
+  );
+}
+const helpers: unknown = await import(helperPath);
+if (!isMigrationHelpers(helpers)) throw new Error('Migration helper export missing');
+const { requireMigrationUrl } = helpers;
+
+describe('migration owner URL helper', () => {
+  it.each([
+    { DATABASE_MIGRATION_URL: runtime },
+    {
+      DATABASE_MIGRATION_URL: owner,
+      DATABASE_URL: owner.replace('owner-secret', 'guard-secret'),
+    },
+  ])('independently rejects unsafe owner identity %j', (env) => {
+    expect(() => requireMigrationUrl(env)).toThrow('DATABASE_MIGRATION_URL');
+    expect(() => requireMigrationUrl(env)).not.toThrow(/owner-secret|guard-secret/);
+  });
+
+  it('accepts distinct owner and runtime identities', () => {
+    expect(requireMigrationUrl({ DATABASE_MIGRATION_URL: owner, DATABASE_URL: runtime })).toBe(
+      owner,
+    );
+  });
+});
+
 describe('development runtime role CLI', () => {
   it.each([
     [{ DATABASE_MIGRATION_URL: '' }, 'DATABASE_MIGRATION_URL'],
