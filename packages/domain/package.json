@@ -9,6 +9,21 @@
       "pinehill-dist": "./dist/index.js",
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./inventory": {
+      "pinehill-dist": "./dist/inventory/index.js",
+      "types": "./src/inventory/index.ts",
+      "default": "./src/inventory/index.ts"
+    },
+    "./pricing": {
+      "pinehill-dist": "./dist/pricing/index.js",
+      "types": "./src/pricing/index.ts",
+      "default": "./src/pricing/index.ts"
+    },
+    "./cancellation": {
+      "pinehill-dist": "./dist/cancellation/index.js",
+      "types": "./src/cancellation/index.ts",
+      "default": "./src/cancellation/index.ts"
     }
   },
   "scripts": {
