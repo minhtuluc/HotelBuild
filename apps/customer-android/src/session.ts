@@ -34,6 +34,8 @@ export class Session {
       baseUrl: deps.baseUrl,
       createId: deps.createId,
       getAccessToken: () => this.accessToken,
+      // Access token hết hạn 15 phút: refresh im lặng rồi gửi lại request đúng một lần (HB-012).
+      onUnauthorized: () => this.silentRefresh(),
       ...(deps.fetchImpl === undefined ? {} : { fetchImpl: deps.fetchImpl }),
       ...(deps.sleep === undefined ? {} : { sleep: deps.sleep }),
     });
@@ -59,6 +61,7 @@ export class Session {
       password: input.password,
       consentMarketing: input.consentMarketing,
       consentVersion: input.consentVersion,
+      clientSurface: 'GUEST_ANDROID',
       ...(input.email === undefined ? {} : { email: input.email }),
     });
     this.accessToken = response.data.accessToken;
@@ -67,7 +70,7 @@ export class Session {
 
   async login(phone: string, password: string): Promise<void> {
     await requireOnline(this.deps.netInfo);
-    const response = await this.auth.guestLogin(displayPhone(phone), password);
+    const response = await this.auth.guestLogin(displayPhone(phone), password, 'GUEST_ANDROID');
     this.accessToken = response.data.accessToken;
     await this.deps.storage.set(SESSION_KEY, response.data.refreshToken);
   }
@@ -91,7 +94,13 @@ export class Session {
     }
   }
 
+  /** Thu hồi phiên trên máy chủ trước, rồi luôn xoá secure storage (kể cả lỗi/mất mạng — HB-012). */
   async logout(): Promise<void> {
+    try {
+      if (this.accessToken !== null) await this.auth.logout();
+    } catch {
+      // Bỏ qua: phiên cục bộ vẫn phải bị xoá dù máy chủ không trả lời.
+    }
     this.accessToken = null;
     await this.deps.storage.remove(SESSION_KEY);
   }

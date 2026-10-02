@@ -1,7 +1,7 @@
 /** Màn hình đăng nhập/đăng ký/khôi phục phiên cho khách (SCR-71). */
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
-import { color, space, touchTargetDp, typography } from '@pinehill/ui-native';
+import { color, space, touchTargetDp, typography, waitMessage } from '@pinehill/ui-native';
 import { isApiError } from '@pinehill/api-client';
 import { createSession } from '../src/session-factory';
 import { Session } from '../src/session';
@@ -33,12 +33,13 @@ export default function GuestScreen(): ReactElement {
   }, [session]);
 
   function mapError(cause: unknown): string {
-    if (isApiError(cause)) {
-      if (cause.knownCode === 'E_AUTH_PHONE_REGISTERED') return t('guest.phoneRegistered');
-      if (cause.knownCode === 'E_AUTH_ACCOUNT_LOCKED' || cause.knownCode === 'E_GEN_RATE_LIMITED')
-        return t('guest.error', { code: cause.code ?? '429' });
+    if (!isApiError(cause)) return t('guest.error', { code: 'UNKNOWN' });
+    if (cause.knownCode === 'E_AUTH_PHONE_REGISTERED') return t('guest.phoneRegistered');
+    const code = cause.code ?? 'UNKNOWN';
+    if (cause.knownCode === 'E_AUTH_ACCOUNT_LOCKED' || cause.knownCode === 'E_GEN_RATE_LIMITED') {
+      return waitMessage(code, cause.retryAfterSeconds ?? 900) ?? t('guest.error', { code });
     }
-    return t('guest.error', { code: isApiError(cause) ? (cause.code ?? 'UNKNOWN') : 'UNKNOWN' });
+    return t('guest.error', { code });
   }
 
   async function submit(): Promise<void> {

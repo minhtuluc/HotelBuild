@@ -13,6 +13,7 @@ import {
   setPinRequestSchema,
   tokenPairSchema,
   userAccessUpdateRequestSchema,
+  userMeSchema,
   type ChangePasswordRequest,
   type GuestRegisterRequest,
   type LoginRequest,
@@ -22,6 +23,7 @@ import {
   type SetPinRequest,
   type TokenPair,
   type UserAccessUpdateRequest,
+  type UserMe,
 } from '@pinehill/contracts';
 import { ApiClient, type ApiResponse } from './client.js';
 
@@ -31,8 +33,14 @@ export interface AuthApi {
   logout(): Promise<ApiResponse<undefined>>;
   pinVerify(pin: string, bookingId?: string): Promise<ApiResponse<PinToken>>;
   guestRegister(input: GuestRegisterRequest): Promise<ApiResponse<TokenPair>>;
-  guestLogin(phone: string, password: string): Promise<ApiResponse<TokenPair>>;
+  guestLogin(
+    phone: string,
+    password: string,
+    clientSurface?: 'GUEST_WEB' | 'GUEST_ANDROID',
+  ): Promise<ApiResponse<TokenPair>>;
   guestRefresh(refreshToken: string): Promise<ApiResponse<TokenPair>>;
+  /** Hồ sơ phiên hiện tại (HB-012): dùng để biết `hasPin`, `propertyScope`, `mustChangePassword`. */
+  me(): Promise<ApiResponse<UserMe>>;
   updateUserAccess(
     userId: string,
     input: UserAccessUpdateRequest,
@@ -75,11 +83,16 @@ export function createAuthApi(client: ApiClient): AuthApi {
         body: guestRegisterRequestSchema.parse(input),
         decoder: tokenPairSchema,
       }),
-    guestLogin: (phone, password) =>
+    me: () => client.request({ method: 'GET', path: '/auth/me', decoder: userMeSchema }),
+    guestLogin: (phone, password, clientSurface) =>
       client.request({
         method: 'POST',
         path: '/guest-auth/login',
-        body: guestLoginRequestSchema.parse({ phone, password }),
+        body: guestLoginRequestSchema.parse({
+          phone,
+          password,
+          ...(clientSurface === undefined ? {} : { clientSurface }),
+        }),
         decoder: tokenPairSchema,
       }),
     guestRefresh: (refreshToken) =>

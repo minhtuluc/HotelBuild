@@ -9,7 +9,7 @@ import { t } from '../src/strings';
 
 export interface LoginScreenProps {
   session: Session;
-  onAuthenticated: (outcome: { mustChangePassword: boolean }) => void;
+  onAuthenticated: () => void;
 }
 
 export default function LoginScreen({ session, onAuthenticated }: LoginScreenProps): ReactElement {
@@ -22,13 +22,13 @@ export default function LoginScreen({ session, onAuthenticated }: LoginScreenPro
     setBusy(true);
     setError(null);
     try {
-      const outcome = await session.login(username, password);
-      onAuthenticated(outcome);
+      await session.login(username, password);
+      onAuthenticated();
     } catch (cause) {
       if (Session.isOffline(cause)) setError(t('login.offline'));
       else if (isApiError(cause) && cause.knownCode === 'E_AUTH_ACCOUNT_LOCKED') {
         setError(
-          waitMessage('E_AUTH_ACCOUNT_LOCKED', PIN_LOCK_SECONDS) ??
+          waitMessage('E_AUTH_ACCOUNT_LOCKED', cause.retryAfterSeconds ?? PIN_LOCK_SECONDS) ??
             t('login.error', { code: '401' }),
         );
       } else {

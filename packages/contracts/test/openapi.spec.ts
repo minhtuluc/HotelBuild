@@ -46,6 +46,7 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['get', '/api/v1/system/health', 'public'],
   ['post', '/api/v1/auth/pin/verify', 'bearer'],
   ['post', '/api/v1/auth/logout', 'bearer'],
+  ['get', '/api/v1/auth/me', 'bearer'],
   ['put', '/api/v1/users/{userId}/access', 'bearer'],
   ['get', '/api/v1/users', 'bearer'],
   ['post', '/api/v1/users', 'bearer'],
@@ -72,11 +73,12 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 15 path của F0 + F1 (14 AUTH/guest-auth/users + system/health)', () => {
+  it('có đủ 16 path của F0 + F1 (15 AUTH/guest-auth/users + system/health)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
         '/api/v1/auth/logout',
+        '/api/v1/auth/me',
         '/api/v1/auth/password',
         '/api/v1/auth/pin',
         '/api/v1/auth/pin/verify',

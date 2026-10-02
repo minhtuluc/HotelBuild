@@ -25,7 +25,10 @@ export default function HomeScreen({ session, onLogout }: HomeScreenProps): Reac
     } catch (cause) {
       if (Session.isOffline(cause)) setPinResult(t('login.offline'));
       else if (isApiError(cause) && cause.knownCode === 'E_AUTH_PIN_LOCKED') {
-        setPinResult(waitMessage('E_AUTH_PIN_LOCKED', PIN_LOCK_SECONDS) ?? t('pin.locked'));
+        setPinResult(
+          waitMessage('E_AUTH_PIN_LOCKED', cause.retryAfterSeconds ?? PIN_LOCK_SECONDS) ??
+            t('pin.locked'),
+        );
       } else {
         setPinResult(
           t('login.error', { code: isApiError(cause) ? (cause.code ?? 'UNKNOWN') : 'UNKNOWN' }),

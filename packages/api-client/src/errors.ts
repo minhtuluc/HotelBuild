@@ -12,6 +12,8 @@ export interface ApiErrorInit {
   details?: { field: string; issue: string }[] | undefined;
   correlationId?: string | undefined;
   retryable?: boolean | undefined;
+  /** Giây phải chờ trước khi thử lại: ưu tiên trường `retryAfterSeconds` trong body, thiếu thì lấy header `Retry-After`. */
+  retryAfterSeconds?: number | undefined;
 }
 
 /**
@@ -26,6 +28,7 @@ export class ApiError extends Error {
   readonly details: { field: string; issue: string }[] | undefined;
   readonly correlationId: string | undefined;
   readonly retryable: boolean;
+  readonly retryAfterSeconds: number | undefined;
 
   constructor(init: ApiErrorInit) {
     super(init.message);
@@ -37,6 +40,7 @@ export class ApiError extends Error {
     this.details = init.details;
     this.correlationId = init.correlationId;
     this.retryable = init.retryable ?? false;
+    this.retryAfterSeconds = init.retryAfterSeconds;
   }
 
   /** Mã lỗi đã biết trong danh mục §4.2; `undefined` nếu server trả mã mới. */

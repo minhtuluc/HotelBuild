@@ -488,6 +488,92 @@
         }
       }
     },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "authMe",
+        "summary": "Hồ sơ phiên hiện tại: vai trò, phạm vi cơ sở, đã có PIN chưa (HB-012)",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hồ sơ phiên",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "username": {
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 64
+                    },
+                    "fullName": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "OWNER",
+                        "MANAGER",
+                        "FRONT_DESK",
+                        "RESERVATION_AGENT",
+                        "ACCOUNTANT",
+                        "HOUSEKEEPING",
+                        "SYSADMIN"
+                      ]
+                    },
+                    "propertyScope": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "hasPin": {
+                      "type": "boolean"
+                    },
+                    "mustChangePassword": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "username",
+                    "fullName",
+                    "role",
+                    "propertyScope",
+                    "hasPin",
+                    "mustChangePassword"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E_AUTH_INVALID_CREDENTIALS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/guest-auth/register": {
       "post": {
         "operationId": "guestRegister",
@@ -546,6 +632,13 @@
                   "consentVersion": {
                     "type": "string",
                     "minLength": 1
+                  },
+                  "clientSurface": {
+                    "type": "string",
+                    "enum": [
+                      "GUEST_WEB",
+                      "GUEST_ANDROID"
+                    ]
                   }
                 },
                 "required": [

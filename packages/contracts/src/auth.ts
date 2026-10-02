@@ -59,6 +59,8 @@ export const guestRegisterRequestSchema = z.strictObject({
   password: z.string().min(8).max(128),
   consentMarketing: z.boolean(),
   consentVersion: z.string().min(1),
+  /** Bề mặt đăng ký (QĐ-03 T10): Android khai `GUEST_ANDROID`. */
+  clientSurface: guestClientSurfaceSchema.optional(),
 });
 
 export const guestLoginRequestSchema = z.strictObject({
@@ -94,6 +96,17 @@ export const userSummarySchema = z.object({
   lockedUntil: isoUtcTimestampSchema.nullable(),
   hasPin: z.boolean(),
   version: z.number().int().min(0),
+});
+
+/** Hồ sơ phiên hiện tại cho `GET /auth/me` (HB-012, QĐ-03 quyết định 4, 5, 9). */
+export const userMeSchema = z.object({
+  userId: z.string().min(1),
+  username: z.string().min(3).max(64),
+  fullName: z.string().min(1).max(120),
+  role: userRoleSchema,
+  propertyScope: z.array(z.string().min(1)),
+  hasPin: z.boolean(),
+  mustChangePassword: z.boolean(),
 });
 
 /** Bộ lọc danh sách người dùng (api.md §2.1, `GET /users`). */
@@ -143,6 +156,7 @@ export type GuestRegisterRequest = z.infer<typeof guestRegisterRequestSchema>;
 export type AccessTokenClaims = z.infer<typeof accessTokenClaimsSchema>;
 export type UserAccessUpdateRequest = z.infer<typeof userAccessUpdateRequestSchema>;
 export type UserSummary = z.infer<typeof userSummarySchema>;
+export type UserMe = z.infer<typeof userMeSchema>;
 export type UsersQuery = z.infer<typeof usersQuerySchema>;
 export type CreateUserRequest = z.infer<typeof createUserRequestSchema>;
 export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;

@@ -66,6 +66,61 @@ describe('Session khách', () => {
     expect(s.hasAccessToken()).toBe(true);
   });
 
+  it('gửi clientSurface GUEST_ANDROID khi đăng nhập và đăng ký (HB-012)', async () => {
+    const bodies: string[] = [];
+    const storage = memoryStorage();
+    const s = new Session({
+      storage,
+      baseUrl: 'http://127.0.0.1:9/api/v1',
+      createId: () => '00000000-0000-4000-8000-000000000000',
+      fetchImpl: async (_input, init) => {
+        bodies.push(typeof init?.body === 'string' ? init.body : '');
+        return new Response(JSON.stringify(TOKENS), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      },
+      netInfo: online,
+      sleep: async () => undefined,
+    });
+    await s.login('0901234567', 'matkhau123');
+    await s.register({
+      phone: '0901234567',
+      fullName: 'Khách',
+      password: 'matkhau123',
+      consentMarketing: true,
+      consentVersion: '2026-10',
+    });
+    expect(bodies[0]).toContain('"clientSurface":"GUEST_ANDROID"');
+    expect(bodies[1]).toContain('"clientSurface":"GUEST_ANDROID"');
+  });
+
+  it('logout gọi /auth/logout trước rồi luôn xoá storage (HB-012)', async () => {
+    const storage = memoryStorage();
+    const calls: string[] = [];
+    const s = new Session({
+      storage,
+      baseUrl: 'http://127.0.0.1:9/api/v1',
+      createId: () => '00000000-0000-4000-8000-000000000000',
+      fetchImpl: async (input) => {
+        const url =
+          typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        calls.push(new URL(url).pathname);
+        const isLogin = calls.length === 1;
+        return new Response(isLogin ? JSON.stringify(TOKENS) : null, {
+          status: isLogin ? 200 : 204,
+          headers: { 'content-type': 'application/json' },
+        });
+      },
+      netInfo: online,
+      sleep: async () => undefined,
+    });
+    await s.login('0901234567', 'matkhau123');
+    await s.logout();
+    expect(calls).toEqual(['/api/v1/guest-auth/login', '/api/v1/auth/logout']);
+    expect(await storage.get(SESSION_KEY)).toBeNull();
+  });
+
   it('đăng ký trùng SĐT → lỗi 409 E_AUTH_PHONE_REGISTERED lan ra ApiError', async () => {
     const { s } = session([
       {

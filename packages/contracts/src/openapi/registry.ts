@@ -19,6 +19,7 @@ import {
   setPinRequestSchema,
   tokenPairSchema,
   userAccessUpdateRequestSchema,
+  userMeSchema,
   userSummarySchema,
   usersQuerySchema,
 } from '../auth.js';
@@ -129,6 +130,19 @@ registry.registerPath({
   parameters: idempotencyHeaders,
   responses: {
     204: { description: 'Đã thu hồi phiên' },
+    401: errorResponse('E_AUTH_INVALID_CREDENTIALS'),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/auth/me',
+  operationId: 'authMe',
+  summary: 'Hồ sơ phiên hiện tại: vai trò, phạm vi cơ sở, đã có PIN chưa (HB-012)',
+  tags: ['auth'],
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: { description: 'Hồ sơ phiên', ...jsonBody(userMeSchema) },
     401: errorResponse('E_AUTH_INVALID_CREDENTIALS'),
   },
 });
