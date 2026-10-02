@@ -1,12 +1,28 @@
-import type { AllocatedPayment, CancellationDecision, CancellationInput } from './index.js';
+import type {
+  AllocatedPayment,
+  CancellationDecision,
+  CancellationInput,
+  CancellationRequest,
+  CancellationResult,
+  PreconfirmationCancellationDecision,
+  PreconfirmationCancellationInput,
+} from './index.js';
 import { allocatePayment } from './allocation.js';
 import { resolveTier } from './policy.js';
 import { fail, ids, integer, money } from './validation.js';
 /** Pure quote plus the next allocation state; caller persists that state atomically with cancellation. */
-export function calculateCancellation(input: CancellationInput): CancellationDecision {
-  if (input.state !== 'CONFIRMED')
-    fail('E_CANCEL_INVALID_STATE', 'Only CONFIRMED cancellation currently supported');
-  const tier = resolveTier(input.policy, input.checkInDateTime, input.now);
+export function calculateCancellation(input: CancellationInput): CancellationDecision;
+export function calculateCancellation(
+  input: PreconfirmationCancellationInput,
+): PreconfirmationCancellationDecision;
+export function calculateCancellation(input: CancellationRequest): CancellationResult;
+export function calculateCancellation(input: CancellationRequest): CancellationResult {
+  if (input.state !== 'CONFIRMED' && input.state !== 'HELD' && input.state !== 'PENDING_PAYMENT')
+    fail('E_CANCEL_INVALID_STATE', 'Cancellation requires CONFIRMED, HELD or PENDING_PAYMENT');
+  const tier =
+    input.state === 'CONFIRMED'
+      ? resolveTier(input.policy, input.checkInDateTime, input.now)
+      : null;
   const rooms = ids(
     input.rooms.map((r) => r.bookingRoomId),
     'Rooms',
@@ -55,14 +71,26 @@ export function calculateCancellation(input: CancellationInput): CancellationDec
     return Object.freeze({ ...canonical, processedRoomIds: Object.freeze([...prior].sort()) });
   });
   const allProcessed = new Set([...processed, ...selected]);
-  return Object.freeze({
-    tier,
+  const common = {
     refundBase: money(base),
-    refundAmount: money(((base * BigInt(tier.refundPercent)) / 100_000n) * 1000n),
-    penaltyAmount: tier.chargeFirstNight ? money(firstNight > base ? firstNight - base : 0n) : 0,
     payments: Object.freeze(payments),
     processedRoomIds: Object.freeze([...allProcessed].sort()),
     remainingRoomIds: Object.freeze([...rooms].filter((id) => !allProcessed.has(id)).sort()),
+  };
+  if (tier === null)
+    return Object.freeze({
+      ...common,
+      refundMode: 'PRECONFIRMATION',
+      tier,
+      refundAmount: common.refundBase,
+      penaltyAmount: 0,
+    });
+  return Object.freeze({
+    ...common,
+    refundMode: 'POLICY',
+    tier,
+    refundAmount: money(((base * BigInt(tier.refundPercent)) / 100_000n) * 1000n),
+    penaltyAmount: tier.chargeFirstNight ? money(firstNight > base ? firstNight - base : 0n) : 0,
   });
 }
 

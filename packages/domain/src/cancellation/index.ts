@@ -35,7 +35,13 @@ export interface CancellationInput {
   readonly processedRoomIds: readonly string[];
   readonly payments: readonly AllocatedPayment[];
 }
+/** State before an expiry or customer withdrawal is committed; terminal states are not accepted. */
+export interface PreconfirmationCancellationInput extends Omit<CancellationInput, 'state'> {
+  readonly state: 'HELD' | 'PENDING_PAYMENT';
+}
+export type CancellationRequest = CancellationInput | PreconfirmationCancellationInput;
 export interface CancellationDecision {
+  readonly refundMode: 'POLICY';
   readonly tier: CancellationTier;
   readonly refundBase: number;
   readonly refundAmount: number;
@@ -44,6 +50,15 @@ export interface CancellationDecision {
   readonly processedRoomIds: readonly string[];
   readonly remainingRoomIds: readonly string[];
 }
+/** No cancellation policy tier applies to money collected before confirmation. */
+export interface PreconfirmationCancellationDecision extends Omit<
+  CancellationDecision,
+  'tier' | 'refundMode'
+> {
+  readonly refundMode: 'PRECONFIRMATION';
+  readonly tier: null;
+}
+export type CancellationResult = CancellationDecision | PreconfirmationCancellationDecision;
 export { allocatePayment } from './allocation.js';
 export { resolveTier } from './policy.js';
 export { calculateCancellation } from './calculate.js';
