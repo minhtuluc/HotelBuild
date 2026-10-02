@@ -34,7 +34,7 @@ function hasParameterNamed(operation: unknown, name: string): boolean {
   );
 }
 
-type Method = 'get' | 'post' | 'put' | 'delete';
+type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
 /** Bảng phân loại công khai/cần token theo api.md §2.1 và §6.1. */
 const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])[] = [
@@ -55,6 +55,21 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['put', '/api/v1/auth/pin', 'bearer'],
   ['post', '/api/v1/guest-auth/password-reset/request', 'public'],
   ['post', '/api/v1/guest-auth/password-reset/confirm', 'public'],
+  ['get', '/api/v1/properties', 'bearer'],
+  ['patch', '/api/v1/properties/{propertyId}', 'bearer'],
+  ['post', '/api/v1/room-types', 'bearer'],
+  ['get', '/api/v1/rooms', 'bearer'],
+  ['put', '/api/v1/rooms/{roomId}/connecting-room', 'bearer'],
+  ['post', '/api/v1/room-blocks', 'bearer'],
+  ['delete', '/api/v1/room-blocks/{roomBlockId}', 'bearer'],
+  ['get', '/api/v1/inventory/grid', 'bearer'],
+  ['get', '/api/v1/channel-allotments', 'bearer'],
+  ['put', '/api/v1/channel-allotments', 'bearer'],
+  ['get', '/api/v1/audit-logs', 'bearer'],
+  ['put', '/api/v1/system-settings/{key}', 'bearer'],
+  ['post', '/api/v1/system/backups', 'bearer'],
+  ['post', '/api/v1/system/backups/{backupId}/restore', 'bearer'],
+  ['get', '/api/v1/operations/{operationId}', 'bearer'],
 ];
 
 const WRITE_TARGETS = AUTH_OPERATIONS.filter(([method]) => method !== 'get');
@@ -73,7 +88,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 16 path của F0 + F1 (15 AUTH/guest-auth/users + system/health)', () => {
+  it('có đủ 30 path của F0 + F1 + F2', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -92,6 +107,20 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/users',
         '/api/v1/users/{userId}/access',
         '/api/v1/users/{userId}/pin',
+        '/api/v1/properties',
+        '/api/v1/properties/{propertyId}',
+        '/api/v1/room-types',
+        '/api/v1/rooms',
+        '/api/v1/rooms/{roomId}/connecting-room',
+        '/api/v1/room-blocks',
+        '/api/v1/room-blocks/{roomBlockId}',
+        '/api/v1/inventory/grid',
+        '/api/v1/channel-allotments',
+        '/api/v1/audit-logs',
+        '/api/v1/system-settings/{key}',
+        '/api/v1/system/backups',
+        '/api/v1/system/backups/{backupId}/restore',
+        '/api/v1/operations/{operationId}',
       ].sort(),
     );
   });
@@ -147,5 +176,19 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
 
   it('có component ErrorBody dùng chung', () => {
     expect(Object.keys(document.components?.schemas ?? {})).toContain('ErrorBody');
+  });
+
+  it('không khai tuyến ghi lên audit-logs hay price snapshot (§2.14, BR-SYS-01, BR-RATE-16)', () => {
+    const audit = document.paths?.['/api/v1/audit-logs'] ?? {};
+    expect(Object.keys(audit)).toEqual(['get']);
+    for (const path of Object.keys(document.paths ?? {})) {
+      expect(path.includes('price-snapshot'), `tuyến cấm: ${path}`).toBe(false);
+    }
+  });
+
+  it('lưới tồn chặn khoảng quá 31 ngày ngay ở schema (HB-030)', () => {
+    const grid = document.paths?.['/api/v1/inventory/grid']?.get;
+    expect(grid).toBeDefined();
+    expect(JSON.stringify(grid)).toContain('31');
   });
 });

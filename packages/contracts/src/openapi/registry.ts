@@ -4,7 +4,6 @@
  */
 import './zod-openapi.js';
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
-import type { z } from 'zod';
 import {
   changePasswordRequestSchema,
   createUserRequestSchema,
@@ -24,48 +23,15 @@ import {
   usersQuerySchema,
 } from '../auth.js';
 import { errorBodySchema, listResponseSchema } from '../common.js';
-import type { ErrorCode } from '../errors.js';
+import { bearerWrite, idempotencyHeaders, jsonBody, makeErrorResponse } from './shared.js';
+import { registerF2Paths } from './paths/f2.js';
 
 export const registry = new OpenAPIRegistry();
 
 /** Thành phần dùng chung tham chiếu từ mọi phản hồi lỗi. */
 const errorBodyComponent = registry.register('ErrorBody', errorBodySchema);
 
-const jsonBody = (schema: z.ZodTypeAny) => ({
-  content: { 'application/json': { schema } },
-});
-
-/** Phản hồi lỗi dùng chung: mã lấy đúng từ danh mục §4.2 nên không thể lệch tài liệu. */
-export function errorResponse(...codes: readonly ErrorCode[]) {
-  return {
-    description: codes.join(', '),
-    content: { 'application/json': { schema: errorBodyComponent } },
-  };
-}
-
-const idempotencyHeaders = [
-  {
-    name: 'Idempotency-Key',
-    in: 'header' as const,
-    required: true,
-    schema: { type: 'string' as const, format: 'uuid' },
-    description: 'Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3).',
-  },
-  {
-    name: 'X-Correlation-Id',
-    in: 'header' as const,
-    required: false,
-    schema: { type: 'string' as const },
-    description: 'Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9).',
-  },
-];
-
-/** Prelude của lệnh ghi nội bộ: cần Bearer + Idempotency-Key/X-Correlation-Id (api.md §1.3). */
-const bearerWrite = {
-  tags: ['auth'],
-  security: [{ bearerAuth: [] }],
-  parameters: idempotencyHeaders,
-};
+const errorResponse = makeErrorResponse(errorBodyComponent);
 
 registry.registerComponent('securitySchemes', 'bearerAuth', {
   type: 'http',
@@ -254,7 +220,7 @@ registry.registerPath({
   path: '/api/v1/users',
   operationId: 'usersCreate',
   summary: 'Tạo người dùng nội bộ với mật khẩu tạm (UC-AUTH-02, QĐ-03 quyết định 7)',
-  ...bearerWrite,
+  ...bearerWrite(['auth']),
   request: { body: jsonBody(createUserRequestSchema) },
   responses: {
     201: { description: 'Người dùng đã tạo', ...jsonBody(userSummarySchema) },
@@ -269,7 +235,7 @@ registry.registerPath({
   path: '/api/v1/auth/password',
   operationId: 'authPasswordChange',
   summary: 'Đổi mật khẩu của chính mình (UC-AUTH-01, QĐ-03 quyết định 8)',
-  ...bearerWrite,
+  ...bearerWrite(['auth']),
   request: { body: jsonBody(changePasswordRequestSchema) },
   responses: {
     204: { description: 'Đã đổi mật khẩu' },
@@ -283,7 +249,7 @@ registry.registerPath({
   path: '/api/v1/auth/pin',
   operationId: 'authPinSet',
   summary: 'Đặt PIN cho chính mình (UC-AUTH-01, QĐ-03 quyết định 5)',
-  ...bearerWrite,
+  ...bearerWrite(['auth']),
   request: { body: jsonBody(setPinRequestSchema) },
   responses: {
     204: { description: 'Đã đặt PIN' },
@@ -339,3 +305,6 @@ registry.registerPath({
     429: errorResponse('E_GEN_RATE_LIMITED'),
   },
 });
+
+// Pha F2 (PROP/INV/SYS) — HB-030.
+registerF2Paths(registry, errorBodyComponent);

@@ -93,6 +93,9 @@ export const operationStatusViewSchema = z.object({
   errorMessage: z.string().min(1).optional(),
 });
 
+export type OperationRef = z.infer<typeof operationRefSchema>;
+export type OperationStatusView = z.infer<typeof operationStatusViewSchema>;
+
 /** Header bắt buộc của mọi lệnh ghi (ADR-017): idempotency + tương quan + điều kiện phiên bản. */
 export const writeRequestHeadersSchema = z.object({
   'idempotency-key': z.string().uuid('Idempotency-Key phải là UUIDv4 do client sinh'),
