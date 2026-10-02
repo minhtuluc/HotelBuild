@@ -31,7 +31,8 @@ Khách đăng ký và đăng nhập bằng SĐT + mật khẩu, giữ phiên 7 n
 
 1. Dùng lại dịch vụ băm, phiên, khoá, rate limit của HB-013 — không chép code.
 2. Đăng ký tạo `guests` + `guest_credentials` + phiên trong một transaction; audit.
-3. Test khoá xanh; `pnpm run ci` xanh.
+3. Đăng ký và đăng nhập nhận `clientSurface` (`GUEST_WEB` mặc định, `GUEST_ANDROID`) theo HB-012; phiên lưu đúng `surface`.
+4. Test khoá xanh; `pnpm run ci` xanh.
 
 ## Cổng phải xanh
 

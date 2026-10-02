@@ -27,6 +27,7 @@ Quyết định: [QĐ-03](../05-ke-hoach/nhat-ky/QD-03-dinh-danh-phien-f1.md) (n
 | Ticket | Việc | Hạng | Làm | Phụ thuộc |
 |---|---|---|---|---|
 | [HB-011](tickets/HB-011-hop-dong-f1.md) | Hợp đồng F1: 7 endpoint, 7 mã lỗi, client, thông điệp UI — **xong (#19)** | R2 | DeepSeek | — |
+| [HB-012](tickets/HB-012-hop-dong-bo-sung-f1.md) | Bổ sung hợp đồng: `GET /auth/me`, `clientSurface` khi khách đăng ký, `retryAfterSeconds` + tự refresh trong api-client; nối vào 2 app Android | R2 | DeepSeek | HB-022 |
 | [HB-027](tickets/HB-027-goi-chung-runtime.md) | Gói dùng chung nạp được ở runtime Node (image) — **xong (#18)** | R1 | DeepSeek | — |
 | [HB-010](tickets/HB-010-bang-phien-credential.md) | Bảng phiên/credential/PIN/reset: csdl §3 + migration 0002 | R2 | Codex | HB-005 |
 | [HB-018](tickets/HB-018-seed-bootstrap.md) | Seed tham chiếu + 7 tài khoản dev + `owner:bootstrap` | R1 | DeepSeek | HB-010 |
@@ -41,11 +42,11 @@ Quyết định: [QĐ-03](../05-ke-hoach/nhat-ky/QD-03-dinh-danh-phien-f1.md) (n
 | [HB-021](tickets/HB-021-scr15-nguoi-dung.md) | SCR-15 người dùng/vai trò/phạm vi | R1 | DeepSeek | HB-020 |
 | [HB-022](tickets/HB-022-scr56-android-ops.md) | SCR-56 đăng nhập + PIN (operations Android) | R1 | DeepSeek | HB-011 |
 | [HB-023](tickets/HB-023-scr08-khach-web.md) | SCR-08 khách web + quên mật khẩu | R1 | DeepSeek | HB-019 |
-| [HB-024](tickets/HB-024-scr71-khach-android.md) | SCR-71 khách Android | R1 | DeepSeek | HB-011 |
+| [HB-024](tickets/HB-024-scr71-khach-android.md) | SCR-71 khách Android — **xong (#23)** | R1 | DeepSeek | HB-011 |
 | [HB-025](tickets/HB-025-qa-f1.md) | QA F1 trên API thật, Chromium + WebKit, Maestro | R0 | Gemini | tất cả ở trên |
 | HB-026 | Nghiệm thu F1 | — | Opus | HB-025 |
 
-HB-012 (test khoá gộp) đã bỏ: mỗi ticket R2 tự có giai đoạn A viết test khoá. Codex là nút thắt (B0 + F1 có 12 việc); nếu Codex chậm, Opus nhận giai đoạn A của HB-013/HB-015/HB-016/HB-017.
+Mã HB-012 trước định dành cho test khoá gộp; nay dùng cho bổ sung hợp đồng (mỗi ticket R2 tự có giai đoạn A viết test khoá). Codex là nút thắt (B0 + F1 có 12 việc); nếu Codex chậm, Opus nhận giai đoạn A của HB-013/HB-015/HB-016/HB-017.
 
 ## Nợ F0 còn mở
 

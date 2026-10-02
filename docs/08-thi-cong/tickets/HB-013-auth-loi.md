@@ -43,7 +43,8 @@ Nhân viên đăng nhập, xoay phiên, đăng xuất và đổi mật khẩu đ
 2. Guard toàn cục: xác thực bearer → nạp `ActorContext` (mở rộng bản HB-009) → cập nhật `last_seen_at` tối đa 1 lần/60 giây. `@Public()` cho login/refresh/health.
 3. Mọi đăng nhập thành công/thất bại/khoá/đổi mật khẩu ghi audit qua `AuditWriter` (HB-009), không ghi mật khẩu/token.
 4. Thời gian/ID qua `Clock`/`IdGenerator`; không `new Date()` rải rác.
-5. Test khoá xanh trong job `backend`; `pnpm run ci` xanh.
+5. `GET /api/v1/auth/me` theo hợp đồng HB-012 (role, phạm vi cơ sở, `hasPin`, `mustChangePassword`) — trả từ DB, không chỉ từ claims của token.
+6. Test khoá xanh trong job `backend`; `pnpm run ci` xanh.
 
 ## Ngoài phạm vi
 
