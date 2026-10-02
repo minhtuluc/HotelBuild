@@ -42,7 +42,8 @@ Lấp bốn lỗ hổng DeepSeek phát hiện khi làm HB-022/HB-024 (02/10/2026
    - Tuỳ chọn `ApiClient({ onUnauthorized })`: khi request đã xác thực nhận 401, gọi hook **một lần**; hook trả `true` thì gửi lại request đúng một lần. Nhiều request 401 đồng thời chỉ gọi hook một lần. Endpoint `refresh`/`login` không kích hoạt hook.
 4. **operations Android:** sau đăng nhập gọi `me()` → chưa có PIN thì vào đặt PIN, nhiều cơ sở thì chọn cơ sở đang làm việc (QĐ-03 quyết định 9, lưu lựa chọn trong bộ nhớ phiên); `E_AUTH_PIN_LOCKED`/`E_AUTH_ACCOUNT_LOCKED` hiện thời gian từ `retryAfterSeconds` (bỏ hằng 900 giây khi có giá trị); `onUnauthorized` → refresh im lặng.
 5. **customer Android:** đăng ký/đăng nhập gửi `clientSurface: GUEST_ANDROID`; hiện thời gian chờ từ `retryAfterSeconds`; `onUnauthorized` → `silentRefresh`.
-6. Test logic cho mục 3–5; bundle Hermes hai app build được; `pnpm run ci` xanh.
+6. **Đăng xuất thu hồi trên máy chủ (cả hai app):** gọi `/auth/logout` (khách: endpoint tương ứng) bằng access token hiện có trước khi xoá secure storage; API lỗi hoặc mất mạng vẫn xoá storage (review PR #22, #23).
+7. Test logic cho mục 3–6; bundle Hermes hai app build được; `pnpm run ci` xanh.
 
 ## Ngoài phạm vi
 
