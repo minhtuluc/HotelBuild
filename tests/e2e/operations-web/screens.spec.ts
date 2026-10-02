@@ -34,7 +34,7 @@ const EXPECTED: Readonly<Record<StateSlug, string>> = {
   success: 'Máy chủ đã xác nhận',
 };
 
-const SCREENS = ['/properties', '/room-types', '/rooms'] as const;
+const SCREENS = ['/properties', '/room-types', '/rooms', '/inventory-grid'] as const;
 
 operationsWebOnly();
 

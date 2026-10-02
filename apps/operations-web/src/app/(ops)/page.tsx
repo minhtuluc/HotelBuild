@@ -26,6 +26,7 @@ export default function OperationsHomePage(): ReactElement {
         </li>
         <li>
           <a href="/rooms">{t('ops.nav.rooms')}</a>
+          <a href="/inventory-grid">{t('ops.nav.grid')}</a>
         </li>
       </ul>
       <h2>t('ops.home.states')</h2>
