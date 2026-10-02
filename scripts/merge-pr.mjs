@@ -32,11 +32,18 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function main(number) {
   if (!/^\d+$/.test(number ?? '')) throw new Error('Dùng: pnpm pr:merge <số-PR>');
-  const pr = JSON.parse(gh('pr', 'view', number, '--json', 'state,isDraft,mergeable,title'));
+  const pr = JSON.parse(gh('pr', 'view', number, '--json', 'state,isDraft,mergeable,title,headRefName'));
   const checks = JSON.parse(gh('pr', 'checks', number, '--json', 'name,state'));
   const reasons = mergeBlockers(pr, checks);
   if (reasons.length) throw new Error(`Không merge PR #${number}:\n- ${reasons.join('\n- ')}`);
-  gh('pr', 'merge', number, '--squash', '--delete-branch');
+  // Không dùng --delete-branch: nhánh local thường đang mở trong worktree của agent → gh báo lỗi
+  // dù đã merge, làm script dừng trước bước kiểm CI trên main. Chỉ xoá nhánh trên remote.
+  gh('pr', 'merge', number, '--squash');
+  try {
+    gh('api', '-X', 'DELETE', `repos/{owner}/{repo}/git/refs/heads/${pr.headRefName}`);
+  } catch {
+    console.warn(`Không xoá được nhánh remote ${pr.headRefName} — xoá tay nếu cần`);
+  }
   console.log(`Đã merge #${number}: ${pr.title}. Chờ CI trên main…`);
   const sha = gh('api', 'repos/{owner}/{repo}/commits/main', '--jq', '.sha').trim();
   for (let i = 0; i < 60; i++) {
