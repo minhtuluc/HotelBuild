@@ -3,6 +3,7 @@
  * storage); mở khoá PIN trả `pinToken` chỉ trong bộ nhớ. Logic thuần để test không cần UI.
  */
 import { ApiClient, createAuthApi, isApiError, type AuthApi } from '@pinehill/api-client';
+import type { UserMe } from '@pinehill/contracts';
 import type { KeyValueStorage } from './storage.js';
 import { SESSION_KEY } from './storage.js';
 import { OfflineError, requireOnline, type NetInfoSource } from './netinfo.js';
@@ -25,6 +26,7 @@ export interface LoginOutcome {
 export class Session {
   private accessToken: string | null = null;
   private pinToken: string | null = null;
+  private selectedPropertyId: string | null = null;
   private readonly auth: AuthApi;
 
   constructor(private readonly deps: SessionDeps) {
@@ -33,6 +35,8 @@ export class Session {
       createId: deps.createId,
       getAccessToken: () => this.accessToken,
       getPinToken: () => this.pinToken,
+      // Access token hết hạn 15 phút: refresh im lặng rồi gửi lại request đúng một lần (HB-012).
+      onUnauthorized: () => this.silentRefresh(),
       ...(deps.fetchImpl === undefined ? {} : { fetchImpl: deps.fetchImpl }),
       ...(deps.sleep === undefined ? {} : { sleep: deps.sleep }),
     });
@@ -41,6 +45,21 @@ export class Session {
 
   hasAccessToken(): boolean {
     return this.accessToken !== null;
+  }
+
+  /** Hồ sơ phiên: vai trò, phạm vi cơ sở, đã có PIN chưa (HB-012). */
+  async profile(): Promise<UserMe> {
+    await requireOnline(this.deps.netInfo);
+    return (await this.auth.me()).data;
+  }
+
+  /** Cơ sở đang làm việc (QĐ-03 quyết định 9) — chỉ giữ trong bộ nhớ phiên. */
+  selectProperty(propertyId: string): void {
+    this.selectedPropertyId = propertyId;
+  }
+
+  selectedProperty(): string | null {
+    return this.selectedPropertyId;
   }
 
   hasRefreshTokenInStorage(): Promise<string | null> {
@@ -75,9 +94,16 @@ export class Session {
     }
   }
 
+  /** Thu hồi phiên trên máy chủ trước, rồi luôn xoá secure storage (kể cả lỗi/mất mạng — HB-012). */
   async logout(): Promise<void> {
+    try {
+      if (this.accessToken !== null) await this.auth.logout();
+    } catch {
+      // Bỏ qua: mục tiêu là phiên cục bộ không còn dùng được; token sẽ bị máy chủ thu hồi theo TTL.
+    }
     this.accessToken = null;
     this.pinToken = null;
+    this.selectedPropertyId = null;
     await this.deps.storage.remove(SESSION_KEY);
   }
 

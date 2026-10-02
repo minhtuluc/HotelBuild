@@ -94,6 +94,7 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 | POST | `/api/v1/guest-auth/register` | Khách đăng ký tài khoản | — | `fullName`, `phone`, `email`, `password`, `consentMarketing` | UC-AUTH-03 | BR-CRM-01 |
 | POST | `/api/v1/guest-auth/login` | Khách đăng nhập | — | `phone`, `password`, `clientSurface?` (T10) | UC-AUTH-03 | BR-CRM-01 |
 | POST | `/api/v1/auth/logout` | Thu hồi phiên và refresh family, hết quyền trên mọi client của phiên | Đã đăng nhập | — | UC-AUTH-01, UC-AUTH-03 | BR-RBAC-05 |
+| GET | `/api/v1/auth/me` | Hồ sơ phiên hiện tại: vai trò, phạm vi cơ sở, `hasPin`, `mustChangePassword` | Đã đăng nhập | — | UC-AUTH-01 | BR-RBAC-02,05 |
 | POST | `/api/v1/guest-auth/refresh` | Xoay refresh của khách; phát hiện reuse thì thu hồi cả family | GUEST session | `refreshToken` | UC-AUTH-03 | BR-RBAC-05 |
 | GET | `/api/v1/users` | Danh sách người dùng nội bộ cho SCR-15 | MANAGER | `cursor`, `limit`, `role`, `propertyId`, `q` | UC-AUTH-02 | BR-RBAC-01,02 |
 | POST | `/api/v1/users` | Tạo người dùng với mật khẩu tạm (buộc đổi ở lần đăng nhập đầu) | OWNER/SYSADMIN | `username`, `fullName`, `phone?`, `role`, `propertyScope[]`, `temporaryPassword` | UC-AUTH-02 | BR-RBAC-01,02 |

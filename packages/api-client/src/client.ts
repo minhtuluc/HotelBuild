@@ -52,6 +52,11 @@ export interface ApiClientOptions {
   timeoutMs?: number;
   /** Tổng số lần gửi tối đa, tính cả lần đầu. */
   maxAttempts?: number;
+  /**
+   * Gọi **một lần** khi request đã xác thực nhận 401 (HB-012). Trả `true` → client gửi lại
+   * đúng một lần; nhiều request 401 đồng thời dùng chung một lần gọi hook.
+   */
+  onUnauthorized?: () => Promise<boolean>;
   baseRetryDelayMs?: number;
   maxRetryDelayMs?: number;
 }
@@ -73,6 +78,20 @@ function readRetryAfterMs(value: string | null): number | undefined {
   if (Number.isNaN(at)) return undefined;
   return Math.max(0, at - Date.now());
 }
+
+/**
+ * Endpoint cấp/huỷ phiên: 401 ở đây là kết quả nghiệp vụ, không kích hoạt `onUnauthorized` (HB-012).
+ * `/auth/logout` bắt buộc có trong danh sách: hook thường gọi logout khi refresh thất bại, nếu logout
+ * lại kích hoạt hook thì hook chờ chính nó → treo (lead tái hiện khi xét PR #32).
+ */
+const CREDENTIAL_PATHS: readonly string[] = [
+  '/auth/login',
+  '/auth/refresh',
+  '/auth/logout',
+  '/guest-auth/login',
+  '/guest-auth/register',
+  '/guest-auth/refresh',
+];
 
 /** Phân loại lỗi kết nối để UI biết có nên gửi lại hay không. */
 function connectionFailure(
@@ -141,6 +160,7 @@ export class ApiClient {
   private readonly maxAttempts: number;
   private readonly baseRetryDelayMs: number;
   private readonly maxRetryDelayMs: number;
+  private reauthInFlight: Promise<boolean> | undefined;
 
   constructor(private readonly options: ApiClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, '');
@@ -168,23 +188,49 @@ export class ApiClient {
     decode: (payload: unknown) => T,
   ): Promise<ApiResponse<T>> {
     const correlationId = spec.correlationId ?? this.createId();
-    const isWrite = WRITE_METHODS.includes(spec.method);
-    const idempotencyKey = isWrite ? (spec.idempotencyKey ?? this.createId()) : undefined;
+    const idempotencyKey = this.idempotencyKeyFor(spec);
     const bodyText = await this.buildBody(spec);
     let lastError: ApiError = new ApiError({ kind: 'network', message: 'Chưa gửi được yêu cầu' });
     const maxAttempts = Math.max(1, spec.maxAttempts ?? this.maxAttempts);
+    let reauthorized = false;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       const outcome = await this.attempt(spec, correlationId, idempotencyKey, bodyText, decode);
       if (outcome.kind === 'ok') return { ...outcome.value, status: outcome.status };
       lastError = outcome.error;
-      if (!outcome.error.retryable || attempt === maxAttempts) throw outcome.error;
-      const delay =
-        outcome.retryAfterMs ??
-        Math.min(this.maxRetryDelayMs, this.baseRetryDelayMs * 2 ** (attempt - 1));
-      await this.sleep(delay);
+      const action = await this.nextAction(spec, outcome, attempt, maxAttempts, reauthorized);
+      if (action.kind === 'throw') throw outcome.error;
+      if (action.kind === 'reauth') {
+        reauthorized = true;
+        continue;
+      }
+      await this.sleep(action.delayMs);
     }
     throw lastError;
+  }
+
+  private idempotencyKeyFor(spec: RequestBase): string | undefined {
+    if (!WRITE_METHODS.includes(spec.method)) return undefined;
+    return spec.idempotencyKey ?? this.createId();
+  }
+
+  /** Bước kế tiếp sau một lần thất bại: gửi lại sau khi refresh, chờ rồi gửi lại, hay ném lỗi. */
+  private async nextAction(
+    spec: RequestBase,
+    outcome: { error: ApiError; retryAfterMs?: number | undefined },
+    attempt: number,
+    maxAttempts: number,
+    reauthorized: boolean,
+  ): Promise<{ kind: 'reauth' } | { kind: 'retry'; delayMs: number } | { kind: 'throw' }> {
+    if (!reauthorized && (await this.retryAfterReauth(spec, outcome.error)))
+      return { kind: 'reauth' };
+    if (!outcome.error.retryable || attempt === maxAttempts) return { kind: 'throw' };
+    return {
+      kind: 'retry',
+      delayMs:
+        outcome.retryAfterMs ??
+        Math.min(this.maxRetryDelayMs, this.baseRetryDelayMs * 2 ** (attempt - 1)),
+    };
   }
 
   private async buildBody(spec: RequestBase): Promise<string | undefined> {
@@ -285,10 +331,17 @@ export class ApiClient {
     const { status, headers, payload } = fetched;
     const traceId = headers.get('x-trace-id') ?? undefined;
     if (status < 200 || status >= 300) {
+      const retryAfterMs = readRetryAfterMs(headers.get('retry-after'));
       return {
         kind: 'error',
-        error: this.mapError(status, payload, correlationId, traceId),
-        retryAfterMs: readRetryAfterMs(headers.get('retry-after')),
+        error: this.mapError(
+          status,
+          payload,
+          correlationId,
+          traceId,
+          retryAfterMs === undefined ? undefined : Math.ceil(retryAfterMs / 1000),
+        ),
+        retryAfterMs,
       };
     }
     try {
@@ -321,6 +374,7 @@ export class ApiClient {
     payload: unknown,
     correlationId: string,
     traceId: string | undefined,
+    retryAfterSecondsFromHeader: number | undefined,
   ): ApiError {
     const parsed = errorBodySchema.safeParse(payload);
     const code = parsed.success ? parsed.data.code : undefined;
@@ -333,6 +387,7 @@ export class ApiClient {
         correlationId,
         traceId,
         retryable,
+        retryAfterSeconds: retryAfterSecondsFromHeader,
       });
     }
     return new ApiError({
@@ -344,7 +399,35 @@ export class ApiClient {
       details: parsed.data.details,
       correlationId,
       retryable,
+      retryAfterSeconds: parsed.data.retryAfterSeconds ?? retryAfterSecondsFromHeader,
     });
+  }
+
+  /** 401 trên request đã xác thực → gọi hook (một lần cho mọi request đồng thời) và gửi lại nếu hook đồng ý. */
+  private async retryAfterReauth(spec: RequestBase, error: ApiError): Promise<boolean> {
+    if (!(await this.shouldReauthorize(spec, error))) return false;
+    return await this.reauthorize();
+  }
+
+  /** Chỉ gọi hook khi 401 đến từ request đã mang access token và không phải endpoint cấp phiên. */
+  private async shouldReauthorize(spec: RequestBase, error: ApiError): Promise<boolean> {
+    if (error.status !== 401 || CREDENTIAL_PATHS.includes(spec.path)) return false;
+    if (this.options.onUnauthorized === undefined) return false;
+    const token = await this.options.getAccessToken?.();
+    return token !== null && token !== undefined;
+  }
+
+  /** Nhiều request 401 đồng thời dùng chung một lần gọi hook; hook trả `true` thì gửi lại một lần. */
+  private async reauthorize(): Promise<boolean> {
+    const hook = this.options.onUnauthorized;
+    if (hook === undefined) return false;
+    const inFlight = this.reauthInFlight ?? hook();
+    this.reauthInFlight = inFlight;
+    try {
+      return await inFlight;
+    } finally {
+      this.reauthInFlight = undefined;
+    }
   }
 
   private buildUrl(spec: RequestBase): string {

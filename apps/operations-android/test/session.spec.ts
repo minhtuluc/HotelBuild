@@ -130,4 +130,62 @@ describe('Session', () => {
     expect(await s.verifyPin('123456')).toBe(PIN.pinToken);
     expect(await storage.get(SESSION_KEY)).toBeNull();
   });
+
+  it('profile() đọc /auth/me để biết hasPin, propertyScope, mustChangePassword (HB-012)', async () => {
+    const storage = memoryStorage();
+    const s = new Session({
+      storage,
+      baseUrl: 'http://127.0.0.1:9/api/v1',
+      createId: () => '00000000-0000-4000-8000-000000000000',
+      fetchImpl: fetchWith([
+        { status: 200, body: TOKENS },
+        {
+          status: 200,
+          body: {
+            userId: 'u1',
+            username: 'letan01',
+            fullName: 'Lễ tân 01',
+            role: 'FRONT_DESK',
+            propertyScope: ['p1', 'p2'],
+            hasPin: false,
+            mustChangePassword: false,
+          },
+        },
+      ]),
+      netInfo: online,
+      sleep: async () => undefined,
+    });
+    await s.login('letan01', 'matkhau123');
+    const profile = await s.profile();
+    expect(profile.propertyScope).toHaveLength(2);
+    expect(profile.hasPin).toBe(false);
+    s.selectProperty('p2');
+    expect(s.selectedProperty()).toBe('p2');
+  });
+
+  it('logout gọi /auth/logout trước rồi luôn xoá storage (HB-012)', async () => {
+    const storage = memoryStorage();
+    const calls: string[] = [];
+    const s = new Session({
+      storage,
+      baseUrl: 'http://127.0.0.1:9/api/v1',
+      createId: () => '00000000-0000-4000-8000-000000000000',
+      fetchImpl: async (input) => {
+        const url =
+          typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        calls.push(new URL(url).pathname);
+        const isLogin = calls.length === 1;
+        return new Response(isLogin ? JSON.stringify(TOKENS) : null, {
+          status: isLogin ? 200 : 204,
+          headers: { 'content-type': 'application/json' },
+        });
+      },
+      netInfo: online,
+      sleep: async () => undefined,
+    });
+    await s.login('letan01', 'matkhau123');
+    await s.logout();
+    expect(calls).toEqual(['/api/v1/auth/login', '/api/v1/auth/logout']);
+    expect(await storage.get(SESSION_KEY)).toBeNull();
+  });
 });

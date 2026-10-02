@@ -19,6 +19,8 @@ export const catalog = {
   'pin.setup.mismatch': 'Hai lần nhập không khớp.',
   'pin.prompt': 'Nhập PIN để mở khoá',
   'pin.locked': 'PIN tạm khoá.',
+  'property.select': 'Chọn cơ sở đang làm việc',
+  'property.open': 'Làm việc tại',
   'home.title': 'Pine Hill — Vận hành',
   'home.pinDemo': 'Thử thao tác cần PIN',
   'home.pinDemo.ok': 'Đã mở khoá PIN: {purpose}',
