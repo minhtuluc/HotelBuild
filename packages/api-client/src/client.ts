@@ -79,10 +79,15 @@ function readRetryAfterMs(value: string | null): number | undefined {
   return Math.max(0, at - Date.now());
 }
 
-/** Endpoint tự cấp phiên: 401 ở đây là kết quả nghiệp vụ, không kích hoạt `onUnauthorized` (HB-012). */
+/**
+ * Endpoint cấp/huỷ phiên: 401 ở đây là kết quả nghiệp vụ, không kích hoạt `onUnauthorized` (HB-012).
+ * `/auth/logout` bắt buộc có trong danh sách: hook thường gọi logout khi refresh thất bại, nếu logout
+ * lại kích hoạt hook thì hook chờ chính nó → treo (lead tái hiện khi xét PR #32).
+ */
 const CREDENTIAL_PATHS: readonly string[] = [
   '/auth/login',
   '/auth/refresh',
+  '/auth/logout',
   '/guest-auth/login',
   '/guest-auth/register',
   '/guest-auth/refresh',
