@@ -4071,6 +4071,1626 @@
           }
         }
       }
+    },
+    "/api/v1/room-types/{roomTypeId}/rate-calendar": {
+      "get": {
+        "operationId": "rateCalendarGet",
+        "summary": "Lịch giá theo ngày (UC-RATE-01, BR-RATE-02,03)",
+        "tags": [
+          "rate"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "roomTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BASE",
+                "SEASON",
+                "OVERRIDE",
+                "RATE_PLAN"
+              ]
+            },
+            "required": false,
+            "name": "source",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lịch giá",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "roomTypeId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "from": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "to": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "entries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "basePrice": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "seasonMultiplier": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "maximum": 5
+                          },
+                          "weekendMultiplier": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "maximum": 5
+                          },
+                          "occupancyMultiplier": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "maximum": 5
+                          },
+                          "losMultiplier": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "maximum": 5
+                          },
+                          "channelMultiplier": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "maximum": 5
+                          },
+                          "clamped": {
+                            "type": "boolean"
+                          },
+                          "nightlyPrice": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "basePrice",
+                          "seasonMultiplier",
+                          "weekendMultiplier",
+                          "occupancyMultiplier",
+                          "losMultiplier",
+                          "channelMultiplier",
+                          "clamped",
+                          "nightlyPrice"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "roomTypeId",
+                    "from",
+                    "to",
+                    "entries"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "rateCalendarPut",
+        "summary": "Ghi đè lịch giá (source=OVERRIDE); lệch ±20% cần OWNER xác nhận (UC-RATE-01, BR-RBAC-04)",
+        "tags": [
+          "rate"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "roomTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "price": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "required": [
+                        "date",
+                        "price"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1
+                  },
+                  "channelCode": {
+                    "type": "string",
+                    "enum": [
+                      "WEB",
+                      "PHONE",
+                      "WALKIN",
+                      "OTA_BOOKING",
+                      "OTA_AGODA",
+                      "OTA_AIRBNB",
+                      "AGENCY"
+                    ]
+                  },
+                  "priority": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "confirmOwnerOverride": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "items",
+                  "priority",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Lịch giá sau ghi đè",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "roomTypeId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "from": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "to": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "entries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "basePrice": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "seasonMultiplier": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "maximum": 5
+                          },
+                          "weekendMultiplier": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "maximum": 5
+                          },
+                          "occupancyMultiplier": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "maximum": 5
+                          },
+                          "losMultiplier": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "maximum": 5
+                          },
+                          "channelMultiplier": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "maximum": 5
+                          },
+                          "clamped": {
+                            "type": "boolean"
+                          },
+                          "nightlyPrice": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "basePrice",
+                          "seasonMultiplier",
+                          "weekendMultiplier",
+                          "occupancyMultiplier",
+                          "losMultiplier",
+                          "channelMultiplier",
+                          "clamped",
+                          "nightlyPrice"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "roomTypeId",
+                    "from",
+                    "to",
+                    "entries"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_RATE_BELOW_FLOOR, E_RATE_CONFIGURATION_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/seasons": {
+      "post": {
+        "operationId": "seasonsCreate",
+        "summary": "Tạo mùa: hệ số, ưu tiên, phụ thu cuối tuần (UC-RATE-02, BR-RATE-05,06)",
+        "tags": [
+          "rate"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "propertyId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "startDate": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "endDate": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "multiplier": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 5
+                  },
+                  "priority": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "weekendSurchargeEnabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "propertyId",
+                  "name",
+                  "startDate",
+                  "endDate",
+                  "multiplier",
+                  "priority",
+                  "weekendSurchargeEnabled"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mùa đã tạo"
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_RATE_CONFIGURATION_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/channels/{channelId}": {
+      "patch": {
+        "operationId": "channelsUpdate",
+        "summary": "Sửa hệ số/hoa hồng/hold mặc định toàn chuỗi + ghi đè theo cơ sở (UC-RATE-03, BR-RATE-07,09,18)",
+        "tags": [
+          "rate"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Phiên bản đọc gần nhất; thiếu → 428, lệch → 412 (api.md §1.3)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "multiplier": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 5
+                  },
+                  "commissionPct": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "holdMinutes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1440
+                  },
+                  "overbookAllowed": {
+                    "type": "boolean"
+                  },
+                  "propertyOverrides": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "propertyId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "multiplier": {
+                          "type": "number",
+                          "minimum": 0.1,
+                          "maximum": 5
+                        },
+                        "commissionPct": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "effectiveFrom": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        }
+                      },
+                      "required": [
+                        "propertyId",
+                        "effectiveFrom"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Đã cập nhật kênh"
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "E_GEN_VERSION_CONFLICT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_RATE_BELOW_FLOOR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "E_GEN_PRECONDITION_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/promotions": {
+      "post": {
+        "operationId": "promotionsCreate",
+        "summary": "Tạo khuyến mãi (UC-RATE-04, BR-RATE-10,11,13)",
+        "tags": [
+          "rate"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "PERCENT",
+                      "AMOUNT"
+                    ]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "minNights": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "channelScope": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "WEB",
+                        "PHONE",
+                        "WALKIN",
+                        "OTA_BOOKING",
+                        "OTA_AGODA",
+                        "OTA_AIRBNB",
+                        "AGENCY"
+                      ]
+                    }
+                  },
+                  "roomTypeScope": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "validFrom": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                  },
+                  "validTo": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                  },
+                  "maxUses": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "stackable": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "code",
+                  "type",
+                  "value",
+                  "minNights",
+                  "channelScope",
+                  "roomTypeScope",
+                  "validFrom",
+                  "validTo",
+                  "stackable"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Khuyến mãi đã tạo"
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_RATE_PROMO_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quotes/multi-channel": {
+      "post": {
+        "operationId": "quotesMultiChannel",
+        "summary": "So sánh giá đồng thời nhiều kênh (UC-RATE-05, BR-RATE-07,08,09)",
+        "tags": [
+          "rate"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "roomTypeId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "checkIn": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "checkOut": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "channelCodes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "WEB",
+                        "PHONE",
+                        "WALKIN",
+                        "OTA_BOOKING",
+                        "OTA_AGODA",
+                        "OTA_AIRBNB",
+                        "AGENCY"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 7
+                  }
+                },
+                "required": [
+                  "roomTypeId",
+                  "checkIn",
+                  "checkOut",
+                  "channelCodes"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Báo giá theo từng kênh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "roomTypeId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "checkIn": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "checkOut": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "channelCode": {
+                            "type": "string",
+                            "enum": [
+                              "WEB",
+                              "PHONE",
+                              "WALKIN",
+                              "OTA_BOOKING",
+                              "OTA_AGODA",
+                              "OTA_AIRBNB",
+                              "AGENCY"
+                            ]
+                          },
+                          "nightlyFrom": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "totalFrom": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "warnings": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          }
+                        },
+                        "required": [
+                          "channelCode",
+                          "nightlyFrom",
+                          "totalFrom",
+                          "warnings"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "roomTypeId",
+                    "checkIn",
+                    "checkOut",
+                    "options"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_RATE_QUOTE_MISMATCH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rate-plans": {
+      "get": {
+        "operationId": "ratePlansList",
+        "summary": "Gói giá đang bán và điều khoản cho khách — không lộ cấu hình nội bộ (UC-RATE-06)",
+        "tags": [
+          "rate"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "propertyId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "checkIn",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "checkOut",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách gói giá",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "FLEX7",
+                              "SAVER3",
+                              "NONREF",
+                              "LONGSTAY14"
+                            ]
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "minNights": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "maxNights": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "depositPercent": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "freeCancelHours": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "name",
+                          "minNights",
+                          "maxNights",
+                          "depositPercent"
+                        ]
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "limit",
+                        "nextCursor",
+                        "hasMore",
+                        "total"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rate-plans/{ratePlanId}": {
+      "put": {
+        "operationId": "ratePlansUpdate",
+        "summary": "Cập nhật cấu hình gói giá cho báo giá mới, giữ nguyên snapshot đã bán (UC-RATE-06, BR-RATE-16)",
+        "tags": [
+          "rate"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "ratePlanId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Phiên bản đọc gần nhất; thiếu → 428, lệch → 412 (api.md §1.3)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "depositPercent": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "minNights": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "maxNights": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "cancellationPolicyId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "INACTIVE"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Đã cập nhật gói giá"
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "E_GEN_VERSION_CONFLICT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "E_GEN_PRECONDITION_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cancellation-policies": {
+      "get": {
+        "operationId": "cancellationPoliciesList",
+        "summary": "Chính sách huỷ và toàn bộ bậc kèm version (UC-RATE-06, BR-CANCEL-01,02)",
+        "tags": [
+          "rate"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "INACTIVE"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách chính sách",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "ACTIVE",
+                              "INACTIVE"
+                            ]
+                          },
+                          "tiers": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "hoursBeforeCheckIn": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "refundPercent": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 100
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 60
+                                }
+                              },
+                              "required": [
+                                "hoursBeforeCheckIn",
+                                "refundPercent"
+                              ]
+                            },
+                            "minItems": 1
+                          },
+                          "earlyCheckoutFreeHours": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "earlyCheckoutRefundPct": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "status",
+                          "tiers",
+                          "earlyCheckoutFreeHours",
+                          "earlyCheckoutRefundPct",
+                          "version"
+                        ]
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "limit",
+                        "nextCursor",
+                        "hasMore",
+                        "total"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cancellation-policies/{policyId}": {
+      "put": {
+        "operationId": "cancellationPoliciesUpdate",
+        "summary": "Thay toàn bộ bậc trong một transaction; validate mốc/phần trăm/catch-all (UC-RATE-06, BR-CANCEL-01,02,09)",
+        "tags": [
+          "rate"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Phiên bản đọc gần nhất; thiếu → 428, lệch → 412 (api.md §1.3)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tiers": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "hoursBeforeCheckIn": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "refundPercent": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 60
+                        }
+                      },
+                      "required": [
+                        "hoursBeforeCheckIn",
+                        "refundPercent"
+                      ]
+                    },
+                    "minItems": 1
+                  },
+                  "earlyCheckoutFreeHours": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "earlyCheckoutRefundPct": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "tiers",
+                  "earlyCheckoutFreeHours",
+                  "earlyCheckoutRefundPct",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chính sách sau cập nhật",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ACTIVE",
+                        "INACTIVE"
+                      ]
+                    },
+                    "tiers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hoursBeforeCheckIn": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "refundPercent": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 60
+                          }
+                        },
+                        "required": [
+                          "hoursBeforeCheckIn",
+                          "refundPercent"
+                        ]
+                      },
+                      "minItems": 1
+                    },
+                    "earlyCheckoutFreeHours": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "earlyCheckoutRefundPct": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "status",
+                    "tiers",
+                    "earlyCheckoutFreeHours",
+                    "earlyCheckoutRefundPct",
+                    "version"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "E_GEN_VERSION_CONFLICT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_RATE_CONFIGURATION_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "E_GEN_PRECONDITION_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "webhooks": {}
