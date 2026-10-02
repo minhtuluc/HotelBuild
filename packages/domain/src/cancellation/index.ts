@@ -1,5 +1,47 @@
-/**
- * Điểm xuất công khai của engine cancellation (`@pinehill/domain/cancellation`).
- * Lead dựng khung để ticket engine sở hữu trọn thư mục này mà không sửa `src/index.ts` hay `package.json`.
- */
-export {};
+export interface CancellationTier {
+  readonly offsetHours: number;
+  readonly refundPercent: number;
+  readonly chargeFirstNight: boolean;
+}
+export interface CancellationPolicy {
+  readonly tiers: readonly CancellationTier[];
+}
+export interface RoomWeight {
+  readonly bookingRoomId: string;
+  readonly weight: number;
+}
+export interface RoomAllocation {
+  readonly bookingRoomId: string;
+  readonly amount: number;
+}
+export interface PaymentInput {
+  readonly paymentId: string;
+  readonly amount: number;
+  readonly weights: readonly RoomWeight[];
+}
+export interface AllocatedPayment extends PaymentInput {
+  readonly allocations: readonly RoomAllocation[];
+  readonly processedRoomIds: readonly string[];
+}
+export interface CancellationInput {
+  readonly state: 'CONFIRMED';
+  readonly policy: CancellationPolicy;
+  readonly checkInDateTime: number;
+  readonly now: number;
+  readonly rooms: readonly { readonly bookingRoomId: string; readonly firstNightPrice: number }[];
+  readonly cancelledRoomIds: readonly string[];
+  readonly processedRoomIds: readonly string[];
+  readonly payments: readonly AllocatedPayment[];
+}
+export interface CancellationDecision {
+  readonly tier: CancellationTier;
+  readonly refundBase: number;
+  readonly refundAmount: number;
+  readonly penaltyAmount: number;
+  readonly payments: readonly AllocatedPayment[];
+  readonly processedRoomIds: readonly string[];
+  readonly remainingRoomIds: readonly string[];
+}
+export { allocatePayment } from './allocation.js';
+export { resolveTier } from './policy.js';
+export { calculateCancellation } from './calculate.js';
