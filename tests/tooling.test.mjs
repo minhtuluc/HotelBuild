@@ -198,3 +198,15 @@ test('contract diff flags breaking changes and ignores compatible ones', () => {
   assert.deepEqual(compatibleResult.breaking, []);
   assert.ok(compatibleResult.additive.length >= 3);
 });
+
+test('pr:merge từ chối PR nháp, check chưa xanh hoặc thiếu check bắt buộc', async () => {
+  const { mergeBlockers, REQUIRED_CHECKS } = await import('../scripts/merge-pr.mjs');
+  const pr = { state: 'OPEN', isDraft: false, mergeable: 'MERGEABLE' };
+  const green = REQUIRED_CHECKS.map((name) => ({ name, state: 'SUCCESS' }));
+  assert.deepEqual(mergeBlockers(pr, green), []);
+  assert.match(mergeBlockers({ ...pr, isDraft: true }, green).join(), /nháp/);
+  assert.match(mergeBlockers(pr, [...green.slice(1), { name: REQUIRED_CHECKS[0], state: 'FAILURE' }]).join(), /FAILURE/);
+  assert.match(mergeBlockers(pr, green.slice(1)).join(), /thiếu check bắt buộc/);
+  assert.match(mergeBlockers(pr, [...green, { name: 'docs-and-embedded', state: 'IN_PROGRESS' }]).join(), /IN_PROGRESS/);
+  assert.match(mergeBlockers({ ...pr, mergeable: 'CONFLICTING' }, green).join(), /xung đột/);
+});
