@@ -70,6 +70,16 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['post', '/api/v1/system/backups', 'bearer'],
   ['post', '/api/v1/system/backups/{backupId}/restore', 'bearer'],
   ['get', '/api/v1/operations/{operationId}', 'bearer'],
+  ['get', '/api/v1/room-types/{roomTypeId}/rate-calendar', 'bearer'],
+  ['put', '/api/v1/room-types/{roomTypeId}/rate-calendar', 'bearer'],
+  ['post', '/api/v1/seasons', 'bearer'],
+  ['patch', '/api/v1/channels/{channelId}', 'bearer'],
+  ['post', '/api/v1/promotions', 'bearer'],
+  ['post', '/api/v1/quotes/multi-channel', 'bearer'],
+  ['get', '/api/v1/rate-plans', 'public'],
+  ['put', '/api/v1/rate-plans/{ratePlanId}', 'bearer'],
+  ['get', '/api/v1/cancellation-policies', 'bearer'],
+  ['put', '/api/v1/cancellation-policies/{policyId}', 'bearer'],
 ];
 
 const WRITE_TARGETS = AUTH_OPERATIONS.filter(([method]) => method !== 'get');
@@ -88,7 +98,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 30 path của F0 + F1 + F2', () => {
+  it('có đủ 39 path của F0 + F1 + F2 + F3', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -121,6 +131,15 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/system/backups',
         '/api/v1/system/backups/{backupId}/restore',
         '/api/v1/operations/{operationId}',
+        '/api/v1/room-types/{roomTypeId}/rate-calendar',
+        '/api/v1/seasons',
+        '/api/v1/channels/{channelId}',
+        '/api/v1/promotions',
+        '/api/v1/quotes/multi-channel',
+        '/api/v1/rate-plans',
+        '/api/v1/rate-plans/{ratePlanId}',
+        '/api/v1/cancellation-policies',
+        '/api/v1/cancellation-policies/{policyId}',
       ].sort(),
     );
   });
@@ -190,5 +209,12 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     const grid = document.paths?.['/api/v1/inventory/grid']?.get;
     expect(grid).toBeDefined();
     expect(JSON.stringify(grid)).toContain('31');
+  });
+
+  it('chính sách huỷ nhận toàn bộ bậc với phần trăm 0–100 và mốc giờ ≥ 0 (HB-050 AC3)', () => {
+    const policy = document.paths?.['/api/v1/cancellation-policies/{policyId}']?.put;
+    expect(policy).toBeDefined();
+    expect(JSON.stringify(policy)).toContain('hoursBeforeCheckIn');
+    expect(JSON.stringify(policy)).toContain('tiers');
   });
 });

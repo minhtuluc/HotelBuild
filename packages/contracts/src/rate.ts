@@ -1,0 +1,140 @@
+/** Hợp đồng RATE — api.md §2.4; csdl §3 (rate_calendars, seasons, channels, channel_property_settings, promotions, rate_plans). */
+import { z } from 'zod';
+import { businessDateSchema, isoUtcTimestampSchema } from './common.js';
+import {
+  channelCodeSchema,
+  ratePlanCodeSchema,
+  rateSourceSchema,
+  promotionTypeSchema,
+} from './enums.js';
+
+/** Hệ số giá: chặn hình thức theo động giá §2 (0,10–5,00) để lỗi cấu hình thật do backend quyết. */
+const multiplier = z.number().min(0.1).max(5);
+const percent = z.number().min(0).max(100);
+
+export const rateCalendarQuerySchema = z.strictObject({
+  from: businessDateSchema,
+  to: businessDateSchema,
+  source: rateSourceSchema.optional(),
+});
+
+export const rateCalendarEntrySchema = z.object({
+  date: businessDateSchema,
+  basePrice: z.number().int().positive(),
+  seasonMultiplier: multiplier,
+  weekendMultiplier: multiplier,
+  occupancyMultiplier: multiplier,
+  losMultiplier: multiplier,
+  channelMultiplier: multiplier,
+  clamped: z.boolean(),
+  nightlyPrice: z.number().int().positive(),
+});
+
+export const rateCalendarSchema = z.object({
+  roomTypeId: z.string().min(1),
+  from: businessDateSchema,
+  to: businessDateSchema,
+  entries: z.array(rateCalendarEntrySchema),
+});
+
+/** `PUT /room-types/{roomTypeId}/rate-calendar` — ghi đè `source = OVERRIDE`; vượt ±20% cần OWNER xác nhận (BR-RBAC-04). */
+export const rateCalendarOverrideRequestSchema = z.strictObject({
+  items: z
+    .array(z.strictObject({ date: businessDateSchema, price: z.number().int().positive() }))
+    .min(1),
+  channelCode: channelCodeSchema.optional(),
+  priority: z.number().int().min(0),
+  reason: z.string().min(1).max(500),
+  confirmOwnerOverride: z.boolean().optional(),
+});
+
+export const seasonCreateRequestSchema = z.strictObject({
+  propertyId: z.string().min(1),
+  name: z.string().min(1).max(120),
+  startDate: businessDateSchema,
+  endDate: businessDateSchema,
+  multiplier,
+  priority: z.number().int().min(0),
+  weekendSurchargeEnabled: z.boolean(),
+});
+
+/** `PATCH /channels/{channelId}` — mặc định toàn chuỗi + ghi đè theo cặp (kênh, cơ sở) (BR-RATE-18). */
+export const channelUpdateRequestSchema = z.strictObject({
+  multiplier: multiplier.optional(),
+  commissionPct: percent.optional(),
+  holdMinutes: z.number().int().min(0).max(1440).optional(),
+  overbookAllowed: z.boolean().optional(),
+  propertyOverrides: z
+    .array(
+      z.strictObject({
+        propertyId: z.string().min(1),
+        multiplier: multiplier.optional(),
+        commissionPct: percent.optional(),
+        effectiveFrom: businessDateSchema,
+      }),
+    )
+    .optional(),
+  reason: z.string().min(1).max(500).optional(),
+});
+
+export const promotionCreateRequestSchema = z.strictObject({
+  code: z.string().min(1).max(40),
+  type: promotionTypeSchema,
+  value: z.number().int().positive(),
+  minNights: z.number().int().min(1),
+  channelScope: z.array(channelCodeSchema),
+  roomTypeScope: z.array(z.string().min(1)),
+  validFrom: isoUtcTimestampSchema,
+  validTo: isoUtcTimestampSchema,
+  maxUses: z.number().int().min(1).optional(),
+  stackable: z.boolean(),
+});
+
+export const multiChannelQuoteRequestSchema = z.strictObject({
+  roomTypeId: z.string().min(1),
+  checkIn: businessDateSchema,
+  checkOut: businessDateSchema,
+  channelCodes: z.array(channelCodeSchema).min(1).max(7),
+});
+
+export const multiChannelQuoteOptionSchema = z.object({
+  channelCode: channelCodeSchema,
+  nightlyFrom: z.number().int().positive(),
+  totalFrom: z.number().int().positive(),
+  warnings: z.array(z.string().min(1)),
+});
+
+export const multiChannelQuoteSchema = z.object({
+  roomTypeId: z.string().min(1),
+  checkIn: businessDateSchema,
+  checkOut: businessDateSchema,
+  options: z.array(multiChannelQuoteOptionSchema),
+});
+
+/** `GET /rate-plans` cho khách: **chỉ** điều khoản hiển thị, không lộ cấu hình nội bộ (HB-050 AC4). */
+export const ratePlanPublicSchema = z.object({
+  code: ratePlanCodeSchema,
+  name: z.string().min(1).max(120),
+  minNights: z.number().int().min(1),
+  maxNights: z.number().int().min(1),
+  depositPercent: percent,
+  freeCancelHours: z.number().int().min(0).optional(),
+});
+
+export const ratePlanUpdateRequestSchema = z.strictObject({
+  depositPercent: percent.optional(),
+  minNights: z.number().int().min(1).optional(),
+  maxNights: z.number().int().min(1).optional(),
+  cancellationPolicyId: z.string().min(1).optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+  reason: z.string().min(1).max(500),
+});
+
+export type RateCalendar = z.infer<typeof rateCalendarSchema>;
+export type RateCalendarOverrideRequest = z.infer<typeof rateCalendarOverrideRequestSchema>;
+export type SeasonCreateRequest = z.infer<typeof seasonCreateRequestSchema>;
+export type ChannelUpdateRequest = z.infer<typeof channelUpdateRequestSchema>;
+export type PromotionCreateRequest = z.infer<typeof promotionCreateRequestSchema>;
+export type MultiChannelQuote = z.infer<typeof multiChannelQuoteSchema>;
+export type RatePlanPublic = z.infer<typeof ratePlanPublicSchema>;
+export type RatePlanUpdateRequest = z.infer<typeof ratePlanUpdateRequestSchema>;

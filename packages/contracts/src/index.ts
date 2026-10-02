@@ -5,4 +5,6 @@ export * from './auth.js';
 export * from './property.js';
 export * from './inventory.js';
 export * from './system.js';
+export * from './rate.js';
+export * from './cancellation-policy.js';
 export * from './env.js';
