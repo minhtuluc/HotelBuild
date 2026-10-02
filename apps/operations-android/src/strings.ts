@@ -1,0 +1,29 @@
+/** Câu chữ riêng của màn hình đăng nhập/PIN cho Operations Android. */
+import { makeTranslate, stateMessages } from '@pinehill/ui-native';
+
+export const catalog = {
+  ...stateMessages,
+  'login.title': 'Đăng nhập Pine Hill',
+  'login.username': 'Tên đăng nhập',
+  'login.password': 'Mật khẩu',
+  'login.submit': 'Đăng nhập',
+  'login.offline': 'Cần kết nối',
+  'login.error': 'Đăng nhập thất bại: {code}',
+  'changePassword.title': 'Đổi mật khẩu',
+  'changePassword.current': 'Mật khẩu hiện tại',
+  'changePassword.next': 'Mật khẩu mới (8–128 ký tự)',
+  'changePassword.submit': 'Đổi mật khẩu',
+  'changePassword.required': 'Bạn phải đổi mật khẩu tạm trước khi tiếp tục.',
+  'pin.setup.title': 'Đặt PIN',
+  'pin.setup.hint': 'Nhập PIN 6 số hai lần để xác nhận.',
+  'pin.setup.mismatch': 'Hai lần nhập không khớp.',
+  'pin.prompt': 'Nhập PIN để mở khoá',
+  'pin.locked': 'PIN tạm khoá.',
+  'home.title': 'Pine Hill — Vận hành',
+  'home.pinDemo': 'Thử thao tác cần PIN',
+  'home.pinDemo.ok': 'Đã mở khoá PIN: {purpose}',
+  'home.logout': 'Đăng xuất',
+} as const;
+
+export const t = makeTranslate(catalog);
+export type AuthMessageKey = keyof typeof catalog;
