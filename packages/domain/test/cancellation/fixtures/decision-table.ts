@@ -1,0 +1,95 @@
+import type { CancellationInput, CancellationPolicy } from '../../../src/cancellation/index.js';
+const tier = (offsetHours: number, refundPercent: number, chargeFirstNight = false) => ({
+  offsetHours,
+  refundPercent,
+  chargeFirstNight,
+});
+export const policies = {
+  FLEX7: { tiers: [tier(168, 100), tier(72, 50), tier(24, 0), tier(-1, 0, true)] },
+  SAVER3: { tiers: [tier(72, 100), tier(24, 50), tier(-1, 0, true)] },
+  NONREF: { tiers: [tier(-1, 0)] },
+  LONGSTAY14: { tiers: [tier(336, 100), tier(168, 50), tier(-1, 0, true)] },
+} satisfies Record<string, CancellationPolicy>;
+// Literal source values from specialty §6, in minutes (no-show = -599).
+const rows: readonly (readonly [
+  keyof typeof policies,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  boolean,
+])[] = [
+  ['FLEX7', 12000, 907000, 168, 100, 907000, 0, false],
+  ['FLEX7', 10080, 907000, 168, 100, 907000, 0, false],
+  ['FLEX7', 10079, 907000, 72, 50, 453000, 0, false],
+  ['FLEX7', 6000, 907000, 72, 50, 453000, 0, false],
+  ['FLEX7', 6000, 0, 72, 50, 0, 0, false],
+  ['FLEX7', 6000, 500000, 72, 50, 250000, 0, false],
+  ['FLEX7', 4320, 907000, 72, 50, 453000, 0, false],
+  ['FLEX7', 4319, 907000, 24, 0, 0, 0, false],
+  ['FLEX7', 2880, 907000, 24, 0, 0, 0, false],
+  ['FLEX7', 1440, 907000, 24, 0, 0, 0, false],
+  ['FLEX7', 1439, 907000, -1, 0, 0, 159000, true],
+  ['FLEX7', 600, 907000, -1, 0, 0, 159000, true],
+  ['FLEX7', 600, 3021000, -1, 0, 0, 0, true],
+  ['FLEX7', 600, 0, -1, 0, 0, 1066000, true],
+  ['FLEX7', -599, 907000, -1, 0, 0, 159000, true],
+  ['SAVER3', 12000, 1511000, 72, 100, 1511000, 0, false],
+  ['SAVER3', 4320, 1511000, 72, 100, 1511000, 0, false],
+  ['SAVER3', 4319, 1511000, 24, 50, 755000, 0, false],
+  ['SAVER3', 1440, 1511000, 24, 50, 755000, 0, false],
+  ['SAVER3', 1439, 1511000, -1, 0, 0, 0, true],
+  ['SAVER3', 600, 0, -1, 0, 0, 1066000, true],
+  ['SAVER3', 600, 500000, -1, 0, 0, 566000, true],
+  ['NONREF', 120000, 3179000, -1, 0, 0, 0, false],
+  ['NONREF', 1439, 3179000, -1, 0, 0, 0, false],
+  ['NONREF', 600, 0, -1, 0, 0, 0, false],
+  ['NONREF', 600, 1000000, -1, 0, 0, 0, false],
+  ['LONGSTAY14', 24000, 5813000, 336, 100, 5813000, 0, false],
+  ['LONGSTAY14', 20160, 5813000, 336, 100, 5813000, 0, false],
+  ['LONGSTAY14', 20159, 5813000, 168, 50, 2906000, 0, false],
+  ['LONGSTAY14', 10080, 5813000, 168, 50, 2906000, 0, false],
+  ['LONGSTAY14', 10079, 5813000, -1, 0, 0, 0, true],
+  ['LONGSTAY14', 600, 5813000, -1, 0, 0, 0, true],
+  ['LONGSTAY14', 600, 0, -1, 0, 0, 1309000, true],
+  ['LONGSTAY14', -599, 5813000, -1, 0, 0, 0, true],
+];
+export const decisionTable = rows.map(
+  ([plan, minutes, paid, offset, percent, refund, penalty, charge], index) => ({
+    name: `DT-${String(index + 1).padStart(2, '0')} TC-CANCEL-${String(index + 1).padStart(2, '0')}`,
+    policy: policies[plan],
+    minutes,
+    paid,
+    offset,
+    percent,
+    refund,
+    penalty,
+    charge,
+    firstNightPrice: plan === 'LONGSTAY14' ? 1_309_000 : plan === 'NONREF' ? 1_122_000 : 1_066_000,
+  }),
+);
+
+export const input = (
+  paid = 907_000,
+  minutes = 10_080,
+  policy: CancellationPolicy = policies.FLEX7,
+): CancellationInput => ({
+  state: 'CONFIRMED',
+  policy,
+  checkInDateTime: 0,
+  now: -minutes * 60_000,
+  rooms: [{ bookingRoomId: 'a', firstNightPrice: 1_066_000 }],
+  cancelledRoomIds: ['a'],
+  processedRoomIds: [],
+  payments: [
+    {
+      paymentId: 'p',
+      amount: paid,
+      weights: [{ bookingRoomId: 'a', weight: 3_021_000 }],
+      allocations: [{ bookingRoomId: 'a', amount: paid }],
+      processedRoomIds: [],
+    },
+  ],
+});
