@@ -4,13 +4,15 @@
 
 ## 1. Ai thay vai lead
 
+Từ [QĐ-04](../05-ke-hoach/nhat-ky/QD-04-quan-tri-tu-chu.md): mọi agent báo cáo **chỉ** cho lead; lead xét cuối và merge.
+
 | Tình huống | Lead thay thế | Ràng buộc bù |
 |---|---|---|
-| Opus không còn | **Codex (GPT-6.1 Sol)** viết đặc tả, ký R2, merge | Ticket R2 do chính Codex làm phải có Gemini review **và** người dùng đồng ý trước khi merge (không ai tự duyệt việc của mình) |
-| Codex quá tải hoặc hết quota | Người dùng merge; Gemini review cấp 2 tạm thời cho R1 | R2 chờ Codex, không hạ hạng để chạy cho nhanh |
+| Opus không còn | **Codex (GPT-6.1 Sol)** | PR R2 do chính Codex làm: người dùng đồng ý merge sau khi Codex tự chạy lại đủ mục §4 (không ai tự duyệt việc của mình) |
+| Codex quá tải hoặc hết quota | Người dùng merge R0/R1 khi CI xanh và báo cáo tự kiểm đủ | R2 chờ Codex, không hạ hạng |
 | Cả Opus và Codex không có | Chỉ làm R0/R1 | Không merge R2 |
 
-Lead không viết mã khối lượng lớn. Việc của lead: đặc tả, gỡ chặn, review cuối, merge, giữ tài liệu khớp mã.
+Lead không viết mã khối lượng lớn. Việc của lead: giao việc, gỡ vướng leo thang, xét cuối, merge, giữ backlog/quyết định khớp thực tế.
 
 ## 2. Vòng làm việc mỗi ngày
 
@@ -19,6 +21,8 @@ Lead không viết mã khối lượng lớn. Việc của lead: đặc tả, g�
 3. Giao việc theo [lộ trình §3](lo-trinh-den-deploy.md#3-đường-găng-và-việc-chạy-song-song): luôn giữ Codex làm lõi R2 trên đường găng, DeepSeek làm song song phía hợp đồng/màn hình.
 
 ## 3. Biến dòng backlog thành đặc tả
+
+Từ QĐ-04, Codex/DeepSeek (và Gemini cho R0) **tự soạn** đặc tả trong nhánh của mình; lead chỉ viết trước cho việc khó hoặc dễ chồng phạm vi. Khi xét PR có đặc tả tự soạn, lead đọc đặc tả trước rồi mới đọc mã. Các bước dưới áp dụng cho cả người tự soạn.
 
 1. Sao chép [mẫu](tickets/_mau.md) thành `tickets/HB-nnn-<slug>.md`.
 2. Đọc **đúng** nguồn ghi ở cột "Căn cứ"; chép tiêu chí kiểm chứng được, mỗi tiêu chí gắn một test.
@@ -32,28 +36,21 @@ Lead không viết mã khối lượng lớn. Việc của lead: đặc tả, g�
    ```
 8. Merge đặc tả vào `main` qua nhánh `lead/*` **trước** khi giao. Gemini được viết nháp đặc tả R0/R1; lead duyệt rồi mới merge.
 
-## 4. Review và merge
+## 4. Xét cuối và merge
 
-**Không bao giờ merge khi CI của PR chưa xanh** (bài học HB-005). Lệnh `gh pr merge` không tự chặn nếu repo chưa bật branch protection.
+Độ sâu theo hạng ([quy trình §2](README.md#2-hạng-rủi-ro--ai-làm-lead-xét-sâu-đến-đâu)). **Không bao giờ merge khi CI của PR chưa xanh** (bài học HB-005).
 
-Danh sách kiểm:
-
-1. CI của PR xanh mọi job: `gh pr checks <n>`.
-2. Nhánh đã chứa `main` mới nhất? Nếu `check:scope` đỏ vì đặc tả vừa sửa trên `main`, rebase nhánh lên `main` rồi push `--force-with-lease`, vì `check:scope` đọc ticket từ merge-base.
-3. Chạy lại cục bộ trong worktree riêng:
+1. `gh pr checks <n>` xanh mọi job. Báo cáo tự kiểm trong PR đủ mục; thiếu mục nào thì trả lại ngay, không tự chạy hộ.
+2. `check:scope` có cảnh báo thì đọc phần giải trình "Ngoài phạm vi đã sửa"; không hợp lý thì yêu cầu tách.
+3. R0: liếc diff → merge. R1: đọc file chính → merge.
+4. R2: chạy lại trong worktree riêng phần rủi ro:
    ```sh
    git worktree add ../wt/review-HB-nnn origin/ticket/HB-nnn-<slug>
-   cd ../wt/review-HB-nnn && pnpm install --frozen-lockfile
-   SCOPE_BASE=origin/main SCOPE_BRANCH=ticket/HB-nnn-<slug> node scripts/check-scope.mjs
-   pnpm run ci
+   cd ../wt/review-HB-nnn && pnpm install --frozen-lockfile && pnpm run ci
    ```
-4. **Chạy thật** theo loại ticket, đừng chỉ đọc test:
-   - backend: `pnpm infra:up`, tạo CSDL tạm, `pnpm migrate`, gọi endpoint bằng `curl`;
-   - image: `docker build` rồi `docker run` và gọi `/api/v1/system/health`;
-   - frontend: `pnpm test:e2e`, mở trình duyệt khi có màn hình mới.
-5. Đọc diff tìm: bí mật, PII trong log, `new Date()`/`Math.random()` trong miền, nới assertion, `skip`, bắt-rồi-nuốt lỗi, quyền thiếu ở endpoint.
-6. Lỗi nhỏ thì lead sửa thẳng trên nhánh (một commit có giải thích), lỗi đáng kể thì `NEEDS_CHANGES` kèm file:dòng và cách tái hiện.
-7. Ghi comment review vào PR (PASS/NEEDS_CHANGES + những gì đã chạy), merge squash, xoá nhánh, rồi **kiểm CI trên `main`** sau merge.
+   rồi chạy thật (migrate trên CSDL tạm, `curl` endpoint, `docker run` image, test đồng thời) và đọc toàn bộ diff tìm: bí mật, PII trong log, thời gian/ngẫu nhiên trong miền, quyền thiếu, test bị nới.
+5. Lỗi nhỏ thì lead sửa thẳng một commit trên nhánh rồi merge; lỗi đáng kể thì `NEEDS_CHANGES` **một lần**, gom đủ mọi điểm, ghi file:dòng và cách tái hiện.
+6. Nhánh đứng sau `main` mà xung đột thì rebase rồi `--force-with-lease` (hoặc nhờ người làm). Merge squash, xoá nhánh, kiểm CI trên `main` sau merge.
 
 ## 5. Ước `max_lines`
 
@@ -68,7 +65,7 @@ Danh sách kiểm:
 | Dựng khung app/gói mới | 700–750 |
 | Migration sinh từ tài liệu | theo SQL thực tế, ghi lý do |
 
-Agent báo vượt mức mà diff hợp lý (không mã chết, không test trùng) thì nâng và ghi lý do trong dòng `max_lines`; vượt vì ôm việc ngoài phạm vi thì yêu cầu tách.
+Từ QĐ-04 vượt `max_lines` chỉ là cảnh báo: người làm giải trình trong PR, lead chấp nhận nếu diff hợp lý (không mã chết, không test trùng), yêu cầu tách nếu ôm việc ngoài phạm vi.
 
 ## 6. Bài học đã trả giá
 

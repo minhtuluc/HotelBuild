@@ -56,23 +56,31 @@ test('nhánh ticket và cổng Codex QC chỉ dành cho R2', () => {
   assert.equal(needsCodexQc(undefined), false);
 });
 
-test('phạm vi: ngoài allow, file khoá, file bảo vệ và diff quá lớn đều bị chặn; unlock mở đúng file', () => {
+test('phạm vi (QĐ-04): file khoá và file bảo vệ chặn; ngoài allow và vượt max_lines chỉ cảnh báo; unlock mở đúng file', () => {
   const ticket = parseTicket(ticketText('max_lines: 50\nunlock:\n  - packages/contracts/openapi.baseline.json\n'));
   const change = (path, added = 1) => ({ path, added, deleted: 0 });
-  assert.deepEqual(evaluateScope({ ticket, changes: [change('apps/operations-web/src/a.tsx'), change('pnpm-lock.yaml', 999)] }).errors, []);
+  const clean = evaluateScope({ ticket, changes: [change('apps/operations-web/src/a.tsx'), change('pnpm-lock.yaml', 999)] });
+  assert.deepEqual([clean.errors, clean.warnings], [[], []]);
   assert.equal(evaluateScope({ ticket, changes: [change('apps/api/prisma/schema.prisma', 999)] }).lines, 0, 'schema.prisma sinh tự động không tính vào max_lines');
-  const { errors } = evaluateScope({ ticket, changes: [
+  const { errors, warnings } = evaluateScope({ ticket, changes: [
     change('apps/customer-web/src/a.tsx'),
     change('apps/operations-web/test/locked.spec.ts'),
     change('docs/08-thi-cong/tickets/HB-001-x.md'),
     change('packages/contracts/openapi.baseline.json'),
+    change('package.json'),
+    change('docs/04-thiet-ke/api.md'),
     change('apps/operations-web/src/big.tsx', 60),
   ] });
-  assert.equal(errors.length, 4);
-  assert.match(errors[0], /ngoài phạm vi/);
-  assert.match(errors[1], /file khoá/);
-  assert.match(errors[2], /bảo vệ/);
-  assert.match(errors[3], /max_lines 50/);
+  assert.equal(errors.length, 2);
+  assert.match(errors[0], /file khoá/);
+  assert.match(errors[1], /HB-001-x\.md: file được bảo vệ/);
+  assert.equal(warnings.length, 4);
+  assert.match(warnings[0], /customer-web\/src\/a\.tsx: ngoài allow/);
+  assert.match(warnings[1], /^package\.json: ngoài allow/);
+  assert.match(warnings[2], /api\.md: ngoài allow/);
+  assert.match(warnings[3], /max_lines 50/);
+  const own = evaluateScope({ ticket, changes: [change('docs/08-thi-cong/tickets/HB-001-x.md')], ownTicketPath: 'docs/08-thi-cong/tickets/HB-001-x.md' });
+  assert.deepEqual(own.errors, [], 'đặc tả tự soạn của chính ticket được tạo');
 });
 
 test('numstat: file nhị phân tính 0 dòng, giữ đường dẫn có tab/dấu cách', () => {
@@ -80,7 +88,7 @@ test('numstat: file nhị phân tính 0 dòng, giữ đường dẫn có tab/d�
     { path: 'a b.ts', added: 3, deleted: 1 }, { path: 'logo.png', added: 0, deleted: 0 }]);
 });
 
-test('CLI đọc ticket từ nhánh nền: sửa ticket trên nhánh không nới được phạm vi', async () => {
+test('CLI: ticket đọc từ main không nới được; ticket mới được tự soạn trên nhánh', async () => {
   const repo = await mkdtemp(join(tmpdir(), 'scope-cli-'));
   const git = (...args) => run('git', args, { cwd: repo });
   const cli = (branch) => run(process.execPath, ['scripts/check-scope.mjs'], { cwd: repo, env: { ...process.env, SCOPE_BASE: 'main', SCOPE_BRANCH: branch, GITHUB_HEAD_REF: '' } });
@@ -97,18 +105,28 @@ test('CLI đọc ticket từ nhánh nền: sửa ticket trên nhánh không nớ
     await git('switch', '-q', '-c', 'ticket/HB-001-ton-phong');
 
     await writeFile(join(repo, 'apps/operations-web/src/page.tsx'), 'export {};\n');
-    assert.match((await cli('ticket/HB-001-ton-phong')).stdout, /trong phạm vi/);
+    assert.match((await cli('ticket/HB-001-ton-phong')).stdout, /— đạt\n/);
 
-    // Tự thêm glob vào ticket trên nhánh: vẫn dùng bản trên main → cả hai file bị chặn.
+    // Tự nới ticket đã có trên main: ticket vẫn đọc từ main, sửa file ticket bị chặn; file ngoài allow chỉ cảnh báo.
     await writeFile(join(repo, 'docs/08-thi-cong/tickets/HB-001-ton-phong.md'), ticketText().replace('allow:\n', 'allow:\n  - apps/customer-web/**\n'));
     await mkdir(join(repo, 'apps/customer-web'), { recursive: true });
     await writeFile(join(repo, 'apps/customer-web/x.ts'), 'x\n');
     const failed = await cli('ticket/HB-001-ton-phong').then(() => undefined, (error) => error);
     assert.ok(failed, 'phải thất bại');
-    assert.match(failed.stderr, /apps\/customer-web\/x\.ts: ngoài phạm vi/);
     assert.match(failed.stderr, /HB-001-ton-phong\.md: file được bảo vệ/);
+    assert.match(failed.stderr, /apps\/customer-web\/x\.ts: ngoài allow/);
 
-    await assert.rejects(cli('ticket/HB-002-chua-co'), /chưa có đặc tả/);
+    // Ticket chưa có trên main: không có đặc tả → chặn kèm hướng dẫn; tự soạn trên nhánh → đạt có cảnh báo.
+    await git('checkout', '-q', '--', '.');
+    await rm(join(repo, 'apps/customer-web'), { recursive: true, force: true });
+    await git('switch', '-q', '-c', 'ticket/HB-002-moi', 'main');
+    await assert.rejects(cli('ticket/HB-002-moi'), /tự soạn/);
+    await writeFile(join(repo, 'docs/08-thi-cong/tickets/HB-002-moi.md'), ticketText().replace('id: HB-001', 'id: HB-002'));
+    await writeFile(join(repo, 'apps/operations-web/src/b.tsx'), 'export {};\n');
+    const self = await cli('ticket/HB-002-moi');
+    assert.match(self.stdout, /đạt \(có cảnh báo\)/);
+    assert.match(self.stderr, /đặc tả tự soạn/);
+
     assert.match((await cli('lead/khac')).stdout, /bỏ qua/);
   } finally {
     await rm(repo, { recursive: true, force: true });
