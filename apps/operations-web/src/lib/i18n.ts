@@ -73,6 +73,30 @@ export const operationsCatalog = {
   'roomTypes.form.cancel': 'Huỷ',
   'roomTypes.created': 'Đã tạo loại phòng {code}',
   'roomTypes.next': 'Tạo tiếp',
+  'ops.nav.rooms': 'Sơ đồ buồng',
+  'enum.roomStatus.ACTIVE': 'Đang dùng',
+  'enum.roomStatus.MAINTENANCE': 'Bảo trì',
+  'enum.roomStatus.INACTIVE': 'Ngừng dùng',
+  'rooms.title': 'Sơ đồ buồng & phòng vật lý',
+  'rooms.intro':
+    'Buồng theo tầng và liên kết phòng thông nhau hai chiều (BR-OVER-15). Chỉ quản lý cơ sở gán được.',
+  'rooms.reload': 'Tải lại',
+  'rooms.col.code': 'Mã phòng',
+  'rooms.col.floor': 'Tầng',
+  'rooms.col.type': 'Loại phòng',
+  'rooms.col.status': 'Trạng thái',
+  'rooms.col.connecting': 'Thông với',
+  'rooms.col.actions': 'Thao tác',
+  'rooms.assign': 'Gán phòng thông nhau',
+  'rooms.unassign': 'Gỡ liên kết',
+  'rooms.asymmetric': '⚠ liên kết một chiều',
+  'rooms.form.legend': 'Gán phòng thông nhau cho {code} (phiên bản {version})',
+  'rooms.form.target': 'Phòng thông nhau',
+  'rooms.form.save': 'Lưu',
+  'rooms.form.cancel': 'Huỷ',
+  'rooms.symmetricNote':
+    'Liên kết hai chiều: máy chủ tự cập nhật cả hai phòng (BR-OVER-15). Danh sách hiện đúng dữ liệu máy chủ trả về.',
+  'rooms.saved': 'Đã cập nhật {code}',
 } as const;
 
 export type OperationsMessageKey = keyof typeof operationsCatalog;
