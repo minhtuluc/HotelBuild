@@ -37,7 +37,7 @@ test('TC-CANCEL-44/45/46/49 generated policies preserve limits, monotonicity and
         expect(engine.calculateCancellation(base)).toEqual(earlier);
       },
     ),
-    { numRuns: 200, seed: 53044 },
+    { numRuns: 10_000, seed: 53044 },
   );
   expect(crossings).toBeGreaterThan(0);
 });
@@ -57,7 +57,7 @@ test('TC-CANCEL-44 allocation property conserves each payment', () => {
         ).toBe(BigInt(amount));
       },
     ),
-    { numRuns: 200, seed: 53019 },
+    { numRuns: 10_000, seed: 53019 },
   );
 });
 
@@ -93,6 +93,6 @@ test('TC-CANCEL-45 every generated policy crosses its own threshold with a stric
         expect(earlier.refundAmount).toBeLessThanOrEqual(paid);
       },
     ),
-    { numRuns: 200, seed: 53045 },
+    { numRuns: 10_000, seed: 53045 },
   );
 });

@@ -149,6 +149,6 @@ test('AC3a generated sequential refunds conserve every collected VND across rece
         expect(base).toEqual(before);
       },
     ),
-    { numRuns: 200, seed: 53003 },
+    { numRuns: 10_000, seed: 53003 },
   );
-});
+}, 30_000);
