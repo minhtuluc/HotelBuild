@@ -1,4 +1,4 @@
-import type { CancellationPolicy } from '../../../src/cancellation/index.js';
+import type { CancellationInput, CancellationPolicy } from '../../../src/cancellation/index.js';
 const tier = (offsetHours: number, refundPercent: number, chargeFirstNight = false) => ({
   offsetHours,
   refundPercent,
@@ -70,3 +70,26 @@ export const decisionTable = rows.map(
     firstNightPrice: plan === 'LONGSTAY14' ? 1_309_000 : plan === 'NONREF' ? 1_122_000 : 1_066_000,
   }),
 );
+
+export const input = (
+  paid = 907_000,
+  minutes = 10_080,
+  policy: CancellationPolicy = policies.FLEX7,
+): CancellationInput => ({
+  state: 'CONFIRMED',
+  policy,
+  checkInDateTime: 0,
+  now: -minutes * 60_000,
+  rooms: [{ bookingRoomId: 'a', firstNightPrice: 1_066_000 }],
+  cancelledRoomIds: ['a'],
+  processedRoomIds: [],
+  payments: [
+    {
+      paymentId: 'p',
+      amount: paid,
+      weights: [{ bookingRoomId: 'a', weight: 3_021_000 }],
+      allocations: [{ bookingRoomId: 'a', amount: paid }],
+      processedRoomIds: [],
+    },
+  ],
+});

@@ -34,11 +34,12 @@ export function calculateCancellation(input: CancellationInput): CancellationDec
     );
     if (allocationIds.size !== canonical.allocations.length)
       fail('E_CANCEL_INVALID_INPUT', 'Incomplete payment allocations');
+    const allocationByRoom = new Map(payment.allocations.map((a) => [a.bookingRoomId, a]));
     for (const id of prior)
       if (!allocationIds.has(id)) fail('E_CANCEL_INVALID_INPUT', 'Unknown processed allocation');
     for (const allocation of canonical.allocations) {
       const id = allocation.bookingRoomId;
-      const actual = payment.allocations.find((a) => a.bookingRoomId === id);
+      const actual = allocationByRoom.get(id);
       if (
         !rooms.has(id) ||
         !actual ||

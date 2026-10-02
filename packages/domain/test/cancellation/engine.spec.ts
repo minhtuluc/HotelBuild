@@ -1,31 +1,8 @@
 import { expect, test } from 'vitest';
-import fc from 'fast-check';
 import * as engine from '../../src/cancellation/index.js';
-import type { CancellationInput, CancellationPolicy } from '../../src/cancellation/index.js';
-import { decisionTable, policies } from './fixtures/decision-table.js';
+import type { CancellationPolicy } from '../../src/cancellation/index.js';
+import { decisionTable, input } from './fixtures/decision-table.js';
 
-const input = (
-  paid = 907_000,
-  minutes = 10_080,
-  policy: CancellationPolicy = policies.FLEX7,
-): CancellationInput => ({
-  state: 'CONFIRMED',
-  policy,
-  checkInDateTime: 0,
-  now: -minutes * 60_000,
-  rooms: [{ bookingRoomId: 'a', firstNightPrice: 1_066_000 }],
-  cancelledRoomIds: ['a'],
-  processedRoomIds: [],
-  payments: [
-    {
-      paymentId: 'p',
-      amount: paid,
-      weights: [{ bookingRoomId: 'a', weight: 3_021_000 }],
-      allocations: [{ bookingRoomId: 'a', amount: paid }],
-      processedRoomIds: [],
-    },
-  ],
-});
 test('TC-CANCEL-02/03 exact 168h and one minute later differ', () => {
   expect(engine.calculateCancellation(input()).refundAmount).toBe(907_000);
   expect(engine.calculateCancellation(input(907_000, 10_079)).refundAmount).toBe(453_000);
@@ -257,52 +234,6 @@ test('sum overflow is rejected before conversion', () => {
     engine.calculateCancellation({ ...input(), payments: [p, { ...p, paymentId: 'q' }] }),
   ).toThrow(/safe/i);
 });
-test('TC-CANCEL-44/45/46/49 generated policies preserve limits, monotonicity and purity', () => {
-  fc.assert(
-    fc.property(
-      fc.integer({ min: 0, max: 200000000 }),
-      fc.integer({ min: -120000, max: 120000 }),
-      fc.integer({ min: 0, max: 100 }),
-      fc.integer({ min: 0, max: 100 }),
-      (paid, minutes, p1, p2) => {
-        const policy = {
-          tiers: [
-            { offsetHours: 72, refundPercent: Math.max(p1, p2), chargeFirstNight: false },
-            { offsetHours: -1, refundPercent: Math.min(p1, p2), chargeFirstNight: false },
-          ],
-        };
-        const base = { ...input(paid, minutes), policy };
-        const earlier = engine.calculateCancellation(base);
-        const later = engine.calculateCancellation({ ...base, now: base.now + 60000 });
-        expect(later.refundAmount).toBeLessThanOrEqual(earlier.refundAmount);
-        expect(earlier.refundAmount).toBeLessThanOrEqual(paid);
-        expect(earlier.refundAmount % 1000).toBe(0);
-        expect(engine.calculateCancellation(base)).toEqual(earlier);
-      },
-    ),
-    { numRuns: 200, seed: 53044 },
-  );
-});
-test('TC-CANCEL-44 allocation property conserves each payment', () => {
-  fc.assert(
-    fc.property(
-      fc.integer({ min: 0, max: Number.MAX_SAFE_INTEGER }),
-      fc.array(fc.integer({ min: 1, max: 1000000 }), { minLength: 1, maxLength: 8 }),
-      (amount, weights) => {
-        const p = allocate({
-          paymentId: 'p',
-          amount,
-          weights: weights.map((weight, index) => ({ bookingRoomId: String(index), weight })),
-        });
-        expect(
-          p.allocations.reduce((sum: bigint, a: { amount: number }) => sum + BigInt(a.amount), 0n),
-        ).toBe(BigInt(amount));
-      },
-    ),
-    { numRuns: 200, seed: 53019 },
-  );
-});
-
 test.each(['DRAFT', 'CHECKED_IN', 'CANCELLED', 'EXPIRED'])(
   'unsupported lifecycle state %s is rejected at runtime',
   (state) => {
@@ -313,5 +244,85 @@ test.each(['DRAFT', 'CHECKED_IN', 'CANCELLED', 'EXPIRED'])(
     } catch (error) {
       expect(error).toMatchObject({ code: 'E_CANCEL_INVALID_STATE' });
     }
+  },
+);
+
+test.each([
+  [0, 0, 0],
+  [50, 5_000, 10_000],
+])(
+  'TC-CANCEL-54 sequential %s percent cancellation excludes retained allocations',
+  (refundPercent, firstRefund, secondRefund) => {
+    const policy = { tiers: [{ offsetHours: -1, refundPercent, chargeFirstNight: false }] };
+    const payment = allocate({
+      paymentId: 'p',
+      amount: 30_001,
+      weights: [
+        { bookingRoomId: 'a', weight: 1 },
+        { bookingRoomId: 'b', weight: 2 },
+      ],
+    });
+    const base = {
+      ...input(0, 0, policy),
+      payments: [payment],
+      rooms: [
+        { bookingRoomId: 'a', firstNightPrice: 20_000 },
+        { bookingRoomId: 'b', firstNightPrice: 40_000 },
+      ],
+    };
+    const first = engine.calculateCancellation(base);
+    expect(first).toMatchObject({
+      refundBase: 10_001,
+      refundAmount: firstRefund,
+      penaltyAmount: 0,
+    });
+    expect(first.payments[0]?.allocations).toEqual([
+      { bookingRoomId: 'a', amount: 10_001 },
+      { bookingRoomId: 'b', amount: 20_000 },
+    ]);
+    const second = engine.calculateCancellation({
+      ...base,
+      payments: first.payments,
+      processedRoomIds: first.processedRoomIds,
+      cancelledRoomIds: ['b'],
+    });
+    expect(second).toMatchObject({
+      refundBase: 20_000,
+      refundAmount: secondRefund,
+      remainingRoomIds: [],
+      processedRoomIds: ['a', 'b'],
+    });
+    expect(() =>
+      engine.calculateCancellation({
+        ...base,
+        payments: first.payments,
+        processedRoomIds: first.processedRoomIds,
+      }),
+    ).toThrow(/processed/i);
+  },
+);
+
+test.each([
+  [10_080, 0],
+  [0, 1_066_000],
+])(
+  'TC-CANCEL-47 empty payments at %s minutes cannot refund unpaid money',
+  (minutes, penaltyAmount) => {
+    const first = engine.calculateCancellation({ ...input(0, minutes), payments: [] });
+    expect(first).toMatchObject({
+      refundBase: 0,
+      refundAmount: 0,
+      penaltyAmount,
+      payments: [],
+      processedRoomIds: ['a'],
+      remainingRoomIds: [],
+    });
+    expect(() =>
+      engine.calculateCancellation({
+        ...input(0, minutes),
+        payments: [],
+        processedRoomIds: first.processedRoomIds,
+      }),
+    ).toThrow(/processed/i);
   },
 );

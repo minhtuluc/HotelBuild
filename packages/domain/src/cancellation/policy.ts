@@ -1,6 +1,10 @@
 import type { CancellationPolicy, CancellationTier } from './index.js';
 import { fail, integer } from './validation.js';
-/** Validate the frozen contract, then compare nominal integer instants without float hours. */
+/**
+ * Validate the frozen contract and compare exact instants without float hours.
+ * @param checkInDateTime Nominal check-in instant in integer milliseconds, computed by the caller.
+ * @param now Cancellation decision instant in integer milliseconds on the same timeline.
+ */
 export function resolveTier(
   policy: CancellationPolicy,
   checkInDateTime: number,

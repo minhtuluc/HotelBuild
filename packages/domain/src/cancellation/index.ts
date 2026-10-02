@@ -26,7 +26,9 @@ export interface AllocatedPayment extends PaymentInput {
 export interface CancellationInput {
   readonly state: 'CONFIRMED';
   readonly policy: CancellationPolicy;
+  /** Nominal check-in instant in integer milliseconds, computed by the caller (including timezone). */
   readonly checkInDateTime: number;
+  /** Cancellation decision instant in integer milliseconds on the same timeline as checkInDateTime. */
   readonly now: number;
   readonly rooms: readonly { readonly bookingRoomId: string; readonly firstNightPrice: number }[];
   readonly cancelledRoomIds: readonly string[];
