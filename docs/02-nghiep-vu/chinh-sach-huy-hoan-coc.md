@@ -182,7 +182,7 @@ netRefund           = max(0, (approvedAmount ?? requestedAmount) − refundFee) 
 | 3 | `resolveTier` → `{offsetHours, refundPercent, chargeFirstNight}` | BR-CANCEL-01 |
 | 4 | Áp ngoại lệ nếu có: bất khả kháng (§9.1) hoặc walk-out (§9.2) **ghi đè** bậc | BR-CANCEL-13/14 |
 | 5 | refundBase theo phân bổ phạm vi huỷ (một phòng, chưa hoàn trước đó: paidAmount) | BR-CANCEL-04 |
-| 6 | `refundAmount` (làm tròn **xuống** 1.000đ) | BR-CANCEL-05, BR-GEN-03 |
+| 6 | `refundAmount` (làm tròn **xuống** 1.000đ; booking chưa xác nhận thì hoàn đúng số đã thu, không làm tròn — BR-BOOK-18) | BR-CANCEL-05, BR-GEN-03 |
 | 7 | `penaltyAmount` (dùng `firstNightPrice` từ `PriceSnapshot`; snapshot được lưu **ngay khi booking rời `DRAFT`**, nên `HELD`/`PENDING_PAYMENT`/`CONFIRMED` đều có) | BR-CANCEL-06, BR-RATE-16 |
 | 8 | Khóa tiền gốc và booking, kiểm tiền đã chi + phần giữ các yêu cầu khác; xung đột thì dừng, không tự giảm nghĩa vụ hoàn | BR-CANCEL-17, BR-PAY-07 |
 | 9 | `refundFee`; `netRefund = max(0, (approvedAmount ?? requestedAmount) − refundFee)` — ngưỡng phê duyệt hai cấp và báo cáo đều so trên `netRefund` | BR-CANCEL-11, BR-CANCEL-05, BR-CANCEL-15 |

@@ -31,9 +31,9 @@ Lời tự báo "đã xong" không thay được bằng chứng; không chạy �
 
 ## 4. Tự quyết hay leo thang
 
-**Tự quyết, ghi vào mục "Quyết định tự đưa ra" của PR, làm tiếp:** đặt tên/cấu trúc file; sửa nhỏ file ngoài `allow` mà ticket cần (helper, client, README, tài liệu thiết kế 03–04 cho khớp mã); vượt `max_lines` với lý do; **thêm** trường/endpoint không phá vỡ vào hợp đồng khi ticket cần; thứ chưa kịp làm và không chạm tiền/tồn/bảo mật → ghi vào `docs/07-ban-giao/no-ky-thuat.md`.
+**Tự quyết, ghi vào mục "Quyết định tự đưa ra" của PR, làm tiếp:** đặt tên/cấu trúc file; sửa nhỏ file ngoài `allow` mà ticket cần (helper, client, README, tài liệu thiết kế 03–04 cho khớp mã); vượt `max_lines` với lý do; **thêm** trường/endpoint không phá vỡ vào hợp đồng khi ticket cần; thứ chưa kịp làm và không chạm tiền/tồn/bảo mật → ghi vào `docs/07-ban-giao/no-ky-thuat.md`. Kế hoạch kiểm thử (`docs/05`) hoặc thiết kế 03–04 mâu thuẫn quy tắc nghiệp vụ (`docs/02`) → làm theo quy tắc nghiệp vụ, sửa tài liệu kia trong cùng PR (QĐ-05).
 
-**Dừng và báo lead (một tin, có đề xuất):** đổi quy tắc nghiệp vụ hoặc yêu cầu (`docs/01`, `docs/02`); thay đổi phá vỡ hợp đồng; đổi ngữ nghĩa tiền, tồn, phân quyền, bảo mật; cần sửa file bảo vệ; hai nguồn tài liệu mâu thuẫn mà mỗi cách hiểu cho kết quả khác; việc lấn sang phạm vi ticket khác đang làm.
+**Dừng và báo lead (một tin, có đề xuất):** đổi quy tắc nghiệp vụ hoặc yêu cầu (`docs/01`, `docs/02`); thay đổi phá vỡ hợp đồng; đổi ngữ nghĩa tiền, tồn, phân quyền, bảo mật; cần sửa file bảo vệ; hai **quy tắc nghiệp vụ** mâu thuẫn nhau; việc lấn sang phạm vi ticket khác đang làm.
 
 ## 5. Ai làm gì
 

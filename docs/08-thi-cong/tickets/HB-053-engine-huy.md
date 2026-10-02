@@ -26,6 +26,7 @@ Hàm thuần tính tiền hoàn/phạt khi huỷ toàn phần hoặc từng phò
 1. Xuất qua `@pinehill/domain/cancellation`. Đầu vào: snapshot policy (bậc, mốc giờ, % hoàn), `paidAmount` theo từng khoản đã thu, phần đã xử lý trước đó, tập `bookingRoomId` bị huỷ, `checkInDateTime`, `now`. Không I/O.
 2. Chọn bậc theo số giờ trước giờ nhận phòng tại biên 336h/168h/72h/24h: đúng 168h00 và 167h59 rơi vào hai bậc khác nhau như tài liệu; policy thiếu bậc bắt tất (catch-all) → lỗi miền rõ ràng.
 3. Tiền hoàn tính trên `paidAmount`, không trên tổng giá; `NONREF` không hoàn.
+3a. Booking **chưa** CONFIRMED (HELD/PENDING_PAYMENT, hết hạn hoặc khách rút): hoàn **đúng số đã thu**, không làm tròn xuống, kể cả phần lẻ do phân bổ (QĐ-05 mục 1; BR-BOOK-18 là ngoại lệ của BR-GEN-03).
 4. Huỷ một phần: phân bổ theo tỷ lệ snapshot từng dòng; hai lần huỷ liên tiếp không dùng lại cùng phần tiền (BR-CANCEL-19).
 5. Test: 100% ca bảng quyết định của tài liệu là dữ liệu chạy (`test.each`), tên chứa mã TC; test thuộc tính TC-CANCEL-44: hoàn không bao giờ vượt tiền đã trả và không tăng khi huỷ muộn hơn.
 6. Phủ nhánh ≥ 90%; `pnpm run ci` xanh.

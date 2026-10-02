@@ -25,7 +25,7 @@
 |----|---------|
 | BR-GEN-01 | Mọi giá trị tiền tệ PHẢI là **số nguyên VND**. KHÔNG ĐƯỢC dùng số thực (`float`/`number` thập phân) để tính tiền ở bất kỳ tầng nào. |
 | BR-GEN-02 | Mọi mốc thời gian PHẢI lưu ở **UTC** trong CSDL và chỉ chuyển sang giờ VN khi hiển thị hoặc khi so mốc nghiệp vụ. |
-| BR-GEN-03 | Làm tròn tiền: **lên** bội số 1.000 VND với giá bán và tiền cọc; **xuống** bội số 1.000 VND với tiền hoàn. |
+| BR-GEN-03 | Làm tròn tiền: **lên** bội số 1.000 VND với giá bán và tiền cọc; **xuống** bội số 1.000 VND với tiền hoàn tính theo chính sách huỷ. Ngoại lệ: hoàn tiền của booking **chưa** xác nhận (BR-BOOK-18) trả đúng số đã thu, không làm tròn ([QĐ-05](../05-ke-hoach/nhat-ky/QD-05-chot-engine-f2f3.md)). |
 | BR-GEN-04 | Thời điểm nhận phòng danh nghĩa = ngày `checkIn` lúc `Property.checkInTime` (mặc định **14:00 giờ VN**). Thời điểm trả phòng danh nghĩa = ngày `checkOut` lúc `Property.checkOutTime` (mặc định **12:00 giờ VN**). |
 | BR-GEN-05 | Múi giờ nghiệp vụ của mọi cơ sở là `Asia/Ho_Chi_Minh`; hệ thống chưa hỗ trợ cơ sở ở múi giờ khác. |
 | BR-GEN-06 | Mã đặt phòng sinh theo `PH-<YYMMDD>-<5 ký tự A-Z0-9>`; PHẢI duy nhất toàn hệ thống kể cả khi hai yêu cầu đến cùng mili-giây. |
