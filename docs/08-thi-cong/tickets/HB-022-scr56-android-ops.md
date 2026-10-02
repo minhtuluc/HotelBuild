@@ -3,7 +3,7 @@ id: HB-022
 title: SCR-56 — đăng nhập + đặt/nhập PIN + secure storage (operations Android)
 risk: R1
 owner: deepseek
-max_lines: 600
+max_lines: 900 # login + đổi mật khẩu + đặt PIN + màn chính + session/storage; lead nâng từ 600 (PR #22)
 allow:
   - apps/operations-android/app/**
   - apps/operations-android/src/**
