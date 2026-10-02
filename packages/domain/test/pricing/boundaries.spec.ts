@@ -320,3 +320,15 @@ it('floor-dropped promotion does not suppress direct-channel underpricing warnin
   expect(q.warnings).toContain('E_RATE_BELOW_FLOOR');
   expect(q.warnings).toContain('E_RATE_DIRECT_BELOW_BASE');
 });
+
+it('TC-RATE-04 TC-RATE-05 no season keeps Friday and Saturday surcharge', () => {
+  for (const [date, checkout, expected] of [
+    ['2026-03-06', '2026-03-07', 780000],
+    ['2026-03-07', '2026-03-08', 780000],
+    ['2026-03-08', '2026-03-09', 650000],
+  ] as const) {
+    const q = quote(input('STD', date, checkout));
+    expect(q.nights[0]?.seasonId).toBeNull();
+    expect(q.total).toBe(expected);
+  }
+});

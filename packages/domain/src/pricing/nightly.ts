@@ -23,7 +23,7 @@ function bounds(i: PricingInput, p: Rational) {
 }
 function weekendMultiplier(i: PricingInput, date: string, enabled: boolean | undefined): Rational {
   const weekday = (((dateDay(date) + 4) % 7) + 7) % 7;
-  return enabled === true && (weekday === 5 || weekday === 6)
+  return enabled !== false && (weekday === 5 || weekday === 6)
     ? decimal(i.settings.weekendMultiplier)
     : ONE;
 }
