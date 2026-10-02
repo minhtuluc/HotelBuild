@@ -47,6 +47,13 @@ export interface ChannelAllotment extends Location {
   readonly date: string;
   readonly allotment: number;
 }
+/**
+ * Loader supplies complete demand, including expired/cancelled facts for unreleased assignments.
+ * For each BookingRoom/night, segments must agree on status, channel and actual location;
+ * moves split half-open segments, with allocatedLocation set only for allocated segments.
+ * Unit modes and loaded fact ranges must satisfy DB constraints. Clock/deadlines must be
+ * finite Dates; absent/null deadlines make holds ineffective. Quotas are safe integers >=0.
+ */
 export interface AvailabilityInput extends Location, NightRange {
   readonly channelCode: ChannelCode;
   readonly now: Date;
@@ -205,10 +212,24 @@ function calculateNight(
     },
   };
 }
-/** Pure per-night calculation. Loaded unit identities and ranges must satisfy DB constraints. */
+function validFacts(input: AvailabilityInput): boolean {
+  return (
+    Number.isFinite(input.now.getTime()) &&
+    input.demand.every(
+      (demand) => demand.holdExpiresAt == null || Number.isFinite(demand.holdExpiresAt.getTime()),
+    ) &&
+    input.allotments.every((row) => Number.isSafeInteger(row.allotment) && row.allotment >= 0)
+  );
+}
+/** Pure per-night calculation; callers must fulfill AvailabilityInput normalization preconditions. */
 export function calculateAvailability(
   input: AvailabilityInput,
 ): Result<Availability, AvailabilityFailure> {
+  if (!validFacts(input))
+    return err({
+      code: 'E_INV_INVALID_INPUT',
+      message: 'Clock/deadlines must be finite Dates and quotas nonnegative safe integers',
+    });
   const dates = stayDates(input);
   if (dates.length === 0)
     return err({

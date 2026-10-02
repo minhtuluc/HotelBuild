@@ -1,51 +1,13 @@
 import { expect, it } from 'vitest';
 import fc from 'fast-check';
+import { fixture, obligation, snapshot, unit } from './fixtures.js';
 import { calculateAvailability } from '../../src/inventory/index.js';
 import type {
-  Availability,
   AvailabilityInput,
   ChannelCode,
   ChannelAllotment,
-  Demand,
-  SellingUnit,
 } from '../../src/inventory/index.js';
 
-const unit = (roomId: string, bedNo = 0): SellingUnit => ({
-  propertyId: 'p',
-  roomTypeId: 't',
-  roomId,
-  bedNo,
-  status: 'ACTIVE',
-});
-const fixture: AvailabilityInput = {
-  propertyId: 'p',
-  roomTypeId: 't',
-  channelCode: 'WEB',
-  checkIn: '2026-11-20',
-  checkOut: '2026-11-21',
-  now: new Date('2026-11-01T00:00:00Z'),
-  units: [unit('r')],
-  demand: [],
-  blocks: [],
-  assignments: [],
-  allotments: [],
-};
-const obligation = (bookingRoomId: string, changes: Partial<Demand> = {}): Demand => ({
-  propertyId: 'p',
-  roomTypeId: 't',
-  checkIn: fixture.checkIn,
-  checkOut: fixture.checkOut,
-  bookingRoomId,
-  channelCode: 'WEB',
-  status: 'CONFIRMED',
-  ...changes,
-});
-function snapshot(changes: Partial<AvailabilityInput> = {}): Availability {
-  const result = calculateAvailability({ ...fixture, ...changes });
-  if (result.ok) return result.value;
-  if (result.error.code === 'E_INV_NO_AVAILABILITY') return result.error.availability;
-  throw new Error(result.error.message);
-}
 it('calculates the pool through the public inventory entrypoint', () => {
   const result = calculateAvailability(fixture);
   expect(result.ok).toBe(true);
@@ -206,7 +168,8 @@ it('TC-INV-06 rejects a five-night stay when the third night has no supply, with
   expect(result.error.availability.continuousUnits).toEqual([]);
 });
 it('cannot infer continuous rooms from positive minimum nightly physical counts', () => {
-  const value = snapshot({
+  const result = calculateAvailability({
+    ...fixture,
     units: [unit('a'), unit('b')],
     checkOut: '2026-11-22',
     blocks: [
@@ -214,6 +177,10 @@ it('cannot infer continuous rooms from positive minimum nightly physical counts'
       { roomId: 'b', checkIn: '2026-11-21', checkOut: '2026-11-22' },
     ],
   });
+  expect(result).toMatchObject({ ok: false, error: { code: 'E_INV_NO_AVAILABILITY' } });
+  if (result.ok || result.error.code !== 'E_INV_NO_AVAILABILITY')
+    throw new Error('Expected continuity failure');
+  const value = result.error.availability;
   expect(value.nightly.map((n) => n.physicalAvailability)).toEqual([1, 1]);
   expect(value.continuousUnits).toEqual([]);
   expect(value.continuousRoomIds).toEqual([]);
@@ -292,15 +259,7 @@ it('applies per-night allotments, every same-channel hold, and leaves direct cha
   expect(
     snapshot({
       channelCode: 'OTA_BOOKING',
-      allotments: [
-        {
-          propertyId: 'other',
-          roomTypeId: 't',
-          channelCode: 'OTA_BOOKING',
-          date: fixture.checkIn,
-          allotment: 5,
-        },
-      ],
+      allotments: allotments.map((row) => ({ ...row, propertyId: 'other' })),
     }).nightly[0]?.channelAvailability,
   ).toBe(1);
 });
