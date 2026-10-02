@@ -25,7 +25,6 @@ import {
 import { errorBodySchema, listResponseSchema } from '../common.js';
 import { bearerWrite, idempotencyHeaders, jsonBody, makeErrorResponse } from './shared.js';
 import { registerF2Paths } from './paths/f2.js';
-import type { ErrorCode } from '../errors.js';
 import { registerF3Paths } from './paths/f3.js';
 
 export const registry = new OpenAPIRegistry();
