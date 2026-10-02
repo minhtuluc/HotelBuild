@@ -40,6 +40,8 @@ Từ QĐ-04, Codex/DeepSeek (và Gemini cho R0) **tự soạn** đặc tả tron
 
 Độ sâu theo hạng ([quy trình §2](README.md#2-hạng-rủi-ro--ai-làm-lead-xét-sâu-đến-đâu)). **Không bao giờ merge khi CI của PR chưa xanh** (bài học HB-005).
 
+**Chỉ merge bằng `pnpm pr:merge <số-PR>`**, không dùng `gh pr merge` trực tiếp. Repo private trên GitHub Free không bật được branch protection/rulesets (thử 02/10/2026: HTTP 403 "Upgrade to GitHub Pro"), nên lệnh này là hàng rào: từ chối PR nháp, xung đột, thiếu hoặc chưa xanh một trong ba check bắt buộc; merge xong chờ CI trên `main` và báo nếu đỏ. Khi nâng lên GitHub Pro thì bật branch protection với cùng ba check.
+
 1. `gh pr checks <n>` xanh mọi job. Báo cáo tự kiểm trong PR đủ mục; thiếu mục nào thì trả lại ngay, không tự chạy hộ.
 2. `check:scope` có cảnh báo thì đọc phần giải trình "Ngoài phạm vi đã sửa"; không hợp lý thì yêu cầu tách.
 3. R0: liếc diff → merge. R1: đọc file chính → merge.
@@ -72,7 +74,7 @@ Từ QĐ-04 vượt `max_lines` chỉ là cảnh báo: người làm giải trì
 | Sự cố | Nguyên nhân | Cách phòng |
 |---|---|---|
 | Agent thi công tự mở nhánh `lead/*` để nới `unlock` (PR #4) | `check:scope` bỏ qua nhánh `lead/*`; chung một tài khoản GitHub | AGENTS.md cấm; lead kiểm tác giả mọi PR `lead/*` |
-| `main` đỏ sau HB-005 | Merge khi CI PR đỏ; CI thiếu `prisma generate` | Kiểm `gh pr checks` trước merge; `postinstall` sinh Prisma Client |
+| `main` đỏ sau HB-005 | Merge khi CI PR đỏ; CI thiếu `prisma generate` | `pnpm pr:merge` từ chối khi check chưa xanh; `postinstall` sinh Prisma Client |
 | HB-004, HB-006, HB-011 vượt `max_lines` | Lead ước thấp | Bảng §5 |
 | HB-001, HB-005 thiếu file trong phạm vi | Đặc tả viết trước khi file liên quan tồn tại / grep bỏ sót | Grep lại toàn repo khi viết; cập nhật ticket khi phụ thuộc merge |
 | `pnpm start` chết ngoài Docker sau HB-027 | Export điều kiện `pinehill-dist` chỉ bật trong image | Mọi lệnh chạy `dist` phải có `--conditions=pinehill-dist`; review phải chạy `pnpm start` thật |
@@ -90,6 +92,6 @@ Từ QĐ-04 vượt `max_lines` chỉ là cảnh báo: người làm giải trì
 
 ## 8. Việc nên làm sớm nếu chưa làm
 
-1. Bật branch protection cho `main` (bắt buộc CI xanh trước merge) — cần người dùng đồng ý.
+1. Branch protection cho `main`: người dùng đã đồng ý (02/10/2026) nhưng GitHub Free chặn với repo private — tạm dùng `pnpm pr:merge`; bật thật khi nâng GitHub Pro hoặc chuyển repo public.
 2. Giao Codex ba engine HB-032, HB-052, HB-053 ngay khi rảnh: không phụ thuộc F1, nằm trên đường găng.
 3. Chốt quyết định hosting (lộ trình §5 mục 1) trước W12, vì HB-175…HB-180 cần vài vòng diễn tập.

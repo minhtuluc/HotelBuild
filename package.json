@@ -24,6 +24,7 @@
     "check:mermaid": "node scripts/check-mermaid.mjs",
     "check:ids": "node scripts/check-ids.mjs",
     "check:scope": "node scripts/check-scope.mjs",
+    "pr:merge": "node scripts/merge-pr.mjs",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d --wait",
     "infra:down": "docker compose -f infra/docker-compose.yml down",
     "extract:sql": "node scripts/extract-sql.mjs",
