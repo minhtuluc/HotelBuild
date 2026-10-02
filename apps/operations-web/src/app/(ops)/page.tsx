@@ -16,6 +16,15 @@ export default function OperationsHomePage(): ReactElement {
         <h2 style={{ fontSize: 'var(--text-h2, 18px)', margin: 0 }}>{t('api.probe.title')}</h2>
         <ApiProbe baseUrl={webEnv().NEXT_PUBLIC_API_BASE_URL} />
       </section>
+      <h2>t('ops.home.screens')</h2>
+      <ul>
+        <li>
+          <a href="/properties">{t('ops.nav.properties')}</a>
+        </li>
+        <li>
+          <a href="/room-types">{t('ops.nav.roomTypes')}</a>
+        </li>
+      </ul>
       <h2>t('ops.home.states')</h2>
       <ul>
         {STATE_SLUGS.map((slug) => (

@@ -2431,6 +2431,152 @@
             }
           }
         }
+      },
+      "get": {
+        "operationId": "roomTypesList",
+        "summary": "Danh sách loại phòng kèm sức chứa và sàn–trần giá (UC-PROP-02, SCR-20)",
+        "tags": [
+          "prop"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "propertyId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách loại phòng",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "propertyId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "code": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 20
+                          },
+                          "capacityAdults": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "capacityChildren": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "basePrice": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "minPrice": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "maxPrice": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "allowShared": {
+                            "type": "boolean"
+                          },
+                          "bedCount": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "propertyId",
+                          "code",
+                          "capacityAdults",
+                          "capacityChildren",
+                          "basePrice",
+                          "minPrice",
+                          "maxPrice",
+                          "allowShared",
+                          "bedCount",
+                          "version"
+                        ]
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "limit",
+                        "nextCursor",
+                        "hasMore",
+                        "total"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/rooms": {

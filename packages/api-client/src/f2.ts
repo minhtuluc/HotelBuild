@@ -48,6 +48,7 @@ export interface PropertyApi {
     ifMatch: string,
   ): Promise<ApiResponse<PropertySummary>>;
   createRoomType(input: RoomTypeCreateRequest): Promise<ApiResponse<RoomTypeSummary>>;
+  listRoomTypes(query?: { propertyId?: string }): Promise<ApiResponse<ListPage<RoomTypeSummary>>>;
   listRooms(query?: {
     propertyId?: string;
     roomTypeId?: string;
@@ -84,6 +85,13 @@ export function createPropertyApi(client: ApiClient): PropertyApi {
         path: '/room-types',
         body: roomTypeCreateRequestSchema.parse(input),
         decoder: roomTypeSummarySchema,
+      }),
+    listRoomTypes: (query) =>
+      client.request({
+        method: 'GET',
+        path: '/room-types',
+        ...(query === undefined ? {} : { query }),
+        decoder: listResponseSchema(roomTypeSummarySchema),
       }),
     listRooms: (query) =>
       client.request({
