@@ -18,4 +18,4 @@ Mỗi lượt có kết quả được ghi thành một dòng JSON trong `.agent
 
 ## Cổng theo hạng rủi ro
 
-Codex chỉ được gọi khi nhánh là `ticket/HB-nnn-*` và ticket tương ứng trong `docs/08-thi-cong/tickets/` có `risk: R2`. Nhánh R0/R1 hoặc nhánh không phải ticket ghi `SKIPPED` (round 0) và không tốn lượt Codex; các hạng này được review ở PR theo [quy trình thi công](../08-thi-cong/README.md#2-hạng-rủi-ro). Ticket thiếu hoặc đặc tả hỏng thì vẫn chạy Codex cho an toàn. Biến môi trường `AGENT_QC=always` ép chạy, `AGENT_QC=never` tắt.
+Codex chỉ được gọi khi nhánh là `ticket/HB-nnn-*` và ticket tương ứng trong `docs/08-thi-cong/tickets/` có `risk: R2`. Nhánh R0/R1 hoặc nhánh không phải ticket ghi `SKIPPED` (round 0) và không tốn lượt Codex; các hạng này được review ở PR theo [quy trình thi công](../08-thi-cong/README.md#2-hạng-rủi-ro--ai-làm-lead-xét-sâu-đến-đâu). Ticket thiếu hoặc đặc tả hỏng thì vẫn chạy Codex cho an toàn. Biến môi trường `AGENT_QC=always` ép chạy, `AGENT_QC=never` tắt.

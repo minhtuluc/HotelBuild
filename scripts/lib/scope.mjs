@@ -7,15 +7,17 @@ export const TICKET_ID = /\bHB-\d{3}\b/;
 export const RISKS = ['R0', 'R1', 'R2'];
 export const DEFAULT_MAX_LINES = 400;
 
-/** File không ticket nào được sửa nếu không ghi tên trong `unlock`. */
+/**
+ * Hàng rào CỨNG (QĐ-04): sửa mà không có trong `unlock` thì cổng đỏ. Chỉ giữ những chỗ mà sửa nhầm
+ * làm hỏng quản trị, hợp đồng đã phát hành, nguồn chân lý nghiệp vụ hoặc CI. Mọi file khác ngoài
+ * `allow` chỉ bị CẢNH BÁO — người làm tự giải trình trong PR, lead xét ở bước cuối.
+ */
 export const PROTECTED = [
   'AGENTS.md',
   'docs/08-thi-cong/**',
   'docs/00-tong-quan.md',
   'docs/01-yeu-cau/**',
   'docs/02-nghiep-vu/**',
-  'docs/03-phan-tich/**',
-  'docs/04-thiet-ke/**',
   'packages/contracts/openapi.baseline.json',
   'packages/config/**',
   '.github/**',
@@ -23,9 +25,6 @@ export const PROTECTED = [
   'scripts/check-scope.mjs',
   'scripts/lib/scope.mjs',
   'scripts/agent-qc/**',
-  'package.json',
-  'pnpm-workspace.yaml',
-  'eslint.config.mjs',
 ];
 
 /** Không tính vào giới hạn kích thước diff (sinh tự động). */
@@ -92,20 +91,25 @@ export const ticketIdFromBranch = (branch) => /^ticket\/(HB-\d{3})(?:-|$)/.exec(
 export const needsCodexQc = (ticket) => ticket?.risk === 'R2';
 
 /**
- * @param {{ ticket: ReturnType<typeof parseTicket>, changes: { path: string, added: number, deleted: number }[] }} input
- * @returns {{ errors: string[], lines: number }}
+ * Lỗi (chặn): sửa file khoá của ticket, hoặc file trong `PROTECTED` mà không có trong `unlock`.
+ * Cảnh báo (không chặn): file ngoài `allow`, diff vượt `max_lines` — giải trình trong PR (QĐ-04).
+ * `ownTicketPath`: đặc tả do người làm tự soạn trên nhánh (ticket chưa có trên main) — được phép tạo.
+ * @param {{ ticket: ReturnType<typeof parseTicket>, changes: { path: string, added: number, deleted: number }[], ownTicketPath?: string }} input
+ * @returns {{ errors: string[], warnings: string[], lines: number }}
  */
-export function evaluateScope({ ticket, changes }) {
+export function evaluateScope({ ticket, changes, ownTicketPath }) {
   const errors = [];
+  const warnings = [];
   let lines = 0;
   for (const { path, added, deleted } of changes) {
-    if (matchesAny(path, ticket.locked)) errors.push(`${path}: file khoá của ${ticket.id} (test/khế ước do người duyệt viết) — không được sửa`);
-    else if (matchesAny(path, PROTECTED) && !matchesAny(path, ticket.unlock)) errors.push(`${path}: file được bảo vệ — cần ticket ghi rõ trong unlock (do lead duyệt)`);
-    else if (!matchesAny(path, [...ticket.allow, ...ticket.unlock])) errors.push(`${path}: ngoài phạm vi allow của ${ticket.id}`);
     if (!matchesAny(path, SIZE_EXEMPT)) lines += added + deleted;
+    if (path === ownTicketPath) continue;
+    if (matchesAny(path, ticket.locked)) errors.push(`${path}: file khoá của ${ticket.id} — không được sửa`);
+    else if (matchesAny(path, PROTECTED) && !matchesAny(path, ticket.unlock)) errors.push(`${path}: file được bảo vệ — báo lead nếu thật sự cần sửa`);
+    else if (!matchesAny(path, [...ticket.allow, ...ticket.unlock])) warnings.push(`${path}: ngoài allow của ${ticket.id} — ghi lý do vào mục "Ngoài phạm vi đã sửa" của PR`);
   }
-  if (lines > ticket.maxLines) errors.push(`Diff ${lines} dòng > max_lines ${ticket.maxLines} — tách ticket hoặc xin lead nâng giới hạn`);
-  return { errors, lines };
+  if (lines > ticket.maxLines) warnings.push(`Diff ${lines} dòng > max_lines ${ticket.maxLines} — ghi lý do vào PR (không chặn)`);
+  return { errors, warnings, lines };
 }
 
 /** Parse `git diff --numstat` (file nhị phân hiện `-`, tính 0 dòng). */

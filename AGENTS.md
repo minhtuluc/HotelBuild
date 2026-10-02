@@ -1,36 +1,50 @@
 # AGENTS.md — luật chung cho mọi agent trong repo HotelBuild
 
-Áp dụng cho DeepSeek (oh-my-pi), Gemini (Antigravity), GPT-6.1 Sol (Codex) và Claude Opus (Kiro). Quy trình đầy đủ: [docs/08-thi-cong/README.md](docs/08-thi-cong/README.md).
+Áp dụng cho Codex (GPT-6.1 Sol), DeepSeek (oh-my-pi), Gemini (Antigravity). Quy trình: [docs/08-thi-cong/README.md](docs/08-thi-cong/README.md) · quyết định quản trị: [QĐ-04](docs/05-ke-hoach/nhat-ky/QD-04-quan-tri-tu-chu.md). Đầu mối báo cáo **duy nhất** là lead (Opus).
 
-## 1. Trước khi làm
+## 1. Nhận việc
 
-1. Xác định ticket `HB-nnn` của mình trong `docs/08-thi-cong/tickets/`. Không có ticket thì không sửa code — hỏi lead.
-2. Làm trên nhánh `ticket/HB-nnn-<slug>` trong worktree riêng **ngoài** `src/` (vd. `../wt/HB-nnn`). Không làm thẳng trên `main`.
-3. Đọc đúng các nguồn mà ticket trỏ tới (BR/UC/API/màn hình). Nguồn chân lý nghiệp vụ là `docs/02-nghiep-vu/quy-tac-nghiep-vu.md`; khi tài liệu mâu thuẫn, dừng lại và báo lead, không tự chọn.
+1. Ticket `HB-nnn` có đặc tả trong `docs/08-thi-cong/tickets/` thì làm theo đặc tả. Chưa có đặc tả mà có dòng trong `docs/08-thi-cong/backlog*.md` và đúng trình độ của mình (bảng §5) → **tự soạn** `docs/08-thi-cong/tickets/HB-nnn-<slug>.md` theo `tickets/_mau.md` làm commit đầu tiên của nhánh, rồi làm tiếp. Không chờ lead.
+2. Làm trên nhánh `ticket/HB-nnn-<slug>` trong worktree riêng ngoài `src/` (vd. `../wt/HB-nnn`).
+3. Đọc đúng nguồn ghi trong ticket. Nguồn chân lý nghiệp vụ là `docs/02-nghiep-vu/quy-tac-nghiep-vu.md`.
 
-## 2. Ranh giới cứng
+## 2. Hàng rào cứng (vi phạm thì PR bị trả)
 
-- Chỉ sửa file khớp `allow` của ticket. `pnpm check:scope` chặn mọi file ngoài phạm vi.
-- **Không** sửa file trong `locked` (test khoá do người duyệt viết) và file được bảo vệ (`scripts/lib/scope.mjs` → `PROTECTED`): tài liệu thiết kế 00–04, ticket, `openapi.baseline.json`, `packages/config`, CI, `package.json`, công cụ QC, file này.
+- Không sửa test khoá (`locked`) của ticket, không sửa file bảo vệ (`PROTECTED` trong `scripts/lib/scope.mjs`) — `check:scope` chặn. Không sửa đặc tả ticket đã có trên `main` (kể cả của mình).
 - Không làm test xanh bằng cách nới assertion, `skip`, `only`, bắt-rồi-nuốt lỗi hoặc mock chính thứ đang kiểm.
-- Không đưa luật giá, policy, phân quyền hay trạng thái nghiệp vụ vào frontend (ADR-018, `pnpm check:imports`).
-- Tiền là VND số nguyên; thời gian và ID truyền qua tham số trong `packages/domain`.
-- Không commit bí mật, dữ liệu khách thật, `.env`. Không push lên remote `nen-ooad` (repo nền chỉ để tham chiếu).
-- Không merge, không force-push, không sửa lịch sử `main`.
-- Không tạo nhánh `lead/*` và không sửa file trong `docs/08-thi-cong/`. Ticket thiếu `allow`/`unlock` hoặc sai đặc tả: dừng, ghi rõ file + dòng + diff đề xuất vào PR, chờ lead sửa ticket.
+- Không phá vỡ hợp đồng API đã phát hành (`pnpm check:contract` phải 0 phá vỡ).
+- Không đưa luật giá, policy, phân quyền hay trạng thái nghiệp vụ vào frontend. Tiền là VND số nguyên; thời gian/ID qua tham số trong `packages/domain`.
+- Không commit bí mật, dữ liệu khách thật, `.env`; không ghi PII/token/mật khẩu vào log.
+- Không merge, không force-push `main`, không push lên remote `nen-ooad`.
 
-## 3. Định nghĩa "xong"
+## 3. Định nghĩa "xong" — tự kiểm trước khi nộp
 
-Một ticket chỉ xong khi các lệnh dưới đây chạy **thật** và xanh trên đúng commit, kèm log trong mô tả PR:
+Nộp PR chỉ khi **tất cả** đạt trên đúng commit nộp:
 
-```sh
-pnpm check:scope
-pnpm run ci        # contract, imports, typecheck, lint, format, coverage, build
-npm run check      # tài liệu + tooling + DB (khi ticket đụng docs/scripts/DDL)
-```
+1. `pnpm run ci` xanh và `pnpm check:scope` không có lỗi (cảnh báo thì giải trình ở PR).
+2. Đụng docs/scripts/DDL thì `npm run check` xanh.
+3. **Chạy thật** đúng loại việc, không chỉ chạy test: backend → `pnpm infra:up` + migrate + gọi endpoint; image → `docker build` + `docker run`; web → `pnpm test:e2e` và mở màn hình; Android → bundle Hermes (smoke thiết bị ghi `BLOCKED` nếu không có máy).
+4. Tự đọc lại diff theo danh sách: bí mật/PII, `new Date()`/`Math.random()` trong miền, quyền thiếu ở endpoint, lỗi bị nuốt, test bị nới.
+5. CI của PR trên GitHub xanh.
 
-Lời tự báo "đã xong/đã test" không phải bằng chứng. Không chạy được cổng nào thì ghi `BLOCKED` + lý do, không ghi đạt.
+Lời tự báo "đã xong" không thay được bằng chứng; không chạy được bước nào thì ghi `BLOCKED` + lý do.
 
-## 4. Báo cáo khi dừng
+## 4. Tự quyết hay leo thang
 
-Mô tả PR (hoặc tin nhắn cuối phiên) gồm: ticket, file đã sửa, lệnh đã chạy + kết quả, phần chưa làm/`BLOCKED`, câu hỏi cho lead. Cùng một lỗi thất bại hai vòng → dừng và chuyển cấp (xem quy trình §5), không thử vòng thứ ba.
+**Tự quyết, ghi vào mục "Quyết định tự đưa ra" của PR, làm tiếp:** đặt tên/cấu trúc file; sửa nhỏ file ngoài `allow` mà ticket cần (helper, client, README, tài liệu thiết kế 03–04 cho khớp mã); vượt `max_lines` với lý do; **thêm** trường/endpoint không phá vỡ vào hợp đồng khi ticket cần; thứ chưa kịp làm và không chạm tiền/tồn/bảo mật → ghi vào `docs/07-ban-giao/no-ky-thuat.md`.
+
+**Dừng và báo lead (một tin, có đề xuất):** đổi quy tắc nghiệp vụ hoặc yêu cầu (`docs/01`, `docs/02`); thay đổi phá vỡ hợp đồng; đổi ngữ nghĩa tiền, tồn, phân quyền, bảo mật; cần sửa file bảo vệ; hai nguồn tài liệu mâu thuẫn mà mỗi cách hiểu cho kết quả khác; việc lấn sang phạm vi ticket khác đang làm.
+
+## 5. Ai làm gì
+
+| Trình độ | Agent | Nhận |
+|---|---|---|
+| 1 | Codex (GPT-6.1 Sol) | Mọi R2 lõi: engine miền, khoá/đồng thời, tiền (ledger, PSP, hoàn, chi), auth/RBAC/phiên/PIN, migration, idempotency/inbox/outbox/worker, BFF, CI/hạ tầng/deploy/bảo mật/tải. Tự viết test của mình. Được tách phần ít rủi ro cho DeepSeek bằng test khoá nếu muốn |
+| 2 | DeepSeek | R1: hợp đồng (thêm mới), use case CRUD không có tiền/đồng thời, màn hình 4 frontend, seed, script, Docker; phần B của R2 khi Codex giao kèm test khoá |
+| 3 | Gemini | R0: tài liệu, i18n, accessibility, kịch bản E2E/Maestro, chạy QA và ghi bằng chứng, dữ liệu kiểm thử; review khi được nhờ |
+
+Gặp việc vượt trình độ của mình thì báo lead để chuyển, không cố làm.
+
+## 6. Nộp bài
+
+Mở PR (mẫu `.github/pull_request_template.md`), điền đủ: ticket, đã chạy gì và kết quả, ngoài phạm vi đã sửa, quyết định tự đưa ra, nợ kỹ thuật đã ghi, `BLOCKED`. Báo lead một lần khi PR sẵn sàng; không chờ agent khác review.

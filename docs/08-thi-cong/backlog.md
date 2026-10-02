@@ -2,6 +2,8 @@
 
 **Toàn bộ đường tới deploy:** [lộ trình đến deploy](lo-trinh-den-deploy.md) · [sổ tay lead](so-tay-lead.md) · backlog [F2–F3](backlog-f2-f3.md) · [F4–F5](backlog-f4-f5.md) · [F6–F7](backlog-f6-f7.md) · [F8–F9](backlog-f8-f9.md). Trang này giữ B0 và F1.
 
+**Cột "Làm" theo QĐ-04:** "Codex (test khoá) → DeepSeek" nghĩa là Codex sở hữu ticket và tự quyết làm trọn hay tách phần ít rủi ro cho DeepSeek kèm test khoá. Không còn bắt buộc Gemini/Codex review chéo; người làm tự kiểm theo AGENTS.md §3 rồi báo lead.
+
 Thứ tự và phân công. Chỉ ticket có file trong [tickets/](tickets/) mới được giao; các dòng "chưa đặc tả" sẽ được lead viết đặc tả khi các ticket mà nó phụ thuộc đã merge, để đặc tả bám mã thật. Quyết định nền: [QĐ-02](../05-ke-hoach/nhat-ky/QD-02-nen-tang-backend.md).
 
 ## Đợt B0 — nền backend (US-INF-01 phần còn lại, US-INF-02, US-SYS-01)
