@@ -37,6 +37,7 @@ Tài liệu phân tích – thiết kế – kế hoạch triển khai cho đồ
 | 05 | [QĐ-02 — Nền tảng backend](05-ke-hoach/nhat-ky/QD-02-nen-tang-backend.md) | Logger, migration baseline từ csdl §3, role migration/runtime, 54 mã lỗi, đề xuất F1 (phiên, BFF cookie, PIN) | ✅ |
 | 05 | [QĐ-03 — Định danh, phiên F1](05-ke-hoach/nhat-ky/QD-03-dinh-danh-phien-f1.md) | 10 quyết định phỏng vấn người dùng (cookie BFF, idle, khoá, PIN, gán vai trò, OWNER đầu tiên, quên mật khẩu email) + quyết định kỹ thuật F1 | ✅ |
 | 05 | [QĐ-04 — Quản trị tự chủ](05-ke-hoach/nhat-ky/QD-04-quan-tri-tu-chu.md) | Giao việc theo trình độ, tự đảm bảo chất lượng, một đầu mối báo cáo, `check:scope` chỉ chặn file khoá/bảo vệ | ✅ |
+| 05 | [QĐ-05 — Chốt engine F2/F3](05-ke-hoach/nhat-ky/QD-05-chot-engine-f2f3.md) | 9 mâu thuẫn tài liệu cho engine tồn/giá/huỷ; hoàn đúng số đã thu trước xác nhận | ✅ |
 | 07 | [Nợ kỹ thuật](07-ban-giao/no-ky-thuat.md) | Những gì chấp nhận làm sau, không chạm tiền/tồn/bảo mật | 🔄 |
 | 05 | [Kế hoạch Sprint](05-ke-hoach/ke-hoach-sprint.md) | Backlog, user story, tiêu chí chấp nhận từng sprint | ✅ |
 | 05 | [Quy tắc kỹ thuật](05-ke-hoach/quy-tac-ky-thuat.md) | Chuẩn code, git, review, DoR/DoD, chính sách test | ✅ |
