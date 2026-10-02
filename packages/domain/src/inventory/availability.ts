@@ -1,5 +1,7 @@
 import { err, ok } from '../shared/result.js';
 import type { Result } from '../shared/result.js';
+export type ChannelCode =
+  'WEB' | 'PHONE' | 'WALKIN' | 'OTA_BOOKING' | 'OTA_AGODA' | 'OTA_AIRBNB' | 'AGENCY';
 export interface Location {
   readonly propertyId: string;
   readonly roomTypeId: string;
@@ -27,7 +29,7 @@ export interface Assignment extends NightRange, UnitIdentity {
 }
 export interface Demand extends NightRange, Location {
   readonly bookingRoomId: string;
-  readonly channelCode: string;
+  readonly channelCode: ChannelCode;
   readonly status:
     | 'CONFIRMED'
     | 'CHECKED_IN'
@@ -41,13 +43,12 @@ export interface Demand extends NightRange, Location {
   readonly allocatedLocation?: Location;
 }
 export interface ChannelAllotment extends Location {
-  readonly channelCode: string;
+  readonly channelCode: ChannelCode;
   readonly date: string;
-  /** null explicitly represents a channel without a separate limit. */
-  readonly allotment: number | null;
+  readonly allotment: number;
 }
 export interface AvailabilityInput extends Location, NightRange {
-  readonly channelCode: string;
+  readonly channelCode: ChannelCode;
   readonly now: Date;
   readonly units: readonly SellingUnit[];
   readonly blocks: readonly RoomBlock[];
@@ -152,21 +153,24 @@ function blockedKeys(
       .map(unitKey),
   );
 }
+function defaultOtaQuota(activeCount: number): number {
+  return activeCount > 0 ? Math.max(1, Math.floor((activeCount * 80) / 100)) : 0;
+}
 function channelAvailability(
   input: AvailabilityInput,
   date: string,
   pool: number,
   used: number,
+  activeCount: number,
 ): number {
   if (directChannels.has(input.channelCode)) return Math.max(0, pool);
   const allotment = input.allotments.find(
     (item) =>
       sameLocation(item, input) && item.channelCode === input.channelCode && item.date === date,
   );
-  // A missing limited-channel configuration grants no quota; null is explicit unlimited.
-  if (!allotment) return 0;
-  if (allotment.allotment === null) return Math.max(0, pool);
-  return Math.max(0, Math.min(pool, allotment.allotment - used));
+  const defaultQuota = input.channelCode === 'AGENCY' ? 0 : defaultOtaQuota(activeCount);
+  const quota = allotment?.allotment ?? defaultQuota;
+  return Math.max(0, Math.min(pool, quota - used));
 }
 function calculateNight(
   input: AvailabilityInput,
@@ -196,7 +200,7 @@ function calculateNight(
       pool,
       used,
       commercialAvailability: Math.max(0, pool),
-      channelAvailability: channelAvailability(input, date, pool, used),
+      channelAvailability: channelAvailability(input, date, pool, used, units.length),
       physicalAvailability: free.length,
     },
   };

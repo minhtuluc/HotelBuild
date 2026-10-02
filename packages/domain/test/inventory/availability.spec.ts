@@ -4,6 +4,8 @@ import { calculateAvailability } from '../../src/inventory/index.js';
 import type {
   Availability,
   AvailabilityInput,
+  ChannelCode,
+  ChannelAllotment,
   Demand,
   SellingUnit,
 } from '../../src/inventory/index.js';
@@ -53,13 +55,13 @@ it('calculates the pool through the public inventory entrypoint', () => {
 it('TC-INV-05 counts obligations once across all channels without adding assignments', () => {
   const demand = Array.from({ length: 5 }, (_, i) =>
     obligation(`b${i}`, {
-      channelCode: 'OTA',
+      channelCode: 'OTA_BOOKING',
       ...(i >= 3 ? { status: 'HELD', holdExpiresAt: new Date('2026-11-02Z') } : {}),
     }),
   );
   expect(
     snapshot({
-      channelCode: 'OTA',
+      channelCode: 'OTA_BOOKING',
       units: Array.from({ length: 20 }, (_, i) => unit(`r${i}`)),
       demand: [...demand, ...demand],
       blocks: [{ roomId: 'r19', checkIn: fixture.checkIn, checkOut: fixture.checkOut }],
@@ -70,7 +72,7 @@ it('TC-INV-05 counts obligations once across all channels without adding assignm
         {
           propertyId: 'p',
           roomTypeId: 't',
-          channelCode: 'OTA',
+          channelCode: 'OTA_BOOKING',
           date: fixture.checkIn,
           allotment: 15,
         },
@@ -116,7 +118,10 @@ it('TC-INV-04 ignores expired holds before a cleanup job, with strict deadline e
 it('counts CHECKED_IN, obligations on other channels, and unassigned oversold demand with a negative pool', () => {
   expect(
     snapshot({
-      demand: [obligation('a', { channelCode: 'OTA', status: 'CHECKED_IN' }), obligation('b')],
+      demand: [
+        obligation('a', { channelCode: 'OTA_BOOKING', status: 'CHECKED_IN' }),
+        obligation('b'),
+      ],
     }).nightly[0],
   ).toMatchObject({
     demand: 2,
@@ -254,23 +259,23 @@ it('TC-INV-11 calculates DOR beds by composite identity and half-open adjacent s
   ]);
   expect(value.continuousRoomIds).toEqual(['a', 'c']);
 });
-it('applies per-night allotments, every same-channel hold, and leaves direct or explicitly unlimited channels uncapped', () => {
-  const allotments = ['2026-11-20', '2026-11-21'].map((date, i) => ({
+it('applies per-night allotments, every same-channel hold, and leaves direct channels uncapped', () => {
+  const allotments: ChannelAllotment[] = ['2026-11-20', '2026-11-21'].map((date, i) => ({
     propertyId: 'p',
     roomTypeId: 't',
-    channelCode: 'OTA',
+    channelCode: 'OTA_BOOKING',
     date,
     allotment: i + 1,
   }));
   expect(
     snapshot({
       units: [unit('a'), unit('b'), unit('c')],
-      channelCode: 'OTA',
+      channelCode: 'OTA_BOOKING',
       checkOut: '2026-11-22',
       allotments,
       demand: [
         obligation('held', {
-          channelCode: 'OTA',
+          channelCode: 'OTA_BOOKING',
           status: 'HELD',
           holdExpiresAt: new Date('2026-11-02Z'),
           checkOut: '2026-11-22',
@@ -278,40 +283,26 @@ it('applies per-night allotments, every same-channel hold, and leaves direct or 
       ],
     }).nightly.map((n) => n.channelAvailability),
   ).toEqual([0, 1]);
-  for (const channelCode of ['WEB', 'PHONE', 'WALKIN'])
+  for (const channelCode of ['WEB', 'PHONE', 'WALKIN'] satisfies ChannelCode[])
     expect(
       snapshot({ channelCode, allotments: [{ ...allotments[0]!, channelCode, allotment: 0 }] })
         .nightly[0]?.channelAvailability,
     ).toBe(1);
+  expect(snapshot({ channelCode: 'OTA_BOOKING' }).nightly[0]?.channelAvailability).toBe(1);
   expect(
     snapshot({
-      channelCode: 'OTA',
-      allotments: [
-        {
-          propertyId: 'p',
-          roomTypeId: 't',
-          channelCode: 'OTA',
-          date: fixture.checkIn,
-          allotment: null,
-        },
-      ],
-    }).nightly[0]?.channelAvailability,
-  ).toBe(1);
-  expect(snapshot({ channelCode: 'OTA' }).nightly[0]?.channelAvailability).toBe(0);
-  expect(
-    snapshot({
-      channelCode: 'OTA',
+      channelCode: 'OTA_BOOKING',
       allotments: [
         {
           propertyId: 'other',
           roomTypeId: 't',
-          channelCode: 'OTA',
+          channelCode: 'OTA_BOOKING',
           date: fixture.checkIn,
           allotment: 5,
         },
       ],
     }).nightly[0]?.channelAvailability,
-  ).toBe(0);
+  ).toBe(1);
 });
 it('keeps date arithmetic deterministic across month and year boundaries', () => {
   expect(
@@ -366,3 +357,22 @@ for (const code of [
   it.todo(`${code}: CSDL/transaction/integration/load thuộc HB-076/HB-008`);
 it.todo('TC-INV-04: scheduler release SLA and transaction thuộc HB-076/HB-008');
 it.todo('TC-INV-11: SQL exclusion and bedNo mode validation thuộc HB-076/HB-008');
+
+it('defaults each missing OTA quota to 80 percent of ACTIVE units before blocks, with a minimum of one', () => {
+  for (const channelCode of ['OTA_BOOKING', 'OTA_AGODA', 'OTA_AIRBNB'] satisfies ChannelCode[]) {
+    for (const count of [0, 1, 12]) {
+      const units = Array.from({ length: count }, (_, i) => unit(`r${i}`, 1));
+      expect(snapshot({ channelCode, units }).nightly[0]?.channelAvailability).toBe(
+        count === 0 ? 0 : Math.max(1, Math.floor(count * 0.8)),
+      );
+    }
+    expect(
+      snapshot({
+        channelCode,
+        units: Array.from({ length: 5 }, (_, i) => unit(`r${i}`)),
+        blocks: [{ roomId: 'r0', checkIn: fixture.checkIn, checkOut: fixture.checkOut }],
+      }).nightly[0]?.channelAvailability,
+    ).toBe(4);
+  }
+  expect(snapshot({ channelCode: 'AGENCY' }).nightly[0]?.channelAvailability).toBe(0);
+});
