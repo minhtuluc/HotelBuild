@@ -97,6 +97,23 @@ export const operationsCatalog = {
   'rooms.symmetricNote':
     'Liên kết hai chiều: máy chủ tự cập nhật cả hai phòng (BR-OVER-15). Danh sách hiện đúng dữ liệu máy chủ trả về.',
   'rooms.saved': 'Đã cập nhật {code}',
+  'ops.nav.grid': 'Lưới tồn',
+  'grid.title': 'Lưới tồn phòng theo ngày',
+  'grid.intro':
+    'Tồn công bố theo BR-INV-01: max(0, pool); pool nội bộ có thể âm. Đổi khoảng ngày chỉ tải lại dữ liệu, không nạp lại trang. Khoảng tối đa 31 ngày (NFR-PERF-05).',
+  'grid.tableLabel': 'Lưới tồn phòng theo ngày và loại phòng',
+  'grid.col.roomType': 'Loại phòng',
+  'grid.form.property': 'Cơ sở',
+  'grid.form.from': 'Từ ngày',
+  'grid.form.to': 'Đến ngày',
+  'grid.form.load': 'Tải lưới',
+  'grid.rangeTooLong': 'Khoảng tối đa {max} ngày — chọn lại khoảng ngắn hơn.',
+  'grid.updated': 'Lưới {from} → {to} · {roomTypes} loại phòng',
+  'grid.cellLabel': 'còn {available}, tổng {supply}, đã cam kết {demand}',
+  'grid.status.available': 'Còn bán',
+  'grid.status.held': 'Hết tồn (đã cam kết hoặc giữ chỗ)',
+  'grid.status.blocked': 'Khoá phòng',
+  'grid.status.oversold': 'Quá tải',
 } as const;
 
 export type OperationsMessageKey = keyof typeof operationsCatalog;
