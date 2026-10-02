@@ -306,9 +306,12 @@ test('TC-CANCEL-44 allocation property conserves each payment', () => {
 test.each(['DRAFT', 'CHECKED_IN', 'CANCELLED', 'EXPIRED'])(
   'unsupported lifecycle state %s is rejected at runtime',
   (state) => {
-    // @ts-expect-error External callers must also be rejected when bypassing the typed CONFIRMED contract.
-    expect(() => engine.calculateCancellation({ ...input(), state })).toThrowError(
-      expect.objectContaining({ code: 'E_CANCEL_INVALID_STATE' }),
-    );
+    expect.assertions(1);
+    try {
+      // @ts-expect-error External callers must also be rejected when bypassing the typed CONFIRMED contract.
+      engine.calculateCancellation({ ...input(), state });
+    } catch (error) {
+      expect(error).toMatchObject({ code: 'E_CANCEL_INVALID_STATE' });
+    }
   },
 );
