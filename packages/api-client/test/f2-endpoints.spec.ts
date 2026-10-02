@@ -53,6 +53,10 @@ const ROUTES: Record<string, (request: Recorded) => Outcome> = {
   }),
   'PATCH /api/v1/properties/p1': () => ({ status: 200, body: PROPERTY }),
   'POST /api/v1/room-types': () => ({ status: 201, body: ROOM_TYPE }),
+  'GET /api/v1/room-types?propertyId=p1': () => ({
+    status: 200,
+    body: { data: [ROOM_TYPE], meta: { limit: 20, nextCursor: null, hasMore: false, total: 1 } },
+  }),
   'GET /api/v1/inventory/grid?propertyId=p1&from=2026-11-01&to=2026-11-03': () => ({
     status: 200,
     body: {
@@ -185,6 +189,15 @@ describe('hợp đồng F2 qua HTTP thật', () => {
     });
     expect(created.status).toBe(201);
     expect(created.data.basePrice).toBe(900_000);
+  });
+
+  it('GET /room-types lọc theo cơ sở và trả sàn–trần nguyên VND (HB-037)', async () => {
+    const page = await createPropertyApi(client()).listRoomTypes({ propertyId: 'p1' });
+    expect(page.data.meta.total).toBe(1);
+    const roomType = page.data.data[0];
+    expect(roomType?.minPrice).toBe(700_000);
+    expect(roomType?.maxPrice).toBe(1_400_000);
+    expect(recorded(0).url).toBe('/api/v1/room-types?propertyId=p1');
   });
 
   it('GET /inventory/grid gửi đủ tham số ngày và giải mã ô tồn', async () => {

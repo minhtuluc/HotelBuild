@@ -1,54 +1,21 @@
 import type { ScreenState } from '@pinehill/ui-web';
+import {
+  DEMO_STATES,
+  demoState,
+  isDemoStateSlug,
+  type DemoStateSlug,
+} from '../../../lib/demo-states';
 
-/** Slug dùng trên tuyến `?state=` để kiểm tra thủ công và chạy axe/e2e ở mọi trạng thái. */
-export const STATE_SLUGS = [
-  'ready',
-  'loading',
-  'refreshing',
-  'empty',
-  'validation-error',
-  'forbidden',
-  'conflict',
-  'expired',
-  'unknown-outcome',
-  'success',
-] as const;
+/**
+ * Tuyến `?state=<slug>` của khung F0. Danh sách slug và fixture dùng chung với các màn nghiệp vụ
+ * (`lib/demo-states.ts`) để hai nơi không lệch nhau.
+ */
+export const STATE_SLUGS = DEMO_STATES;
 
-export type StateSlug = (typeof STATE_SLUGS)[number];
+export type StateSlug = DemoStateSlug;
 
-export function isStateSlug(value: string): value is StateSlug {
-  return STATE_SLUGS.some((slug) => slug === value);
-}
-
-const updatedAt = '2026-11-12T07:00:00.000Z';
-const expiresAt = '2026-11-12T07:15:00.000Z';
-
-/** Fixture của F0 — dữ liệu minh hoạ, không gọi API nghiệp vụ. */
-const FIXTURES: Record<StateSlug, ScreenState> = {
-  ready: { kind: 'ready' },
-  loading: { kind: 'loading' },
-  refreshing: { kind: 'refreshing', updatedAt, stale: false },
-  empty: { kind: 'empty', reason: 'soldOut', canCreate: false },
-  'validation-error': {
-    kind: 'validationError',
-    details: [{ field: 'adults', issue: 'OUT_OF_RANGE' }],
-  },
-  forbidden: { kind: 'forbidden' },
-  conflict: {
-    kind: 'conflict',
-    currentVersion: '8',
-    attemptedVersion: '7',
-    onReload: () => undefined,
-  },
-  expired: { kind: 'expired', expiresAt, onReload: () => undefined },
-  'unknown-outcome': {
-    kind: 'unknownOutcome',
-    referenceId: 'trace-f0-demo',
-    onLookup: () => undefined,
-  },
-  success: { kind: 'success' },
-};
+export const isStateSlug = isDemoStateSlug;
 
 export function createFixture(slug: StateSlug): ScreenState {
-  return FIXTURES[slug];
+  return demoState(slug);
 }

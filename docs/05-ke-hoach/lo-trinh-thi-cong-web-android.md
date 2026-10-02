@@ -195,7 +195,7 @@ flowchart LR
 
 **Màn hình:** `SCR-19` (cơ sở), `SCR-20` (loại phòng/sức chứa/sàn–trần), `SCR-21` (sơ đồ buồng, phòng thông nhau), `SCR-22` (khoá phòng bảo trì), `SCR-23` (bảng điều khiển ngày), `SCR-24` (lưới tồn phòng theo ngày), `SCR-25` (allotment theo kênh), `SCR-16` (nhật ký kiểm toán), `SCR-17` (tham số hệ thống), `SCR-18` (sao lưu & phục hồi).
 
-**Hợp đồng bắt buộc:** PROP 7 endpoint; `/api/v1/inventory/grid`, `/api/v1/channel-allotments`; `/api/v1/audit-logs`, `/api/v1/system-settings/{key}`, `/api/v1/system/backups`, `/api/v1/system/health`; mã `E_INV_NO_AVAILABILITY`, `E_INV_LOCK_TIMEOUT`, `E_GEN_PRECONDITION_REQUIRED`, `E_GEN_VERSION_CONFLICT`.
+**Hợp đồng bắt buộc:** PROP 8 endpoint (thêm `GET /api/v1/room-types` cho SCR-20 — HB-037); `/api/v1/inventory/grid`, `/api/v1/channel-allotments`; `/api/v1/audit-logs`, `/api/v1/system-settings/{key}`, `/api/v1/system/backups`, `/api/v1/system/health`; mã `E_INV_NO_AVAILABILITY`, `E_INV_LOCK_TIMEOUT`, `E_GEN_PRECONDITION_REQUIRED`, `E_GEN_VERSION_CONFLICT`.
 
 **FR/UC:** FR-PROP-01…FR-PROP-07, FR-INV-01, FR-INV-06, FR-INV-07, FR-SYS-01…FR-SYS-03; UC-PROP-01…UC-PROP-04, UC-INV-01, UC-INV-03, UC-SYS-01, UC-SYS-02.
 

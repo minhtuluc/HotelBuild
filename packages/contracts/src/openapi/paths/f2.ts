@@ -93,6 +93,23 @@ export function registerF2Paths(registry: OpenAPIRegistry, errorBodyComponent: z
 
   registry.registerPath({
     method: 'get',
+    path: '/api/v1/room-types',
+    operationId: 'roomTypesList',
+    summary: 'Danh sách loại phòng kèm sức chứa và sàn–trần giá (UC-PROP-02, SCR-20)',
+    tags: ['prop'],
+    ...bearerRead,
+    request: { query: z.object({ propertyId: z.string().min(1).optional() }) },
+    responses: {
+      200: {
+        description: 'Danh sách loại phòng',
+        ...jsonBody(listResponseSchema(roomTypeSummarySchema)),
+      },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
     path: '/api/v1/rooms',
     operationId: 'roomsList',
     summary: 'Danh sách phòng vật lý (UC-PROP-03)',

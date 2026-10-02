@@ -58,6 +58,7 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['get', '/api/v1/properties', 'bearer'],
   ['patch', '/api/v1/properties/{propertyId}', 'bearer'],
   ['post', '/api/v1/room-types', 'bearer'],
+  ['get', '/api/v1/room-types', 'bearer'],
   ['get', '/api/v1/rooms', 'bearer'],
   ['put', '/api/v1/rooms/{roomId}/connecting-room', 'bearer'],
   ['post', '/api/v1/room-blocks', 'bearer'],
