@@ -24,6 +24,11 @@
       "pinehill-dist": "./dist/cancellation/index.js",
       "types": "./src/cancellation/index.ts",
       "default": "./src/cancellation/index.ts"
+    },
+    "./overbooking": {
+      "pinehill-dist": "./dist/overbooking/index.js",
+      "types": "./src/overbooking/index.ts",
+      "default": "./src/overbooking/index.ts"
     }
   },
   "scripts": {
