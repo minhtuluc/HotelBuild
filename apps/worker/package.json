@@ -10,6 +10,7 @@
     "start": "node --conditions=pinehill-dist dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
+    "test:integration": "node ../../scripts/test-integration.mjs worker",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {

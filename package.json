@@ -36,6 +36,7 @@
     "lint": "eslint . --max-warnings 0",
     "format:check": "prettier --check \"apps/**/*.{ts,tsx,mjs,js,json,css}\" \"packages/**/*.{ts,tsx,mjs,js,json}\"",
     "products:test": "pnpm -r test",
+    "test:integration": "pnpm --filter @pinehill/api test:integration && pnpm --filter @pinehill/worker test:integration",
     "products:test:coverage": "pnpm -r test:coverage",
     "products:build": "pnpm -r build",
     "openapi:generate": "pnpm --filter @pinehill/contracts openapi:generate",

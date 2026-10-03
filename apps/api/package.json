@@ -11,6 +11,7 @@
     "start": "node --conditions=pinehill-dist dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run --no-file-parallelism",
+    "test:integration": "node ../../scripts/test-integration.mjs api",
     "test:coverage": "vitest run --coverage --no-file-parallelism",
     "db:pull": "prisma db pull",
     "db:generate": "prisma generate"
