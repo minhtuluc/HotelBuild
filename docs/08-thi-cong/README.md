@@ -1,6 +1,6 @@
 # 08 — Quy trình thi công
 
-Áp dụng từ 02/10/2026 theo [QĐ-04](../05-ke-hoach/nhat-ky/QD-04-quan-tri-tu-chu.md) (thay mô hình duyệt nhiều tầng của bản 01/10). Luật ngắn cho agent: [AGENTS.md](../../AGENTS.md). Đường tới deploy: [lộ trình](lo-trinh-den-deploy.md). Người thay vai lead: [sổ tay lead](so-tay-lead.md).
+Áp dụng từ 02/10/2026 theo [QĐ-04](../05-ke-hoach/nhat-ky/QD-04-quan-tri-tu-chu.md) (thay mô hình duyệt nhiều tầng của bản 01/10). Luật ngắn cho agent: [AGENTS.md](../../AGENTS.md). Đường tới deploy: [lộ trình](lo-trinh-den-deploy.md). Người thay vai lead: [sổ tay lead](so-tay-lead.md). Đặc tả F6: [backlog và ticket](backlog-f6-f7.md), [các điểm chưa chốt](f6-diem-cho-chot.md).
 
 Nguyên tắc: **giao theo trình độ, mỗi đơn vị tự chịu chất lượng trong phạm vi của mình, một đầu mối báo cáo, lead chỉ xét bước cuối.** Hàng rào cứng chỉ giữ ở những chỗ mà sai thì không bù được khi vận hành (QĐ-04 mục "Không nới").
 
