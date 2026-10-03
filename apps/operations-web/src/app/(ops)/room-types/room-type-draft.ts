@@ -4,6 +4,7 @@
  * (BR-RATE-03, BR-RATE-04).
  */
 import type { RoomTypeCreateRequest } from '@pinehill/contracts';
+import { toMoney } from '../../../lib/money';
 
 export interface RoomTypeDraft {
   propertyId: string;
@@ -28,13 +29,6 @@ export const EMPTY_ROOM_TYPE_DRAFT: RoomTypeDraft = {
   bedCount: '1',
   allowShared: false,
 };
-
-/** Chuyển chuỗi nhập thành số nguyên VND; trả `null` khi để trống hoặc không phải số nguyên dương. */
-export function toMoney(value: string): number | null {
-  if (value.trim() === '') return null;
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-}
 
 function toCount(value: string, minimum: number): number | null {
   const parsed = Number(value);

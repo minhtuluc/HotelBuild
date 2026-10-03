@@ -28,6 +28,12 @@ export const rateCalendarEntrySchema = z.object({
   channelMultiplier: multiplier,
   clamped: z.boolean(),
   nightlyPrice: z.number().int().positive(),
+  /**
+   * Nguồn giá đang thắng của ngày (BR-RATE-02: OVERRIDE → RATE_PLAN → SEASON → BASE) và tên mùa
+   * đang thắng, cùng lấy từ hàm phân giải của engine giá (HB-054 AC1) — giao diện **không** tự suy.
+   */
+  source: rateSourceSchema.optional(),
+  seasonName: z.string().min(1).max(120).optional(),
 });
 
 export const rateCalendarSchema = z.object({
@@ -35,6 +41,8 @@ export const rateCalendarSchema = z.object({
   from: businessDateSchema,
   to: businessDateSchema,
   entries: z.array(rateCalendarEntrySchema),
+  /** Cảnh báo nghiệp vụ của máy chủ (vd. `LONGSTAY14` chưa có giá riêng — BR-RATE-19, HB-054 AC2). */
+  warnings: z.array(z.string().min(1)).optional(),
 });
 
 /** `PUT /room-types/{roomTypeId}/rate-calendar` — ghi đè `source = OVERRIDE`; vượt ±20% cần OWNER xác nhận (BR-RBAC-04). */

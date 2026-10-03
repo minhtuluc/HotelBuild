@@ -4336,6 +4336,20 @@
                           "nightlyPrice": {
                             "type": "integer",
                             "exclusiveMinimum": 0
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "BASE",
+                              "SEASON",
+                              "OVERRIDE",
+                              "RATE_PLAN"
+                            ]
+                          },
+                          "seasonName": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
                           }
                         },
                         "required": [
@@ -4349,6 +4363,13 @@
                           "clamped",
                           "nightlyPrice"
                         ]
+                      }
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
                       }
                     }
                   },
@@ -4541,6 +4562,20 @@
                           "nightlyPrice": {
                             "type": "integer",
                             "exclusiveMinimum": 0
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "BASE",
+                              "SEASON",
+                              "OVERRIDE",
+                              "RATE_PLAN"
+                            ]
+                          },
+                          "seasonName": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
                           }
                         },
                         "required": [
@@ -4554,6 +4589,13 @@
                           "clamped",
                           "nightlyPrice"
                         ]
+                      }
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
                       }
                     }
                   },
