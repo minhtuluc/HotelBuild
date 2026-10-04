@@ -45,6 +45,7 @@ const SCREENS = [
   '/room-blocks',
   '/seasons',
   '/channels',
+  '/system-settings',
 ] as const;
 
 operationsWebOnly();

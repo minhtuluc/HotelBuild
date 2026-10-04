@@ -69,6 +69,8 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['get', '/api/v1/channel-allotments', 'bearer'],
   ['put', '/api/v1/channel-allotments', 'bearer'],
   ['get', '/api/v1/audit-logs', 'bearer'],
+  // HB-044: bổ sung tuyến đọc tham số cho SCR-17 (thêm tuyến, không phá vỡ hợp đồng).
+  ['get', '/api/v1/system-settings', 'bearer'],
   ['put', '/api/v1/system-settings/{key}', 'bearer'],
   ['post', '/api/v1/system/backups', 'bearer'],
   ['post', '/api/v1/system/backups/{backupId}/restore', 'bearer'],
@@ -161,6 +163,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/inventory/grid',
         '/api/v1/channel-allotments',
         '/api/v1/audit-logs',
+        '/api/v1/system-settings',
         '/api/v1/system-settings/{key}',
         '/api/v1/system/backups',
         '/api/v1/system/backups/{backupId}/restore',

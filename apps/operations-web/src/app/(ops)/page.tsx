@@ -35,6 +35,7 @@ export default function OperationsHomePage(): ReactElement {
           <a href="/channels">{t('ops.nav.channels')}</a>
           <a href="/audit-logs">{t('ops.nav.auditLogs')}</a>
           <a href="/room-blocks">{t('ops.nav.roomBlocks')}</a>
+          <a href="/system-settings">{t('ops.nav.settings')}</a>
         </li>
       </ul>
       <h2>t('ops.home.states')</h2>
