@@ -135,6 +135,7 @@ model bookings {
   loyalty_transactions                                   loyalty_transactions[]
   notifications                                          notifications[]
   payments                                               payments[]
+  pin_grants                                             pin_grants[]
   price_snapshots                                        price_snapshots[]
   refund_requests                                        refund_requests[]
   room_merges_room_merges_primary_booking_idTobookings   room_merges[]            @relation("room_merges_primary_booking_idTobookings")
@@ -293,29 +294,32 @@ model guest_notes {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model guests {
-  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  full_name            String
-  phone                String
-  email                String?
-  id_number            String?
-  dob                  DateTime?              @db.Date
-  nationality          String?                @default("VN")
-  loyalty_tier         String                 @default("GUEST")
-  loyalty_points       Int                    @default(0)
-  total_stays          Int                    @default(0) @db.SmallInt
-  blacklisted          Boolean                @default(false)
-  blacklist_reason     String?
-  notes                String?
-  gender               String                 @default("UNSPECIFIED")
-  consent_marketing    Boolean                @default(false)
-  consent_at           DateTime?              @db.Timestamptz(6)
-  consent_version      String?
-  anonymized_at        DateTime?              @db.Timestamptz(6)
-  created_at           DateTime               @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime               @default(now()) @db.Timestamptz(6)
-  bookings             bookings[]
-  guest_notes          guest_notes[]
-  loyalty_transactions loyalty_transactions[]
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  full_name             String
+  phone                 String
+  email                 String?
+  id_number             String?
+  dob                   DateTime?               @db.Date
+  nationality           String?                 @default("VN")
+  loyalty_tier          String                  @default("GUEST")
+  loyalty_points        Int                     @default(0)
+  total_stays           Int                     @default(0) @db.SmallInt
+  blacklisted           Boolean                 @default(false)
+  blacklist_reason      String?
+  notes                 String?
+  gender                String                  @default("UNSPECIFIED")
+  consent_marketing     Boolean                 @default(false)
+  consent_at            DateTime?               @db.Timestamptz(6)
+  consent_version       String?
+  anonymized_at         DateTime?               @db.Timestamptz(6)
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime                @default(now()) @db.Timestamptz(6)
+  auth_sessions         auth_sessions[]
+  bookings              bookings[]
+  guest_credentials     guest_credentials?
+  guest_notes           guest_notes[]
+  guest_password_resets guest_password_resets[]
+  loyalty_transactions  loyalty_transactions[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -906,7 +910,10 @@ model users {
   last_login_at                                       DateTime?                @db.Timestamptz(6)
   created_at                                          DateTime                 @default(now()) @db.Timestamptz(6)
   updated_at                                          DateTime                 @default(now()) @db.Timestamptz(6)
+  must_change_password                                Boolean                  @default(false)
+  password_changed_at                                 DateTime?                @db.Timestamptz(6)
   audit_logs                                          audit_logs[]
+  auth_sessions                                       auth_sessions[]
   booking_status_history                              booking_status_history[]
   bookings                                            bookings[]
   guest_notes                                         guest_notes[]
@@ -914,6 +921,7 @@ model users {
   idempotency_keys                                    idempotency_keys[]
   overbooking_cases                                   overbooking_cases[]
   payments                                            payments[]
+  pin_grants                                          pin_grants[]
   rate_calendars                                      rate_calendars[]
   refund_approvals                                    refund_approvals[]
   refund_requests_refund_requests_approved_byTousers  refund_requests[]        @relation("refund_requests_approved_byTousers")
@@ -922,6 +930,7 @@ model users {
   room_merges                                         room_merges[]
   room_moves                                          room_moves[]
   system_settings                                     system_settings[]
+  user_pins                                           user_pins?
   user_property_scopes                                user_property_scopes[]
 }
 
@@ -945,4 +954,83 @@ model webhook_inbox {
   updated_at            DateTime  @default(now()) @db.Timestamptz(6)
 
   @@unique([provider, provider_account_id, event_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model auth_sessions {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  principal_type String
+  user_id        String?      @db.Uuid
+  guest_id       String?      @db.Uuid
+  surface        String
+  family_id      String       @db.Uuid
+  token_hash     String       @unique
+  created_at     DateTime     @default(now()) @db.Timestamptz(6)
+  last_seen_at   DateTime     @default(now()) @db.Timestamptz(6)
+  expires_at     DateTime     @db.Timestamptz(6)
+  rotated_at     DateTime?    @db.Timestamptz(6)
+  revoked_at     DateTime?    @db.Timestamptz(6)
+  revoke_reason  String?
+  ip             String?      @db.Inet
+  user_agent     String?
+  updated_at     DateTime     @default(now()) @db.Timestamptz(6)
+  guests         guests?      @relation(fields: [guest_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users          users?       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  pin_grants     pin_grants[]
+
+  @@unique([id, user_id], map: "uq_auth_sessions_id_user")
+  @@index([family_id], map: "idx_auth_sessions_family")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model guest_credentials {
+  guest_id            String    @id @db.Uuid
+  password_hash       String
+  failed_login_count  Int       @default(0) @db.SmallInt
+  locked_until        DateTime? @db.Timestamptz(6)
+  password_changed_at DateTime? @db.Timestamptz(6)
+  created_at          DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime  @default(now()) @db.Timestamptz(6)
+  guests              guests    @relation(fields: [guest_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model guest_password_resets {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  guest_id    String    @db.Uuid
+  token_hash  String    @unique
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  expires_at  DateTime  @db.Timestamptz(6)
+  consumed_at DateTime? @db.Timestamptz(6)
+  updated_at  DateTime  @default(now()) @db.Timestamptz(6)
+  guests      guests    @relation(fields: [guest_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pin_grants {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token_hash    String        @unique
+  user_id       String        @db.Uuid
+  session_id    String        @db.Uuid
+  purpose       String
+  booking_id    String?       @db.Uuid
+  created_at    DateTime      @default(now()) @db.Timestamptz(6)
+  expires_at    DateTime      @db.Timestamptz(6)
+  consumed_at   DateTime?     @db.Timestamptz(6)
+  updated_at    DateTime      @default(now()) @db.Timestamptz(6)
+  bookings      bookings?     @relation(fields: [booking_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_pin_grants_booking")
+  auth_sessions auth_sessions @relation(fields: [session_id, user_id], references: [id, user_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_pin_grants_session_user")
+  users         users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model user_pins {
+  user_id      String    @id @db.Uuid
+  pin_hash     String
+  failed_count Int       @default(0) @db.SmallInt
+  locked_until DateTime? @db.Timestamptz(6)
+  set_at       DateTime  @default(now()) @db.Timestamptz(6)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime  @default(now()) @db.Timestamptz(6)
+  users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }

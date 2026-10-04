@@ -33,6 +33,28 @@ test('documented §3 DDL and business constraints', async (t) => {
     assert.ok((await db.query("SELECT conname FROM pg_constraint WHERE contype = 'x' AND conrelid = 'room_assignments'::regclass")).rows.length >= 2);
   });
 
+  await run('HB-010: principal/surface, hashed tokens, counters and PIN/reset expiry enforced by current DDL', async (f) => {
+    const start = '2030-01-01T00:00:00Z';
+    const session = await insert(db, 'auth_sessions', { principal_type: 'USER', user_id: f.user.id, surface: 'OPS_WEB', family_id: f.user.id, token_hash: 'session-fixture-hash', created_at: start, expires_at: '2030-01-08' });
+    for (const [field, value] of [['principal_type', 'INVALID'], ['user_id', null], ['guest_id', f.guest.id], ['surface', 'GUEST_WEB'], ['surface', 'INVALID'], ['expires_at', start]]) {
+      await rejectsSQL(db, `UPDATE auth_sessions SET ${field}=$1 WHERE id=$2`, [value, session.id], '23514');
+    }
+    for (const surface of ['GUEST_WEB', 'GUEST_ANDROID']) await insert(db, 'auth_sessions', { principal_type: 'GUEST', guest_id: f.guest.id, surface, family_id: f.guest.id, token_hash: `guest-${surface}-hash`, created_at: start, expires_at: '2030-01-08' });
+    await rejectsSQL(db, 'UPDATE auth_sessions SET token_hash=$1 WHERE id<>$2', [session.token_hash, session.id], '23505');
+    await insert(db, 'guest_credentials', { guest_id: f.guest.id, password_hash: 'fixture-password-hash' });
+    await insert(db, 'user_pins', { user_id: f.user.id, pin_hash: 'fixture-pin-hash' });
+    await rejectsSQL(db, 'UPDATE guest_credentials SET failed_login_count=-1 WHERE guest_id=$1', [f.guest.id], '23514');
+    await rejectsSQL(db, 'UPDATE user_pins SET failed_count=-1 WHERE user_id=$1', [f.user.id], '23514');
+    const grant = await insert(db, 'pin_grants', { user_id: f.user.id, session_id: session.id, purpose: 'PAYMENT', booking_id: (await f.booking()).id, token_hash: 'pin-fixture-hash', created_at: start, expires_at: '2030-01-01T00:05:00Z' });
+    const reset = await insert(db, 'guest_password_resets', { guest_id: f.guest.id, token_hash: 'reset-fixture-hash', created_at: start, expires_at: '2030-01-01T00:30:00Z' });
+    for (const [table, row, excess] of [['pin_grants', grant, '2030-01-01T00:05:00.001Z'], ['guest_password_resets', reset, '2030-01-01T00:30:00.001Z']]) {
+      for (const expiry of [start, excess]) await rejectsSQL(db, `UPDATE ${table} SET expires_at=$1 WHERE id=$2`, [expiry, row.id], '23514');
+    }
+    await rejectsSQL(db, 'INSERT INTO pin_grants(user_id,session_id,purpose,token_hash,created_at,expires_at) SELECT user_id,session_id,purpose,token_hash,created_at,expires_at FROM pin_grants', [], '23505');
+    await rejectsSQL(db, 'INSERT INTO guest_password_resets(guest_id,token_hash,created_at,expires_at) SELECT guest_id,token_hash,created_at,expires_at FROM guest_password_resets', [], '23505');
+    await rejectsSQL(db, 'UPDATE pin_grants SET user_id=$1 WHERE id=$2', [f.otherUser.id, grant.id], '23503');
+  });
+
   await run('BR-INV-03: same unit overlaps rejected, adjacent nights accepted, released unit reusable', async (f) => {
     const a = await f.assignment(await f.bookingRoom(await f.booking()));
     const br = await f.bookingRoom(await f.booking());
