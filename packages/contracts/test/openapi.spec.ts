@@ -81,6 +81,15 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['put', '/api/v1/rate-plans/{ratePlanId}', 'bearer'],
   ['get', '/api/v1/cancellation-policies', 'bearer'],
   ['put', '/api/v1/cancellation-policies/{policyId}', 'bearer'],
+  // F4 (HB-070): availability và quotes công khai; bookings/holds cần Bearer.
+  ['get', '/api/v1/inventory/availability', 'public'],
+  ['post', '/api/v1/quotes', 'public'],
+  ['post', '/api/v1/bookings', 'bearer'],
+  ['get', '/api/v1/bookings', 'bearer'],
+  ['get', '/api/v1/bookings/{bookingId}', 'bearer'],
+  ['post', '/api/v1/bookings/{bookingId}/confirm', 'bearer'],
+  ['post', '/api/v1/holds', 'bearer'],
+  ['delete', '/api/v1/holds/{holdId}', 'bearer'],
 ];
 
 const WRITE_TARGETS = AUTH_OPERATIONS.filter(([method]) => method !== 'get');
@@ -99,7 +108,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 39 path của F0 + F1 + F2 + F3', () => {
+  it('có đủ 46 path của F0 + F1 + F2 + F3 + F4', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -141,6 +150,13 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/rate-plans/{ratePlanId}',
         '/api/v1/cancellation-policies',
         '/api/v1/cancellation-policies/{policyId}',
+        '/api/v1/inventory/availability',
+        '/api/v1/quotes',
+        '/api/v1/bookings',
+        '/api/v1/bookings/{bookingId}',
+        '/api/v1/bookings/{bookingId}/confirm',
+        '/api/v1/holds',
+        '/api/v1/holds/{holdId}',
       ].sort(),
     );
   });
