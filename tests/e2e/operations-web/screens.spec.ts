@@ -41,6 +41,7 @@ const SCREENS = [
   '/inventory-grid',
   '/rate-calendar',
   '/audit-logs',
+  '/promotions',
 ] as const;
 
 operationsWebOnly();

@@ -7,6 +7,7 @@ import {
   cancellationPolicyUpdateRequestSchema,
   channelUpdateRequestSchema,
   listResponseSchema,
+  promotionSummarySchema,
   multiChannelQuoteRequestSchema,
   multiChannelQuoteSchema,
   promotionCreateRequestSchema,
@@ -21,6 +22,7 @@ import {
   type ListPage,
   type MultiChannelQuote,
   type PromotionCreateRequest,
+  type PromotionSummary,
   type RateCalendar,
   type RateCalendarOverrideRequest,
   type RatePlanPublic,
@@ -44,6 +46,12 @@ export interface RateApi {
     input: ChannelUpdateRequest,
     ifMatch: string,
   ): Promise<ApiResponse<undefined>>;
+  listPromotions(query?: {
+    propertyId?: string;
+    status?: 'ACTIVE' | 'INACTIVE';
+    limit?: number;
+    cursor?: string;
+  }): Promise<ApiResponse<ListPage<PromotionSummary>>>;
   createPromotion(input: PromotionCreateRequest): Promise<ApiResponse<undefined>>;
   quoteMultiChannel(input: {
     roomTypeId: string;
@@ -101,6 +109,13 @@ export function createRateApi(client: ApiClient): RateApi {
         path: `/channels/${encodeURIComponent(channelId)}`,
         body: channelUpdateRequestSchema.parse(input),
         ifMatch,
+      }),
+    listPromotions: (query) =>
+      client.request({
+        method: 'GET',
+        path: '/promotions',
+        ...(query === undefined ? {} : { query }),
+        decoder: listResponseSchema(promotionSummarySchema),
       }),
     createPromotion: (input) =>
       client.requestVoid({

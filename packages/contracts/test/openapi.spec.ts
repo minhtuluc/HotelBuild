@@ -75,6 +75,8 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['put', '/api/v1/room-types/{roomTypeId}/rate-calendar', 'bearer'],
   ['post', '/api/v1/seasons', 'bearer'],
   ['patch', '/api/v1/channels/{channelId}', 'bearer'],
+  // HB-061: bổ sung tuyến đọc khuyến mãi cho SCR-29 (thêm tuyến, không phá vỡ hợp đồng).
+  ['get', '/api/v1/promotions', 'bearer'],
   ['post', '/api/v1/promotions', 'bearer'],
   ['post', '/api/v1/quotes/multi-channel', 'bearer'],
   ['get', '/api/v1/rate-plans', 'public'],
