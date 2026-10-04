@@ -42,6 +42,7 @@ const SCREENS = [
   '/rate-calendar',
   '/audit-logs',
   '/promotions',
+  '/room-blocks',
 ] as const;
 
 operationsWebOnly();

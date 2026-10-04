@@ -32,6 +32,7 @@ export default function OperationsHomePage(): ReactElement {
           <a href="/rate-calendar">{t('ops.nav.rateCalendar')}</a>
           <a href="/promotions">{t('ops.nav.promotions')}</a>
           <a href="/audit-logs">{t('ops.nav.auditLogs')}</a>
+          <a href="/room-blocks">{t('ops.nav.roomBlocks')}</a>
         </li>
       </ul>
       <h2>t('ops.home.states')</h2>
