@@ -56,6 +56,28 @@ export const rateCalendarOverrideRequestSchema = z.strictObject({
   confirmOwnerOverride: z.boolean().optional(),
 });
 
+/** Bộ lọc `GET /seasons` — danh sách mùa của một cơ sở (SCR-27, chủ dự án duyệt 05/10/2026). */
+export const seasonQuerySchema = z.strictObject({
+  propertyId: z.string().min(1).optional(),
+  from: businessDateSchema.optional(),
+  to: businessDateSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  cursor: z.string().min(1).optional(),
+});
+
+/** Một mùa đang cấu hình; `version` để màn hình dùng `If-Match` khi sửa (BR-RATE-05,06). */
+export const seasonSummarySchema = z.object({
+  id: z.string().min(1),
+  propertyId: z.string().min(1),
+  name: z.string().min(1).max(120),
+  startDate: businessDateSchema,
+  endDate: businessDateSchema,
+  multiplier,
+  priority: z.number().int().min(0),
+  weekendSurchargeEnabled: z.boolean(),
+  version: z.number().int().min(0),
+});
+
 export const seasonCreateRequestSchema = z.strictObject({
   propertyId: z.string().min(1),
   name: z.string().min(1).max(120),
@@ -170,6 +192,8 @@ export const ratePlanUpdateRequestSchema = z.strictObject({
 export type RateCalendar = z.infer<typeof rateCalendarSchema>;
 export type RateCalendarOverrideRequest = z.infer<typeof rateCalendarOverrideRequestSchema>;
 export type SeasonCreateRequest = z.infer<typeof seasonCreateRequestSchema>;
+export type SeasonSummary = z.infer<typeof seasonSummarySchema>;
+export type SeasonQuery = z.infer<typeof seasonQuerySchema>;
 export type ChannelUpdateRequest = z.infer<typeof channelUpdateRequestSchema>;
 export type PromotionCreateRequest = z.infer<typeof promotionCreateRequestSchema>;
 export type PromotionSummary = z.infer<typeof promotionSummarySchema>;

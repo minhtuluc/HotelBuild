@@ -10,10 +10,11 @@
  */
 import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { createPropertyApi, createRateApi, isApiError } from '@pinehill/api-client';
-import type { PropertySummary, RoomTypeSummary } from '@pinehill/contracts';
+import type { PropertySummary, RoomTypeSummary, SeasonSummary } from '@pinehill/contracts';
 import {
   StateSurface,
   formatMoney,
+  formatMultiplier,
   formatStatusWithEnum,
   type ScreenState,
 } from '@pinehill/ui-web';
@@ -38,6 +39,7 @@ interface Loaded {
   properties: readonly PropertySummary[];
   roomTypes: readonly RoomTypeSummary[];
   entries: readonly RateCalendarEntry[];
+  seasons: readonly SeasonSummary[];
 }
 
 type SeasonTarget = Pick<SeasonDraft, 'propertyId' | 'roomTypeId'>;
@@ -59,16 +61,13 @@ async function fetchCalendar(
   const roomTypes =
     propertyId === '' ? [] : (await propertyApi.listRoomTypes({ propertyId })).data.data;
   const roomTypeId = pickId(draft.roomTypeId, roomTypes);
+  const rateApi = createRateApi(client);
   const entries =
     roomTypeId === ''
       ? []
-      : (
-          await createRateApi(client).rateCalendar(roomTypeId, {
-            from: range.from,
-            to: range.to,
-          })
-        ).data.entries;
-  return { properties, roomTypes, entries };
+      : (await rateApi.rateCalendar(roomTypeId, { from: range.from, to: range.to })).data.entries;
+  const seasons = propertyId === '' ? [] : (await rateApi.listSeasons({ propertyId })).data.data;
+  return { properties, roomTypes, entries, seasons };
 }
 
 /** Nhãn Việt + mã enum nguồn giá (BR-RATE-02) — không viết cứng chuỗi trong component (NFR-LOC-01). */
@@ -131,6 +130,54 @@ function WinnerTable({ rows }: { rows: readonly CalendarRow[] }): ReactElement {
   );
 }
 
+/** Danh sách mùa hiện có của cơ sở — đọc thẳng từ `GET /seasons` (AC1). */
+function SeasonListTable({ seasons }: { seasons: readonly SeasonSummary[] }): ReactElement {
+  const headers = [
+    t('seasons.col.name'),
+    t('seasons.col.range'),
+    t('seasons.col.multiplier'),
+    t('seasons.col.priority'),
+    t('seasons.col.weekend'),
+    t('seasons.col.version'),
+  ];
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table data-testid="seasons-list" style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
+          {t('seasons.list.title')}
+        </caption>
+        <thead>
+          <tr>
+            {headers.map((label) => (
+              <th
+                key={label}
+                scope="col"
+                style={{ textAlign: 'start', borderBottom: '1px solid var(--color-border)' }}
+              >
+                {label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {seasons.map((season) => (
+            <tr key={season.id} data-testid={`season-${season.name}`}>
+              <td>{season.name}</td>
+              <td>
+                {season.startDate} → {season.endDate}
+              </td>
+              <td>{formatMultiplier(season.multiplier)}</td>
+              <td>{season.priority}</td>
+              <td>{season.weekendSurchargeEnabled ? t('seasons.yes') : t('seasons.no')}</td>
+              <td>{season.version}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function SeasonsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
   const forced = useForcedState();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
@@ -140,6 +187,7 @@ export function SeasonsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
   const [properties, setProperties] = useState<readonly PropertySummary[]>([]);
   const [roomTypes, setRoomTypes] = useState<readonly RoomTypeSummary[]>([]);
   const [entries, setEntries] = useState<readonly RateCalendarEntry[]>([]);
+  const [seasons, setSeasons] = useState<readonly SeasonSummary[]>([]);
   const [savedName, setSavedName] = useState<string | null>(null);
   const [readError, setReadError] = useState<unknown>(null);
 
@@ -151,6 +199,7 @@ export function SeasonsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
         setProperties(loaded.properties);
         setRoomTypes(loaded.roomTypes);
         setEntries(loaded.entries);
+        setSeasons(loaded.seasons);
         setDraft((current) => ({
           ...current,
           propertyId: loaded.properties.some((item) => item.id === current.propertyId)
@@ -221,9 +270,13 @@ export function SeasonsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
     >
       <h1 style={{ margin: 0 }}>{t('seasons.title')}</h1>
       <p style={{ margin: 0 }}>{t('seasons.intro')}</p>
-      <p data-testid="seasons-list-unsupported" style={{ margin: 0 }}>
-        {t('seasons.listUnsupported')}
-      </p>
+      {seasons.length === 0 ? (
+        <p data-testid="seasons-list-empty" style={{ margin: 0 }}>
+          {t('seasons.list.empty')}
+        </p>
+      ) : (
+        <SeasonListTable seasons={seasons} />
+      )}
       <form
         data-testid="seasons-range"
         onSubmit={(event) => {

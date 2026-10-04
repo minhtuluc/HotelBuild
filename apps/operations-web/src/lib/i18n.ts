@@ -158,8 +158,16 @@ export const operationsCatalog = {
   'seasons.title': 'Mùa & hệ số',
   'seasons.intro':
     'Tạo mùa cho một cơ sở và xem mùa đang thắng từng ngày do máy chủ quyết (BR-RATE-05). Mùa chồng nhau được phép — giao diện không tự chọn mùa thắng.',
-  'seasons.listUnsupported':
-    'Chưa hỗ trợ danh sách mùa kèm phiên bản: hợp đồng chưa có tuyến đọc GET /seasons (chờ lead chốt). Màn hình chỉ hiện mùa thắng theo ngày từ lịch giá.',
+  'seasons.list.title': 'Mùa đang cấu hình',
+  'seasons.list.empty': 'Cơ sở này chưa có mùa nào.',
+  'seasons.col.name': 'Tên mùa',
+  'seasons.col.range': 'Khoảng ngày',
+  'seasons.col.multiplier': 'Hệ số',
+  'seasons.col.priority': 'Ưu tiên',
+  'seasons.col.weekend': 'Phụ thu cuối tuần',
+  'seasons.col.version': 'Phiên bản',
+  'seasons.yes': 'Có',
+  'seasons.no': 'Không',
   'seasons.form.property': 'Cơ sở',
   'seasons.form.roomType': 'Loại phòng',
   'seasons.form.from': 'Từ ngày',

@@ -23,6 +23,8 @@ import {
   ratePlanPublicSchema,
   ratePlanUpdateRequestSchema,
   seasonCreateRequestSchema,
+  seasonQuerySchema,
+  seasonSummarySchema,
 } from '../../rate.js';
 import type { ErrorCode } from '../../errors.js';
 
@@ -102,6 +104,22 @@ export function registerF3Paths(registry: OpenAPIRegistry, errorBodyComponent: z
       200: { description: 'Lịch giá sau ghi đè', ...jsonBody(rateCalendarSchema) },
       403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
       422: errorResponse('E_RATE_BELOW_FLOOR', 'E_RATE_CONFIGURATION_INVALID'),
+    },
+  });
+
+  // Bổ sung tuyến đọc (HB-059 SCR-27, chủ dự án duyệt 05/10/2026): api.md §2.4 chỉ có POST /seasons
+  // nên màn hình không liệt kê được mùa hiện có. Thay đổi tương thích (thêm tuyến), 0 phá vỡ.
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/seasons',
+    operationId: 'seasonsList',
+    summary: 'Danh sách mùa của cơ sở kèm hệ số, ưu tiên, phụ thu cuối tuần và phiên bản (SCR-27)',
+    tags: ['rate'],
+    ...bearerRead,
+    request: { query: seasonQuerySchema },
+    responses: {
+      200: { description: 'Danh sách mùa', ...jsonBody(listResponseSchema(seasonSummarySchema)) },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
     },
   });
 

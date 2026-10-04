@@ -60,21 +60,37 @@ const CALENDAR = {
   ],
 };
 
+/** Một mùa đang cấu hình do `GET /seasons` trả (AC1). */
+const SEASON = {
+  id: 's1',
+  propertyId: 'p1',
+  name: 'Hè 2026',
+  startDate: '2026-06-01',
+  endDate: '2026-08-31',
+  multiplier: 1.4,
+  priority: 5,
+  weekendSurchargeEnabled: true,
+  version: 2,
+};
+
 const PROPERTIES = '**/api/v1/properties*';
 const ROOM_TYPES = '**/api/v1/room-types*';
 const CALENDARS = '**/api/v1/room-types/*/rate-calendar*';
-const SEASONS = '**/api/v1/seasons';
+const SEASONS = '**/api/v1/seasons**';
 
 operationsWebOnly();
 
-function backend(page: Page): { created: () => string[] } {
+function backend(page: Page, seasons: readonly unknown[] = [SEASON]): { created: () => string[] } {
   const created: string[] = [];
   void page.route(PROPERTIES, (route) => fulfillJson(route, 200, listBody([PROPERTY])));
   void page.route(ROOM_TYPES, (route) => fulfillJson(route, 200, listBody([ROOM_TYPE])));
   void page.route(CALENDARS, (route) => fulfillJson(route, 200, JSON.stringify(CALENDAR)));
   void page.route(SEASONS, async (route) => {
-    created.push(route.request().postData() ?? '');
-    return fulfillJson(route, 201, '');
+    if (route.request().method() === 'POST') {
+      created.push(route.request().postData() ?? '');
+      return fulfillJson(route, 201, '');
+    }
+    return fulfillJson(route, 200, listBody(seasons));
   });
   return { created: () => created };
 }
@@ -141,16 +157,32 @@ test.describe('SCR-27 mùa & hệ số trên API giả (HB-059)', () => {
     await page.route(PROPERTIES, (route) => fulfillJson(route, 200, listBody([PROPERTY])));
     await page.route(ROOM_TYPES, (route) => fulfillJson(route, 200, listBody([ROOM_TYPE])));
     await page.route(CALENDARS, (route) => fulfillJson(route, 200, JSON.stringify(CALENDAR)));
-    await page.route(SEASONS, (route) => route.abort('failed'));
+    await page.route(SEASONS, (route) =>
+      route.request().method() === 'POST'
+        ? route.abort('failed')
+        : fulfillJson(route, 200, listBody([SEASON])),
+    );
     await page.goto('/seasons');
     await page.getByLabel('Tên mùa').fill('Mùa A');
     await page.getByRole('button', { name: 'Tạo mùa' }).click();
     await expect(page.getByText(/Chưa xác định kết quả/)).toBeVisible();
   });
 
-  test('ghi rõ danh sách mùa chưa hỗ trợ', async ({ page }) => {
+  test('hiện danh sách mùa', async ({ page }) => {
     backend(page);
     await page.goto('/seasons');
-    await expect(page.getByTestId('seasons-list-unsupported')).toContainText('GET /seasons');
+    const list = page.getByTestId('seasons-list');
+    await expect(list).toBeVisible();
+    await expect(list).toContainText('Hè 2026');
+    await expect(list).toContainText('2026-06-01 → 2026-08-31');
+    await expect(list).toContainText('1,40');
+    await expect(list).toContainText('Có');
+    await expect(page.getByTestId('season-Hè 2026')).toContainText('2');
+  });
+
+  test('cơ sở chưa có mùa thì ghi rõ', async ({ page }) => {
+    backend(page, []);
+    await page.goto('/seasons');
+    await expect(page.getByTestId('seasons-list-empty')).toContainText('chưa có mùa');
   });
 });
