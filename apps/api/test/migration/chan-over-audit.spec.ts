@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { expectMigrationHistory } from './baseline-fixture.js';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const chan = ['channels', 'channel_property_settings', 'channel_mappings', 'channel_allotments'];
@@ -51,8 +52,7 @@ const docs: unknown = await import(`${root}scripts/lib/docs.mjs`);
 if (!isFixtureModule(helpers) || !isDocsModule(docs))
   throw new Error('Audit read-only helpers unavailable');
 
-// The oracle is CURRENT csdl §3, independently loaded from the frozen migration.
-// Full definitions retain numeric precision, nullability, defaults and FK delete actions.
+// Independent current csdl§3 oracle retains precision, nullability, defaults and FK actions.
 const catalogs = {
   columns: `SELECT table_name,column_name,data_type,udt_name,is_nullable,column_default, numeric_precision,numeric_scale,is_generated,generation_expression FROM information_schema.columns WHERE table_schema='public' AND table_name=ANY($1::text[]) ORDER BY table_name,ordinal_position`,
   constraints: `SELECT c.relname,k.conname,k.contype,k.convalidated,k.condeferrable,k.condeferred, pg_get_constraintdef(k.oid) definition FROM pg_constraint k JOIN pg_class c ON c.oid=k.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname=ANY($1::text[]) ORDER BY c.relname,k.conname`,
@@ -109,9 +109,7 @@ describe('HB-121 scoped PostgreSQL 16 baseline audit (not F6 business acceptance
     expect(migrated.status, migrated.stderr).toBe(0);
     for (const block of docs.sqlBlocks(await readFile(`${root}docs/04-thiet-ke/csdl.md`, 'utf8')))
       await reference.query(block.sql);
-    expect((await db.query('SELECT migration_name FROM _prisma_migrations')).rows).toEqual([
-      { migration_name: '0001_baseline' },
-    ]);
+    await expectMigrationHistory(db, root);
   }, 90000);
   afterAll(async () => {
     for (const client of clients) await client.end();

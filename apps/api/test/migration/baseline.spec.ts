@@ -8,10 +8,10 @@ import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
+import { baselineFixture } from './baseline-fixture.js';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const source = '8a3b9f9540237fac404c25c1405af007043fb50d';
-const schema = `${root}apps/api/prisma/schema.prisma`;
 const migration = `${root}apps/api/prisma/migrations/0001_baseline/migration.sql`;
 const owner = process.env.DATABASE_MIGRATION_URL;
 const run = (script: string, env: Record<string, string>, args: string[] = []) =>
@@ -21,7 +21,6 @@ const run = (script: string, env: Record<string, string>, args: string[] = []) =
     encoding: 'utf8',
     timeout: 60000,
   });
-const migrate = (url: string) => run(`${root}scripts/migrate.mjs`, { DATABASE_MIGRATION_URL: url });
 const require = createRequire(import.meta.url);
 
 interface Block {
@@ -142,6 +141,9 @@ describe('real PostgreSQL 16 migration certification', () => {
   it.skipIf(!owner)(
     'certifies deploy, SQL parity, runtime invariants, client and drift',
     async () => {
+      const baseline = await baselineFixture(root);
+      const schema = baseline.schema;
+      const migrate = (url: string) => run(baseline.migrate, { DATABASE_MIGRATION_URL: url });
       const admin = new pg.Client({ connectionString: owner });
       const names = ['migration', 'reference'].map(
         (part) => `hb005_${part}_${randomUUID().replaceAll('-', '')}`,
@@ -300,12 +302,16 @@ describe('real PostgreSQL 16 migration certification', () => {
         }
         const generate = run(prisma, { DATABASE_URL: url }, ['generate', '--schema', schema]);
         expect(generate.status, generate.stderr).toBe(0);
-        const clientModule: {
-          PrismaClient: new (options: { datasources: { db: { url: string } } }) => {
-            users: { count: () => Promise<number> };
-            $disconnect: () => Promise<void>;
-          };
-        } = await import('@prisma/client');
+        const clientModule = z
+          .object({
+            PrismaClient: z.custom<
+              new (options: { datasources: { db: { url: string } } }) => {
+                users: { count: () => Promise<number> };
+                $disconnect: () => Promise<void>;
+              }
+            >((value) => typeof value === 'function'),
+          })
+          .parse(await import(baseline.client));
         const client = new clientModule.PrismaClient({
           datasources: { db: { url: runtimeUrl.href } },
         });
@@ -314,7 +320,7 @@ describe('real PostgreSQL 16 migration certification', () => {
         } finally {
           await client.$disconnect();
         }
-        const drift = run(`${root}apps/api/prisma/drift.mjs`, { DATABASE_MIGRATION_URL: url });
+        const drift = run(baseline.drift, { DATABASE_MIGRATION_URL: url });
         expect(drift.status, drift.stderr).toBe(0);
         expect(drift.stdout).toContain('No drift');
       } finally {
@@ -322,6 +328,7 @@ describe('real PostgreSQL 16 migration certification', () => {
         for (const name of names)
           await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
         await admin.end();
+        await rm(baseline.directory, { recursive: true, force: true });
       }
     },
     180000,
