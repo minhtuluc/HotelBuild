@@ -45,6 +45,11 @@ const BY_CODE: Readonly<Record<string, UiAction>> = {
   E_BOOK_BLACKLISTED: 'request-access',
   E_PAY_SELF_APPROVAL: 'request-access',
   E_PAY_REFUND_FORCE_MAJEURE_FORBIDDEN: 'request-access',
+  E_PAY_AMOUNT_MISMATCH: 'fix-fields',
+  E_PAY_REFUND_EXCEEDS_PAID: 'fix-fields',
+  E_PAY_GATEWAY_ERROR: 'retry-later',
+  E_PAY_GATEWAY_TIMEOUT: 'retry-later',
+  E_PAY_SIGNATURE_INVALID: 'contact-support',
   E_OVER_APPROVAL_REQUIRED: 'request-access',
 };
 

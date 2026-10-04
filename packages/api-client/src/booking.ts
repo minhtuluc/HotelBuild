@@ -6,19 +6,29 @@ import {
   bookingConfirmRequestSchema,
   bookingCreateRequestSchema,
   bookingSummarySchema,
+  cancelPreviewRequestSchema,
+  cancelPreviewSchema,
+  cancelRequestSchema,
+  cancelResponseSchema,
   holdCreateRequestSchema,
   holdSchema,
   listResponseSchema,
   quoteRequestSchema,
   quoteSchema,
+  rescheduleRequestSchema,
   type BookingConfirmRequest,
   type BookingCreateRequest,
   type BookingSummary,
+  type CancelPreview,
+  type CancelPreviewRequest,
+  type CancelRequest,
+  type CancelResponse,
   type Hold,
   type HoldCreateRequest,
   type ListPage,
   type Quote,
   type QuoteRequest,
+  type RescheduleRequest,
 } from '@pinehill/contracts';
 import { ApiClient, type ApiResponse } from './client.js';
 
@@ -54,6 +64,13 @@ export interface BookingApi {
   confirm(bookingId: string, input: BookingConfirmRequest): Promise<ApiResponse<BookingSummary>>;
   createHold(input: HoldCreateRequest): Promise<ApiResponse<Hold>>;
   releaseHold(holdId: string, reason: string): Promise<ApiResponse<undefined>>;
+  cancelPreview(
+    bookingId: string,
+    input: CancelPreviewRequest,
+  ): Promise<ApiResponse<CancelPreview>>;
+  cancel(bookingId: string, input: CancelRequest): Promise<ApiResponse<CancelResponse>>;
+  reschedule(bookingId: string, input: RescheduleRequest): Promise<ApiResponse<BookingSummary>>;
+  deleteBooking(bookingId: string, reason: string): Promise<ApiResponse<undefined>>;
 }
 
 export function createBookingApi(client: ApiClient): BookingApi {
@@ -96,6 +113,33 @@ export function createBookingApi(client: ApiClient): BookingApi {
       client.requestVoid({
         method: 'DELETE',
         path: `/holds/${encodeURIComponent(holdId)}`,
+        query: { reason },
+      }),
+    cancelPreview: (bookingId, input) =>
+      client.request({
+        method: 'POST',
+        path: `/bookings/${encodeURIComponent(bookingId)}/cancel-preview`,
+        body: cancelPreviewRequestSchema.parse(input),
+        decoder: cancelPreviewSchema,
+      }),
+    cancel: (bookingId, input) =>
+      client.request({
+        method: 'POST',
+        path: `/bookings/${encodeURIComponent(bookingId)}/cancel`,
+        body: cancelRequestSchema.parse(input),
+        decoder: cancelResponseSchema,
+      }),
+    reschedule: (bookingId, input) =>
+      client.request({
+        method: 'POST',
+        path: `/bookings/${encodeURIComponent(bookingId)}/reschedule`,
+        body: rescheduleRequestSchema.parse(input),
+        decoder: bookingSummarySchema,
+      }),
+    deleteBooking: (bookingId, reason) =>
+      client.requestVoid({
+        method: 'DELETE',
+        path: `/bookings/${encodeURIComponent(bookingId)}`,
         query: { reason },
       }),
   };
