@@ -27,6 +27,7 @@ import { bearerWrite, idempotencyHeaders, jsonBody, makeErrorResponse } from './
 import { registerF2Paths } from './paths/f2.js';
 import { registerF3Paths } from './paths/f3.js';
 import { registerF4Paths } from './paths/f4.js';
+import { registerF5Paths } from './paths/f5.js';
 
 export const registry = new OpenAPIRegistry();
 
@@ -314,3 +315,5 @@ registerF2Paths(registry, errorBodyComponent);
 registerF3Paths(registry, errorBodyComponent);
 // Pha F4 (journey khách: availability, quotes, bookings, confirm, holds) — HB-070.
 registerF4Paths(registry, errorBodyComponent);
+// Pha F5 (thanh toán, huỷ/hoàn, đổi ngày, xoá booking) — HB-090.
+registerF5Paths(registry, errorBodyComponent);

@@ -7505,6 +7505,92 @@
             }
           }
         }
+      },
+      "delete": {
+        "operationId": "bookingsDelete",
+        "summary": "Xoá cứng DRAFT/HELD chưa phát sinh thanh toán, audit beforeJson (UC-BOOK-05, BR-BOOK-14)",
+        "tags": [
+          "booking"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "required": true,
+            "name": "reason",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Đã xoá booking"
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_BOOK_HARD_DELETE_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/bookings/{bookingId}/confirm": {
@@ -8116,6 +8202,3113 @@
           },
           "409": {
             "description": "E_BOOK_INVALID_STATE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/{bookingId}/cancel-preview": {
+      "post": {
+        "operationId": "bookingsCancelPreview",
+        "summary": "Xem trước tiền hoàn theo bậc chính sách, không đổi trạng thái (UC-BOOK-08, BR-CANCEL-01…06)",
+        "tags": [
+          "booking"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "GUEST_REQUEST",
+                      "FORCE_MAJEURE",
+                      "HOTEL_RELOCATION",
+                      "PAYMENT_TIMEOUT",
+                      "DUPLICATE",
+                      "NO_SHOW",
+                      "SYSTEM",
+                      "OTA_CANCELLATION",
+                      "EARLY_CHECKOUT"
+                    ]
+                  },
+                  "isForceMajeure": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "reason",
+                  "isForceMajeure"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Xem trước hoàn tiền",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bookingId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "currency": {
+                      "type": "string",
+                      "enum": [
+                        "VND"
+                      ]
+                    },
+                    "cancellation": {
+                      "type": "object",
+                      "properties": {
+                        "policyId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "appliedTierId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "hoursBeforeCheckIn": {
+                          "type": "number"
+                        },
+                        "refundPercent": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "paidAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "requestedAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "penaltyAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "refundFee": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "policyId",
+                        "appliedTierId",
+                        "hoursBeforeCheckIn",
+                        "refundPercent",
+                        "paidAmount",
+                        "requestedAmount",
+                        "penaltyAmount",
+                        "refundFee"
+                      ]
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "bookingId",
+                    "currency",
+                    "cancellation"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_CANCEL_NOT_ALLOWED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/{bookingId}/cancel": {
+      "post": {
+        "operationId": "bookingsCancel",
+        "summary": "Huỷ booking toàn phần/một phần, tạo RefundRequest (UC-BOOK-08, BR-BOOK-11,14)",
+        "tags": [
+          "booking"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "GUEST_REQUEST",
+                      "FORCE_MAJEURE",
+                      "HOTEL_RELOCATION",
+                      "PAYMENT_TIMEOUT",
+                      "DUPLICATE",
+                      "NO_SHOW",
+                      "SYSTEM",
+                      "OTA_CANCELLATION",
+                      "EARLY_CHECKOUT"
+                    ]
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "isForceMajeure": {
+                    "type": "boolean"
+                  },
+                  "evidenceRefs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "bookingRoomIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "required": [
+                  "reason",
+                  "isForceMajeure"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Kết quả huỷ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bookingId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "HELD",
+                        "PENDING_PAYMENT",
+                        "CONFIRMED",
+                        "CHECKED_IN",
+                        "CHECKED_OUT",
+                        "CANCELLED",
+                        "NO_SHOW",
+                        "EXPIRED"
+                      ]
+                    },
+                    "cancelledAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "cancelReason": {
+                      "type": "string",
+                      "enum": [
+                        "GUEST_REQUEST",
+                        "FORCE_MAJEURE",
+                        "HOTEL_RELOCATION",
+                        "PAYMENT_TIMEOUT",
+                        "DUPLICATE",
+                        "NO_SHOW",
+                        "SYSTEM",
+                        "OTA_CANCELLATION",
+                        "EARLY_CHECKOUT"
+                      ]
+                    },
+                    "releasedAssignmentCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "cancellation": {
+                      "type": "object",
+                      "properties": {
+                        "policyId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "appliedTierId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "hoursBeforeCheckIn": {
+                          "type": "number"
+                        },
+                        "refundPercent": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "paidAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "requestedAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "penaltyAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "refundFee": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "policyId",
+                        "appliedTierId",
+                        "hoursBeforeCheckIn",
+                        "refundPercent",
+                        "paidAmount",
+                        "requestedAmount",
+                        "penaltyAmount",
+                        "refundFee"
+                      ]
+                    },
+                    "refundRequest": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "APPROVED",
+                            "REJECTED",
+                            "PAID",
+                            "CANCELLED"
+                          ]
+                        },
+                        "approvedAmount": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "approvedAmount"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "bookingId",
+                    "status",
+                    "cancelledAt",
+                    "cancelReason",
+                    "releasedAssignmentCount",
+                    "cancellation",
+                    "refundRequest"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "E_PAY_REASON_TOO_SHORT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_PAY_REFUND_FORCE_MAJEURE_FORBIDDEN, E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_CANCEL_NOT_ALLOWED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_PAY_REFUND_EXCEEDS_PAID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/{bookingId}/reschedule": {
+      "post": {
+        "operationId": "bookingsReschedule",
+        "summary": "Đổi ngày, lưu PriceSnapshot RESCHEDULE và giữ bản cũ (UC-BOOK-06, BR-BOOK-12,13)",
+        "tags": [
+          "booking"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "checkIn": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "checkOut": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "quoteId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "checkIn",
+                  "checkOut"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Booking sau đổi ngày",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "seq": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "HELD",
+                        "PENDING_PAYMENT",
+                        "CONFIRMED",
+                        "CHECKED_IN",
+                        "CHECKED_OUT",
+                        "CANCELLED",
+                        "NO_SHOW",
+                        "EXPIRED"
+                      ]
+                    },
+                    "guestId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "propertyId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "roomTypeId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "ratePlanId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "channelId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "checkIn": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "checkOut": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "nights": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "adults": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "children": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "roomCount": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "totalAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "depositPercent": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "depositAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "paidAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "refundedAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "balanceDue": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "penaltyAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "type": "string",
+                      "enum": [
+                        "VND"
+                      ]
+                    },
+                    "rescheduleCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "holdExpiresAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "oversold": {
+                      "type": "boolean"
+                    },
+                    "priceLocked": {
+                      "type": "boolean"
+                    },
+                    "duplicateSuspected": {
+                      "type": "boolean"
+                    },
+                    "channelPolicyCode": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "note": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 500
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "seq",
+                    "status",
+                    "guestId",
+                    "propertyId",
+                    "roomTypeId",
+                    "ratePlanId",
+                    "channelId",
+                    "checkIn",
+                    "checkOut",
+                    "nights",
+                    "adults",
+                    "children",
+                    "roomCount",
+                    "totalAmount",
+                    "depositPercent",
+                    "depositAmount",
+                    "paidAmount",
+                    "refundedAmount",
+                    "balanceDue",
+                    "penaltyAmount",
+                    "currency",
+                    "rescheduleCount",
+                    "holdExpiresAt",
+                    "oversold",
+                    "priceLocked",
+                    "duplicateSuspected",
+                    "channelPolicyCode",
+                    "note",
+                    "createdBy",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_BOOK_INVALID_STATE, E_INV_NO_AVAILABILITY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_BOOK_MIN_NIGHTS, E_BOOK_OVER_CAPACITY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments": {
+      "post": {
+        "operationId": "paymentsCreate",
+        "summary": "Thu tiền tại quầy (cọc/số dư/khác) — 🔒 PIN, PIN gắn người và amount (UC-PAY-01,03)",
+        "tags": [
+          "pay"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bookingId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "DEPOSIT",
+                      "BALANCE",
+                      "REFUND",
+                      "PENALTY",
+                      "EXTRA_SERVICE",
+                      "COMPENSATION",
+                      "RESCHEDULE_FEE"
+                    ]
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "VNPAY",
+                      "MOMO",
+                      "CASH",
+                      "BANK_TRANSFER",
+                      "OTA_COLLECT"
+                    ]
+                  },
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "pinToken": {
+                    "type": "string",
+                    "minLength": 16
+                  }
+                },
+                "required": [
+                  "bookingId",
+                  "type",
+                  "method",
+                  "amount"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Khoản thu đã ghi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "paymentId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "bookingId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "DEPOSIT",
+                        "BALANCE",
+                        "REFUND",
+                        "PENALTY",
+                        "EXTRA_SERVICE",
+                        "COMPENSATION",
+                        "RESCHEDULE_FEE"
+                      ]
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "VNPAY",
+                        "MOMO",
+                        "CASH",
+                        "BANK_TRANSFER",
+                        "OTA_COLLECT"
+                      ]
+                    },
+                    "amount": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "SUCCEEDED",
+                        "FAILED",
+                        "REVERSED"
+                      ]
+                    },
+                    "providerTxnId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "paymentUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "expiresAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "paidAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "paymentId",
+                    "bookingId",
+                    "type",
+                    "method",
+                    "amount",
+                    "status",
+                    "providerTxnId",
+                    "paymentUrl",
+                    "expiresAt",
+                    "paidAt",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E_AUTH_PIN_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_BOOK_INVALID_STATE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_PAY_AMOUNT_MISMATCH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/online": {
+      "post": {
+        "operationId": "paymentsOnlineCreate",
+        "summary": "Khởi tạo thanh toán trực tuyến; kết quả cuối do PSP xác nhận (UC-PAY-02, BR-PAY-03)",
+        "tags": [
+          "pay"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bookingId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "DEPOSIT",
+                      "BALANCE",
+                      "REFUND",
+                      "PENALTY",
+                      "EXTRA_SERVICE",
+                      "COMPENSATION",
+                      "RESCHEDULE_FEE"
+                    ]
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "VNPAY",
+                      "MOMO",
+                      "CASH",
+                      "BANK_TRANSFER",
+                      "OTA_COLLECT"
+                    ]
+                  },
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "returnUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "bookingId",
+                  "type",
+                  "method",
+                  "amount",
+                  "returnUrl"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Giao dịch PENDING và URL PSP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "paymentId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "bookingId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "DEPOSIT",
+                        "BALANCE",
+                        "REFUND",
+                        "PENALTY",
+                        "EXTRA_SERVICE",
+                        "COMPENSATION",
+                        "RESCHEDULE_FEE"
+                      ]
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "VNPAY",
+                        "MOMO",
+                        "CASH",
+                        "BANK_TRANSFER",
+                        "OTA_COLLECT"
+                      ]
+                    },
+                    "amount": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "SUCCEEDED",
+                        "FAILED",
+                        "REVERSED"
+                      ]
+                    },
+                    "providerTxnId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "paymentUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "expiresAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "paidAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "paymentId",
+                    "bookingId",
+                    "type",
+                    "method",
+                    "amount",
+                    "status",
+                    "providerTxnId",
+                    "paymentUrl",
+                    "expiresAt",
+                    "paidAt",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_PAY_AMOUNT_MISMATCH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "E_PAY_GATEWAY_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "E_PAY_GATEWAY_TIMEOUT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/{paymentId}/status": {
+      "get": {
+        "operationId": "paymentsStatus",
+        "summary": "Đọc lại trạng thái giao dịch sau khi PSP chuyển hướng (UC-PAY-02, BR-PAY-05)",
+        "tags": [
+          "pay"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "paymentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trạng thái giao dịch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "paymentId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "bookingId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "SUCCEEDED",
+                        "FAILED",
+                        "REVERSED"
+                      ]
+                    },
+                    "amount": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "providerTxnId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "paidAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "paymentId",
+                    "bookingId",
+                    "status",
+                    "amount",
+                    "providerTxnId",
+                    "paidAt"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/{bookingId}/balance": {
+      "get": {
+        "operationId": "bookingsBalance",
+        "summary": "Số dư booking: đã thu, còn nợ, hoàn đang giữ hạn mức (UC-PAY-03, BR-PAY-02)",
+        "tags": [
+          "pay"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Số dư booking",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bookingId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "currency": {
+                      "type": "string",
+                      "enum": [
+                        "VND"
+                      ]
+                    },
+                    "totalAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "paidAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "refundedAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "reservedRefundAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "balanceDue": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "bookingId",
+                    "currency",
+                    "totalAmount",
+                    "paidAmount",
+                    "refundedAmount",
+                    "reservedRefundAmount",
+                    "balanceDue"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/refund-requests": {
+      "post": {
+        "operationId": "refundRequestsCreate",
+        "summary": "Lập hồ sơ hoàn từ nghiệp vụ (UC-PAY-04, BR-CANCEL-01…07,13)",
+        "tags": [
+          "refund"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bookingId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "paymentId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "GUEST_REQUEST",
+                      "FORCE_MAJEURE",
+                      "HOTEL_RELOCATION",
+                      "PAYMENT_TIMEOUT",
+                      "DUPLICATE",
+                      "NO_SHOW",
+                      "SYSTEM",
+                      "OTA_CANCELLATION",
+                      "EARLY_CHECKOUT"
+                    ]
+                  },
+                  "isForceMajeure": {
+                    "type": "boolean"
+                  },
+                  "evidenceRefs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "bookingId",
+                  "paymentId",
+                  "reason",
+                  "isForceMajeure"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Hồ sơ hoàn PENDING",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "bookingId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "paymentId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "policyId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "hoursBeforeCheckIn": {
+                      "type": "number"
+                    },
+                    "appliedTierId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "refundPercent": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "requestedAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "approvedAmount": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "refundFee": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "APPROVED",
+                        "REJECTED",
+                        "PAID",
+                        "CANCELLED"
+                      ]
+                    },
+                    "isForceMajeure": {
+                      "type": "boolean"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "enum": [
+                        "GUEST_REQUEST",
+                        "FORCE_MAJEURE",
+                        "HOTEL_RELOCATION",
+                        "PAYMENT_TIMEOUT",
+                        "DUPLICATE",
+                        "NO_SHOW",
+                        "SYSTEM",
+                        "OTA_CANCELLATION",
+                        "EARLY_CHECKOUT"
+                      ]
+                    },
+                    "evidenceRefs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "requestedBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "approvedBy": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "decidedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "paidAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "bookingId",
+                    "paymentId",
+                    "policyId",
+                    "hoursBeforeCheckIn",
+                    "appliedTierId",
+                    "refundPercent",
+                    "requestedAmount",
+                    "approvedAmount",
+                    "refundFee",
+                    "status",
+                    "isForceMajeure",
+                    "reason",
+                    "evidenceRefs",
+                    "requestedBy",
+                    "approvedBy",
+                    "decidedAt",
+                    "paidAt",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "E_PAY_REASON_TOO_SHORT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_PAY_REFUND_FORCE_MAJEURE_FORBIDDEN, E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_PAY_REFUND_NOT_PENDING",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_PAY_REFUND_EXCEEDS_PAID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "refundRequestsList",
+        "summary": "Danh sách hồ sơ hoàn kèm số tiền đã giữ/chi và version (UC-PAY-04, BR-CANCEL-16)",
+        "tags": [
+          "refund"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "bookingId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "propertyId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "PAID",
+                "CANCELLED"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách hồ sơ hoàn",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "bookingId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "paymentId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "policyId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "hoursBeforeCheckIn": {
+                            "type": "number"
+                          },
+                          "appliedTierId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "refundPercent": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "requestedAmount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "approvedAmount": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "refundFee": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "PENDING",
+                              "APPROVED",
+                              "REJECTED",
+                              "PAID",
+                              "CANCELLED"
+                            ]
+                          },
+                          "isForceMajeure": {
+                            "type": "boolean"
+                          },
+                          "reason": {
+                            "type": "string",
+                            "enum": [
+                              "GUEST_REQUEST",
+                              "FORCE_MAJEURE",
+                              "HOTEL_RELOCATION",
+                              "PAYMENT_TIMEOUT",
+                              "DUPLICATE",
+                              "NO_SHOW",
+                              "SYSTEM",
+                              "OTA_CANCELLATION",
+                              "EARLY_CHECKOUT"
+                            ]
+                          },
+                          "evidenceRefs": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "requestedBy": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "approvedBy": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          },
+                          "decidedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "paidAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "bookingId",
+                          "paymentId",
+                          "policyId",
+                          "hoursBeforeCheckIn",
+                          "appliedTierId",
+                          "refundPercent",
+                          "requestedAmount",
+                          "approvedAmount",
+                          "refundFee",
+                          "status",
+                          "isForceMajeure",
+                          "reason",
+                          "evidenceRefs",
+                          "requestedBy",
+                          "approvedBy",
+                          "decidedAt",
+                          "paidAt",
+                          "createdAt"
+                        ]
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "limit",
+                        "nextCursor",
+                        "hasMore",
+                        "total"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/refund-requests/{refundRequestId}/approve": {
+      "post": {
+        "operationId": "refundRequestsApprove",
+        "summary": "Duyệt hoàn — 🔒 PIN, người duyệt ≠ người lập (UC-PAY-04, BR-CANCEL-15)",
+        "tags": [
+          "refund"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "refundRequestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "approvedAmount": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "pinToken": {
+                    "type": "string",
+                    "minLength": 16
+                  }
+                },
+                "required": [
+                  "approvedAmount"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hồ sơ đã duyệt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "APPROVED",
+                        "REJECTED",
+                        "PAID",
+                        "CANCELLED"
+                      ]
+                    },
+                    "requestedAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "approvedAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "refundPercent": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "requestedBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "approvedBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "decidedAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "auditLogId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "payoutDeadline": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "status",
+                    "requestedAmount",
+                    "approvedAmount",
+                    "refundPercent",
+                    "requestedBy",
+                    "approvedBy",
+                    "decidedAt",
+                    "auditLogId",
+                    "payoutDeadline"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E_AUTH_PIN_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_PAY_SELF_APPROVAL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_PAY_REFUND_NOT_PENDING",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_PAY_AMOUNT_MISMATCH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/refund-requests/{refundRequestId}/reject": {
+      "post": {
+        "operationId": "refundRequestsReject",
+        "summary": "Từ chối PENDING, ghi lý do và trả hạn mức hoàn — 🔒 PIN (UC-PAY-04, BR-CANCEL-17)",
+        "tags": [
+          "refund"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "refundRequestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "note": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "pinToken": {
+                    "type": "string",
+                    "minLength": 16
+                  }
+                },
+                "required": [
+                  "note"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hồ sơ đã từ chối",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "bookingId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "paymentId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "policyId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "hoursBeforeCheckIn": {
+                      "type": "number"
+                    },
+                    "appliedTierId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "refundPercent": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "requestedAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "approvedAmount": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "refundFee": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "APPROVED",
+                        "REJECTED",
+                        "PAID",
+                        "CANCELLED"
+                      ]
+                    },
+                    "isForceMajeure": {
+                      "type": "boolean"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "enum": [
+                        "GUEST_REQUEST",
+                        "FORCE_MAJEURE",
+                        "HOTEL_RELOCATION",
+                        "PAYMENT_TIMEOUT",
+                        "DUPLICATE",
+                        "NO_SHOW",
+                        "SYSTEM",
+                        "OTA_CANCELLATION",
+                        "EARLY_CHECKOUT"
+                      ]
+                    },
+                    "evidenceRefs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "requestedBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "approvedBy": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "decidedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "paidAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "bookingId",
+                    "paymentId",
+                    "policyId",
+                    "hoursBeforeCheckIn",
+                    "appliedTierId",
+                    "refundPercent",
+                    "requestedAmount",
+                    "approvedAmount",
+                    "refundFee",
+                    "status",
+                    "isForceMajeure",
+                    "reason",
+                    "evidenceRefs",
+                    "requestedBy",
+                    "approvedBy",
+                    "decidedAt",
+                    "paidAt",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E_AUTH_PIN_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_PAY_REFUND_NOT_PENDING",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/refund-requests/{refundRequestId}/cancel": {
+      "post": {
+        "operationId": "refundRequestsCancel",
+        "summary": "Rút yêu cầu còn PENDING; không khôi phục booking (UC-PAY-04, BR-CANCEL-18)",
+        "tags": [
+          "refund"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "refundRequestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hồ sơ đã rút",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "bookingId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "paymentId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "policyId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "hoursBeforeCheckIn": {
+                      "type": "number"
+                    },
+                    "appliedTierId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "refundPercent": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "requestedAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "approvedAmount": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "refundFee": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "APPROVED",
+                        "REJECTED",
+                        "PAID",
+                        "CANCELLED"
+                      ]
+                    },
+                    "isForceMajeure": {
+                      "type": "boolean"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "enum": [
+                        "GUEST_REQUEST",
+                        "FORCE_MAJEURE",
+                        "HOTEL_RELOCATION",
+                        "PAYMENT_TIMEOUT",
+                        "DUPLICATE",
+                        "NO_SHOW",
+                        "SYSTEM",
+                        "OTA_CANCELLATION",
+                        "EARLY_CHECKOUT"
+                      ]
+                    },
+                    "evidenceRefs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "requestedBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "approvedBy": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "decidedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "paidAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "bookingId",
+                    "paymentId",
+                    "policyId",
+                    "hoursBeforeCheckIn",
+                    "appliedTierId",
+                    "refundPercent",
+                    "requestedAmount",
+                    "approvedAmount",
+                    "refundFee",
+                    "status",
+                    "isForceMajeure",
+                    "reason",
+                    "evidenceRefs",
+                    "requestedBy",
+                    "approvedBy",
+                    "decidedAt",
+                    "paidAt",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_PAY_REFUND_NOT_PENDING",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/refund-requests/{refundRequestId}/pay": {
+      "post": {
+        "operationId": "refundRequestsPay",
+        "summary": "Chi hoàn về phương thức gốc — 🔒 PIN, chỉ khi APPROVED (UC-PAY-04, BR-CANCEL-16)",
+        "tags": [
+          "refund"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "refundRequestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "VNPAY",
+                      "MOMO",
+                      "CASH",
+                      "BANK_TRANSFER",
+                      "OTA_COLLECT"
+                    ]
+                  },
+                  "bankNote": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "pinToken": {
+                    "type": "string",
+                    "minLength": 16
+                  }
+                },
+                "required": [
+                  "method"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hồ sơ đã chi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "bookingId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "paymentId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "policyId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "hoursBeforeCheckIn": {
+                      "type": "number"
+                    },
+                    "appliedTierId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "refundPercent": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "requestedAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "approvedAmount": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "refundFee": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "APPROVED",
+                        "REJECTED",
+                        "PAID",
+                        "CANCELLED"
+                      ]
+                    },
+                    "isForceMajeure": {
+                      "type": "boolean"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "enum": [
+                        "GUEST_REQUEST",
+                        "FORCE_MAJEURE",
+                        "HOTEL_RELOCATION",
+                        "PAYMENT_TIMEOUT",
+                        "DUPLICATE",
+                        "NO_SHOW",
+                        "SYSTEM",
+                        "OTA_CANCELLATION",
+                        "EARLY_CHECKOUT"
+                      ]
+                    },
+                    "evidenceRefs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "requestedBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "approvedBy": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "decidedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "paidAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "bookingId",
+                    "paymentId",
+                    "policyId",
+                    "hoursBeforeCheckIn",
+                    "appliedTierId",
+                    "refundPercent",
+                    "requestedAmount",
+                    "approvedAmount",
+                    "refundFee",
+                    "status",
+                    "isForceMajeure",
+                    "reason",
+                    "evidenceRefs",
+                    "requestedBy",
+                    "approvedBy",
+                    "decidedAt",
+                    "paidAt",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E_AUTH_PIN_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_PAY_REFUND_FORCE_MAJEURE_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_PAY_REFUND_NOT_APPROVED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/psp/vnpay/callback": {
+      "get": {
+        "operationId": "pspVnpayCallback",
+        "summary": "IPN VNPay: xác minh chữ ký trước ghi tiền, ghi bền rồi ACK (BR-PAY-03, NFR-SEC-05)",
+        "tags": [
+          "integration"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "vnp_TxnRef",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "vnp_Amount",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "vnp_ResponseCode",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "vnp_TransactionNo",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "vnp_SecureHash",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ACK theo RspCode của VNPay"
+          },
+          "401": {
+            "description": "E_PAY_SIGNATURE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_PAY_AMOUNT_MISMATCH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "E_GEN_SERVICE_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/psp/momo/callback": {
+      "post": {
+        "operationId": "pspMomoCallback",
+        "summary": "IPN MoMo: xác minh chữ ký, chống phát lại, ACK 204 không body (BR-PAY-03, NFR-REL-06)",
+        "tags": [
+          "integration"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "partnerCode": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "orderId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "requestId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "amount": {
+                    "type": "integer"
+                  },
+                  "resultCode": {
+                    "type": "integer"
+                  },
+                  "transId": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  "signature": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "partnerCode",
+                  "orderId",
+                  "requestId",
+                  "amount",
+                  "resultCode",
+                  "signature"
+                ],
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Đã ghi nhận (body rỗng theo giao thức MoMo)"
+          },
+          "401": {
+            "description": "E_PAY_SIGNATURE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_PAY_AMOUNT_MISMATCH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "E_GEN_SERVICE_UNAVAILABLE",
             "content": {
               "application/json": {
                 "schema": {

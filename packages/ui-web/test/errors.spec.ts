@@ -40,6 +40,20 @@ describe('ánh xạ mã lỗi sang hành động UI', () => {
     expect(expectedHttpStatus('E_FUTURE_UNKNOWN')).toBeNull();
   });
 
+  it('mã lỗi F5 có hành động riêng (HB-090)', () => {
+    expect(mapErrorToUiAction({ code: 'E_PAY_AMOUNT_MISMATCH', status: 422 })).toBe('fix-fields');
+    expect(mapErrorToUiAction({ code: 'E_PAY_REFUND_EXCEEDS_PAID', status: 422 })).toBe(
+      'fix-fields',
+    );
+    expect(mapErrorToUiAction({ code: 'E_PAY_GATEWAY_ERROR', status: 502 })).toBe('retry-later');
+    expect(mapErrorToUiAction({ code: 'E_PAY_GATEWAY_TIMEOUT', status: 504 })).toBe('retry-later');
+    expect(mapErrorToUiAction({ code: 'E_PAY_SIGNATURE_INVALID' })).toBe('contact-support');
+    expect(mapErrorToUiAction({ code: 'E_PAY_SELF_APPROVAL', status: 403 })).toBe('request-access');
+    expect(mapErrorToUiAction({ code: 'E_CANCEL_NOT_ALLOWED', status: 409 })).toBe(
+      'reload-and-diff',
+    );
+  });
+
   it('mã lỗi F1 có hành động riêng theo QĐ-03', () => {
     expect(mapErrorToUiAction({ code: 'E_AUTH_ACCOUNT_LOCKED', status: 401 })).toBe('retry-after');
     expect(mapErrorToUiAction({ code: 'E_AUTH_PIN_LOCKED', status: 403 })).toBe('retry-after');

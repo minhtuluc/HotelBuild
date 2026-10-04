@@ -3,6 +3,9 @@
  * Bao hình danh sách (`data` + `meta{limit,nextCursor,hasMore,total}`), phân trang con trỏ,
  * tiền số nguyên VND, thời gian ISO-8601 UTC, bao lỗi §4.1 và trạng thái tác vụ 202 (§6).
  */
+// Bật `.openapi()` **trước** khi bất kỳ schema nào được tạo: phần mở rộng không hồi tố trên instance
+// đã dựng, nên nạp nó ở đây để mọi điểm vào (test, generate) đều an toàn.
+import './openapi/zod-openapi.js';
 import { z } from 'zod';
 import { errorCodePattern, type ErrorCode } from './errors.js';
 

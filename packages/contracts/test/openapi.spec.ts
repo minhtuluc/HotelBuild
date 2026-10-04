@@ -90,6 +90,21 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['post', '/api/v1/bookings/{bookingId}/confirm', 'bearer'],
   ['post', '/api/v1/holds', 'bearer'],
   ['delete', '/api/v1/holds/{holdId}', 'bearer'],
+  // F5 (HB-090): vòng đời booking, thanh toán và hoàn tiền đều cần Bearer.
+  ['post', '/api/v1/bookings/{bookingId}/cancel-preview', 'bearer'],
+  ['post', '/api/v1/bookings/{bookingId}/cancel', 'bearer'],
+  ['post', '/api/v1/bookings/{bookingId}/reschedule', 'bearer'],
+  ['delete', '/api/v1/bookings/{bookingId}', 'bearer'],
+  ['post', '/api/v1/payments', 'bearer'],
+  ['post', '/api/v1/payments/online', 'bearer'],
+  ['get', '/api/v1/payments/{paymentId}/status', 'bearer'],
+  ['get', '/api/v1/bookings/{bookingId}/balance', 'bearer'],
+  ['post', '/api/v1/refund-requests', 'bearer'],
+  ['get', '/api/v1/refund-requests', 'bearer'],
+  ['post', '/api/v1/refund-requests/{refundRequestId}/approve', 'bearer'],
+  ['post', '/api/v1/refund-requests/{refundRequestId}/reject', 'bearer'],
+  ['post', '/api/v1/refund-requests/{refundRequestId}/cancel', 'bearer'],
+  ['post', '/api/v1/refund-requests/{refundRequestId}/pay', 'bearer'],
 ];
 
 const WRITE_TARGETS = AUTH_OPERATIONS.filter(([method]) => method !== 'get');
@@ -108,7 +123,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 46 path của F0 + F1 + F2 + F3 + F4', () => {
+  it('có đủ 60 path của F0 + F1 + F2 + F3 + F4 + F5', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -157,6 +172,20 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/bookings/{bookingId}/confirm',
         '/api/v1/holds',
         '/api/v1/holds/{holdId}',
+        '/api/v1/bookings/{bookingId}/cancel-preview',
+        '/api/v1/bookings/{bookingId}/cancel',
+        '/api/v1/bookings/{bookingId}/reschedule',
+        '/api/v1/bookings/{bookingId}/balance',
+        '/api/v1/payments',
+        '/api/v1/payments/online',
+        '/api/v1/payments/{paymentId}/status',
+        '/api/v1/refund-requests',
+        '/api/v1/refund-requests/{refundRequestId}/approve',
+        '/api/v1/refund-requests/{refundRequestId}/reject',
+        '/api/v1/refund-requests/{refundRequestId}/cancel',
+        '/api/v1/refund-requests/{refundRequestId}/pay',
+        '/api/v1/integrations/psp/vnpay/callback',
+        '/api/v1/integrations/psp/momo/callback',
       ].sort(),
     );
   });

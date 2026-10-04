@@ -8,5 +8,8 @@ export * from './system.js';
 export * from './rate.js';
 export * from './quote.js';
 export * from './booking.js';
+export * from './payment.js';
+export * from './refund.js';
+export * from './cancellation.js';
 export * from './cancellation-policy.js';
 export * from './env.js';
