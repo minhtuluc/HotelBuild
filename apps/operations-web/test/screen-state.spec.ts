@@ -7,9 +7,9 @@ import {
   writeFailureState,
 } from '../src/lib/screen-state';
 import { roomTypePriceWarnings } from '../src/lib/room-type-warnings';
+import { toMoney } from '../src/lib/money';
 import {
   EMPTY_ROOM_TYPE_DRAFT,
-  toMoney,
   toRoomTypeRequest,
 } from '../src/app/(ops)/room-types/room-type-draft';
 

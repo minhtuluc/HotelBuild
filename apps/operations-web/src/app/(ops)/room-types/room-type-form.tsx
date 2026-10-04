@@ -4,8 +4,9 @@
 import type { FormEvent, ReactElement } from 'react';
 import type { PropertySummary } from '@pinehill/contracts';
 import { roomTypePriceWarnings, type RoomTypePriceWarning } from '../../../lib/room-type-warnings';
+import { toMoney } from '../../../lib/money';
 import { t, type OperationsMessageKey } from '../../../lib/i18n';
-import { toMoney, type RoomTypeDraft } from './room-type-draft';
+import type { RoomTypeDraft } from './room-type-draft';
 
 const WARNING_MESSAGES: Readonly<Record<RoomTypePriceWarning, OperationsMessageKey>> = {
   floorAboveCeiling: 'roomTypes.warn.floorAboveCeiling',
