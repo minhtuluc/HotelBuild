@@ -44,6 +44,7 @@ const SCREENS = [
   '/promotions',
   '/room-blocks',
   '/seasons',
+  '/channels',
 ] as const;
 
 operationsWebOnly();
