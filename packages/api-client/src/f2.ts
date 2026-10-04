@@ -6,6 +6,7 @@ import {
   allotmentPutRequestSchema,
   allotmentRowSchema,
   auditLogEntrySchema,
+  availabilitySchema,
   inventoryGridSchema,
   listResponseSchema,
   operationRefSchema,
@@ -21,6 +22,7 @@ import {
   restoreRequestSchema,
   type AllotmentPutRequest,
   type AllotmentRow,
+  type Availability,
   type AuditLogEntry,
   type BackupRequest,
   type InventoryGrid,
@@ -131,6 +133,18 @@ export interface InventoryApi {
     to: string;
     roomTypeId?: string;
   }): Promise<ApiResponse<InventoryGrid>>;
+  availability(query: {
+    propertyId: string;
+    checkIn: string;
+    checkOut: string;
+    adults: number;
+    children: number;
+    roomCount: number;
+    roomTypeId?: string;
+    channelCode?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<ApiResponse<Availability>>;
   listAllotments(query: {
     channelId: string;
     roomTypeId: string;
@@ -148,6 +162,13 @@ export function createInventoryApi(client: ApiClient): InventoryApi {
         path: '/inventory/grid',
         query,
         decoder: inventoryGridSchema,
+      }),
+    availability: (query) =>
+      client.request({
+        method: 'GET',
+        path: '/inventory/availability',
+        query,
+        decoder: availabilitySchema,
       }),
     listAllotments: (query) =>
       client.request({

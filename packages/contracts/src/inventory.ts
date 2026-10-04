@@ -68,6 +68,61 @@ export const allotmentPutRequestSchema = z.strictObject({
   reason: z.string().min(1).max(500).optional(),
 });
 
+/**
+ * `GET /inventory/availability` — tìm phòng trống (api.md §2.3, §3.8); **chỉ đọc**, không khoá phòng.
+ * `availableCount` là min trên mọi đêm riêng biệt (BR-INV-07); `roomCount` vượt → `409 E_INV_NO_AVAILABILITY`.
+ */
+export const availabilityQuerySchema = z
+  .strictObject({
+    propertyId: z.string().min(1),
+    roomTypeId: z.string().min(1).optional(),
+    checkIn: businessDateSchema,
+    checkOut: businessDateSchema,
+    adults: z.coerce.number().int().min(1).max(20),
+    children: z.coerce.number().int().min(0).max(20),
+    roomCount: z.coerce.number().int().min(1).max(10),
+    channelCode: channelCodeSchema.optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    cursor: z.string().min(1).optional(),
+  })
+  .refine((value) => daysBetween(value.checkIn, value.checkOut) >= 1, {
+    message: '`checkOut` phải sau `checkIn` ít nhất một đêm',
+    path: ['checkOut'],
+  });
+
+/** Một loại phòng còn chỗ cho cả kỳ; `availableCount` đã là min toàn kỳ (api.md §3.8). */
+export const availabilityItemSchema = z.object({
+  propertyId: z.string().min(1),
+  roomTypeId: z.string().min(1),
+  roomTypeCode: z.string().min(1),
+  roomTypeName: z.string().min(1),
+  capacityAdults: z.number().int().min(1),
+  availableCount: z.number().int().min(0),
+  soldOut: z.boolean(),
+  minNights: z.number().int().min(1),
+  maxNights: z.number().int().min(1),
+  nightlyFrom: z.number().int().positive(),
+  totalFrom: z.number().int().positive(),
+});
+
+/** Phản hồi `200`: kỳ, số đêm và danh sách loại phòng kèm phân trang con trỏ (api.md §3.8). */
+export const availabilitySchema = z.object({
+  checkIn: businessDateSchema,
+  checkOut: businessDateSchema,
+  nights: z.number().int().min(1),
+  channelCode: channelCodeSchema.optional(),
+  data: z.array(availabilityItemSchema),
+  // Ví dụ api.md §3.8 chỉ khai limit/nextCursor/hasMore; `total` là tuỳ chọn để khớp tài liệu.
+  meta: z.strictObject({
+    limit: z.number().int().min(1).max(100),
+    nextCursor: z.string().nullable(),
+    hasMore: z.boolean(),
+    total: z.number().int().min(0).optional(),
+  }),
+});
+
 export type InventoryGrid = z.infer<typeof inventoryGridSchema>;
 export type AllotmentRow = z.infer<typeof allotmentRowSchema>;
 export type AllotmentPutRequest = z.infer<typeof allotmentPutRequestSchema>;
+export type Availability = z.infer<typeof availabilitySchema>;
+export type AvailabilityItem = z.infer<typeof availabilityItemSchema>;

@@ -6,5 +6,7 @@ export * from './property.js';
 export * from './inventory.js';
 export * from './system.js';
 export * from './rate.js';
+export * from './quote.js';
+export * from './booking.js';
 export * from './cancellation-policy.js';
 export * from './env.js';

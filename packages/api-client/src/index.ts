@@ -4,3 +4,4 @@ export * from './auth.js';
 export * from './users.js';
 export * from './f2.js';
 export * from './rate.js';
+export * from './booking.js';
