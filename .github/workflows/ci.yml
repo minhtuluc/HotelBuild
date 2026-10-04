@@ -18,6 +18,22 @@ jobs:
     name: Quality gate (typecheck, lint, test, build)
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Migration audits are mandatory when present; retain all existing quality checks.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: hb007_ci_owner
+          POSTGRES_DB: pinehill_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d pinehill_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_MIGRATION_URL: postgresql://postgres:hb007_ci_owner@localhost:5432/pinehill_ci
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,3 +65,57 @@ jobs:
         run: pnpm products:test:coverage
       - name: Build hai web app
         run: pnpm products:build
+
+  backend:
+    name: Backend integration (PostgreSQL 16, Redis 7)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: hb007_ci_owner
+          POSTGRES_DB: pinehill_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d pinehill_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    env:
+      DATABASE_MIGRATION_URL: postgresql://postgres:hb007_ci_owner@localhost:5432/pinehill_ci
+      DATABASE_URL: postgresql://app_rw:hb007_ci_runtime@localhost:5432/pinehill_ci
+      REDIS_URL: redis://localhost:6379
+      CI_REQUIRE_SERVICES: '1'
+      NODE_ENV: development
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # locked baseline oracle reads its original source commit
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Integration runner regressions
+        run: node --test tests/integration-runner.test.mjs
+      - name: Migrate empty database
+        run: pnpm migrate
+      - name: Configure app_rw runtime login
+        run: pnpm db:dev-roles
+      - name: Migrate again (idempotence)
+        run: pnpm migrate
+      - name: Required API and worker integrations (no skips)
+        run: pnpm test:integration
