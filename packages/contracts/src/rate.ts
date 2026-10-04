@@ -85,6 +85,35 @@ export const channelUpdateRequestSchema = z.strictObject({
   reason: z.string().min(1).max(500).optional(),
 });
 
+/**
+ * Bổ sung tuyến đọc khuyến mãi (HB-061 SCR-29, chủ dự án duyệt 05/10/2026): api.md §2.4 chỉ có
+ * `POST /promotions` nên màn hình không liệt kê được mã hiện có, lượt đã dùng hay trạng thái.
+ */
+export const promotionQuerySchema = z.strictObject({
+  propertyId: z.string().min(1).optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  cursor: z.string().min(1).optional(),
+});
+
+/** Một khuyến mãi đang cấu hình; `usedCount`/`status`/`version` để màn hình hiển thị và `If-Match`. */
+export const promotionSummarySchema = z.object({
+  id: z.string().min(1),
+  code: z.string().min(1).max(40),
+  type: promotionTypeSchema,
+  value: z.number().int().positive(),
+  minNights: z.number().int().min(1),
+  channelScope: z.array(channelCodeSchema),
+  roomTypeScope: z.array(z.string().min(1)),
+  validFrom: isoUtcTimestampSchema,
+  validTo: isoUtcTimestampSchema,
+  maxUses: z.number().int().min(1).nullable(),
+  usedCount: z.number().int().min(0),
+  stackable: z.boolean(),
+  status: z.enum(['ACTIVE', 'INACTIVE']),
+  version: z.number().int().min(0),
+});
+
 export const promotionCreateRequestSchema = z.strictObject({
   code: z.string().min(1).max(40),
   type: promotionTypeSchema,
@@ -143,6 +172,8 @@ export type RateCalendarOverrideRequest = z.infer<typeof rateCalendarOverrideReq
 export type SeasonCreateRequest = z.infer<typeof seasonCreateRequestSchema>;
 export type ChannelUpdateRequest = z.infer<typeof channelUpdateRequestSchema>;
 export type PromotionCreateRequest = z.infer<typeof promotionCreateRequestSchema>;
+export type PromotionSummary = z.infer<typeof promotionSummarySchema>;
+export type PromotionQuery = z.infer<typeof promotionQuerySchema>;
 export type MultiChannelQuote = z.infer<typeof multiChannelQuoteSchema>;
 export type RatePlanPublic = z.infer<typeof ratePlanPublicSchema>;
 export type RatePlanUpdateRequest = z.infer<typeof ratePlanUpdateRequestSchema>;

@@ -15,6 +15,8 @@ import {
   multiChannelQuoteRequestSchema,
   multiChannelQuoteSchema,
   promotionCreateRequestSchema,
+  promotionQuerySchema,
+  promotionSummarySchema,
   rateCalendarOverrideRequestSchema,
   rateCalendarQuerySchema,
   rateCalendarSchema,
@@ -132,6 +134,24 @@ export function registerF3Paths(registry: OpenAPIRegistry, errorBodyComponent: z
       412: errorResponse('E_GEN_VERSION_CONFLICT'),
       422: errorResponse('E_RATE_BELOW_FLOOR'),
       428: errorResponse('E_GEN_PRECONDITION_REQUIRED'),
+    },
+  });
+
+  // Bổ sung tuyến đọc khuyến mãi (HB-061 SCR-29, chủ dự án duyệt 05/10/2026). Thêm tuyến, 0 phá vỡ.
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/promotions',
+    operationId: 'promotionsList',
+    summary: 'Danh sách khuyến mãi kèm lượt đã dùng, phạm vi và trạng thái (SCR-29)',
+    tags: ['rate'],
+    ...bearerRead,
+    request: { query: promotionQuerySchema },
+    responses: {
+      200: {
+        description: 'Danh sách khuyến mãi',
+        ...jsonBody(listResponseSchema(promotionSummarySchema)),
+      },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
     },
   });
 
