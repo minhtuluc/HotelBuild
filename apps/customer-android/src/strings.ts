@@ -16,6 +16,17 @@ export const catalog = {
   'guest.phoneRegistered': 'Số điện thoại đã có hồ sơ. Vui lòng liên hệ lễ tân.',
   'home.title': 'Pine Hill — Khách',
   'home.logout': 'Đăng xuất',
+  'nav.search': 'Tìm phòng',
+  'nav.bookings': 'Đơn của tôi',
+  'nav.account': 'Tài khoản',
+  'journey.search.title': 'Tìm phòng',
+  'journey.search.placeholder': 'Khung tìm phòng — màn hình thật ở HB-085.',
+  'journey.bookings.title': 'Đơn của tôi',
+  'journey.bookings.placeholder': 'Danh sách đơn — màn hình thật ở HB-079/HB-113.',
+  'journey.account.title': 'Tài khoản',
+  'journey.account.placeholder': 'Hồ sơ khách — màn hình thật ở HB-115.',
+  'booking.title': 'Booking {code}',
+  'booking.placeholder': 'Chi tiết booking mở từ deep link — màn hình thật ở HB-086.',
 } as const;
 
 export const t = makeTranslate(catalog);
