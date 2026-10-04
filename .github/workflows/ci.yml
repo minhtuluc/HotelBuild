@@ -95,7 +95,7 @@ jobs:
     env:
       DATABASE_MIGRATION_URL: postgresql://postgres:hb007_ci_owner@localhost:5432/pinehill_ci
       DATABASE_URL: postgresql://app_rw:hb007_ci_runtime@localhost:5432/pinehill_ci
-      REDIS_URL: redis://localhost:6379
+      REDIS_URL: redis://localhost:1 # deliberate unreachable dependency; AC5 evidence only
       CI_REQUIRE_SERVICES: '1'
       NODE_ENV: development
     steps:
