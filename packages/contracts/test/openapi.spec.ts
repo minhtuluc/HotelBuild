@@ -116,6 +116,15 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['post', '/api/v1/refund-requests/{refundRequestId}/reject', 'bearer'],
   ['post', '/api/v1/refund-requests/{refundRequestId}/cancel', 'bearer'],
   ['post', '/api/v1/refund-requests/{refundRequestId}/pay', 'bearer'],
+  // F7 (HB-140): tiền sảnh, buồng phòng, khách tại quầy, chốt đối soát.
+  ['post', '/api/v1/front-office/check-in', 'bearer'],
+  ['post', '/api/v1/front-office/check-out', 'bearer'],
+  ['post', '/api/v1/front-office/no-show', 'bearer'],
+  ['get', '/api/v1/housekeeping/tasks', 'bearer'],
+  ['patch', '/api/v1/housekeeping/tasks/{taskId}', 'bearer'],
+  ['get', '/api/v1/guests', 'bearer'],
+  ['post', '/api/v1/guests', 'bearer'],
+  ['post', '/api/v1/reconciliation/daily/close', 'bearer'],
 ];
 
 const WRITE_TARGETS = AUTH_OPERATIONS.filter(([method]) => method !== 'get');
@@ -134,7 +143,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 62 path của F0…F5 kèm tuyến đọc bổ sung (room-blocks, seasons, channels, system-settings)', () => {
+  it('có đủ 69 path của F0…F5 + F7 (kèm tuyến đọc bổ sung F2/F3)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -197,6 +206,13 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/refund-requests/{refundRequestId}/reject',
         '/api/v1/refund-requests/{refundRequestId}/cancel',
         '/api/v1/refund-requests/{refundRequestId}/pay',
+        '/api/v1/front-office/check-in',
+        '/api/v1/front-office/check-out',
+        '/api/v1/front-office/no-show',
+        '/api/v1/housekeeping/tasks',
+        '/api/v1/housekeeping/tasks/{taskId}',
+        '/api/v1/guests',
+        '/api/v1/reconciliation/daily/close',
         '/api/v1/integrations/psp/vnpay/callback',
         '/api/v1/integrations/psp/momo/callback',
       ].sort(),
@@ -268,6 +284,23 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     const seasons = document.paths?.['/api/v1/seasons'] ?? {};
     expect(Object.keys(seasons).sort()).toEqual(['get', 'post']);
     expect(JSON.stringify(seasons.get)).toContain('propertyId');
+  });
+
+  it('DTO buồng phòng là projection tối thiểu, không có booking/khách/tiền (HB-140 AC3)', () => {
+    const task = document.paths?.['/api/v1/housekeeping/tasks']?.get;
+    const serialized = JSON.stringify(task).toLowerCase();
+    for (const forbidden of [
+      'bookingid',
+      'guestid',
+      'guestname',
+      'amount',
+      'paidamount',
+      'balance',
+    ]) {
+      expect(serialized, forbidden).not.toContain(forbidden);
+    }
+    const patch = document.paths?.['/api/v1/housekeeping/tasks/{taskId}']?.patch;
+    expect(JSON.stringify(patch)).toContain('If-Match');
   });
 
   it('không khai tuyến ghi lên audit-logs hay price snapshot (§2.14, BR-SYS-01, BR-RATE-16)', () => {

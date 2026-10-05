@@ -28,6 +28,7 @@ import { registerF2Paths } from './paths/f2.js';
 import { registerF3Paths } from './paths/f3.js';
 import { registerF4Paths } from './paths/f4.js';
 import { registerF5Paths } from './paths/f5.js';
+import { registerF7Paths } from './paths/f7.js';
 
 export const registry = new OpenAPIRegistry();
 
@@ -317,3 +318,5 @@ registerF3Paths(registry, errorBodyComponent);
 registerF4Paths(registry, errorBodyComponent);
 // Pha F5 (thanh toán, huỷ/hoàn, đổi ngày, xoá booking) — HB-090.
 registerF5Paths(registry, errorBodyComponent);
+// Pha F7 (tiền sảnh, buồng phòng, khách tại quầy, chốt đối soát) — HB-140.
+registerF7Paths(registry, errorBodyComponent);
