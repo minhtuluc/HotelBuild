@@ -20,12 +20,12 @@ pnpm infra:down          # = docker compose -f infra/docker-compose.yml down (kh
 
 Mọi cổng chỉ bind vào loopback, không phơi ra mạng LAN.
 
-| Dịch vụ | Cổng | Ghi chú |
-|---|---|---|
+| Dịch vụ       | Cổng             | Ghi chú                                             |
+| ------------- | ---------------- | --------------------------------------------------- |
 | PostgreSQL 16 | `127.0.0.1:5432` | role chủ `pinehill`, CSDL `pinehill` (mặc định dev) |
-| Redis 7 | `127.0.0.1:6379` | cache, khoá phân tán, idempotency (ADR-004) |
-| Mailpit SMTP | `127.0.0.1:1025` | giá trị của `SMTP_URL` trong `.env` |
-| Mailpit UI | `127.0.0.1:8025` | xem thư đã gửi |
+| Redis 7       | `127.0.0.1:6379` | cache, khoá phân tán, idempotency (ADR-004)         |
+| Mailpit SMTP  | `127.0.0.1:1025` | giá trị của `SMTP_URL` trong `.env`                 |
+| Mailpit UI    | `127.0.0.1:8025` | xem thư đã gửi                                      |
 
 ## Kết nối `psql`
 
@@ -57,6 +57,24 @@ psql "$DATABASE_URL" -c "select current_user"
 ```
 
 `db:dev-roles` lấy mật khẩu đã giải mã từ `DATABASE_URL`, yêu cầu role `app_rw` đã tồn tại và kết nối bằng `DATABASE_MIGRATION_URL`. Mật khẩu không nằm trong migration. Lệnh chỉ dành cho dev: từ chối `NODE_ENV=production`, host ngoài loopback, runtime khác `app_rw`, hoặc hai URL khác endpoint/CSDL. Nếu đổi mật khẩu runtime trong `.env`, chạy lại lệnh này; không cần xoá volume.
+
+## Seed dữ liệu tham chiếu (HB-018)
+
+Sau khi migrate, nạp dữ liệu tham chiếu của đề tài (3 cơ sở · 55 phòng · 75 đơn vị bán · 5 loại phòng · 7 kênh · 4 gói giá · 4 chính sách huỷ + 11 bậc · tham số hệ thống) và 7 tài khoản dev:
+
+```sh
+pnpm db:seed
+```
+
+- **Idempotent**: chạy lại không tạo bản ghi trùng; giá trị `system_settings` đã có thì giữ nguyên (không ghi đè cấu hình vận hành).
+- Mật khẩu tài khoản dev đọc từ `SEED_DEV_PASSWORD`; ngoài production có mặc định dev — **khi `NODE_ENV=production` phần tài khoản dev bị bỏ qua**.
+- Môi trường thật tạo OWNER đầu tiên bằng `BOOTSTRAP_OWNER_USERNAME` + `BOOTSTRAP_OWNER_PASSWORD`:
+
+```sh
+pnpm owner:bootstrap
+```
+
+Lệnh chỉ chạy khi **chưa có OWNER đang hoạt động**; tài khoản mới phải đổi mật khẩu ở lần đăng nhập đầu và mọi lần chạy đều ghi `AuditLog` với actor `SYSTEM`. Mật khẩu không bao giờ được in ra.
 
 ## Xoá dữ liệu
 
