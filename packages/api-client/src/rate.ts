@@ -8,6 +8,7 @@ import {
   channelUpdateRequestSchema,
   listResponseSchema,
   promotionSummarySchema,
+  seasonSummarySchema,
   multiChannelQuoteRequestSchema,
   multiChannelQuoteSchema,
   promotionCreateRequestSchema,
@@ -28,6 +29,7 @@ import {
   type RatePlanPublic,
   type RatePlanUpdateRequest,
   type SeasonCreateRequest,
+  type SeasonSummary,
 } from '@pinehill/contracts';
 import { ApiClient, type ApiResponse } from './client.js';
 
@@ -40,6 +42,13 @@ export interface RateApi {
     roomTypeId: string,
     input: RateCalendarOverrideRequest,
   ): Promise<ApiResponse<RateCalendar>>;
+  listSeasons(query?: {
+    propertyId?: string;
+    from?: string;
+    to?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<ApiResponse<ListPage<SeasonSummary>>>;
   createSeason(input: SeasonCreateRequest): Promise<ApiResponse<undefined>>;
   updateChannel(
     channelId: string,
@@ -96,6 +105,13 @@ export function createRateApi(client: ApiClient): RateApi {
         path: `/room-types/${encodeURIComponent(roomTypeId)}/rate-calendar`,
         body: rateCalendarOverrideRequestSchema.parse(input),
         decoder: rateCalendarSchema,
+      }),
+    listSeasons: (query) =>
+      client.request({
+        method: 'GET',
+        path: '/seasons',
+        ...(query === undefined ? {} : { query }),
+        decoder: listResponseSchema(seasonSummarySchema),
       }),
     createSeason: (input) =>
       client.requestVoid({

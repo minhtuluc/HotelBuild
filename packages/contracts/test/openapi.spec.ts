@@ -75,6 +75,8 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['get', '/api/v1/operations/{operationId}', 'bearer'],
   ['get', '/api/v1/room-types/{roomTypeId}/rate-calendar', 'bearer'],
   ['put', '/api/v1/room-types/{roomTypeId}/rate-calendar', 'bearer'],
+  // HB-059: bổ sung tuyến đọc mùa cho SCR-27 (thêm tuyến, không phá vỡ hợp đồng).
+  ['get', '/api/v1/seasons', 'bearer'],
   ['post', '/api/v1/seasons', 'bearer'],
   ['patch', '/api/v1/channels/{channelId}', 'bearer'],
   // HB-061: bổ sung tuyến đọc khuyến mãi cho SCR-29 (thêm tuyến, không phá vỡ hợp đồng).
@@ -253,6 +255,12 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     const list = document.paths?.['/api/v1/room-blocks']?.get;
     expect(JSON.stringify(list)).toContain('propertyId');
     expect(JSON.stringify(list)).toContain('roomId');
+  });
+
+  it('tuyến đọc mùa phục vụ SCR-27 (HB-059): GET + POST, không có tuyến ghi khác', () => {
+    const seasons = document.paths?.['/api/v1/seasons'] ?? {};
+    expect(Object.keys(seasons).sort()).toEqual(['get', 'post']);
+    expect(JSON.stringify(seasons.get)).toContain('propertyId');
   });
 
   it('không khai tuyến ghi lên audit-logs hay price snapshot (§2.14, BR-SYS-01, BR-RATE-16)', () => {
