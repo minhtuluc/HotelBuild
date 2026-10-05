@@ -5,7 +5,12 @@
  */
 import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
-import { listResponseSchema, operationRefSchema, operationStatusViewSchema } from '../../common.js';
+import {
+  businessDateSchema,
+  listResponseSchema,
+  operationRefSchema,
+  operationStatusViewSchema,
+} from '../../common.js';
 import {
   allotmentPutRequestSchema,
   allotmentQuerySchema,
@@ -141,6 +146,34 @@ export function registerF2Paths(registry: OpenAPIRegistry, errorBodyComponent: z
       403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
       404: errorResponse('E_GEN_NOT_FOUND'),
       412: errorResponse('E_GEN_VERSION_CONFLICT'),
+    },
+  });
+
+  // Bổ sung tuyến đọc (HB-039, QĐ-04 mục 7): api.md §2.2 chỉ có POST/DELETE nên SCR-22 không liệt kê
+  // được khoá đang có và không cảnh báo chồng lấn. Thay đổi tương thích (thêm tuyến), 0 phá vỡ.
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/room-blocks',
+    operationId: 'roomBlocksList',
+    summary: 'Danh sách khoá phòng đang có để SCR-22 liệt kê và cảnh báo chồng lấn (UC-PROP-04)',
+    tags: ['prop'],
+    ...bearerRead,
+    request: {
+      query: z.object({
+        propertyId: z.string().min(1).optional(),
+        roomId: z.string().min(1).optional(),
+        from: businessDateSchema.optional(),
+        to: businessDateSchema.optional(),
+        limit: z.coerce.number().int().min(1).max(100).default(50),
+        cursor: z.string().min(1).optional(),
+      }),
+    },
+    responses: {
+      200: {
+        description: 'Danh sách khoá phòng',
+        ...jsonBody(listResponseSchema(roomBlockSchema)),
+      },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
     },
   });
 

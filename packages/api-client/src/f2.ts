@@ -61,6 +61,14 @@ export interface PropertyApi {
     input: ConnectingRoomRequest,
     ifMatch: string,
   ): Promise<ApiResponse<RoomSummary>>;
+  listRoomBlocks(query?: {
+    propertyId?: string;
+    roomId?: string;
+    from?: string;
+    to?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<ApiResponse<ListPage<RoomBlock>>>;
   createRoomBlock(input: RoomBlockCreateRequest): Promise<ApiResponse<RoomBlock>>;
   deleteRoomBlock(roomBlockId: string, reason: string): Promise<ApiResponse<undefined>>;
 }
@@ -109,6 +117,13 @@ export function createPropertyApi(client: ApiClient): PropertyApi {
         body: input,
         ifMatch,
         decoder: roomSummarySchema,
+      }),
+    listRoomBlocks: (query) =>
+      client.request({
+        method: 'GET',
+        path: '/room-blocks',
+        ...(query === undefined ? {} : { query }),
+        decoder: listResponseSchema(roomBlockSchema),
       }),
     createRoomBlock: (input) =>
       client.request({

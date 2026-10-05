@@ -61,6 +61,8 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['get', '/api/v1/room-types', 'bearer'],
   ['get', '/api/v1/rooms', 'bearer'],
   ['put', '/api/v1/rooms/{roomId}/connecting-room', 'bearer'],
+  // HB-039: bổ sung tuyến đọc khoá phòng cho SCR-22 (thêm tuyến, không phá vỡ hợp đồng).
+  ['get', '/api/v1/room-blocks', 'bearer'],
   ['post', '/api/v1/room-blocks', 'bearer'],
   ['delete', '/api/v1/room-blocks/{roomBlockId}', 'bearer'],
   ['get', '/api/v1/inventory/grid', 'bearer'],
@@ -243,6 +245,14 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
 
   it('có component ErrorBody dùng chung', () => {
     expect(Object.keys(document.components?.schemas ?? {})).toContain('ErrorBody');
+  });
+
+  it('tuyến đọc khoá phòng phục vụ SCR-22 (HB-039): chỉ GET, không thêm tuyến ghi', () => {
+    const blocks = document.paths?.['/api/v1/room-blocks'] ?? {};
+    expect(Object.keys(blocks).sort()).toEqual(['get', 'post']);
+    const list = document.paths?.['/api/v1/room-blocks']?.get;
+    expect(JSON.stringify(list)).toContain('propertyId');
+    expect(JSON.stringify(list)).toContain('roomId');
   });
 
   it('không khai tuyến ghi lên audit-logs hay price snapshot (§2.14, BR-SYS-01, BR-RATE-16)', () => {
