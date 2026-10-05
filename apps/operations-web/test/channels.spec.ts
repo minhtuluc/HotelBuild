@@ -52,6 +52,10 @@ describe('channelWarnings', () => {
     expect(channelWarnings({ code: 'WEB', multiplier: 0.95, commissionPct: 0 })).toEqual([
       'directBelowOne',
     ]);
+    // Kênh trực tiếp 0% hoa hồng KHÔNG có ngưỡng sàn (BR-RATE-07: sàn chỉ cho kênh hoa hồng > 0).
+    expect(channelWarnings({ code: 'PHONE', multiplier: 0.5, commissionPct: 0 })).toEqual([
+      'directBelowOne',
+    ]);
     expect(channelWarnings({ code: 'WALKIN', multiplier: 0.9, commissionPct: 10 })).toEqual([
       'belowFloor',
       'directBelowOne',

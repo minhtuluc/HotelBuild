@@ -28,7 +28,9 @@ export function channelWarnings(channel: {
   commissionPct: number;
 }): readonly ChannelWarning[] {
   const warnings: ChannelWarning[] = [];
-  if (channel.code !== AGENCY_CHANNEL) {
+  // BR-RATE-07: ngưỡng sàn `1/(1−hoa hồng)` chỉ áp cho kênh **có hoa hồng > 0**; kênh trực tiếp
+  // (0%) không có sàn, chỉ chịu cảnh báo "dưới 1,00" của BR-RATE-09. `AGENCY` được miễn cả hai.
+  if (channel.code !== AGENCY_CHANNEL && channel.commissionPct > 0) {
     const floor = floorMultiplier(channel.commissionPct);
     if (floor !== null && channel.multiplier < floor) warnings.push('belowFloor');
   }
