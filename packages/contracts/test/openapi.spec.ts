@@ -134,7 +134,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 61 path của F0 + F1 + F2 + F3 + F4 + F5', () => {
+  it('có đủ 62 path của F0…F5 kèm tuyến đọc bổ sung (room-blocks, seasons, channels, system-settings)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
