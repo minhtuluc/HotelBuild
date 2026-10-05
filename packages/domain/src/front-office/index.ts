@@ -1,4 +1,11 @@
 export { checkIn } from './check-in.js';
+export {
+  checkOutFee,
+  type CheckOutFeeInput,
+  type CheckOutFeeDecision,
+  type CheckOutFeeFailure,
+  type EarlyCheckoutFacts,
+} from './checkout/index.js';
 
 export interface CheckInUnit {
   readonly roomId: string;
