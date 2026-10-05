@@ -16,4 +16,6 @@ export * from './reconciliation.js';
 export * from './refund.js';
 export * from './cancellation.js';
 export * from './cancellation-policy.js';
+export * from './report.js';
+export * from './notification.js';
 export * from './env.js';
