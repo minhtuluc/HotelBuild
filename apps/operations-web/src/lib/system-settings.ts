@@ -10,14 +10,24 @@ export interface FieldIssue {
   issue: string;
 }
 
-/** Kiểm giá trị theo `valueType` máy chủ khai (số nguyên / boolean / chuỗi). */
+/** Kiểm giá trị theo `valueType` máy chủ khai — đúng bốn kiểu của csdl §3. */
 export function valueIssue(valueType: SystemSettingValueType, raw: string): FieldIssue | null {
   const value = raw.trim();
   if (valueType === 'BOOLEAN') {
     return value === 'true' || value === 'false' ? null : { field: 'value', issue: 'NOT_BOOLEAN' };
   }
-  if (valueType === 'INTEGER') {
-    return /^-?\d+$/.test(value) ? null : { field: 'value', issue: 'NOT_INTEGER' };
+  if (valueType === 'NUMBER') {
+    return value !== '' && Number.isFinite(Number(value))
+      ? null
+      : { field: 'value', issue: 'NOT_NUMBER' };
+  }
+  if (valueType === 'JSON') {
+    try {
+      JSON.parse(value);
+      return null;
+    } catch {
+      return { field: 'value', issue: 'NOT_JSON' };
+    }
   }
   return value === '' ? { field: 'value', issue: 'REQUIRED' } : null;
 }

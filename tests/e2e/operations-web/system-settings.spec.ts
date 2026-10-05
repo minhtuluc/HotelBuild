@@ -2,10 +2,10 @@ import { expect, test, type Page } from '@playwright/test';
 import { errorBody, fulfillJson, listBody } from './fake-api';
 import { operationsWebOnly } from './guard';
 
-const INTEGER_SETTING = {
+const NUMBER_SETTING = {
   key: 'pricing.maxDiscountPct',
   value: '20',
-  valueType: 'INTEGER',
+  valueType: 'NUMBER',
   description: 'Trần giảm giá tối đa',
   updatedBy: 'u1',
   updatedAt: '2026-11-12T07:00:00.000Z',
@@ -48,7 +48,7 @@ function backend(page: Page): { puts: () => string[]; ifMatch: () => (string | u
       puts.push(route.request().postData() ?? '');
       return fulfillJson(route, 204, '');
     }
-    return fulfillJson(route, 200, listBody([INTEGER_SETTING, BOOLEAN_SETTING]));
+    return fulfillJson(route, 200, listBody([NUMBER_SETTING, BOOLEAN_SETTING]));
   });
   return { puts: () => puts, ifMatch: () => ifMatch };
 }
@@ -60,7 +60,7 @@ test.describe('SCR-17 tham số hệ thống trên API giả (HB-044)', () => {
     const table = page.getByTestId('settings-table');
     await expect(table).toBeVisible();
     await expect(page.getByTestId('setting-pricing.maxDiscountPct')).toContainText('20');
-    await expect(page.getByTestId('setting-pricing.maxDiscountPct')).toContainText('INTEGER');
+    await expect(page.getByTestId('setting-pricing.maxDiscountPct')).toContainText('NUMBER');
     await expect(page.getByTestId('setting-pricing.maxDiscountPct')).toContainText('u1');
     await expect(page.getByTestId('setting-pricing.maxDiscountPct')).toContainText(
       '12/11/2026 14:00 (giờ VN)',
@@ -75,7 +75,7 @@ test.describe('SCR-17 tham số hệ thống trên API giả (HB-044)', () => {
     await page.getByLabel('Giá trị mới').fill('hai mươi');
     await page.getByLabel('Lý do thay đổi').fill('Đổi trần');
     await page.getByRole('button', { name: 'Lưu' }).click();
-    await expect(page.getByText('value: NOT_INTEGER')).toBeVisible();
+    await expect(page.getByText('value: NOT_NUMBER')).toBeVisible();
     expect(spy.puts()).toHaveLength(0);
   });
 
@@ -105,7 +105,7 @@ test.describe('SCR-17 tham số hệ thống trên API giả (HB-044)', () => {
           errorBody('E_GEN_VERSION_CONFLICT', 'trace-412', '/api/v1/system-settings/x'),
         );
       }
-      return fulfillJson(route, 200, listBody([INTEGER_SETTING]));
+      return fulfillJson(route, 200, listBody([NUMBER_SETTING]));
     });
     await page.goto('/system-settings');
     await page.getByTestId('setting-pricing.maxDiscountPct').getByRole('button', { name: 'Sửa' }).click();
@@ -148,7 +148,7 @@ test.describe('SCR-17 tham số hệ thống trên API giả (HB-044)', () => {
     void page.route(SETTINGS, (route) =>
       route.request().method() === 'PUT'
         ? route.abort('failed')
-        : fulfillJson(route, 200, listBody([INTEGER_SETTING])),
+        : fulfillJson(route, 200, listBody([NUMBER_SETTING])),
     );
     await page.goto('/system-settings');
     await page.getByTestId('setting-pricing.maxDiscountPct').getByRole('button', { name: 'Sửa' }).click();

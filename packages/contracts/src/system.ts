@@ -34,8 +34,11 @@ export const systemSettingQuerySchema = z.strictObject({
   cursor: z.string().min(1).optional(),
 });
 
-/** Kiểu giá trị tham số: quyết định ô nhập kiểm tại chỗ ở SCR-17. */
-export const systemSettingValueTypeSchema = z.enum(['INTEGER', 'BOOLEAN', 'STRING']);
+/**
+ * Kiểu giá trị tham số — khớp `CHECK (value_type IN ('STRING','NUMBER','BOOLEAN','JSON'))`
+ * của csdl §3 (nguồn chân lý), không tự đặt tập giá trị khác.
+ */
+export const systemSettingValueTypeSchema = z.enum(['STRING', 'NUMBER', 'BOOLEAN', 'JSON']);
 
 export const systemSettingSchema = z.object({
   key: z.string().min(1),

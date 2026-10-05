@@ -12,7 +12,7 @@ import {
 const setting = (over: Partial<SystemSetting> = {}): SystemSetting => ({
   key: 'pricing.maxDiscountPct',
   value: '20',
-  valueType: 'INTEGER',
+  valueType: 'NUMBER',
   description: 'Trần giảm giá tối đa',
   updatedBy: 'u1',
   updatedAt: '2026-11-12T07:00:00.000Z',
@@ -21,10 +21,16 @@ const setting = (over: Partial<SystemSetting> = {}): SystemSetting => ({
 });
 
 describe('valueIssue', () => {
-  it('INTEGER chỉ nhận số nguyên (kể cả âm)', () => {
-    expect(valueIssue('INTEGER', '20')).toBeNull();
-    expect(valueIssue('INTEGER', '-3')).toBeNull();
-    expect(valueIssue('INTEGER', '2,5')).toEqual({ field: 'value', issue: 'NOT_INTEGER' });
+  it('NUMBER nhận số (kể cả âm và thập phân)', () => {
+    expect(valueIssue('NUMBER', '20')).toBeNull();
+    expect(valueIssue('NUMBER', '-3')).toBeNull();
+    expect(valueIssue('NUMBER', '0.85')).toBeNull();
+    expect(valueIssue('NUMBER', 'hai mươi')).toEqual({ field: 'value', issue: 'NOT_NUMBER' });
+  });
+
+  it('JSON phải parse được', () => {
+    expect(valueIssue('JSON', '{"a":1}')).toBeNull();
+    expect(valueIssue('JSON', '{a:1}')).toEqual({ field: 'value', issue: 'NOT_JSON' });
   });
 
   it('BOOLEAN chỉ nhận true/false', () => {
@@ -49,7 +55,7 @@ describe('validateEdit', () => {
 
   it('ưu tiên lỗi kiểu giá trị hơn lỗi không đổi', () => {
     expect(validateEdit(setting(), 'x', 'Lý do')).toEqual([
-      { field: 'value', issue: 'NOT_INTEGER' },
+      { field: 'value', issue: 'NOT_NUMBER' },
     ]);
   });
 });
