@@ -6,3 +6,4 @@ export * from './f2.js';
 export * from './rate.js';
 export * from './booking.js';
 export * from './payment.js';
+export * from './front-office.js';

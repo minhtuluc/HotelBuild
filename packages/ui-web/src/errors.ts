@@ -50,6 +50,8 @@ const BY_CODE: Readonly<Record<string, UiAction>> = {
   E_PAY_GATEWAY_ERROR: 'retry-later',
   E_PAY_GATEWAY_TIMEOUT: 'retry-later',
   E_PAY_SIGNATURE_INVALID: 'contact-support',
+  E_FO_CHECKIN_NOT_ALLOWED: 'reload-and-diff',
+  E_CRM_PHONE_INVALID: 'fix-fields',
   E_OVER_APPROVAL_REQUIRED: 'request-access',
 };
 
