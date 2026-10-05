@@ -46,6 +46,38 @@ export const guestQuerySchema = listQuerySchema.extend({
   propertyId: z.string().min(1).optional(),
 });
 
+/**
+ * `POST /guests/{guestId}/anonymize` — MANAGER; ẩn danh hoá theo yêu cầu khách, **không** xoá cứng
+ * (BR-CRM-05, NFR-COMP-02). Endpoint `DELETE /guests/{id}` bị cấm (§2.14).
+ */
+export const guestAnonymizeRequestSchema = z.strictObject({
+  reason: z.string().min(1).max(500),
+  requestedAt: isoUtcTimestampSchema,
+});
+
+/** `GET /guests/{guestId}/loyalty` — hạng, điểm và số đêm tích luỹ 12 tháng (BR-CRM-02,03). */
+export const guestLoyaltySchema = z.object({
+  guestId: z.string().min(1),
+  loyaltyTier: loyaltyTierSchema,
+  loyaltyPoints: z.number().int().min(0),
+  staysLast12Months: z.number().int().min(0),
+  totalStays: z.number().int().min(0),
+  updatedAt: isoUtcTimestampSchema,
+});
+
+/** `POST /guests/{guestId}/blacklist` — MANAGER; lý do bắt buộc (BR-CRM-04). */
+export const guestBlacklistRequestSchema = z.strictObject({
+  blacklistReason: z.string().min(1).max(500),
+});
+
+/** `DELETE /guests/{guestId}/blacklist` — gỡ khỏi danh sách đen kèm lý do, trả 204 (BR-CRM-04,05). */
+export const guestBlacklistReleaseQuerySchema = z.strictObject({
+  reason: z.string().min(1).max(500),
+});
+
 export type GuestCreateRequest = z.infer<typeof guestCreateRequestSchema>;
 export type GuestSummary = z.infer<typeof guestSummarySchema>;
 export type GuestQuery = z.infer<typeof guestQuerySchema>;
+export type GuestAnonymizeRequest = z.infer<typeof guestAnonymizeRequestSchema>;
+export type GuestLoyalty = z.infer<typeof guestLoyaltySchema>;
+export type GuestBlacklistRequest = z.infer<typeof guestBlacklistRequestSchema>;

@@ -7,7 +7,10 @@ import {
   checkInResponseSchema,
   checkOutRequestSchema,
   checkOutResponseSchema,
+  guestAnonymizeRequestSchema,
+  guestBlacklistRequestSchema,
   guestCreateRequestSchema,
+  guestLoyaltySchema,
   guestSummarySchema,
   housekeepingTaskSchema,
   housekeepingTaskUpdateRequestSchema,
@@ -20,7 +23,10 @@ import {
   type CheckInResponse,
   type CheckOutRequest,
   type CheckOutResponse,
+  type GuestAnonymizeRequest,
+  type GuestBlacklistRequest,
   type GuestCreateRequest,
+  type GuestLoyalty,
   type GuestSummary,
   type HousekeepingTask,
   type HousekeepingTaskUpdateRequest,
@@ -124,6 +130,11 @@ export interface GuestApi {
     cursor?: string;
   }): Promise<ApiResponse<ListPage<GuestSummary>>>;
   create(input: GuestCreateRequest): Promise<ApiResponse<GuestSummary>>;
+  /** Ẩn danh hoá theo yêu cầu khách — không xoá cứng (BR-CRM-05, §2.14). */
+  anonymize(guestId: string, input: GuestAnonymizeRequest): Promise<ApiResponse<GuestSummary>>;
+  loyalty(guestId: string): Promise<ApiResponse<GuestLoyalty>>;
+  addBlacklist(guestId: string, input: GuestBlacklistRequest): Promise<ApiResponse<GuestSummary>>;
+  removeBlacklist(guestId: string, reason: string): Promise<ApiResponse<undefined>>;
 }
 
 export function createGuestApi(client: ApiClient): GuestApi {
@@ -141,6 +152,32 @@ export function createGuestApi(client: ApiClient): GuestApi {
         path: '/guests',
         body: guestCreateRequestSchema.parse(input),
         decoder: guestSummarySchema,
+      }),
+    anonymize: (guestId, input) =>
+      client.request({
+        method: 'POST',
+        path: `/guests/${encodeURIComponent(guestId)}/anonymize`,
+        body: guestAnonymizeRequestSchema.parse(input),
+        decoder: guestSummarySchema,
+      }),
+    loyalty: (guestId) =>
+      client.request({
+        method: 'GET',
+        path: `/guests/${encodeURIComponent(guestId)}/loyalty`,
+        decoder: guestLoyaltySchema,
+      }),
+    addBlacklist: (guestId, input) =>
+      client.request({
+        method: 'POST',
+        path: `/guests/${encodeURIComponent(guestId)}/blacklist`,
+        body: guestBlacklistRequestSchema.parse(input),
+        decoder: guestSummarySchema,
+      }),
+    removeBlacklist: (guestId, reason) =>
+      client.requestVoid({
+        method: 'DELETE',
+        path: `/guests/${encodeURIComponent(guestId)}/blacklist`,
+        query: { reason },
       }),
   };
 }
