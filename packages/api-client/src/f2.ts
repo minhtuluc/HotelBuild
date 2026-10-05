@@ -17,6 +17,7 @@ import {
   roomSummarySchema,
   roomTypeCreateRequestSchema,
   roomTypeSummarySchema,
+  systemSettingSchema,
   systemSettingUpdateRequestSchema,
   backupRequestSchema,
   restoreRequestSchema,
@@ -38,6 +39,7 @@ import {
   type OperationStatusView,
   type RestoreRequest,
   type RoomBlock,
+  type SystemSetting,
   type SystemSettingUpdateRequest,
 } from '@pinehill/contracts';
 import { ApiClient, type ApiResponse } from './client.js';
@@ -207,6 +209,10 @@ export interface SystemApi {
     entityType?: string;
     entityId?: string;
   }): Promise<ApiResponse<ListPage<AuditLogEntry>>>;
+  listSettings(query?: {
+    limit?: number;
+    cursor?: string;
+  }): Promise<ApiResponse<ListPage<SystemSetting>>>;
   updateSetting(
     key: string,
     input: SystemSettingUpdateRequest,
@@ -225,6 +231,13 @@ export function createSystemApi(client: ApiClient): SystemApi {
         path: '/audit-logs',
         ...(query === undefined ? {} : { query }),
         decoder: listResponseSchema(auditLogEntrySchema),
+      }),
+    listSettings: (query) =>
+      client.request({
+        method: 'GET',
+        path: '/system-settings',
+        ...(query === undefined ? {} : { query }),
+        decoder: listResponseSchema(systemSettingSchema),
       }),
     updateSetting: (key, input, ifMatch) =>
       client.requestVoid({

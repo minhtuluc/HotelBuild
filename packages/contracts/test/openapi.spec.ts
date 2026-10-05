@@ -69,6 +69,8 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['get', '/api/v1/channel-allotments', 'bearer'],
   ['put', '/api/v1/channel-allotments', 'bearer'],
   ['get', '/api/v1/audit-logs', 'bearer'],
+  // HB-044: bổ sung tuyến đọc tham số cho SCR-17 (thêm tuyến, không phá vỡ hợp đồng).
+  ['get', '/api/v1/system-settings', 'bearer'],
   ['put', '/api/v1/system-settings/{key}', 'bearer'],
   ['post', '/api/v1/system/backups', 'bearer'],
   ['post', '/api/v1/system/backups/{backupId}/restore', 'bearer'],
@@ -132,7 +134,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 61 path của F0 + F1 + F2 + F3 + F4 + F5', () => {
+  it('có đủ 62 path của F0…F5 kèm tuyến đọc bổ sung (room-blocks, seasons, channels, system-settings)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -161,6 +163,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/inventory/grid',
         '/api/v1/channel-allotments',
         '/api/v1/audit-logs',
+        '/api/v1/system-settings',
         '/api/v1/system-settings/{key}',
         '/api/v1/system/backups',
         '/api/v1/system/backups/{backupId}/restore',

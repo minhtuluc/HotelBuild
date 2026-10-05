@@ -25,6 +25,31 @@ export const auditLogEntrySchema = z.object({
   createdAt: isoUtcTimestampSchema,
 });
 
+/**
+ * Bổ sung tuyến đọc tham số (HB-044 SCR-17, chủ dự án duyệt 05/10/2026): api.md §2.13 chỉ có
+ * `PUT /system-settings/{key}` nên màn hình không biết giá trị hiện tại, kiểu giá trị hay phiên bản.
+ */
+export const systemSettingQuerySchema = z.strictObject({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  cursor: z.string().min(1).optional(),
+});
+
+/**
+ * Kiểu giá trị tham số — khớp `CHECK (value_type IN ('STRING','NUMBER','BOOLEAN','JSON'))`
+ * của csdl §3 (nguồn chân lý), không tự đặt tập giá trị khác.
+ */
+export const systemSettingValueTypeSchema = z.enum(['STRING', 'NUMBER', 'BOOLEAN', 'JSON']);
+
+export const systemSettingSchema = z.object({
+  key: z.string().min(1),
+  value: z.string(),
+  valueType: systemSettingValueTypeSchema,
+  description: z.string().min(1),
+  updatedBy: z.string().min(1),
+  updatedAt: isoUtcTimestampSchema,
+  version: z.number().int().min(0),
+});
+
 /** `PUT /system-settings/{key}` — đổi tham số phải kèm lý do và ghi `AuditLog` cùng transaction (BR-SYS-02, BR-GEN-07). */
 export const systemSettingUpdateRequestSchema = z.strictObject({
   value: z.string().min(1),
@@ -43,5 +68,7 @@ export const restoreRequestSchema = z.strictObject({
 
 export type AuditLogEntry = z.infer<typeof auditLogEntrySchema>;
 export type SystemSettingUpdateRequest = z.infer<typeof systemSettingUpdateRequestSchema>;
+export type SystemSetting = z.infer<typeof systemSettingSchema>;
+export type SystemSettingValueType = z.infer<typeof systemSettingValueTypeSchema>;
 export type BackupRequest = z.infer<typeof backupRequestSchema>;
 export type RestoreRequest = z.infer<typeof restoreRequestSchema>;

@@ -6,6 +6,7 @@
  * đang xem. Không có bất kỳ thao tác tạo/sửa/xoá nào kể cả trên giao diện.
  */
 import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createSystemApi, isApiError } from '@pinehill/api-client';
 import type { AuditLogEntry, ListPage } from '@pinehill/contracts';
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
@@ -117,8 +118,17 @@ function FilterForm({
 
 export function AuditLogsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
   const forced = useForcedState();
-  const [draft, setDraft] = useState<AuditFilters>(EMPTY_AUDIT_FILTERS);
-  const [filters, setFilters] = useState<AuditFilters>(EMPTY_AUDIT_FILTERS);
+  // Lọc sẵn từ URL (`?entityType=SystemSetting&entityId=…`) để SCR-17 mở lịch sử của một tham số.
+  const searchParams = useSearchParams();
+  const fromUrl = (): AuditFilters => ({
+    ...EMPTY_AUDIT_FILTERS,
+    actorId: searchParams.get('actorId') ?? '',
+    entityType: searchParams.get('entityType') ?? '',
+    entityId: searchParams.get('entityId') ?? '',
+    action: searchParams.get('action') ?? '',
+  });
+  const [draft, setDraft] = useState<AuditFilters>(fromUrl);
+  const [filters, setFilters] = useState<AuditFilters>(fromUrl);
   const [rows, setRows] = useState<readonly AuditLogEntry[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });

@@ -33,6 +33,8 @@ import {
   auditLogQuerySchema,
   backupRequestSchema,
   restoreRequestSchema,
+  systemSettingQuerySchema,
+  systemSettingSchema,
   systemSettingUpdateRequestSchema,
 } from '../../system.js';
 import {
@@ -272,6 +274,26 @@ export function registerF2Paths(registry: OpenAPIRegistry, errorBodyComponent: z
         ...jsonBody(listResponseSchema(auditLogEntrySchema)),
       },
       403: errorResponse('E_RBAC_FORBIDDEN'),
+    },
+  });
+
+  // Bổ sung tuyến đọc tham số (HB-044 SCR-17, chủ dự án duyệt 05/10/2026): api.md §2.13 chỉ có PUT
+  // nên màn hình không biết giá trị hiện tại/kiểu/phiên bản. Thay đổi tương thích (thêm tuyến).
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/system-settings',
+    operationId: 'systemSettingsList',
+    summary:
+      'Danh sách tham số hệ thống kèm kiểu giá trị, người sửa cuối và phiên bản (SCR-17, BR-SYS-02)',
+    tags: ['sys'],
+    ...bearerRead,
+    request: { query: systemSettingQuerySchema },
+    responses: {
+      200: {
+        description: 'Danh sách tham số',
+        ...jsonBody(listResponseSchema(systemSettingSchema)),
+      },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
     },
   });
 
