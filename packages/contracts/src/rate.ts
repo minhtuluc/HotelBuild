@@ -190,10 +190,21 @@ export const multiChannelQuoteRequestSchema = z.strictObject({
   channelCodes: z.array(channelCodeSchema).min(1).max(7),
 });
 
+/**
+ * Một kênh trong so sánh giá (BR-RATE-07,08): giá gộp, hoa hồng và **giá thuần** đều do máy chủ trả.
+ * Hoa hồng/thuần để **tuỳ chọn** vì HB-050 chỉ chốt `nightlyFrom`/`totalFrom`; HB-056 (engine báo giá
+ * đa kênh) trả đủ ba con số, nên màn SCR-30 đọc được mà không phải tính lại ở giao diện (BR-RATE-17).
+ */
 export const multiChannelQuoteOptionSchema = z.object({
   channelCode: channelCodeSchema,
   nightlyFrom: z.number().int().positive(),
   totalFrom: z.number().int().positive(),
+  commissionPct: percent.optional(),
+  /** Giá gộp = tổng trước hoa hồng; `null` khi kênh không có hoa hồng (kênh trực tiếp). */
+  grossTotal: z.number().int().positive().optional(),
+  commissionAmount: z.number().int().min(0).optional(),
+  /** Giá thuần = gộp − hoa hồng (BR-RATE-08). */
+  netTotal: z.number().int().optional(),
   warnings: z.array(z.string().min(1)),
 });
 
@@ -236,5 +247,6 @@ export type PromotionCreateRequest = z.infer<typeof promotionCreateRequestSchema
 export type PromotionSummary = z.infer<typeof promotionSummarySchema>;
 export type PromotionQuery = z.infer<typeof promotionQuerySchema>;
 export type MultiChannelQuote = z.infer<typeof multiChannelQuoteSchema>;
+export type MultiChannelQuoteRequest = z.infer<typeof multiChannelQuoteRequestSchema>;
 export type RatePlanPublic = z.infer<typeof ratePlanPublicSchema>;
 export type RatePlanUpdateRequest = z.infer<typeof ratePlanUpdateRequestSchema>;

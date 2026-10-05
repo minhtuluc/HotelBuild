@@ -30,6 +30,7 @@ export default function OperationsHomePage(): ReactElement {
         </li>
         <li>
           <a href="/rate-calendar">{t('ops.nav.rateCalendar')}</a>
+          <a href="/multi-channel-quote">{t('ops.nav.multiChannelQuote')}</a>
           <a href="/promotions">{t('ops.nav.promotions')}</a>
           <a href="/seasons">{t('ops.nav.seasons')}</a>
           <a href="/channels">{t('ops.nav.channels')}</a>
