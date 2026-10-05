@@ -5093,7 +5093,306 @@
         }
       }
     },
+    "/api/v1/channels": {
+      "get": {
+        "operationId": "channelsList",
+        "summary": "Danh sách kênh kèm hệ số, hoa hồng, hold, cờ bán vượt và phiên bản (SCR-25, SCR-28)",
+        "tags": [
+          "rate"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách kênh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "WEB",
+                              "PHONE",
+                              "WALKIN",
+                              "OTA_BOOKING",
+                              "OTA_AGODA",
+                              "OTA_AIRBNB",
+                              "AGENCY"
+                            ]
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "multiplier": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "maximum": 5
+                          },
+                          "commissionPct": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "holdMinutes": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1440
+                          },
+                          "overbookAllowed": {
+                            "type": "boolean"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "code",
+                          "name",
+                          "multiplier",
+                          "commissionPct",
+                          "holdMinutes",
+                          "overbookAllowed",
+                          "version"
+                        ]
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "limit",
+                        "nextCursor",
+                        "hasMore",
+                        "total"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/channels/{channelId}": {
+      "get": {
+        "operationId": "channelsGet",
+        "summary": "Chi tiết kênh kèm các dòng ghi đè theo cơ sở (SCR-28, BR-RATE-18)",
+        "tags": [
+          "rate"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chi tiết kênh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "WEB",
+                        "PHONE",
+                        "WALKIN",
+                        "OTA_BOOKING",
+                        "OTA_AGODA",
+                        "OTA_AIRBNB",
+                        "AGENCY"
+                      ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "multiplier": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 5
+                    },
+                    "commissionPct": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "holdMinutes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 1440
+                    },
+                    "overbookAllowed": {
+                      "type": "boolean"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "propertyOverrides": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "propertyId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "multiplier": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "maximum": 5
+                          },
+                          "commissionPct": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "effectiveFrom": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "propertyId",
+                          "effectiveFrom"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name",
+                    "multiplier",
+                    "commissionPct",
+                    "holdMinutes",
+                    "overbookAllowed",
+                    "version",
+                    "propertyOverrides"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
       "patch": {
         "operationId": "channelsUpdate",
         "summary": "Sửa hệ số/hoa hồng/hold mặc định toàn chuỗi + ghi đè theo cơ sở (UC-RATE-03, BR-RATE-07,09,18)",

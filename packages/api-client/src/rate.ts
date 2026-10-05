@@ -5,6 +5,8 @@
 import {
   cancellationPolicySchema,
   cancellationPolicyUpdateRequestSchema,
+  channelDetailSchema,
+  channelSummarySchema,
   channelUpdateRequestSchema,
   listResponseSchema,
   promotionSummarySchema,
@@ -19,6 +21,8 @@ import {
   seasonCreateRequestSchema,
   type CancellationPolicy,
   type CancellationPolicyUpdateRequest,
+  type ChannelDetail,
+  type ChannelSummary,
   type ChannelUpdateRequest,
   type ListPage,
   type MultiChannelQuote,
@@ -50,6 +54,11 @@ export interface RateApi {
     cursor?: string;
   }): Promise<ApiResponse<ListPage<SeasonSummary>>>;
   createSeason(input: SeasonCreateRequest): Promise<ApiResponse<undefined>>;
+  listChannels(query?: {
+    limit?: number;
+    cursor?: string;
+  }): Promise<ApiResponse<ListPage<ChannelSummary>>>;
+  channel(channelId: string): Promise<ApiResponse<ChannelDetail>>;
   updateChannel(
     channelId: string,
     input: ChannelUpdateRequest,
@@ -118,6 +127,19 @@ export function createRateApi(client: ApiClient): RateApi {
         method: 'POST',
         path: '/seasons',
         body: seasonCreateRequestSchema.parse(input),
+      }),
+    listChannels: (query) =>
+      client.request({
+        method: 'GET',
+        path: '/channels',
+        ...(query === undefined ? {} : { query }),
+        decoder: listResponseSchema(channelSummarySchema),
+      }),
+    channel: (channelId) =>
+      client.request({
+        method: 'GET',
+        path: `/channels/${encodeURIComponent(channelId)}`,
+        decoder: channelDetailSchema,
       }),
     updateChannel: (channelId, input, ifMatch) =>
       client.requestVoid({

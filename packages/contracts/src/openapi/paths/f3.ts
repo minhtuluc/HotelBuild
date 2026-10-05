@@ -11,6 +11,9 @@ import {
   cancellationPolicyUpdateRequestSchema,
 } from '../../cancellation-policy.js';
 import {
+  channelDetailSchema,
+  channelQuerySchema,
+  channelSummarySchema,
   channelUpdateRequestSchema,
   multiChannelQuoteRequestSchema,
   multiChannelQuoteSchema,
@@ -134,6 +137,40 @@ export function registerF3Paths(registry: OpenAPIRegistry, errorBodyComponent: z
       201: { description: 'Mùa đã tạo' },
       403: errorResponse('E_RBAC_FORBIDDEN'),
       422: errorResponse('E_RATE_CONFIGURATION_INVALID'),
+    },
+  });
+
+  // Bổ sung tuyến đọc kênh (HB-060/HB-042, chủ dự án duyệt 05/10/2026): api.md chỉ có PATCH theo
+  // `{channelId}` nên SCR-28/SCR-25 không dựng được danh sách kênh. Thêm tuyến, 0 phá vỡ.
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/channels',
+    operationId: 'channelsList',
+    summary: 'Danh sách kênh kèm hệ số, hoa hồng, hold, cờ bán vượt và phiên bản (SCR-25, SCR-28)',
+    tags: ['rate'],
+    ...bearerRead,
+    request: { query: channelQuerySchema },
+    responses: {
+      200: {
+        description: 'Danh sách kênh',
+        ...jsonBody(listResponseSchema(channelSummarySchema)),
+      },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/channels/{channelId}',
+    operationId: 'channelsGet',
+    summary: 'Chi tiết kênh kèm các dòng ghi đè theo cơ sở (SCR-28, BR-RATE-18)',
+    tags: ['rate'],
+    ...bearerRead,
+    parameters: [pathParam('channelId')],
+    responses: {
+      200: { description: 'Chi tiết kênh', ...jsonBody(channelDetailSchema) },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
+      404: errorResponse('E_GEN_NOT_FOUND'),
     },
   });
 

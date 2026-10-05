@@ -88,6 +88,40 @@ export const seasonCreateRequestSchema = z.strictObject({
   weekendSurchargeEnabled: z.boolean(),
 });
 
+/**
+ * Bổ sung tuyến đọc kênh (HB-060 SCR-28 + HB-042 SCR-25, chủ dự án duyệt 05/10/2026):
+ * api.md chỉ có PATCH theo `{channelId}` nên màn hình không dựng được danh sách kênh.
+ */
+export const channelQuerySchema = z.strictObject({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  cursor: z.string().min(1).optional(),
+});
+
+/** Kênh ở mức mặc định toàn chuỗi; `version` để màn hình gửi `If-Match` khi sửa (BR-RATE-07,18). */
+export const channelSummarySchema = z.object({
+  id: z.string().min(1),
+  code: channelCodeSchema,
+  name: z.string().min(1).max(120),
+  multiplier,
+  commissionPct: percent,
+  holdMinutes: z.number().int().min(0).max(1440),
+  overbookAllowed: z.boolean(),
+  version: z.number().int().min(0),
+});
+
+/** Một dòng ghi đè theo cặp (kênh, cơ sở); máy chủ ghi dòng **mới** theo `effectiveFrom`. */
+export const channelPropertyOverrideSchema = z.object({
+  propertyId: z.string().min(1),
+  multiplier: multiplier.optional(),
+  commissionPct: percent.optional(),
+  effectiveFrom: businessDateSchema,
+  version: z.number().int().min(0).optional(),
+});
+
+export const channelDetailSchema = channelSummarySchema.extend({
+  propertyOverrides: z.array(channelPropertyOverrideSchema),
+});
+
 /** `PATCH /channels/{channelId}` — mặc định toàn chuỗi + ghi đè theo cặp (kênh, cơ sở) (BR-RATE-18). */
 export const channelUpdateRequestSchema = z.strictObject({
   multiplier: multiplier.optional(),
@@ -195,6 +229,9 @@ export type SeasonCreateRequest = z.infer<typeof seasonCreateRequestSchema>;
 export type SeasonSummary = z.infer<typeof seasonSummarySchema>;
 export type SeasonQuery = z.infer<typeof seasonQuerySchema>;
 export type ChannelUpdateRequest = z.infer<typeof channelUpdateRequestSchema>;
+export type ChannelSummary = z.infer<typeof channelSummarySchema>;
+export type ChannelDetail = z.infer<typeof channelDetailSchema>;
+export type ChannelPropertyOverride = z.infer<typeof channelPropertyOverrideSchema>;
 export type PromotionCreateRequest = z.infer<typeof promotionCreateRequestSchema>;
 export type PromotionSummary = z.infer<typeof promotionSummarySchema>;
 export type PromotionQuery = z.infer<typeof promotionQuerySchema>;
