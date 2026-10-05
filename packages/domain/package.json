@@ -25,6 +25,11 @@
       "types": "./src/cancellation/index.ts",
       "default": "./src/cancellation/index.ts"
     },
+    "./front-office": {
+      "pinehill-dist": "./dist/front-office/index.js",
+      "types": "./src/front-office/index.ts",
+      "default": "./src/front-office/index.ts"
+    },
     "./overbooking": {
       "pinehill-dist": "./dist/overbooking/index.js",
       "types": "./src/overbooking/index.ts",
