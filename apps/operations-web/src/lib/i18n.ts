@@ -8,6 +8,7 @@ import { allotmentsCatalog } from './messages-allotments.js';
 import { ratePlansCatalog } from './messages-rate-plans.js';
 import { reportsCatalog } from '../app/(ops)/reports/messages-reports.js';
 import { crmCatalog } from '../app/(ops)/crm/messages-crm.js';
+import { notiCatalog } from '../app/(ops)/noti/messages-noti.js';
 
 export const operationsCatalog = {
   ...viCatalog,
@@ -15,6 +16,7 @@ export const operationsCatalog = {
   ...ratePlansCatalog,
   ...reportsCatalog,
   ...crmCatalog,
+  ...notiCatalog,
   'ops.home.title': 'Pine Hill — Bảng điều khiển vận hành',
   'ops.home.intro':
     'Khung back-office F0: dùng chung hợp đồng trạng thái, token và định dạng vi-VN với web khách.',
