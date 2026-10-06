@@ -1,0 +1,41 @@
+/**
+ * Nhãn SCR-51 (mẫu & hàng đợi thông báo) — gộp vào `operationsCatalog`, giữ `lib/i18n.ts` dưới trần
+ * `max-lines` 400 (NFR-LOC-01).
+ */
+export const notiCatalog = {
+  'ops.nav.notifications': 'Hàng đợi thông báo',
+  'noti.title': 'Mẫu & hàng đợi thông báo',
+  'noti.intro':
+    'Danh sách thông báo đã ghi kèm trạng thái, số lần thử và lỗi. Người nhận do máy chủ che (không lộ SĐT/email đầy đủ). Gửi lại tối đa 3 lần, cách nhau ít nhất 5 phút (BR-SYS-06).',
+  'noti.form.status': 'Trạng thái',
+  'noti.form.channel': 'Kênh gửi',
+  'noti.form.template': 'Mẫu thông báo',
+  'noti.form.anyStatus': 'Mọi trạng thái',
+  'noti.form.anyChannel': 'Mọi kênh',
+  'noti.form.load': 'Xem hàng đợi',
+  'noti.col.template': 'Mẫu',
+  'noti.col.channel': 'Kênh',
+  'noti.col.recipient': 'Người nhận',
+  'noti.col.status': 'Trạng thái',
+  'noti.col.retries': 'Số lần thử',
+  'noti.col.error': 'Lỗi',
+  'noti.col.sentAt': 'Gửi lúc',
+  'noti.col.createdAt': 'Tạo lúc',
+  'noti.col.actions': 'Thao tác',
+  'noti.action.resend': 'Gửi lại',
+  'noti.resend.reason': 'Lý do gửi lại',
+  'noti.resend.submit': 'Gửi lại thông báo',
+  'noti.resend.cancel': 'Huỷ',
+  'noti.resend.blockedMax': 'Đã đủ 3 lần gửi lại — không gửi lại được nữa.',
+  'noti.resend.blockedSoon': 'Chưa đủ 5 phút kể từ lần thử trước.',
+  'noti.saved.resend': 'Đã gửi lại thông báo {id}.',
+  'noti.issue.REQUIRED': 'Bắt buộc.',
+  'noti.failed.warning': 'Thông báo đã thất bại 3 lần — cần nhân viên kiểm tra thủ công.',
+  'enum.notiStatus.PENDING': 'Đang chờ gửi',
+  'enum.notiStatus.SENT': 'Đã gửi',
+  'enum.notiStatus.FAILED': 'Thất bại',
+  'enum.notiChannel.EMAIL': 'Email',
+  'enum.notiChannel.SMS': 'SMS',
+  'enum.notiChannel.ZALO_OA': 'Zalo OA',
+  'enum.notiChannel.PUSH': 'Push',
+} as const;

@@ -46,6 +46,7 @@ const SCREENS = [
   '/reports/overbooking',
   '/crm/guests',
   '/crm/loyalty',
+  '/noti/notifications',
   '/rate-calendar',
   '/audit-logs',
   '/promotions',
