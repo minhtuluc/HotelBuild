@@ -4,13 +4,15 @@
 import type { ReactElement } from 'react';
 import type {
   AdrRevparReport,
+  CancellationsReport,
   OccupancyReport,
   OperationStatusView,
+  OverbookingReport,
   RevenueByChannelReport,
 } from '@pinehill/contracts';
-import { formatMoney } from '@pinehill/ui-web';
+import { formatDateTimeVn, formatMoney, formatStatusWithEnum } from '@pinehill/ui-web';
 import { t, type OperationsMessageKey } from '../../../lib/i18n';
-import { OPERATION_STATUS_KEY } from './report-shared';
+import { OPERATION_STATUS_KEY, OVERBOOKING_STATUS_KEY } from './report-shared';
 
 /** Nhãn Việt + mã enum kênh (NFR-LOC-01): không viết cứng chuỗi trong component. */
 const CHANNEL_LABEL: Readonly<Record<string, OperationsMessageKey>> = {
@@ -156,6 +158,101 @@ export function RevenueByChannelTable({
       </Table>
       <p role="note" style={{ margin: 0 }}>
         {t('reports.revenue.formula')}
+      </p>
+    </>
+  );
+}
+
+/** Gói giá trong báo cáo huỷ (NFR-LOC-01) — nhãn lấy từ danh mục, không viết cứng trong component. */
+const RATE_PLAN_LABEL: Readonly<Record<string, OperationsMessageKey>> = {
+  FLEX7: 'enum.ratePlanCode.FLEX7',
+  SAVER3: 'enum.ratePlanCode.SAVER3',
+  NONREF: 'enum.ratePlanCode.NONREF',
+  LONGSTAY14: 'enum.ratePlanCode.LONGSTAY14',
+};
+
+/** Huỷ phòng & hoàn cọc theo gói/bậc (UC-REP-03): bậc `-1` là bậc bắt tất (BR-CANCEL-01). */
+export function CancellationsTable({ report }: { report: CancellationsReport }): ReactElement {
+  return (
+    <>
+      <Table
+        testId="cancellations-table"
+        title={t('reports.cancel.table')}
+        head={[
+          t('reports.col.ratePlan'),
+          t('reports.col.tier'),
+          t('reports.col.cancellations'),
+          t('reports.col.refundAmount'),
+        ]}
+      >
+        <>
+          {report.rows.map((row) => (
+            <tr
+              key={`${row.ratePlanCode}-${row.appliedTierOffsetHours}`}
+              data-testid={`cancel-row-${row.ratePlanCode}-${row.appliedTierOffsetHours}`}
+            >
+              <td style={CELL}>{t(RATE_PLAN_LABEL[row.ratePlanCode] ?? 'reports.col.ratePlan')}</td>
+              <td style={CELL}>
+                {row.appliedTierOffsetHours < 0
+                  ? t('reports.cancel.catchAll')
+                  : `${row.appliedTierOffsetHours}h`}
+              </td>
+              <td style={CELL}>{row.cancellations}</td>
+              <td style={CELL}>{formatMoney(row.refundAmount)}</td>
+            </tr>
+          ))}
+        </>
+      </Table>
+      <p role="note" style={{ margin: 0 }}>
+        {t('reports.cancel.formula')}
+      </p>
+    </>
+  );
+}
+
+/** Ca quá tải & chi phí xử lý (UC-REP-04, BR-OVER-15/16): ba khoản chi phí đọc nguyên từ máy chủ. */
+export function OverbookingTable({ report }: { report: OverbookingReport }): ReactElement {
+  return (
+    <>
+      <Table
+        testId="overbooking-table"
+        title={t('reports.over.table')}
+        head={[
+          t('reports.col.caseId'),
+          t('reports.col.property'),
+          t('reports.col.businessDate'),
+          t('reports.col.status'),
+          t('reports.col.detectedAt'),
+          t('reports.col.resolvedAt'),
+          t('reports.col.mergeDiscount'),
+          t('reports.col.walkOut'),
+          t('reports.col.transport'),
+          t('reports.col.totalCost'),
+        ]}
+      >
+        <>
+          {report.rows.map((row) => (
+            <tr key={row.caseId} data-testid={`overbooking-row-${row.caseId}`}>
+              <td style={CELL}>{row.caseId}</td>
+              <td style={CELL}>{row.propertyId}</td>
+              <td style={CELL}>{row.businessDate}</td>
+              <td style={CELL}>
+                {formatStatusWithEnum(t(OVERBOOKING_STATUS_KEY[row.status]), row.status)}
+              </td>
+              <td style={CELL}>{formatDateTimeVn(row.detectedAt)}</td>
+              <td style={CELL}>
+                {row.resolvedAt === null ? '—' : formatDateTimeVn(row.resolvedAt)}
+              </td>
+              <td style={CELL}>{formatMoney(row.mergeDiscountAmount)}</td>
+              <td style={CELL}>{formatMoney(row.walkOutCompensationAmount)}</td>
+              <td style={CELL}>{formatMoney(row.transportSupportAmount)}</td>
+              <td style={CELL}>{formatMoney(row.totalCost)}</td>
+            </tr>
+          ))}
+        </>
+      </Table>
+      <p role="note" style={{ margin: 0 }}>
+        {t('reports.over.formula')}
       </p>
     </>
   );

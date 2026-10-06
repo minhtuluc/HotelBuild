@@ -42,6 +42,8 @@ const SCREENS = [
   '/channel-allotments',
   '/reports/occupancy',
   '/reports/revenue-by-channel',
+  '/reports/cancellations',
+  '/reports/overbooking',
   '/rate-calendar',
   '/audit-logs',
   '/promotions',
