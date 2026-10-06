@@ -39,6 +39,7 @@ const SCREENS = [
   '/room-types',
   '/rooms',
   '/inventory-grid',
+  '/channel-allotments',
   '/rate-calendar',
   '/audit-logs',
   '/promotions',
