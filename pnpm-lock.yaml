@@ -172,6 +172,9 @@ importers:
       '@types/react':
         specifier: ~19.2.4
         version: 19.2.18
+      '@vitest/coverage-v8':
+        specifier: ^3.2.7
+        version: 3.2.7(vitest@3.2.7(@types/node@22.20.4)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
       babel-preset-expo:
         specifier: ^57.0.0
         version: 57.0.13(@babel/core@7.29.7)(@babel/runtime@7.29.7)(expo@57.0.25)(react-refresh@0.14.2)
@@ -215,6 +218,9 @@ importers:
       '@types/react-dom':
         specifier: ~19.2.7
         version: 19.2.7(@types/react@19.2.18)
+      '@vitest/coverage-v8':
+        specifier: ^3.2.7
+        version: 3.2.7(vitest@3.2.7(@types/node@22.20.4)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
@@ -270,6 +276,9 @@ importers:
       '@types/react':
         specifier: ~19.2.4
         version: 19.2.18
+      '@vitest/coverage-v8':
+        specifier: ^3.2.7
+        version: 3.2.7(vitest@3.2.7(@types/node@22.20.4)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
       babel-preset-expo:
         specifier: ^57.0.0
         version: 57.0.13(@babel/core@7.29.7)(@babel/runtime@7.29.7)(expo@57.0.25)(react-refresh@0.14.2)
@@ -313,6 +322,9 @@ importers:
       '@types/react-dom':
         specifier: ~19.2.7
         version: 19.2.7(@types/react@19.2.18)
+      '@vitest/coverage-v8':
+        specifier: ^3.2.7
+        version: 3.2.7(vitest@3.2.7(@types/node@22.20.4)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
