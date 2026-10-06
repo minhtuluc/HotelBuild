@@ -52,6 +52,51 @@ export const REVENUE_REPORT = {
   ],
 };
 
+/** Huỷ & hoàn cọc (UC-REP-03): tỷ lệ huỷ do máy chủ trả, tiền hoàn theo bậc (bậc −1 là bắt tất). */
+export const CANCELLATIONS_REPORT = {
+  from: '2026-12-24',
+  to: '2026-12-27',
+  cancellationRate: 12.5,
+  rows: [
+    { ratePlanCode: 'FLEX7' as const, appliedTierOffsetHours: 72, cancellations: 2, refundAmount: 1_304_000 },
+    { ratePlanCode: 'NONREF' as const, appliedTierOffsetHours: -1, cancellations: 1, refundAmount: 0 },
+  ],
+};
+
+/** Quá tải & điều chuyển (UC-REP-04, BR-OVER-15): ba khoản chi phí + tổng do máy chủ trả. */
+export const OVERBOOKING_REPORT = {
+  from: '2026-12-24',
+  to: '2026-12-27',
+  rows: [
+    {
+      caseId: 'ob-1',
+      propertyId: 'p1',
+      roomTypeId: 'rt1',
+      businessDate: '2026-12-24',
+      status: 'RESOLVED' as const,
+      detectedAt: '2026-12-23T09:00:00.000Z',
+      resolvedAt: '2026-12-23T10:30:00.000Z',
+      mergeDiscountAmount: 200_000,
+      walkOutCompensationAmount: 1_100_000,
+      transportSupportAmount: 150_000,
+      totalCost: 1_450_000,
+    },
+    {
+      caseId: 'ob-2',
+      propertyId: 'p1',
+      roomTypeId: 'rt1',
+      businessDate: '2026-12-25',
+      status: 'OPEN' as const,
+      detectedAt: '2026-12-24T08:00:00.000Z',
+      resolvedAt: null,
+      mergeDiscountAmount: 0,
+      walkOutCompensationAmount: 0,
+      transportSupportAmount: 100_000,
+      totalCost: 100_000,
+    },
+  ],
+};
+
 export const OPERATION_REF = {
   operationId: 'op-1',
   status: 'PENDING' as const,
@@ -86,6 +131,7 @@ export interface F8ReportSpy {
   exports: () => string[];
   polls: () => number;
   reportCalls: () => number;
+  reportUrls: () => string[];
 }
 
 /**
@@ -95,6 +141,7 @@ export function installReportApi(page: Page, options: F8ReportOptions = {}): F8R
   const exports: string[] = [];
   let polls = 0;
   let reportCalls = 0;
+  const reportUrls: string[] = [];
   const statuses = options.operationStatuses ?? [OPERATION_STATUSES.SUCCEEDED];
   const readStatus = options.readStatus ?? 200;
 
@@ -107,10 +154,13 @@ export function installReportApi(page: Page, options: F8ReportOptions = {}): F8R
     ['**/api/v1/reports/occupancy**', OCCUPANCY_REPORT],
     ['**/api/v1/reports/adr-revpar**', ADR_REVPAR_REPORT],
     ['**/api/v1/reports/revenue-by-channel**', REVENUE_REPORT],
+    ['**/api/v1/reports/cancellations**', CANCELLATIONS_REPORT],
+    ['**/api/v1/reports/overbooking**', OVERBOOKING_REPORT],
   ];
   for (const [pattern, body] of reports) {
     void page.route(pattern, (route) => {
       reportCalls += 1;
+      reportUrls.push(route.request().url());
       return readStatus === 200
         ? json(route, 200, JSON.stringify(body))
         : json(route, readStatus, options.readErrorBody ?? '{}');
@@ -128,5 +178,10 @@ export function installReportApi(page: Page, options: F8ReportOptions = {}): F8R
     return json(route, 200, JSON.stringify(view));
   });
 
-  return { exports: () => exports, polls: () => polls, reportCalls: () => reportCalls };
+  return {
+    exports: () => exports,
+    polls: () => polls,
+    reportCalls: () => reportCalls,
+    reportUrls: () => reportUrls,
+  };
 }
