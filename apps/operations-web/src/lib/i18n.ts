@@ -7,12 +7,14 @@ import { makeTranslate, viCatalog } from '@pinehill/ui-web/messages';
 import { allotmentsCatalog } from './messages-allotments.js';
 import { ratePlansCatalog } from './messages-rate-plans.js';
 import { reportsCatalog } from '../app/(ops)/reports/messages-reports.js';
+import { crmCatalog } from '../app/(ops)/crm/messages-crm.js';
 
 export const operationsCatalog = {
   ...viCatalog,
   ...allotmentsCatalog,
   ...ratePlansCatalog,
   ...reportsCatalog,
+  ...crmCatalog,
   'ops.home.title': 'Pine Hill — Bảng điều khiển vận hành',
   'ops.home.intro':
     'Khung back-office F0: dùng chung hợp đồng trạng thái, token và định dạng vi-VN với web khách.',

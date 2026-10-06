@@ -40,6 +40,8 @@ export default function OperationsHomePage(): ReactElement {
           <a href="/reports/revenue-by-channel">{t('ops.nav.reportsRevenue')}</a>
           <a href="/reports/cancellations">{t('ops.nav.reportsCancellations')}</a>
           <a href="/reports/overbooking">{t('ops.nav.reportsOverbooking')}</a>
+          <a href="/crm/guests">{t('ops.nav.crmGuests')}</a>
+          <a href="/crm/loyalty">{t('ops.nav.crmLoyalty')}</a>
           <a href="/audit-logs">{t('ops.nav.auditLogs')}</a>
           <a href="/room-blocks">{t('ops.nav.roomBlocks')}</a>
           <a href="/system-settings">{t('ops.nav.settings')}</a>
