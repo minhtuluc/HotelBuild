@@ -143,6 +143,7 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 | POST | `/api/v1/quotes` | **Báo giá** kỳ lưu trú (§3.1) | — | `propertyId`, `roomTypeId`, `channelCode`, `ratePlanCode`, `checkIn`, `checkOut`, `adults`, `children`, `roomCount`, `promotionCodes[]` | UC-INV-02, UC-RATE-05 | BR-RATE-01…17 |
 | POST | `/api/v1/quotes/multi-channel` | So sánh giá đồng thời nhiều kênh | MANAGER | `roomTypeId`, `checkIn`, `checkOut`, `channelCodes[]` | UC-RATE-05 | BR-RATE-07,08,09 |
 | GET | `/api/v1/rate-plans` | Gói giá đang bán và điều khoản dành cho khách; không lộ cấu hình nội bộ | — | `propertyId`, `checkIn`, `checkOut` | UC-RATE-06 | BR-CANCEL-01, BR-BOOK-03 |
+| GET | `/api/v1/rate-plans/admin` | Cấu hình gói giá cho chủ chuỗi: cọc, min/max đêm, chính sách áp dụng, trạng thái, phiên bản (màn SCR-70) | OWNER | — | UC-RATE-06 | BR-CANCEL-01, BR-RATE-16, BR-RATE-20 |
 | PUT | `/api/v1/rate-plans/{ratePlanId}` | Cập nhật cấu hình gói giá cho báo giá mới, giữ nguyên snapshot đã bán | OWNER | `depositPercent`, `minNights`, `maxNights`, `cancellationPolicyId`, `status`, `reason` | UC-RATE-06 | BR-CANCEL-01, BR-RATE-16 |
 | GET | `/api/v1/cancellation-policies` | Chính sách và toàn bộ bậc cùng version | OWNER | `status` | UC-RATE-06 | BR-CANCEL-01,02 |
 | PUT | `/api/v1/cancellation-policies/{policyId}` | Thay toàn bộ bậc trong một transaction; validate mốc, phần trăm, bậc bắt tất | OWNER | `tiers[]`, `earlyCheckoutFreeHours`, `earlyCheckoutRefundPct`, `reason` | UC-RATE-06 | BR-CANCEL-01,02,09 |

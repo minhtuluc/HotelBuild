@@ -46,6 +46,7 @@ const SCREENS = [
   '/room-blocks',
   '/seasons',
   '/channels',
+  '/rate-plans',
   '/system-settings',
 ] as const;
 

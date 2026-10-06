@@ -234,6 +234,22 @@ export const ratePlanUpdateRequestSchema = z.strictObject({
   reason: z.string().min(1).max(500),
 });
 
+/**
+ * `GET /rate-plans/admin` cho chủ chuỗi (UC-RATE-06): cấu hình đầy đủ để sửa, khác bản công khai
+ * (`ratePlanPublicSchema`) vốn chỉ lộ điều khoản cho khách. Trường `version` dùng cho `If-Match`.
+ */
+export const ratePlanAdminSchema = z.object({
+  id: z.string().min(1),
+  code: ratePlanCodeSchema,
+  name: z.string().min(1).max(120),
+  minNights: z.number().int().min(1),
+  maxNights: z.number().int().min(1),
+  depositPercent: percent,
+  cancellationPolicyId: z.string().min(1),
+  status: z.enum(['ACTIVE', 'INACTIVE']),
+  version: z.number().int().min(0),
+});
+
 export type RateCalendar = z.infer<typeof rateCalendarSchema>;
 export type RateCalendarOverrideRequest = z.infer<typeof rateCalendarOverrideRequestSchema>;
 export type SeasonCreateRequest = z.infer<typeof seasonCreateRequestSchema>;
@@ -249,4 +265,5 @@ export type PromotionQuery = z.infer<typeof promotionQuerySchema>;
 export type MultiChannelQuote = z.infer<typeof multiChannelQuoteSchema>;
 export type MultiChannelQuoteRequest = z.infer<typeof multiChannelQuoteRequestSchema>;
 export type RatePlanPublic = z.infer<typeof ratePlanPublicSchema>;
+export type RatePlanAdmin = z.infer<typeof ratePlanAdminSchema>;
 export type RatePlanUpdateRequest = z.infer<typeof ratePlanUpdateRequestSchema>;

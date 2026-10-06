@@ -23,6 +23,7 @@ import {
   rateCalendarOverrideRequestSchema,
   rateCalendarQuerySchema,
   rateCalendarSchema,
+  ratePlanAdminSchema,
   ratePlanPublicSchema,
   ratePlanUpdateRequestSchema,
   seasonCreateRequestSchema,
@@ -257,6 +258,22 @@ export function registerF3Paths(registry: OpenAPIRegistry, errorBodyComponent: z
         description: 'Danh sách gói giá',
         ...jsonBody(listResponseSchema(ratePlanPublicSchema)),
       },
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/rate-plans/admin',
+    operationId: 'ratePlansAdminList',
+    summary: 'Cấu hình gói giá cho chủ chuỗi — đủ trường để sửa (UC-RATE-06)',
+    tags: ['rate'],
+    ...bearerRead,
+    responses: {
+      200: {
+        description: 'Danh sách gói giá (cấu hình đầy đủ)',
+        ...jsonBody(listResponseSchema(ratePlanAdminSchema)),
+      },
+      403: errorResponse('E_RBAC_FORBIDDEN'),
     },
   });
 
