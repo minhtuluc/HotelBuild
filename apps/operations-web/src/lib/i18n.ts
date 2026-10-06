@@ -1,15 +1,18 @@
 /**
  * Danh mục câu chữ của Operations Web: mở rộng danh mục dùng chung.
- * Nội bộ hiển thị nhãn tiếng Việt kèm mã enum (§7.4).
+ * Nội bộ hiển thị nhãn tiếng Việt kèm mã enum (§7.4). Nhóm khoá lớn tách ở module riêng để giữ
+ * tệp này dưới trần `max-lines` 400.
  */
 import { makeTranslate, viCatalog } from '@pinehill/ui-web/messages';
 import { allotmentsCatalog } from './messages-allotments.js';
 import { ratePlansCatalog } from './messages-rate-plans.js';
+import { reportsCatalog } from '../app/(ops)/reports/messages-reports.js';
 
 export const operationsCatalog = {
   ...viCatalog,
   ...allotmentsCatalog,
   ...ratePlansCatalog,
+  ...reportsCatalog,
   'ops.home.title': 'Pine Hill — Bảng điều khiển vận hành',
   'ops.home.intro':
     'Khung back-office F0: dùng chung hợp đồng trạng thái, token và định dạng vi-VN với web khách.',
