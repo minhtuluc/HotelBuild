@@ -26,6 +26,7 @@ import {
   type ChannelUpdateRequest,
   type ListPage,
   type MultiChannelQuote,
+  type MultiChannelQuoteRequest,
   type PromotionCreateRequest,
   type PromotionSummary,
   type RateCalendar,
@@ -71,14 +72,8 @@ export interface RateApi {
     cursor?: string;
   }): Promise<ApiResponse<ListPage<PromotionSummary>>>;
   createPromotion(input: PromotionCreateRequest): Promise<ApiResponse<undefined>>;
-  quoteMultiChannel(input: {
-    roomTypeId: string;
-    checkIn: string;
-    checkOut: string;
-    channelCodes: readonly (
-      'WEB' | 'PHONE' | 'WALK_IN' | 'OTA_BOOKING' | 'OTA_AGODA' | 'OTA_AIRBNB' | 'AGENCY'
-    )[];
-  }): Promise<ApiResponse<MultiChannelQuote>>;
+  /** Đầu vào lấy **nguyên** từ hợp đồng để không lệch enum (trước đây chép tay và sai `WALK_IN`). */
+  quoteMultiChannel(input: MultiChannelQuoteRequest): Promise<ApiResponse<MultiChannelQuote>>;
   listRatePlans(query?: {
     propertyId?: string;
     checkIn?: string;

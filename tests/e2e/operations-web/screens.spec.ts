@@ -42,6 +42,7 @@ const SCREENS = [
   '/rate-calendar',
   '/audit-logs',
   '/promotions',
+  '/multi-channel-quote',
   '/room-blocks',
   '/seasons',
   '/channels',
