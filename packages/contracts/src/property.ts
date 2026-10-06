@@ -74,6 +74,12 @@ export const roomTypeSummarySchema = z.object({
   maxPrice: z.number().int().positive(),
   allowShared: z.boolean(),
   bedCount: z.number().int().min(1),
+  /**
+   * Số đơn vị bán **đang hoạt động** của loại phòng (DOR bán theo giường, BR-PROP-03) — dùng cho
+   * hạn mức kênh: `allotment ≤ sellingUnits`, không giới hạn tổng các kênh (BR-INV-05, QĐ-05 mục 2).
+   * **Tuỳ chọn**: hợp đồng F1 chưa chốt trường này, nên giao diện chỉ cảnh báo khi máy chủ trả số.
+   */
+  sellingUnits: z.number().int().min(0).optional(),
   version: z.number().int().min(0),
 });
 

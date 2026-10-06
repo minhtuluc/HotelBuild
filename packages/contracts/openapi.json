@@ -2388,6 +2388,10 @@
                       "type": "integer",
                       "minimum": 1
                     },
+                    "sellingUnits": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
                     "version": {
                       "type": "integer",
                       "minimum": 0
@@ -2506,6 +2510,10 @@
                           "bedCount": {
                             "type": "integer",
                             "minimum": 1
+                          },
+                          "sellingUnits": {
+                            "type": "integer",
+                            "minimum": 0
                           },
                           "version": {
                             "type": "integer",
