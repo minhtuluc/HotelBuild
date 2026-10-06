@@ -282,5 +282,7 @@ describe('HB-052 pricing', () => {
       ),
       { numRuns: 10000, seed: 52022 },
     );
-  }, 30000);
+    // Đo trên CI: 30,0–30,6s (local ~18s) — mốc 30s cũ đỏ ngẫu nhiên và chặn mọi merge.
+    // Giữ nguyên 10.000 lượt và mọi khẳng định; chỉ nới trần thời gian của ca.
+  }, 180_000);
 });
