@@ -157,7 +157,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 81 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3)', () => {
+  it('có đủ 82 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -198,6 +198,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/promotions',
         '/api/v1/quotes/multi-channel',
         '/api/v1/rate-plans',
+        '/api/v1/rate-plans/admin',
         '/api/v1/rate-plans/{ratePlanId}',
         '/api/v1/cancellation-policies',
         '/api/v1/cancellation-policies/{policyId}',

@@ -17,6 +17,7 @@ import {
   rateCalendarOverrideRequestSchema,
   rateCalendarSchema,
   ratePlanPublicSchema,
+  ratePlanAdminSchema,
   ratePlanUpdateRequestSchema,
   seasonCreateRequestSchema,
   type CancellationPolicy,
@@ -32,6 +33,7 @@ import {
   type RateCalendar,
   type RateCalendarOverrideRequest,
   type RatePlanPublic,
+  type RatePlanAdmin,
   type RatePlanUpdateRequest,
   type SeasonCreateRequest,
   type SeasonSummary,
@@ -79,6 +81,7 @@ export interface RateApi {
     checkIn?: string;
     checkOut?: string;
   }): Promise<ApiResponse<ListPage<RatePlanPublic>>>;
+  listRatePlansAdmin(): Promise<ApiResponse<ListPage<RatePlanAdmin>>>;
   updateRatePlan(
     ratePlanId: string,
     input: RatePlanUpdateRequest,
@@ -169,6 +172,12 @@ export function createRateApi(client: ApiClient): RateApi {
         path: '/rate-plans',
         ...(query === undefined ? {} : { query }),
         decoder: listResponseSchema(ratePlanPublicSchema),
+      }),
+    listRatePlansAdmin: () =>
+      client.request({
+        method: 'GET',
+        path: '/rate-plans/admin',
+        decoder: listResponseSchema(ratePlanAdminSchema),
       }),
     updateRatePlan: (ratePlanId, input, ifMatch) =>
       client.requestVoid({
