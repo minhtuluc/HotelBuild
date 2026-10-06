@@ -10,6 +10,11 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./reporting": {
+      "pinehill-dist": "./dist/reporting/index.js",
+      "types": "./src/reporting/index.ts",
+      "default": "./src/reporting/index.ts"
+    },
     "./inventory": {
       "pinehill-dist": "./dist/inventory/index.js",
       "types": "./src/inventory/index.ts",
