@@ -10,6 +10,8 @@ allow:
   - apps/api/test/audit/**
 locked:
   - apps/api/test/audit/audit-writer.locked.spec.ts
+locked_sha:
+  - 0a9122937fef2659424d21f90a2738958cf13683f9106ce3942f27c1b2f4b111 apps/api/test/audit/audit-writer.locked.spec.ts
 ---
 
 # HB-009 — `AuditWriter` trong cùng transaction
@@ -26,7 +28,7 @@ Hạ tầng để mọi use case ghi `audit_logs` **trong cùng transaction** v�
 
 ## Hai giai đoạn
 
-- **A — Codex** (nhánh `lead/HB-009-test-khoa`, merge trước): viết `apps/api/test/audit/audit-writer.locked.spec.ts` chạy trên PG16 thật, đỏ ở thời điểm merge. Các ca: (1) ghi nghiệp vụ + audit trong một transaction, commit thì có cả hai; (2) ép lỗi ở bước audit thì không còn dòng nghiệp vụ nào (TC-SYS-02, dùng một bảng nghiệp vụ có sẵn trong schema); (3) bản ghi đủ trường BR-SYS-05 (actor, role, action, entity, before/after, reason, IP, thời điểm); (4) `before/after` đã che các trường nhạy cảm (`password_hash`, số điện thoại → che giữa); (5) `row_hash`/`prev_hash` nối chuỗi đúng qua 3 bản ghi; (6) dùng `app_rw` thì `UPDATE`/`DELETE` bị từ chối (TC-SYS-01).
+- **A — Codex** (nhánh `ticket/HB-009-audit-writer`, bàn giao commit/hash cho B; không merge A đỏ): viết `apps/api/test/audit/audit-writer.locked.spec.ts` chạy trên PG16 thật, đỏ lúc bàn giao A; chỉ merge PR tích hợp A+B xanh. Các ca: (1) ghi nghiệp vụ + audit trong một transaction, commit thì có cả hai; (2) ép lỗi ở bước audit thì không còn dòng nghiệp vụ nào (TC-SYS-02, dùng một bảng nghiệp vụ có sẵn trong schema); (3) bản ghi đủ trường BR-SYS-05 (actor, role, action, entity, before/after, reason, IP, thời điểm); (4) `before/after` đã che các trường nhạy cảm (`password_hash`, PII → `****` + 4 ký tự cuối theo NFR-SEC-03); (5) `row_hash`/`prev_hash` nối chuỗi đúng qua 3 bản ghi; (6) dùng `app_rw` thì `UPDATE`/`DELETE` bị từ chối (TC-SYS-01).
 - **B — DeepSeek** (nhánh `ticket/HB-009-audit-writer`): hiện thực cho đến khi test khoá xanh, không sửa test khoá.
 
 ## Tiêu chí nghiệm thu
