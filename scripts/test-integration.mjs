@@ -42,7 +42,7 @@ async function main(target) {
     if (target === 'api') run(target, ['tsx', 'test/integration/runtime.ts']);
     const report = join(directory, 'vitest.json');
     run(target, [
-      'vitest', 'run', target === 'api' ? 'test/migration' : 'test/redis.integration.spec.ts',
+      'vitest', 'run', target === 'api' ? 'test' : 'test/redis.integration.spec.ts',
       '--no-file-parallelism', '--reporter=default', '--reporter=json', `--outputFile.json=${report}`,
     ]);
     assertIntegrationReport(JSON.parse(await readFile(report, 'utf8')));
