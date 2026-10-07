@@ -10,6 +10,7 @@
 
 ## 2. Hàng rào cứng (vi phạm thì PR bị trả)
 
+- Test khoá có `locked_sha` do lead công bố: giai đoạn A được tạo đúng nội dung đã ghim; A+B giữ nguyên nội dung/hash. Không merge A đỏ vào main.
 - Không sửa test khoá (`locked`) của ticket, không sửa file bảo vệ (`PROTECTED` trong `scripts/lib/scope.mjs`) — `check:scope` chặn. Không sửa đặc tả ticket đã có trên `main` (kể cả của mình).
 - Không làm test xanh bằng cách nới assertion, `skip`, `only`, bắt-rồi-nuốt lỗi hoặc mock chính thứ đang kiểm.
 - Không phá vỡ hợp đồng API đã phát hành (`pnpm check:contract` phải 0 phá vỡ).

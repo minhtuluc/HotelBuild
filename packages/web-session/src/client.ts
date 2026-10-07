@@ -135,3 +135,5 @@ export function createSessionClient(options: SessionClientOptions) {
     },
   };
 }
+
+export { createJourneyApiClient, type JourneySession } from './journey-client.js';

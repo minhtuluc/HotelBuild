@@ -169,3 +169,5 @@ export function createSessionHandler(options: SessionOptions) {
     return response;
   };
 }
+
+export { createJourneyHandler, type JourneyOptions } from './journey.js';

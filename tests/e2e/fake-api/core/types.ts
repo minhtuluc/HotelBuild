@@ -3,6 +3,7 @@ export interface FakeRequest {
   url: URL;
   body: unknown;
   authorization: string | undefined;
+  idempotencyKey?: string;
 }
 export interface FakeResponse {
   status: number;
@@ -12,3 +13,7 @@ export interface FakeResponse {
 export type FakeHandler = (
   request: FakeRequest,
 ) => FakeResponse | undefined | Promise<FakeResponse | undefined>;
+
+export interface FakeApiContext {
+  authenticateGuest?: (authorization: string | undefined) => string | undefined;
+}
