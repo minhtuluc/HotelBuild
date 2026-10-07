@@ -54,6 +54,10 @@ export function createHandler(context: FakeApiContext): FakeHandler {
   const holds = new Map<string, { value: Hold; owner: string }>();
   const duplicateBookings = new Map<string, BookingSummary>();
   const bookings = new Map<string, { value: BookingSummary; owner: string }>();
+  context.getBooking = (id) => bookings.get(id);
+  context.deleteBooking = (id) => {
+    bookings.delete(id);
+  };
   const replays = new Map<string, { fingerprint: string; response: FakeResponse }>();
   function resolveQuote(
     input: HoldCreateRequest | BookingCreateRequest,
@@ -180,6 +184,11 @@ export function createHandler(context: FakeApiContext): FakeHandler {
       request.method === 'POST' && ['/api/v1/holds', '/api/v1/bookings'].includes(path);
     const detail = /^\/api\/v1\/(holds|bookings)\/([^/]+)$/.exec(path);
     if (!mutation && !detail) return undefined;
+    if (
+      detail?.[1] === 'bookings' &&
+      context.authenticateActor?.(request.authorization)?.guest === false
+    )
+      return undefined;
     if (!owner) return error(401, 'E_AUTH_INVALID_CREDENTIALS', path);
     if (mutation) return idempotent(request, owner, () => write(request, owner));
     const id = decodeURIComponent(detail![2]!);
