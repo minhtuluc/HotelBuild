@@ -196,6 +196,9 @@ importers:
       '@pinehill/ui-web':
         specifier: workspace:*
         version: link:../../packages/ui-web
+      '@pinehill/web-session':
+        specifier: workspace:*
+        version: link:../../packages/web-session
       next:
         specifier: ^15.5.26
         version: 15.5.26(@playwright/test@1.63.0)(@types/node@22.20.4)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -300,6 +303,9 @@ importers:
       '@pinehill/ui-web':
         specifier: workspace:*
         version: link:../../packages/ui-web
+      '@pinehill/web-session':
+        specifier: workspace:*
+        version: link:../../packages/web-session
       next:
         specifier: ^15.5.26
         version: 15.5.26(@playwright/test@1.63.0)(@types/node@22.20.4)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -480,6 +486,28 @@ importers:
       react-dom:
         specifier: 19.2.3
         version: 19.2.3(react@19.2.3)
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@22.20.4)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
+
+  packages/web-session:
+    dependencies:
+      '@pinehill/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@pinehill/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      server-only:
+        specifier: 0.0.1
+        version: 0.0.1
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: ^3.2.7
+        version: 3.2.7(vitest@3.2.7(@types/node@22.20.4)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       vitest:
         specifier: ^3.2.7
         version: 3.2.7(@types/node@22.20.4)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)

@@ -19,7 +19,8 @@
     "@pinehill/ui-web": "workspace:*",
     "next": "^15.5.26",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "@pinehill/web-session": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

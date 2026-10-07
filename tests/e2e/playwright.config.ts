@@ -6,8 +6,16 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 
 /** Hai web app chạy độc lập (ADR-018): mỗi bề mặt một project E2E riêng. */
 const APPS = [
-  { name: 'customer-web', filter: '@pinehill/customer-web', port: 3001 },
-  { name: 'operations-web', filter: '@pinehill/operations-web', port: 3002 },
+  {
+    name: 'customer-web',
+    filter: '@pinehill/customer-web',
+    port: Number(process.env.E2E_CUSTOMER_WEB_PORT ?? 3001),
+  },
+  {
+    name: 'operations-web',
+    filter: '@pinehill/operations-web',
+    port: Number(process.env.E2E_OPERATIONS_WEB_PORT ?? 3002),
+  },
 ] as const;
 
 const fakeApiBaseUrl = process.env.E2E_API_BASE_URL ?? 'http://127.0.0.1:4000/api/v1';
@@ -41,12 +49,28 @@ export default defineConfig({
       use: { ...BROWSERS[browser], baseURL: `http://127.0.0.1:${app.port}` },
     })),
   ),
-  webServer: APPS.map((app) => ({
-    command: `pnpm --filter ${app.filter} start`,
-    cwd: root,
-    url: `http://127.0.0.1:${app.port}/`,
-    env: { NEXT_PUBLIC_API_BASE_URL: fakeApiBaseUrl },
-    reuseExistingServer: process.env.CI === undefined,
-    timeout: 120_000,
-  })),
+  webServer: [
+    {
+      command: 'pnpm --filter @pinehill/api exec tsx ../../tests/e2e/fake-api/server.ts',
+      cwd: root,
+      url: `${fakeApiBaseUrl}/system/health`,
+      env: {
+        E2E_API_BASE_URL: fakeApiBaseUrl,
+        E2E_APP_ORIGINS: APPS.map((app) => `http://127.0.0.1:${app.port}`).join(','),
+      },
+      reuseExistingServer: false,
+      timeout: 120_000,
+    },
+    ...APPS.map((app) => ({
+      command: `pnpm --filter ${app.filter} exec next start --port ${app.port}`,
+      cwd: root,
+      url: `http://127.0.0.1:${app.port}/`,
+      env: {
+        NEXT_PUBLIC_API_BASE_URL: fakeApiBaseUrl,
+        SESSION_APP_ORIGIN: `http://127.0.0.1:${app.port}`,
+      },
+      reuseExistingServer: process.env.CI === undefined,
+      timeout: 120_000,
+    })),
+  ],
 });
