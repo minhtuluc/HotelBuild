@@ -29,7 +29,7 @@ Từ QĐ-04, Codex/DeepSeek (và Gemini cho R0) **tự soạn** đặc tả tron
 3. `allow`: glob hẹp nhất có thể. Kiểm không chồng với ticket khác đang mở hoặc sẽ chạy song song. Chỗ dùng chung (bảng quyền, API giả, router) thì thiết kế dạng ghép theo module (xem HB-014, HB-019).
 4. `unlock` chỉ cho file được bảo vệ mà ticket thật sự phải sửa; liệt kê đủ ngay từ đầu (bài học HB-001, HB-005).
 5. `max_lines` theo bảng §5.
-6. R2: ghi rõ giai đoạn A (Codex viết test khoá trên nhánh `lead/HB-nnn-test-khoa`, merge trước, test đỏ) và giai đoạn B (DeepSeek).
+6. R2 có test khoá: A do Codex viết trên nhánh `ticket/HB-nnn-*`, bàn giao commit/hash và log đỏ vì thiếu hành vi; không merge A đỏ. Lead công bố `locked_sha` (SHA-256 + đường dẫn) trong ticket trên main sau review A. B lấy commit A, giữ nguyên hash và merge/rebase main đã có pin vào nhánh A trước khi chạy scope (hoặc tạo nhánh từ main đã có pin rồi cherry-pick A); chỉ merge PR tích hợp A+B khi mọi cổng xanh. Không dùng nhánh lead để né scope.
 7. Chạy: `npm run check:docs` (mã định danh phải có thật) và parse thử ticket:
    ```sh
    node --input-type=module -e "import {parseTicket} from './scripts/lib/scope.mjs'; import {readFileSync} from 'node:fs'; console.log(parseTicket(readFileSync('docs/08-thi-cong/tickets/HB-nnn-x.md','utf8')))"
