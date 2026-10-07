@@ -1,5 +1,6 @@
 import { errorBodySchema, operationRefSchema } from '@pinehill/contracts';
 import { ApiError, type ApiFailureKind } from './errors.js';
+import { sentAccessToken, type FetchedResponse, type AttemptOutcome } from './transport.js';
 
 /** Bộ giải mã đầu ra: schema zod của contracts thoả cấu trúc này. */
 export interface Decoder<T> {
@@ -56,7 +57,7 @@ export interface ApiClientOptions {
    * Gọi **một lần** khi request đã xác thực nhận 401 (HB-012). Trả `true` → client gửi lại
    * đúng một lần; nhiều request 401 đồng thời dùng chung một lần gọi hook.
    */
-  onUnauthorized?: () => Promise<boolean>;
+  onUnauthorized?: (rejectedAccessToken?: string) => Promise<boolean>;
   baseRetryDelayMs?: number;
   maxRetryDelayMs?: number;
 }
@@ -217,12 +218,19 @@ export class ApiClient {
   /** Bước kế tiếp sau một lần thất bại: gửi lại sau khi refresh, chờ rồi gửi lại, hay ném lỗi. */
   private async nextAction(
     spec: RequestBase,
-    outcome: { error: ApiError; retryAfterMs?: number | undefined },
+    outcome: {
+      error: ApiError;
+      retryAfterMs?: number | undefined;
+      rejectedAccessToken?: string | undefined;
+    },
     attempt: number,
     maxAttempts: number,
     reauthorized: boolean,
   ): Promise<{ kind: 'reauth' } | { kind: 'retry'; delayMs: number } | { kind: 'throw' }> {
-    if (!reauthorized && (await this.retryAfterReauth(spec, outcome.error)))
+    if (
+      !reauthorized &&
+      (await this.retryAfterReauth(spec, outcome.error, outcome.rejectedAccessToken))
+    )
       return { kind: 'reauth' };
     if (!outcome.error.retryable || attempt === maxAttempts) return { kind: 'throw' };
     return {
@@ -300,15 +308,23 @@ export class ApiClient {
     if (spec.signal?.aborted === true) controller.abort();
     else spec.signal?.addEventListener('abort', abortFromCaller, { once: true });
     try {
+      const headers = await this.headers(spec, correlationId, idempotencyKey);
+      const rejectedAccessToken = sentAccessToken(headers.authorization);
       const response = await this.fetchImpl(this.buildUrl(spec), {
         method: spec.method,
-        headers: await this.headers(spec, correlationId, idempotencyKey),
+        headers,
         ...(bodyText === undefined ? {} : { body: bodyText }),
         signal: controller.signal,
       });
       // Đọc body trong cùng phạm vi timeout: body treo không được vượt hạn.
       const payload = await readPayload(response);
-      return { kind: 'ok', status: response.status, headers: response.headers, payload };
+      return {
+        kind: 'ok',
+        status: response.status,
+        headers: response.headers,
+        payload,
+        rejectedAccessToken,
+      };
     } catch {
       const callerAborted = spec.signal?.aborted === true;
       const timedOut = !callerAborted && controller.signal.aborted;
@@ -342,6 +358,7 @@ export class ApiClient {
           retryAfterMs === undefined ? undefined : Math.ceil(retryAfterMs / 1000),
         ),
         retryAfterMs,
+        rejectedAccessToken: fetched.rejectedAccessToken,
       };
     }
     try {
@@ -404,24 +421,31 @@ export class ApiClient {
   }
 
   /** 401 trên request đã xác thực → gọi hook (một lần cho mọi request đồng thời) và gửi lại nếu hook đồng ý. */
-  private async retryAfterReauth(spec: RequestBase, error: ApiError): Promise<boolean> {
-    if (!(await this.shouldReauthorize(spec, error))) return false;
-    return await this.reauthorize();
+  private async retryAfterReauth(
+    spec: RequestBase,
+    error: ApiError,
+    token: string | undefined,
+  ): Promise<boolean> {
+    if (!this.shouldReauthorize(spec, error, token)) return false;
+    return await this.reauthorize(token);
   }
 
   /** Chỉ gọi hook khi 401 đến từ request đã mang access token và không phải endpoint cấp phiên. */
-  private async shouldReauthorize(spec: RequestBase, error: ApiError): Promise<boolean> {
+  private shouldReauthorize(
+    spec: RequestBase,
+    error: ApiError,
+    token: string | undefined,
+  ): boolean {
     if (error.status !== 401 || CREDENTIAL_PATHS.includes(spec.path)) return false;
     if (this.options.onUnauthorized === undefined) return false;
-    const token = await this.options.getAccessToken?.();
-    return token !== null && token !== undefined;
+    return token !== undefined;
   }
 
   /** Nhiều request 401 đồng thời dùng chung một lần gọi hook; hook trả `true` thì gửi lại một lần. */
-  private async reauthorize(): Promise<boolean> {
+  private async reauthorize(token: string | undefined): Promise<boolean> {
     const hook = this.options.onUnauthorized;
     if (hook === undefined) return false;
-    const inFlight = this.reauthInFlight ?? hook();
+    const inFlight = this.reauthInFlight ?? hook(token);
     this.reauthInFlight = inFlight;
     try {
       return await inFlight;
@@ -448,14 +472,3 @@ export const operationRefDecoder: Decoder<{
 }> = {
   parse: (input) => operationRefSchema.parse(input),
 };
-
-interface FetchedResponse {
-  kind: 'ok';
-  status: number;
-  headers: Headers;
-  payload: unknown;
-}
-
-type AttemptOutcome<T> =
-  | { kind: 'ok'; status: number; value: Omit<ApiResponse<T>, 'status'> }
-  | { kind: 'error'; error: ApiError; retryAfterMs?: number | undefined };

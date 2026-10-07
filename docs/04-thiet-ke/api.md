@@ -111,7 +111,7 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 | GET | `/api/v1/properties` | Danh sách cơ sở kèm số phòng `ACTIVE` | HOUSEKEEPING | `status` | UC-PROP-01 | BR-PROP-01,02 |
 | PATCH | `/api/v1/properties/{propertyId}` | Sửa cơ sở, đổi trần bán vượt (trần theo cơ sở, tổng chuỗi = tổng trần cơ sở), giờ nhận/trả phòng | OWNER | `overbookLimitPct`, `checkInTime`, `checkOutTime` | UC-PROP-01 | BR-OVER-01,02, BR-GEN-04 |
 | POST | `/api/v1/room-types` | Tạo loại phòng (sức chứa, giá cơ bản, sàn/trần) | OWNER | `propertyId`, `code`, `capacityAdults`, `capacityChildren`, `basePrice`, `minPrice`, `maxPrice`, `allowShared` | UC-PROP-02 | BR-PROP-03,04, BR-RATE-03,04 |
-| GET | `/api/v1/room-types` | Danh sách loại phòng kèm sức chứa và sàn–trần giá (màn SCR-20) | HOUSEKEEPING | `propertyId` | UC-PROP-02 | BR-PROP-03,04, BR-RATE-03,04 |
+| GET | `/api/v1/room-types` | Danh sách loại phòng kèm sức chứa, sàn–trần giá và `sellingUnits` (số đơn vị bán ACTIVE, dùng cho hạn mức kênh BR-INV-05) (màn SCR-20, SCR-25) | HOUSEKEEPING | `propertyId` | UC-PROP-02 | BR-PROP-03,04, BR-RATE-03,04, BR-INV-05 |
 | GET | `/api/v1/rooms` | Danh sách phòng vật lý | HOUSEKEEPING | `propertyId`, `roomTypeId`, `floor`, `status` | UC-PROP-03 | BR-PROP-05 |
 | PUT | `/api/v1/rooms/{roomId}/connecting-room` | Gán/gỡ phòng thông nhau (đối xứng hai chiều) | MANAGER | `connectingRoomId` | UC-PROP-03 | BR-OVER-15 |
 | GET | `/api/v1/room-blocks` | Danh sách khoá phòng đang có (màn SCR-22 liệt kê và cảnh báo chồng lấn) | HOUSEKEEPING | `propertyId`, `roomId`, `from`, `to` | UC-PROP-04 | BR-INV-06 |
@@ -133,13 +133,17 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 |--------|-----------|-------|-------------------|---------------|----|----|
 | GET | `/api/v1/room-types/{roomTypeId}/rate-calendar` | Lịch giá theo ngày | MANAGER | `from`, `to`, `source` | UC-RATE-01 | BR-RATE-02,03 |
 | PUT | `/api/v1/room-types/{roomTypeId}/rate-calendar` | Ghi đè lịch giá (`source = OVERRIDE`, `priority` cao nhất); cảnh báo khi `LONGSTAY14` không có giá riêng nên bằng giá `FLEX7` | OWNER | `date[]`, `price`, `channelCode`, `priority`, `reason`, `confirmOwnerOverride` | UC-RATE-01 | BR-RATE-02, BR-RATE-19, BR-RBAC-04 |
+| GET | `/api/v1/seasons` | Danh sách mùa của cơ sở kèm hệ số, ưu tiên, phụ thu cuối tuần, phiên bản (màn SCR-27) | MANAGER | `propertyId`, `from`, `to` | UC-RATE-02 | BR-RATE-05,06 |
 | POST | `/api/v1/seasons` | Tạo mùa (hệ số, `priority`, phụ thu cuối tuần) | OWNER | `propertyId`, `name`, `startDate`, `endDate`, `multiplier`, `priority`, `weekendSurchargeEnabled` | UC-RATE-02 | BR-RATE-05,06 |
+| GET | `/api/v1/channels` | Danh sách kênh kèm hệ số, hoa hồng, hold, cờ bán vượt, phiên bản (màn SCR-25, SCR-28) | MANAGER | — | UC-RATE-03 | BR-RATE-07,18 |
+| GET | `/api/v1/channels/{channelId}` | Chi tiết kênh kèm các dòng ghi đè theo cơ sở | MANAGER | — | UC-RATE-03 | BR-RATE-18 |
 | PATCH | `/api/v1/channels/{channelId}` | Sửa hệ số/hoa hồng/hold/`overbookAllowed` mức **mặc định toàn chuỗi**; ghi đè theo cặp (kênh, cơ sở) qua `ChannelPropertySetting` (mốc so sánh là **ngày của từng đêm**: dòng có `effectiveFrom` lớn nhất ≤ ngày đêm đó thắng); cảnh báo khi hệ số dưới ngưỡng sàn `1/(1−hoa hồng)`, `AGENCY` miễn | OWNER | `multiplier`, `commissionPct`, `holdMinutes`, `overbookAllowed`, `propertyOverrides[]` | UC-RATE-03 | BR-RATE-07,09,18, BR-OVER-02 |
 | GET | `/api/v1/promotions` | Danh sách khuyến mãi kèm lượt đã dùng, phạm vi và trạng thái (màn SCR-29) | MANAGER | `propertyId`, `status` | UC-RATE-04 | BR-RATE-10,11,13 |
 | POST | `/api/v1/promotions` | Tạo khuyến mãi | OWNER | `code`, `type`, `value`, `minNights`, `channelScope`, `roomTypeScope`, `validFrom`, `validTo`, `maxUses`, `stackable` | UC-RATE-04 | BR-RATE-10,11,13 |
 | POST | `/api/v1/quotes` | **Báo giá** kỳ lưu trú (§3.1) | — | `propertyId`, `roomTypeId`, `channelCode`, `ratePlanCode`, `checkIn`, `checkOut`, `adults`, `children`, `roomCount`, `promotionCodes[]` | UC-INV-02, UC-RATE-05 | BR-RATE-01…17 |
 | POST | `/api/v1/quotes/multi-channel` | So sánh giá đồng thời nhiều kênh | MANAGER | `roomTypeId`, `checkIn`, `checkOut`, `channelCodes[]` | UC-RATE-05 | BR-RATE-07,08,09 |
 | GET | `/api/v1/rate-plans` | Gói giá đang bán và điều khoản dành cho khách; không lộ cấu hình nội bộ | — | `propertyId`, `checkIn`, `checkOut` | UC-RATE-06 | BR-CANCEL-01, BR-BOOK-03 |
+| GET | `/api/v1/rate-plans/admin` | Cấu hình gói giá cho chủ chuỗi: cọc, min/max đêm, chính sách áp dụng, trạng thái, phiên bản (màn SCR-70) | OWNER | — | UC-RATE-06 | BR-CANCEL-01, BR-RATE-16, BR-RATE-20 |
 | PUT | `/api/v1/rate-plans/{ratePlanId}` | Cập nhật cấu hình gói giá cho báo giá mới, giữ nguyên snapshot đã bán | OWNER | `depositPercent`, `minNights`, `maxNights`, `cancellationPolicyId`, `status`, `reason` | UC-RATE-06 | BR-CANCEL-01, BR-RATE-16 |
 | GET | `/api/v1/cancellation-policies` | Chính sách và toàn bộ bậc cùng version | OWNER | `status` | UC-RATE-06 | BR-CANCEL-01,02 |
 | PUT | `/api/v1/cancellation-policies/{policyId}` | Thay toàn bộ bậc trong một transaction; validate mốc, phần trăm, bậc bắt tất | OWNER | `tiers[]`, `earlyCheckoutFreeHours`, `earlyCheckoutRefundPct`, `reason` | UC-RATE-06 | BR-CANCEL-01,02,09 |
@@ -245,6 +249,7 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |
 |--------|-----------|-------|-------------------|---------------|----|----|
 | GET | `/api/v1/audit-logs` | Nhật ký kiểm toán (chỉ đọc) | MANAGER | `actorId`, `entityType`, `entityId`, `action`, `from`, `to` | UC-SYS-01 | BR-SYS-01,05 |
+| GET | `/api/v1/system-settings` | Danh sách tham số kèm kiểu giá trị, người sửa cuối, phiên bản (màn SCR-17) | OWNER | — | UC-SYS-02 | BR-SYS-02 |
 | PUT | `/api/v1/system-settings/{key}` | Sửa tham số (ghi `AuditLog` cùng transaction) | OWNER | `value`, `reason` | UC-SYS-02 | BR-SYS-02, BR-GEN-07 |
 | POST | `/api/v1/system/backups` | Yêu cầu sao lưu (202) | SYSADMIN | `mode` (`PITR`/`FULL`) | UC-SYS-03 | BR-SYS-03 |
 | POST | `/api/v1/system/backups/{backupId}/restore` | Diễn tập phục hồi vào môi trường tạm do server chọn (202); không nhận đường dẫn/DB URL của client | SYSADMIN | `targetTimestamp`, `reason` | UC-SYS-03 | BR-SYS-03 |

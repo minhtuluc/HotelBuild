@@ -10,6 +10,7 @@
     "start": "next start --port 3001",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "e2e": "playwright test -c ../../tests/e2e/playwright.config.ts"
   },
   "dependencies": {
@@ -18,7 +19,8 @@
     "@pinehill/ui-web": "workspace:*",
     "next": "^15.5.26",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "@pinehill/web-session": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
@@ -27,6 +29,7 @@
     "@types/react-dom": "~19.2.7",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.7"
+    "vitest": "^3.2.7",
+    "@vitest/coverage-v8": "^3.2.7"
   }
 }

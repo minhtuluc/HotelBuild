@@ -56,6 +56,28 @@ export const rateCalendarOverrideRequestSchema = z.strictObject({
   confirmOwnerOverride: z.boolean().optional(),
 });
 
+/** Bộ lọc `GET /seasons` — danh sách mùa của một cơ sở (SCR-27, chủ dự án duyệt 05/10/2026). */
+export const seasonQuerySchema = z.strictObject({
+  propertyId: z.string().min(1).optional(),
+  from: businessDateSchema.optional(),
+  to: businessDateSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  cursor: z.string().min(1).optional(),
+});
+
+/** Một mùa đang cấu hình; `version` để màn hình dùng `If-Match` khi sửa (BR-RATE-05,06). */
+export const seasonSummarySchema = z.object({
+  id: z.string().min(1),
+  propertyId: z.string().min(1),
+  name: z.string().min(1).max(120),
+  startDate: businessDateSchema,
+  endDate: businessDateSchema,
+  multiplier,
+  priority: z.number().int().min(0),
+  weekendSurchargeEnabled: z.boolean(),
+  version: z.number().int().min(0),
+});
+
 export const seasonCreateRequestSchema = z.strictObject({
   propertyId: z.string().min(1),
   name: z.string().min(1).max(120),
@@ -64,6 +86,40 @@ export const seasonCreateRequestSchema = z.strictObject({
   multiplier,
   priority: z.number().int().min(0),
   weekendSurchargeEnabled: z.boolean(),
+});
+
+/**
+ * Bổ sung tuyến đọc kênh (HB-060 SCR-28 + HB-042 SCR-25, chủ dự án duyệt 05/10/2026):
+ * api.md chỉ có PATCH theo `{channelId}` nên màn hình không dựng được danh sách kênh.
+ */
+export const channelQuerySchema = z.strictObject({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  cursor: z.string().min(1).optional(),
+});
+
+/** Kênh ở mức mặc định toàn chuỗi; `version` để màn hình gửi `If-Match` khi sửa (BR-RATE-07,18). */
+export const channelSummarySchema = z.object({
+  id: z.string().min(1),
+  code: channelCodeSchema,
+  name: z.string().min(1).max(120),
+  multiplier,
+  commissionPct: percent,
+  holdMinutes: z.number().int().min(0).max(1440),
+  overbookAllowed: z.boolean(),
+  version: z.number().int().min(0),
+});
+
+/** Một dòng ghi đè theo cặp (kênh, cơ sở); máy chủ ghi dòng **mới** theo `effectiveFrom`. */
+export const channelPropertyOverrideSchema = z.object({
+  propertyId: z.string().min(1),
+  multiplier: multiplier.optional(),
+  commissionPct: percent.optional(),
+  effectiveFrom: businessDateSchema,
+  version: z.number().int().min(0).optional(),
+});
+
+export const channelDetailSchema = channelSummarySchema.extend({
+  propertyOverrides: z.array(channelPropertyOverrideSchema),
 });
 
 /** `PATCH /channels/{channelId}` — mặc định toàn chuỗi + ghi đè theo cặp (kênh, cơ sở) (BR-RATE-18). */
@@ -134,10 +190,21 @@ export const multiChannelQuoteRequestSchema = z.strictObject({
   channelCodes: z.array(channelCodeSchema).min(1).max(7),
 });
 
+/**
+ * Một kênh trong so sánh giá (BR-RATE-07,08): giá gộp, hoa hồng và **giá thuần** đều do máy chủ trả.
+ * Hoa hồng/thuần để **tuỳ chọn** vì HB-050 chỉ chốt `nightlyFrom`/`totalFrom`; HB-056 (engine báo giá
+ * đa kênh) trả đủ ba con số, nên màn SCR-30 đọc được mà không phải tính lại ở giao diện (BR-RATE-17).
+ */
 export const multiChannelQuoteOptionSchema = z.object({
   channelCode: channelCodeSchema,
   nightlyFrom: z.number().int().positive(),
   totalFrom: z.number().int().positive(),
+  commissionPct: percent.optional(),
+  /** Giá gộp = tổng trước hoa hồng; `null` khi kênh không có hoa hồng (kênh trực tiếp). */
+  grossTotal: z.number().int().positive().optional(),
+  commissionAmount: z.number().int().min(0).optional(),
+  /** Giá thuần = gộp − hoa hồng (BR-RATE-08). */
+  netTotal: z.number().int().optional(),
   warnings: z.array(z.string().min(1)),
 });
 
@@ -167,13 +234,36 @@ export const ratePlanUpdateRequestSchema = z.strictObject({
   reason: z.string().min(1).max(500),
 });
 
+/**
+ * `GET /rate-plans/admin` cho chủ chuỗi (UC-RATE-06): cấu hình đầy đủ để sửa, khác bản công khai
+ * (`ratePlanPublicSchema`) vốn chỉ lộ điều khoản cho khách. Trường `version` dùng cho `If-Match`.
+ */
+export const ratePlanAdminSchema = z.object({
+  id: z.string().min(1),
+  code: ratePlanCodeSchema,
+  name: z.string().min(1).max(120),
+  minNights: z.number().int().min(1),
+  maxNights: z.number().int().min(1),
+  depositPercent: percent,
+  cancellationPolicyId: z.string().min(1),
+  status: z.enum(['ACTIVE', 'INACTIVE']),
+  version: z.number().int().min(0),
+});
+
 export type RateCalendar = z.infer<typeof rateCalendarSchema>;
 export type RateCalendarOverrideRequest = z.infer<typeof rateCalendarOverrideRequestSchema>;
 export type SeasonCreateRequest = z.infer<typeof seasonCreateRequestSchema>;
+export type SeasonSummary = z.infer<typeof seasonSummarySchema>;
+export type SeasonQuery = z.infer<typeof seasonQuerySchema>;
 export type ChannelUpdateRequest = z.infer<typeof channelUpdateRequestSchema>;
+export type ChannelSummary = z.infer<typeof channelSummarySchema>;
+export type ChannelDetail = z.infer<typeof channelDetailSchema>;
+export type ChannelPropertyOverride = z.infer<typeof channelPropertyOverrideSchema>;
 export type PromotionCreateRequest = z.infer<typeof promotionCreateRequestSchema>;
 export type PromotionSummary = z.infer<typeof promotionSummarySchema>;
 export type PromotionQuery = z.infer<typeof promotionQuerySchema>;
 export type MultiChannelQuote = z.infer<typeof multiChannelQuoteSchema>;
+export type MultiChannelQuoteRequest = z.infer<typeof multiChannelQuoteRequestSchema>;
 export type RatePlanPublic = z.infer<typeof ratePlanPublicSchema>;
+export type RatePlanAdmin = z.infer<typeof ratePlanAdminSchema>;
 export type RatePlanUpdateRequest = z.infer<typeof ratePlanUpdateRequestSchema>;

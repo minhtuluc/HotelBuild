@@ -27,12 +27,25 @@ export default function OperationsHomePage(): ReactElement {
         <li>
           <a href="/rooms">{t('ops.nav.rooms')}</a>
           <a href="/inventory-grid">{t('ops.nav.grid')}</a>
+          <a href="/channel-allotments">{t('ops.nav.allotments')}</a>
         </li>
         <li>
           <a href="/rate-calendar">{t('ops.nav.rateCalendar')}</a>
+          <a href="/multi-channel-quote">{t('ops.nav.multiChannelQuote')}</a>
           <a href="/promotions">{t('ops.nav.promotions')}</a>
+          <a href="/seasons">{t('ops.nav.seasons')}</a>
+          <a href="/channels">{t('ops.nav.channels')}</a>
+          <a href="/rate-plans">{t('ops.nav.ratePlans')}</a>
+          <a href="/reports/occupancy">{t('ops.nav.reportsOccupancy')}</a>
+          <a href="/reports/revenue-by-channel">{t('ops.nav.reportsRevenue')}</a>
+          <a href="/reports/cancellations">{t('ops.nav.reportsCancellations')}</a>
+          <a href="/reports/overbooking">{t('ops.nav.reportsOverbooking')}</a>
+          <a href="/crm/guests">{t('ops.nav.crmGuests')}</a>
+          <a href="/crm/loyalty">{t('ops.nav.crmLoyalty')}</a>
+          <a href="/noti/notifications">{t('ops.nav.notifications')}</a>
           <a href="/audit-logs">{t('ops.nav.auditLogs')}</a>
           <a href="/room-blocks">{t('ops.nav.roomBlocks')}</a>
+          <a href="/system-settings">{t('ops.nav.settings')}</a>
         </li>
       </ul>
       <h2>t('ops.home.states')</h2>

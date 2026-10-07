@@ -69,13 +69,20 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['get', '/api/v1/channel-allotments', 'bearer'],
   ['put', '/api/v1/channel-allotments', 'bearer'],
   ['get', '/api/v1/audit-logs', 'bearer'],
+  // HB-044: bổ sung tuyến đọc tham số cho SCR-17 (thêm tuyến, không phá vỡ hợp đồng).
+  ['get', '/api/v1/system-settings', 'bearer'],
   ['put', '/api/v1/system-settings/{key}', 'bearer'],
   ['post', '/api/v1/system/backups', 'bearer'],
   ['post', '/api/v1/system/backups/{backupId}/restore', 'bearer'],
   ['get', '/api/v1/operations/{operationId}', 'bearer'],
   ['get', '/api/v1/room-types/{roomTypeId}/rate-calendar', 'bearer'],
   ['put', '/api/v1/room-types/{roomTypeId}/rate-calendar', 'bearer'],
+  // HB-059: bổ sung tuyến đọc mùa cho SCR-27 (thêm tuyến, không phá vỡ hợp đồng).
+  ['get', '/api/v1/seasons', 'bearer'],
   ['post', '/api/v1/seasons', 'bearer'],
+  // HB-060/HB-042: bổ sung tuyến đọc kênh (thêm tuyến, không phá vỡ hợp đồng).
+  ['get', '/api/v1/channels', 'bearer'],
+  ['get', '/api/v1/channels/{channelId}', 'bearer'],
   ['patch', '/api/v1/channels/{channelId}', 'bearer'],
   // HB-061: bổ sung tuyến đọc khuyến mãi cho SCR-29 (thêm tuyến, không phá vỡ hợp đồng).
   ['get', '/api/v1/promotions', 'bearer'],
@@ -109,6 +116,29 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['post', '/api/v1/refund-requests/{refundRequestId}/reject', 'bearer'],
   ['post', '/api/v1/refund-requests/{refundRequestId}/cancel', 'bearer'],
   ['post', '/api/v1/refund-requests/{refundRequestId}/pay', 'bearer'],
+  // F7 (HB-140): tiền sảnh, buồng phòng, khách tại quầy, chốt đối soát.
+  ['post', '/api/v1/front-office/check-in', 'bearer'],
+  ['post', '/api/v1/front-office/check-out', 'bearer'],
+  ['post', '/api/v1/front-office/no-show', 'bearer'],
+  ['get', '/api/v1/housekeeping/tasks', 'bearer'],
+  ['patch', '/api/v1/housekeeping/tasks/{taskId}', 'bearer'],
+  ['get', '/api/v1/guests', 'bearer'],
+  ['post', '/api/v1/guests', 'bearer'],
+  ['post', '/api/v1/reconciliation/daily/close', 'bearer'],
+  // F8 (HB-160): báo cáo, xuất báo cáo, thông báo, CRM quản trị.
+  ['get', '/api/v1/reports/occupancy', 'bearer'],
+  ['get', '/api/v1/reports/adr-revpar', 'bearer'],
+  ['get', '/api/v1/reports/revenue-by-channel', 'bearer'],
+  ['get', '/api/v1/reports/cancellations', 'bearer'],
+  ['get', '/api/v1/reports/force-majeure', 'bearer'],
+  ['get', '/api/v1/reports/overbooking', 'bearer'],
+  ['post', '/api/v1/reports/export', 'bearer'],
+  ['post', '/api/v1/guests/{guestId}/anonymize', 'bearer'],
+  ['get', '/api/v1/guests/{guestId}/loyalty', 'bearer'],
+  ['post', '/api/v1/guests/{guestId}/blacklist', 'bearer'],
+  ['delete', '/api/v1/guests/{guestId}/blacklist', 'bearer'],
+  ['get', '/api/v1/notifications', 'bearer'],
+  ['post', '/api/v1/notifications/{notificationId}/resend', 'bearer'],
 ];
 
 const WRITE_TARGETS = AUTH_OPERATIONS.filter(([method]) => method !== 'get');
@@ -127,7 +157,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 60 path của F0 + F1 + F2 + F3 + F4 + F5', () => {
+  it('có đủ 82 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -156,16 +186,19 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/inventory/grid',
         '/api/v1/channel-allotments',
         '/api/v1/audit-logs',
+        '/api/v1/system-settings',
         '/api/v1/system-settings/{key}',
         '/api/v1/system/backups',
         '/api/v1/system/backups/{backupId}/restore',
         '/api/v1/operations/{operationId}',
         '/api/v1/room-types/{roomTypeId}/rate-calendar',
         '/api/v1/seasons',
+        '/api/v1/channels',
         '/api/v1/channels/{channelId}',
         '/api/v1/promotions',
         '/api/v1/quotes/multi-channel',
         '/api/v1/rate-plans',
+        '/api/v1/rate-plans/admin',
         '/api/v1/rate-plans/{ratePlanId}',
         '/api/v1/cancellation-policies',
         '/api/v1/cancellation-policies/{policyId}',
@@ -188,6 +221,25 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/refund-requests/{refundRequestId}/reject',
         '/api/v1/refund-requests/{refundRequestId}/cancel',
         '/api/v1/refund-requests/{refundRequestId}/pay',
+        '/api/v1/front-office/check-in',
+        '/api/v1/front-office/check-out',
+        '/api/v1/front-office/no-show',
+        '/api/v1/housekeeping/tasks',
+        '/api/v1/housekeeping/tasks/{taskId}',
+        '/api/v1/guests',
+        '/api/v1/reconciliation/daily/close',
+        '/api/v1/reports/occupancy',
+        '/api/v1/reports/adr-revpar',
+        '/api/v1/reports/revenue-by-channel',
+        '/api/v1/reports/cancellations',
+        '/api/v1/reports/force-majeure',
+        '/api/v1/reports/overbooking',
+        '/api/v1/reports/export',
+        '/api/v1/guests/{guestId}/anonymize',
+        '/api/v1/guests/{guestId}/loyalty',
+        '/api/v1/guests/{guestId}/blacklist',
+        '/api/v1/notifications',
+        '/api/v1/notifications/{notificationId}/resend',
         '/api/v1/integrations/psp/vnpay/callback',
         '/api/v1/integrations/psp/momo/callback',
       ].sort(),
@@ -253,6 +305,41 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     const list = document.paths?.['/api/v1/room-blocks']?.get;
     expect(JSON.stringify(list)).toContain('propertyId');
     expect(JSON.stringify(list)).toContain('roomId');
+  });
+
+  it('tuyến đọc mùa phục vụ SCR-27 (HB-059): GET + POST, không có tuyến ghi khác', () => {
+    const seasons = document.paths?.['/api/v1/seasons'] ?? {};
+    expect(Object.keys(seasons).sort()).toEqual(['get', 'post']);
+    expect(JSON.stringify(seasons.get)).toContain('propertyId');
+  });
+
+  it('DTO buồng phòng là projection tối thiểu, không có booking/khách/tiền (HB-140 AC3)', () => {
+    const task = document.paths?.['/api/v1/housekeeping/tasks']?.get;
+    const serialized = JSON.stringify(task).toLowerCase();
+    for (const forbidden of [
+      'bookingid',
+      'guestid',
+      'guestname',
+      'amount',
+      'paidamount',
+      'balance',
+    ]) {
+      expect(serialized, forbidden).not.toContain(forbidden);
+    }
+    const patch = document.paths?.['/api/v1/housekeeping/tasks/{taskId}']?.patch;
+    expect(JSON.stringify(patch)).toContain('If-Match');
+  });
+
+  it('không có DELETE /guests/{guestId} — chỉ ẩn danh hoá (§2.14, BR-CRM-05, HB-160 AC3)', () => {
+    const guest = document.paths?.['/api/v1/guests/{guestId}'] ?? {};
+    expect(Object.keys(guest)).toEqual([]);
+    expect(document.paths?.['/api/v1/guests/{guestId}/anonymize']?.post).toBeDefined();
+  });
+
+  it('xuất báo cáo trả 202 kèm tham chiếu tác vụ (NFR-COMP-04, HB-160 AC3)', () => {
+    const exported = document.paths?.['/api/v1/reports/export']?.post;
+    expect(exported?.responses?.['202']).toBeDefined();
+    expect(JSON.stringify(exported)).toContain('operationId');
   });
 
   it('không khai tuyến ghi lên audit-logs hay price snapshot (§2.14, BR-SYS-01, BR-RATE-16)', () => {

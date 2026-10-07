@@ -11,6 +11,9 @@ import {
   cancellationPolicyUpdateRequestSchema,
 } from '../../cancellation-policy.js';
 import {
+  channelDetailSchema,
+  channelQuerySchema,
+  channelSummarySchema,
   channelUpdateRequestSchema,
   multiChannelQuoteRequestSchema,
   multiChannelQuoteSchema,
@@ -20,9 +23,12 @@ import {
   rateCalendarOverrideRequestSchema,
   rateCalendarQuerySchema,
   rateCalendarSchema,
+  ratePlanAdminSchema,
   ratePlanPublicSchema,
   ratePlanUpdateRequestSchema,
   seasonCreateRequestSchema,
+  seasonQuerySchema,
+  seasonSummarySchema,
 } from '../../rate.js';
 import type { ErrorCode } from '../../errors.js';
 
@@ -105,6 +111,22 @@ export function registerF3Paths(registry: OpenAPIRegistry, errorBodyComponent: z
     },
   });
 
+  // Bổ sung tuyến đọc (HB-059 SCR-27, chủ dự án duyệt 05/10/2026): api.md §2.4 chỉ có POST /seasons
+  // nên màn hình không liệt kê được mùa hiện có. Thay đổi tương thích (thêm tuyến), 0 phá vỡ.
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/seasons',
+    operationId: 'seasonsList',
+    summary: 'Danh sách mùa của cơ sở kèm hệ số, ưu tiên, phụ thu cuối tuần và phiên bản (SCR-27)',
+    tags: ['rate'],
+    ...bearerRead,
+    request: { query: seasonQuerySchema },
+    responses: {
+      200: { description: 'Danh sách mùa', ...jsonBody(listResponseSchema(seasonSummarySchema)) },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
+    },
+  });
+
   registry.registerPath({
     method: 'post',
     path: '/api/v1/seasons',
@@ -116,6 +138,40 @@ export function registerF3Paths(registry: OpenAPIRegistry, errorBodyComponent: z
       201: { description: 'Mùa đã tạo' },
       403: errorResponse('E_RBAC_FORBIDDEN'),
       422: errorResponse('E_RATE_CONFIGURATION_INVALID'),
+    },
+  });
+
+  // Bổ sung tuyến đọc kênh (HB-060/HB-042, chủ dự án duyệt 05/10/2026): api.md chỉ có PATCH theo
+  // `{channelId}` nên SCR-28/SCR-25 không dựng được danh sách kênh. Thêm tuyến, 0 phá vỡ.
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/channels',
+    operationId: 'channelsList',
+    summary: 'Danh sách kênh kèm hệ số, hoa hồng, hold, cờ bán vượt và phiên bản (SCR-25, SCR-28)',
+    tags: ['rate'],
+    ...bearerRead,
+    request: { query: channelQuerySchema },
+    responses: {
+      200: {
+        description: 'Danh sách kênh',
+        ...jsonBody(listResponseSchema(channelSummarySchema)),
+      },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/channels/{channelId}',
+    operationId: 'channelsGet',
+    summary: 'Chi tiết kênh kèm các dòng ghi đè theo cơ sở (SCR-28, BR-RATE-18)',
+    tags: ['rate'],
+    ...bearerRead,
+    parameters: [pathParam('channelId')],
+    responses: {
+      200: { description: 'Chi tiết kênh', ...jsonBody(channelDetailSchema) },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
+      404: errorResponse('E_GEN_NOT_FOUND'),
     },
   });
 
@@ -202,6 +258,22 @@ export function registerF3Paths(registry: OpenAPIRegistry, errorBodyComponent: z
         description: 'Danh sách gói giá',
         ...jsonBody(listResponseSchema(ratePlanPublicSchema)),
       },
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/rate-plans/admin',
+    operationId: 'ratePlansAdminList',
+    summary: 'Cấu hình gói giá cho chủ chuỗi — đủ trường để sửa (UC-RATE-06)',
+    tags: ['rate'],
+    ...bearerRead,
+    responses: {
+      200: {
+        description: 'Danh sách gói giá (cấu hình đầy đủ)',
+        ...jsonBody(listResponseSchema(ratePlanAdminSchema)),
+      },
+      403: errorResponse('E_RBAC_FORBIDDEN'),
     },
   });
 

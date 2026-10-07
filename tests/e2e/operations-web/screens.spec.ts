@@ -39,10 +39,23 @@ const SCREENS = [
   '/room-types',
   '/rooms',
   '/inventory-grid',
+  '/channel-allotments',
+  '/reports/occupancy',
+  '/reports/revenue-by-channel',
+  '/reports/cancellations',
+  '/reports/overbooking',
+  '/crm/guests',
+  '/crm/loyalty',
+  '/noti/notifications',
   '/rate-calendar',
   '/audit-logs',
   '/promotions',
+  '/multi-channel-quote',
   '/room-blocks',
+  '/seasons',
+  '/channels',
+  '/rate-plans',
+  '/system-settings',
 ] as const;
 
 operationsWebOnly();

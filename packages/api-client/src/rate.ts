@@ -5,29 +5,38 @@
 import {
   cancellationPolicySchema,
   cancellationPolicyUpdateRequestSchema,
+  channelDetailSchema,
+  channelSummarySchema,
   channelUpdateRequestSchema,
   listResponseSchema,
   promotionSummarySchema,
+  seasonSummarySchema,
   multiChannelQuoteRequestSchema,
   multiChannelQuoteSchema,
   promotionCreateRequestSchema,
   rateCalendarOverrideRequestSchema,
   rateCalendarSchema,
   ratePlanPublicSchema,
+  ratePlanAdminSchema,
   ratePlanUpdateRequestSchema,
   seasonCreateRequestSchema,
   type CancellationPolicy,
   type CancellationPolicyUpdateRequest,
+  type ChannelDetail,
+  type ChannelSummary,
   type ChannelUpdateRequest,
   type ListPage,
   type MultiChannelQuote,
+  type MultiChannelQuoteRequest,
   type PromotionCreateRequest,
   type PromotionSummary,
   type RateCalendar,
   type RateCalendarOverrideRequest,
   type RatePlanPublic,
+  type RatePlanAdmin,
   type RatePlanUpdateRequest,
   type SeasonCreateRequest,
+  type SeasonSummary,
 } from '@pinehill/contracts';
 import { ApiClient, type ApiResponse } from './client.js';
 
@@ -40,7 +49,19 @@ export interface RateApi {
     roomTypeId: string,
     input: RateCalendarOverrideRequest,
   ): Promise<ApiResponse<RateCalendar>>;
+  listSeasons(query?: {
+    propertyId?: string;
+    from?: string;
+    to?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<ApiResponse<ListPage<SeasonSummary>>>;
   createSeason(input: SeasonCreateRequest): Promise<ApiResponse<undefined>>;
+  listChannels(query?: {
+    limit?: number;
+    cursor?: string;
+  }): Promise<ApiResponse<ListPage<ChannelSummary>>>;
+  channel(channelId: string): Promise<ApiResponse<ChannelDetail>>;
   updateChannel(
     channelId: string,
     input: ChannelUpdateRequest,
@@ -53,19 +74,14 @@ export interface RateApi {
     cursor?: string;
   }): Promise<ApiResponse<ListPage<PromotionSummary>>>;
   createPromotion(input: PromotionCreateRequest): Promise<ApiResponse<undefined>>;
-  quoteMultiChannel(input: {
-    roomTypeId: string;
-    checkIn: string;
-    checkOut: string;
-    channelCodes: readonly (
-      'WEB' | 'PHONE' | 'WALK_IN' | 'OTA_BOOKING' | 'OTA_AGODA' | 'OTA_AIRBNB' | 'AGENCY'
-    )[];
-  }): Promise<ApiResponse<MultiChannelQuote>>;
+  /** Đầu vào lấy **nguyên** từ hợp đồng để không lệch enum (trước đây chép tay và sai `WALK_IN`). */
+  quoteMultiChannel(input: MultiChannelQuoteRequest): Promise<ApiResponse<MultiChannelQuote>>;
   listRatePlans(query?: {
     propertyId?: string;
     checkIn?: string;
     checkOut?: string;
   }): Promise<ApiResponse<ListPage<RatePlanPublic>>>;
+  listRatePlansAdmin(): Promise<ApiResponse<ListPage<RatePlanAdmin>>>;
   updateRatePlan(
     ratePlanId: string,
     input: RatePlanUpdateRequest,
@@ -97,11 +113,31 @@ export function createRateApi(client: ApiClient): RateApi {
         body: rateCalendarOverrideRequestSchema.parse(input),
         decoder: rateCalendarSchema,
       }),
+    listSeasons: (query) =>
+      client.request({
+        method: 'GET',
+        path: '/seasons',
+        ...(query === undefined ? {} : { query }),
+        decoder: listResponseSchema(seasonSummarySchema),
+      }),
     createSeason: (input) =>
       client.requestVoid({
         method: 'POST',
         path: '/seasons',
         body: seasonCreateRequestSchema.parse(input),
+      }),
+    listChannels: (query) =>
+      client.request({
+        method: 'GET',
+        path: '/channels',
+        ...(query === undefined ? {} : { query }),
+        decoder: listResponseSchema(channelSummarySchema),
+      }),
+    channel: (channelId) =>
+      client.request({
+        method: 'GET',
+        path: `/channels/${encodeURIComponent(channelId)}`,
+        decoder: channelDetailSchema,
       }),
     updateChannel: (channelId, input, ifMatch) =>
       client.requestVoid({
@@ -136,6 +172,12 @@ export function createRateApi(client: ApiClient): RateApi {
         path: '/rate-plans',
         ...(query === undefined ? {} : { query }),
         decoder: listResponseSchema(ratePlanPublicSchema),
+      }),
+    listRatePlansAdmin: () =>
+      client.request({
+        method: 'GET',
+        path: '/rate-plans/admin',
+        decoder: listResponseSchema(ratePlanAdminSchema),
       }),
     updateRatePlan: (ratePlanId, input, ifMatch) =>
       client.requestVoid({

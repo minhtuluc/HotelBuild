@@ -210,3 +210,24 @@ test('pr:merge từ chối PR nháp, check chưa xanh hoặc thiếu check bắt
   assert.match(mergeBlockers(pr, [...green, { name: 'docs-and-embedded', state: 'IN_PROGRESS' }]).join(), /IN_PROGRESS/);
   assert.match(mergeBlockers({ ...pr, mergeable: 'CONFLICTING' }, green).join(), /xung đột/);
 });
+
+test('mọi workspace chạy vitest đều có test:coverage để CI không bỏ qua test đơn vị', async () => {
+  const { readdir, readFile } = await import('node:fs/promises');
+  const root = new URL('..', import.meta.url);
+  const missing = [];
+  for (const group of ['apps', 'packages']) {
+    const entries = await readdir(new URL(`${group}/`, root), { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const pkg = JSON.parse(
+        await readFile(new URL(`${group}/${entry.name}/package.json`, root), 'utf8'),
+      );
+      const scripts = pkg.scripts ?? {};
+      if (!(scripts.test ?? '').includes('vitest')) continue;
+      const hasCoverageScript = typeof scripts['test:coverage'] === 'string';
+      const hasCoverageDep = '@vitest/coverage-v8' in (pkg.devDependencies ?? {});
+      if (!hasCoverageScript || !hasCoverageDep) missing.push(`${group}/${entry.name}`);
+    }
+  }
+  assert.deepEqual(missing, []);
+});

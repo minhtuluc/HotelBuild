@@ -2388,6 +2388,10 @@
                       "type": "integer",
                       "minimum": 1
                     },
+                    "sellingUnits": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
                     "version": {
                       "type": "integer",
                       "minimum": 0
@@ -2506,6 +2510,10 @@
                           "bedCount": {
                             "type": "integer",
                             "minimum": 1
+                          },
+                          "sellingUnits": {
+                            "type": "integer",
+                            "minimum": 0
                           },
                           "version": {
                             "type": "integer",
@@ -3958,6 +3966,149 @@
         }
       }
     },
+    "/api/v1/system-settings": {
+      "get": {
+        "operationId": "systemSettingsList",
+        "summary": "Danh sách tham số hệ thống kèm kiểu giá trị, người sửa cuối và phiên bản (SCR-17, BR-SYS-02)",
+        "tags": [
+          "sys"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách tham số",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "value": {
+                            "type": "string"
+                          },
+                          "valueType": {
+                            "type": "string",
+                            "enum": [
+                              "STRING",
+                              "NUMBER",
+                              "BOOLEAN",
+                              "JSON"
+                            ]
+                          },
+                          "description": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "updatedBy": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "value",
+                          "valueType",
+                          "description",
+                          "updatedBy",
+                          "updatedAt",
+                          "version"
+                        ]
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "limit",
+                        "nextCursor",
+                        "hasMore",
+                        "total"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/system-settings/{key}": {
       "put": {
         "operationId": "systemSettingsUpdate",
@@ -4809,6 +4960,181 @@
       }
     },
     "/api/v1/seasons": {
+      "get": {
+        "operationId": "seasonsList",
+        "summary": "Danh sách mùa của cơ sở kèm hệ số, ưu tiên, phụ thu cuối tuần và phiên bản (SCR-27)",
+        "tags": [
+          "rate"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "propertyId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách mùa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "propertyId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "startDate": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "endDate": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "multiplier": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "maximum": 5
+                          },
+                          "priority": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "weekendSurchargeEnabled": {
+                            "type": "boolean"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "propertyId",
+                          "name",
+                          "startDate",
+                          "endDate",
+                          "multiplier",
+                          "priority",
+                          "weekendSurchargeEnabled",
+                          "version"
+                        ]
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "limit",
+                        "nextCursor",
+                        "hasMore",
+                        "total"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "operationId": "seasonsCreate",
         "summary": "Tạo mùa: hệ số, ưu tiên, phụ thu cuối tuần (UC-RATE-02, BR-RATE-05,06)",
@@ -4918,7 +5244,306 @@
         }
       }
     },
+    "/api/v1/channels": {
+      "get": {
+        "operationId": "channelsList",
+        "summary": "Danh sách kênh kèm hệ số, hoa hồng, hold, cờ bán vượt và phiên bản (SCR-25, SCR-28)",
+        "tags": [
+          "rate"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách kênh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "WEB",
+                              "PHONE",
+                              "WALKIN",
+                              "OTA_BOOKING",
+                              "OTA_AGODA",
+                              "OTA_AIRBNB",
+                              "AGENCY"
+                            ]
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "multiplier": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "maximum": 5
+                          },
+                          "commissionPct": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "holdMinutes": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1440
+                          },
+                          "overbookAllowed": {
+                            "type": "boolean"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "code",
+                          "name",
+                          "multiplier",
+                          "commissionPct",
+                          "holdMinutes",
+                          "overbookAllowed",
+                          "version"
+                        ]
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "limit",
+                        "nextCursor",
+                        "hasMore",
+                        "total"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/channels/{channelId}": {
+      "get": {
+        "operationId": "channelsGet",
+        "summary": "Chi tiết kênh kèm các dòng ghi đè theo cơ sở (SCR-28, BR-RATE-18)",
+        "tags": [
+          "rate"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chi tiết kênh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "WEB",
+                        "PHONE",
+                        "WALKIN",
+                        "OTA_BOOKING",
+                        "OTA_AGODA",
+                        "OTA_AIRBNB",
+                        "AGENCY"
+                      ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "multiplier": {
+                      "type": "number",
+                      "minimum": 0.1,
+                      "maximum": 5
+                    },
+                    "commissionPct": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "holdMinutes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 1440
+                    },
+                    "overbookAllowed": {
+                      "type": "boolean"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "propertyOverrides": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "propertyId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "multiplier": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "maximum": 5
+                          },
+                          "commissionPct": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "effectiveFrom": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "propertyId",
+                          "effectiveFrom"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name",
+                    "multiplier",
+                    "commissionPct",
+                    "holdMinutes",
+                    "overbookAllowed",
+                    "version",
+                    "propertyOverrides"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
       "patch": {
         "operationId": "channelsUpdate",
         "summary": "Sửa hệ số/hoa hồng/hold mặc định toàn chuỗi + ghi đè theo cơ sở (UC-RATE-03, BR-RATE-07,09,18)",
@@ -5562,6 +6187,22 @@
                             "type": "integer",
                             "exclusiveMinimum": 0
                           },
+                          "commissionPct": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "grossTotal": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "commissionAmount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "netTotal": {
+                            "type": "integer"
+                          },
                           "warnings": {
                             "type": "array",
                             "items": {
@@ -5735,6 +6376,143 @@
                     "data",
                     "meta"
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rate-plans/admin": {
+      "get": {
+        "operationId": "ratePlansAdminList",
+        "summary": "Cấu hình gói giá cho chủ chuỗi — đủ trường để sửa (UC-RATE-06)",
+        "tags": [
+          "rate"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách gói giá (cấu hình đầy đủ)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "FLEX7",
+                              "SAVER3",
+                              "NONREF",
+                              "LONGSTAY14"
+                            ]
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "minNights": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "maxNights": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "depositPercent": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "cancellationPolicyId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "ACTIVE",
+                              "INACTIVE"
+                            ]
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "code",
+                          "name",
+                          "minNights",
+                          "maxNights",
+                          "depositPercent",
+                          "cancellationPolicyId",
+                          "status",
+                          "version"
+                        ]
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "limit",
+                        "nextCursor",
+                        "hasMore",
+                        "total"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             }
@@ -11701,6 +12479,3415 @@
           },
           "503": {
             "description": "E_GEN_SERVICE_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/front-office/check-in": {
+      "post": {
+        "operationId": "frontOfficeCheckIn",
+        "summary": "Check-in: gán phòng thực tế, chặn khi nợ vượt ngưỡng (UC-FO-01, BR-FO-01,02,04)",
+        "tags": [
+          "fo"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bookingId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "idNumber": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50
+                  },
+                  "actualRoomIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  },
+                  "earlyCheckIn": {
+                    "type": "boolean"
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "bookingId",
+                  "actualRoomIds",
+                  "earlyCheckIn"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Đã check-in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bookingId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "HELD",
+                        "PENDING_PAYMENT",
+                        "CONFIRMED",
+                        "CHECKED_IN",
+                        "CHECKED_OUT",
+                        "CANCELLED",
+                        "NO_SHOW",
+                        "EXPIRED"
+                      ]
+                    },
+                    "roomIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "checkedInAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "earlyCheckInFee": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "bookingId",
+                    "status",
+                    "roomIds",
+                    "checkedInAt",
+                    "earlyCheckInFee"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE, E_BOOK_BLACKLISTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_FO_CHECKIN_NOT_ALLOWED, E_BOOK_INVALID_STATE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_BOOK_OVER_CAPACITY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/front-office/check-out": {
+      "post": {
+        "operationId": "frontOfficeCheckOut",
+        "summary": "Check-out — 🔒 PIN; thu phát sinh, phụ thu trả muộn/sớm (UC-FO-02, BR-FO-03,05,06)",
+        "tags": [
+          "fo"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bookingId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "extras": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "description": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "amount": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 99
+                        }
+                      },
+                      "required": [
+                        "description",
+                        "amount"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 50
+                  },
+                  "lateCheckOut": {
+                    "type": "boolean"
+                  },
+                  "earlyCheckOut": {
+                    "type": "boolean"
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "pinToken": {
+                    "type": "string",
+                    "minLength": 16
+                  }
+                },
+                "required": [
+                  "bookingId",
+                  "lateCheckOut",
+                  "earlyCheckOut"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đã check-out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bookingId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "HELD",
+                        "PENDING_PAYMENT",
+                        "CONFIRMED",
+                        "CHECKED_IN",
+                        "CHECKED_OUT",
+                        "CANCELLED",
+                        "NO_SHOW",
+                        "EXPIRED"
+                      ]
+                    },
+                    "checkedOutAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "extrasAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "feeAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "balanceDue": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "housekeepingTaskIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
+                  "required": [
+                    "bookingId",
+                    "status",
+                    "checkedOutAt",
+                    "extrasAmount",
+                    "feeAmount",
+                    "balanceDue",
+                    "housekeepingTaskIds"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E_AUTH_PIN_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_BOOK_INVALID_STATE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_PAY_AMOUNT_MISMATCH",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/front-office/no-show": {
+      "post": {
+        "operationId": "frontOfficeNoShow",
+        "summary": "Ghi nhận khách không đến, áp bậc bắt tất của chính sách (UC-FO-04, BR-CANCEL-10)",
+        "tags": [
+          "fo"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bookingId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "bookingId",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đã đánh dấu no-show",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bookingId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "HELD",
+                        "PENDING_PAYMENT",
+                        "CONFIRMED",
+                        "CHECKED_IN",
+                        "CHECKED_OUT",
+                        "CANCELLED",
+                        "NO_SHOW",
+                        "EXPIRED"
+                      ]
+                    },
+                    "markedAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "penaltyAmount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "refundRequestId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "bookingId",
+                    "status",
+                    "markedAt",
+                    "penaltyAmount",
+                    "refundRequestId"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_BOOK_INVALID_STATE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/housekeeping/tasks": {
+      "get": {
+        "operationId": "housekeepingTasksList",
+        "summary": "Danh sách việc dọn phòng — projection tối thiểu (UC-FO-03, BR-FO-06, BR-RBAC-03)",
+        "tags": [
+          "fo"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "propertyId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "businessDate",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "IN_PROGRESS",
+                "DONE",
+                "INSPECTED"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "assignedTo",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Nhiệm vụ buồng phòng (không kèm booking/khách/tiền)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "roomId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "roomCode": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "businessDate": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "PENDING",
+                              "IN_PROGRESS",
+                              "DONE",
+                              "INSPECTED"
+                            ]
+                          },
+                          "assignedTo": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          },
+                          "note": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "maxLength": 500
+                          },
+                          "completedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "roomId",
+                          "roomCode",
+                          "businessDate",
+                          "status",
+                          "assignedTo",
+                          "note",
+                          "completedAt",
+                          "version"
+                        ]
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "limit",
+                        "nextCursor",
+                        "hasMore",
+                        "total"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/housekeeping/tasks/{taskId}": {
+      "patch": {
+        "operationId": "housekeepingTasksUpdate",
+        "summary": "Cập nhật việc được giao; `assignedTo` chỉ MANAGER/OWNER (UC-FO-03, BR-FO-06,07)",
+        "tags": [
+          "fo"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Phiên bản đọc gần nhất; thiếu → 428, lệch → 412 (api.md §1.3)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "IN_PROGRESS",
+                      "DONE",
+                      "INSPECTED"
+                    ]
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "assignedTo": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1
+                  },
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Nhiệm vụ sau cập nhật",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "roomId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "roomCode": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "businessDate": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "IN_PROGRESS",
+                        "DONE",
+                        "INSPECTED"
+                      ]
+                    },
+                    "assignedTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "note": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 500
+                    },
+                    "completedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "roomId",
+                    "roomCode",
+                    "businessDate",
+                    "status",
+                    "assignedTo",
+                    "note",
+                    "completedAt",
+                    "version"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "E_GEN_VERSION_CONFLICT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "E_GEN_PRECONDITION_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/guests": {
+      "get": {
+        "operationId": "guestsList",
+        "summary": "Tra cứu hồ sơ khách tại quầy (UC-CRM-01, BR-CRM-01)",
+        "tags": [
+          "crm"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "GUEST",
+                "MEMBER",
+                "SILVER",
+                "GOLD",
+                "PLATINUM"
+              ]
+            },
+            "required": false,
+            "name": "loyaltyTier",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "required": false,
+            "name": "blacklisted",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "propertyId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách khách",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "fullName": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "phone": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "email": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          },
+                          "loyaltyTier": {
+                            "type": "string",
+                            "enum": [
+                              "GUEST",
+                              "MEMBER",
+                              "SILVER",
+                              "GOLD",
+                              "PLATINUM"
+                            ]
+                          },
+                          "loyaltyPoints": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "totalStays": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "blacklisted": {
+                            "type": "boolean"
+                          },
+                          "consentMarketing": {
+                            "type": "boolean"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "fullName",
+                          "phone",
+                          "email",
+                          "loyaltyTier",
+                          "loyaltyPoints",
+                          "totalStays",
+                          "blacklisted",
+                          "consentMarketing",
+                          "createdAt"
+                        ]
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "limit",
+                        "nextCursor",
+                        "hasMore",
+                        "total"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "guestsCreate",
+        "summary": "Tạo hồ sơ khách theo SĐT chuẩn hoá (UC-CRM-01, BR-CRM-01, NFR-COMP-01)",
+        "tags": [
+          "crm"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fullName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+84\\d{9}$"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "idNumber": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50
+                  },
+                  "dob": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "nationality": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 2
+                  },
+                  "gender": {
+                    "type": "string",
+                    "enum": [
+                      "MALE",
+                      "FEMALE",
+                      "OTHER",
+                      "UNSPECIFIED"
+                    ]
+                  },
+                  "consentMarketing": {
+                    "type": "boolean"
+                  },
+                  "consentVersion": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "fullName",
+                  "phone",
+                  "consentMarketing",
+                  "consentVersion"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Hồ sơ khách",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "fullName": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "phone": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "loyaltyTier": {
+                      "type": "string",
+                      "enum": [
+                        "GUEST",
+                        "MEMBER",
+                        "SILVER",
+                        "GOLD",
+                        "PLATINUM"
+                      ]
+                    },
+                    "loyaltyPoints": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "totalStays": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "blacklisted": {
+                      "type": "boolean"
+                    },
+                    "consentMarketing": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "fullName",
+                    "phone",
+                    "email",
+                    "loyaltyTier",
+                    "loyaltyPoints",
+                    "totalStays",
+                    "blacklisted",
+                    "consentMarketing",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_AUTH_PHONE_REGISTERED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_CRM_PHONE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reconciliation/daily/close": {
+      "post": {
+        "operationId": "reconciliationDailyClose",
+        "summary": "Chốt ca/ngày theo (người thu, ngày VN) — 🔒 PIN (UC-PAY-05, BR-PAY-06,10)",
+        "tags": [
+          "pay"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "propertyId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "businessDate": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "countedCash": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "pinToken": {
+                    "type": "string",
+                    "minLength": 16
+                  }
+                },
+                "required": [
+                  "propertyId",
+                  "businessDate",
+                  "countedCash"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Đã chốt đối soát",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "propertyId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "businessDate": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "expectedCash": {
+                      "type": "integer"
+                    },
+                    "countedCash": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "difference": {
+                      "type": "integer"
+                    },
+                    "managerNotified": {
+                      "type": "boolean"
+                    },
+                    "auditLogId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "closedAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "propertyId",
+                    "businessDate",
+                    "expectedCash",
+                    "countedCash",
+                    "difference",
+                    "managerNotified",
+                    "auditLogId",
+                    "closedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E_AUTH_PIN_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_SYS_IDEMPOTENCY_KEY_REUSED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/occupancy": {
+      "get": {
+        "operationId": "reportsOccupancy",
+        "summary": "Công suất theo ngày/loại phòng/cơ sở — DOR đếm theo đơn vị bán (UC-REP-01)",
+        "tags": [
+          "rep"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "propertyId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DAY",
+                "ROOM_TYPE",
+                "PROPERTY"
+              ],
+              "default": "DAY"
+            },
+            "required": false,
+            "name": "groupBy",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Báo cáo công suất",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "groupBy": {
+                      "type": "string",
+                      "enum": [
+                        "DAY",
+                        "ROOM_TYPE",
+                        "PROPERTY"
+                      ]
+                    },
+                    "from": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "to": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "businessDate": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "propertyId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "roomTypeId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "soldUnits": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "availableUnits": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "occupancyPct": {
+                            "type": "number",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "soldUnits",
+                          "availableUnits",
+                          "occupancyPct"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "groupBy",
+                    "from",
+                    "to",
+                    "rows"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/adr-revpar": {
+      "get": {
+        "operationId": "reportsAdrRevpar",
+        "summary": "ADR, RevPAR, phòng-đêm đã bán/khả dụng trên doanh thu thuần (UC-REP-01, BR-REP-01)",
+        "tags": [
+          "rep"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "propertyId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DAY",
+                "ROOM_TYPE",
+                "PROPERTY"
+              ],
+              "default": "DAY"
+            },
+            "required": false,
+            "name": "groupBy",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Báo cáo ADR/RevPAR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "groupBy": {
+                      "type": "string",
+                      "enum": [
+                        "DAY",
+                        "ROOM_TYPE",
+                        "PROPERTY"
+                      ]
+                    },
+                    "from": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "to": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "businessDate": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "propertyId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "roomNightsSold": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "roomNightsAvailable": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "netRevenue": {
+                            "type": "integer"
+                          },
+                          "adr": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "revpar": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "roomNightsSold",
+                          "roomNightsAvailable",
+                          "netRevenue",
+                          "adr",
+                          "revpar"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "groupBy",
+                    "from",
+                    "to",
+                    "rows"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/revenue-by-channel": {
+      "get": {
+        "operationId": "reportsRevenueByChannel",
+        "summary": "Doanh thu gộp/thuần & hoa hồng theo kênh — ACCOUNTANT (UC-REP-02, BR-RATE-08)",
+        "tags": [
+          "rep"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "channelId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "propertyId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Doanh thu theo kênh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "to": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "channelCode": {
+                            "type": "string",
+                            "enum": [
+                              "WEB",
+                              "PHONE",
+                              "WALKIN",
+                              "OTA_BOOKING",
+                              "OTA_AGODA",
+                              "OTA_AIRBNB",
+                              "AGENCY"
+                            ]
+                          },
+                          "grossAmount": {
+                            "type": "integer"
+                          },
+                          "commissionAmount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "netAmount": {
+                            "type": "integer"
+                          },
+                          "bookings": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "channelCode",
+                          "grossAmount",
+                          "commissionAmount",
+                          "netAmount",
+                          "bookings"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "to",
+                    "rows"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/cancellations": {
+      "get": {
+        "operationId": "reportsCancellations",
+        "summary": "Huỷ theo bậc chính sách kèm tỷ lệ huỷ — ACCOUNTANT (UC-REP-03, BR-REP-01)",
+        "tags": [
+          "rep"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "FLEX7",
+                "SAVER3",
+                "NONREF",
+                "LONGSTAY14"
+              ]
+            },
+            "required": false,
+            "name": "ratePlanCode",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "propertyId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Báo cáo huỷ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "to": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "cancellationRate": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "ratePlanCode": {
+                            "type": "string",
+                            "enum": [
+                              "FLEX7",
+                              "SAVER3",
+                              "NONREF",
+                              "LONGSTAY14"
+                            ]
+                          },
+                          "appliedTierOffsetHours": {
+                            "type": "integer"
+                          },
+                          "cancellations": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "refundAmount": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "ratePlanCode",
+                          "appliedTierOffsetHours",
+                          "cancellations",
+                          "refundAmount"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "to",
+                    "cancellationRate",
+                    "rows"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/force-majeure": {
+      "get": {
+        "operationId": "reportsForceMajeure",
+        "summary": "Ca bất khả kháng — chỉ OWNER xem (UC-REP-03, BR-CANCEL-13)",
+        "tags": [
+          "rep"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Báo cáo bất khả kháng",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "to": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "bookingId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "propertyId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "cancelledAt": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "refundAmount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "note": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "bookingId",
+                          "propertyId",
+                          "cancelledAt",
+                          "refundAmount",
+                          "note"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "to",
+                    "rows"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/overbooking": {
+      "get": {
+        "operationId": "reportsOverbooking",
+        "summary": "Ca quá tải kèm tổng chi phí xử lý (UC-REP-04, BR-OVER-15)",
+        "tags": [
+          "rep"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "propertyId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "PROPOSED",
+                "RESOLVED",
+                "ESCALATED"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Báo cáo quá tải",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "to": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "caseId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "propertyId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "roomTypeId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "businessDate": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "OPEN",
+                              "PROPOSED",
+                              "RESOLVED",
+                              "ESCALATED"
+                            ]
+                          },
+                          "detectedAt": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "resolvedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "mergeDiscountAmount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "walkOutCompensationAmount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "transportSupportAmount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "totalCost": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "caseId",
+                          "propertyId",
+                          "roomTypeId",
+                          "businessDate",
+                          "status",
+                          "detectedAt",
+                          "resolvedAt",
+                          "mergeDiscountAmount",
+                          "walkOutCompensationAmount",
+                          "transportSupportAmount",
+                          "totalCost"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "to",
+                    "rows"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/export": {
+      "post": {
+        "operationId": "reportsExport",
+        "summary": "Xuất CSV/XLSX bất đồng bộ — 202 kèm tham chiếu tác vụ (NFR-COMP-04)",
+        "tags": [
+          "rep"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "report": {
+                    "type": "string",
+                    "enum": [
+                      "occupancy",
+                      "adr-revpar",
+                      "revenue-by-channel",
+                      "cancellations"
+                    ]
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "CSV",
+                      "XLSX"
+                    ]
+                  },
+                  "params": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "report",
+                  "format",
+                  "params"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Đã nhận yêu cầu xuất",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "operationId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "RUNNING",
+                        "SUCCEEDED",
+                        "FAILED"
+                      ]
+                    },
+                    "statusUrl": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "operationId",
+                    "status",
+                    "statusUrl"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_GEN_VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/guests/{guestId}/anonymize": {
+      "post": {
+        "operationId": "guestsAnonymize",
+        "summary": "Ẩn danh hoá hồ sơ khách theo yêu cầu — MANAGER (UC-CRM-01, BR-CRM-05)",
+        "tags": [
+          "crm"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "guestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "requestedAt": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                  }
+                },
+                "required": [
+                  "reason",
+                  "requestedAt"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hồ sơ đã ẩn danh hoá",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "fullName": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "phone": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "loyaltyTier": {
+                      "type": "string",
+                      "enum": [
+                        "GUEST",
+                        "MEMBER",
+                        "SILVER",
+                        "GOLD",
+                        "PLATINUM"
+                      ]
+                    },
+                    "loyaltyPoints": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "totalStays": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "blacklisted": {
+                      "type": "boolean"
+                    },
+                    "consentMarketing": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "fullName",
+                    "phone",
+                    "email",
+                    "loyaltyTier",
+                    "loyaltyPoints",
+                    "totalStays",
+                    "blacklisted",
+                    "consentMarketing",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/guests/{guestId}/loyalty": {
+      "get": {
+        "operationId": "guestsLoyalty",
+        "summary": "Hạng, điểm và số đêm tích luỹ 12 tháng (UC-CRM-02, BR-CRM-02,03)",
+        "tags": [
+          "crm"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "guestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hồ sơ khách hàng thân thiết",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "guestId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "loyaltyTier": {
+                      "type": "string",
+                      "enum": [
+                        "GUEST",
+                        "MEMBER",
+                        "SILVER",
+                        "GOLD",
+                        "PLATINUM"
+                      ]
+                    },
+                    "loyaltyPoints": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "staysLast12Months": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "totalStays": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "guestId",
+                    "loyaltyTier",
+                    "loyaltyPoints",
+                    "staysLast12Months",
+                    "totalStays",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/guests/{guestId}/blacklist": {
+      "post": {
+        "operationId": "guestsBlacklistAdd",
+        "summary": "Đưa khách vào danh sách đen kèm lý do — MANAGER (UC-CRM-03, BR-CRM-04)",
+        "tags": [
+          "crm"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "guestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "blacklistReason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "blacklistReason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Khách đã vào danh sách đen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "fullName": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "phone": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "loyaltyTier": {
+                      "type": "string",
+                      "enum": [
+                        "GUEST",
+                        "MEMBER",
+                        "SILVER",
+                        "GOLD",
+                        "PLATINUM"
+                      ]
+                    },
+                    "loyaltyPoints": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "totalStays": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "blacklisted": {
+                      "type": "boolean"
+                    },
+                    "consentMarketing": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "fullName",
+                    "phone",
+                    "email",
+                    "loyaltyTier",
+                    "loyaltyPoints",
+                    "totalStays",
+                    "blacklisted",
+                    "consentMarketing",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "guestsBlacklistRemove",
+        "summary": "Gỡ khỏi danh sách đen kèm lý do — MANAGER (UC-CRM-03, BR-CRM-04,05)",
+        "tags": [
+          "crm"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "guestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "required": true,
+            "name": "reason",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Đã gỡ khỏi danh sách đen"
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "operationId": "notificationsList",
+        "summary": "Thông báo đã gửi kèm trạng thái và số lần thử — người nhận được che (BR-SYS-06)",
+        "tags": [
+          "noti"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "bookingId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "EMAIL",
+                "SMS",
+                "ZALO_OA",
+                "PUSH"
+              ]
+            },
+            "required": false,
+            "name": "channel",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "SENT",
+                "FAILED"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "template",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách thông báo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "bookingId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          },
+                          "channel": {
+                            "type": "string",
+                            "enum": [
+                              "EMAIL",
+                              "SMS",
+                              "ZALO_OA",
+                              "PUSH"
+                            ]
+                          },
+                          "template": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "PENDING",
+                              "SENT",
+                              "FAILED"
+                            ]
+                          },
+                          "recipientMasked": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "retryCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "errorMessage": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          },
+                          "sentAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "bookingId",
+                          "channel",
+                          "template",
+                          "status",
+                          "recipientMasked",
+                          "retryCount",
+                          "errorMessage",
+                          "sentAt",
+                          "createdAt"
+                        ]
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "limit",
+                        "nextCursor",
+                        "hasMore",
+                        "total"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/{notificationId}/resend": {
+      "post": {
+        "operationId": "notificationsResend",
+        "summary": "Gửi lại thông báo — tối đa 3 lần, cách nhau 5 phút (UC-NOTI-02, BR-SYS-06)",
+        "tags": [
+          "noti"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "notificationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Đã xếp hàng gửi lại",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "bookingId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "channel": {
+                      "type": "string",
+                      "enum": [
+                        "EMAIL",
+                        "SMS",
+                        "ZALO_OA",
+                        "PUSH"
+                      ]
+                    },
+                    "template": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "SENT",
+                        "FAILED"
+                      ]
+                    },
+                    "recipientMasked": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "retryCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "errorMessage": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
+                    },
+                    "sentAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "bookingId",
+                    "channel",
+                    "template",
+                    "status",
+                    "recipientMasked",
+                    "retryCount",
+                    "errorMessage",
+                    "sentAt",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_GEN_VALIDATION_FAILED",
             "content": {
               "application/json": {
                 "schema": {
