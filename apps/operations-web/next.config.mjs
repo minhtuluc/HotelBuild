@@ -3,7 +3,12 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   // Gói workspace dùng mã TypeScript nguồn; Next biên dịch tại chỗ (kiến trúc §5).
-  transpilePackages: ['@pinehill/contracts', '@pinehill/api-client', '@pinehill/ui-web'],
+  transpilePackages: [
+    '@pinehill/contracts',
+    '@pinehill/api-client',
+    '@pinehill/ui-web',
+    '@pinehill/web-session',
+  ],
   eslint: { ignoreDuringBuilds: true },
   // Gói workspace dùng specifier `.js` theo NodeNext; webpack phải ánh xạ sang nguồn TS.
   webpack: (config) => {
