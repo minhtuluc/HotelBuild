@@ -1,6 +1,7 @@
-import type { FakeHandler, FakeRequest, FakeResponse } from './types.js';
+import type { FakeApiContext, FakeHandler, FakeRequest, FakeResponse } from './types.js';
 interface Actor {
   key: string;
+  guest: boolean;
   sequence: number;
   refreshCount: number;
   logoutCount: number;
@@ -32,10 +33,10 @@ function error(status: number, path: string): FakeResponse {
     },
   };
 }
-function issue(actor: Actor) {
+function issue(actor: Actor, namespace: string) {
   actor.sequence++;
-  actor.access = `synthetic-access-${actor.key}-${actor.sequence}`;
-  actor.refresh = `synthetic-refresh-${actor.key}-${actor.sequence}`;
+  actor.access = `synthetic-access-${namespace}-${actor.key}-${actor.sequence}`;
+  actor.refresh = `synthetic-refresh-${namespace}-${actor.key}-${actor.sequence}`;
   return {
     tokenType: 'Bearer',
     accessToken: actor.access,
@@ -45,7 +46,8 @@ function issue(actor: Actor) {
     mustChangePassword: false,
   };
 }
-export function createHandler(): FakeHandler {
+export function createHandler(context: FakeApiContext = {}): FakeHandler {
+  const namespace = crypto.randomUUID();
   const actors = new Map<string, Actor>();
   const tokens = new Map<string, Actor>();
   function actor(key: string): Actor {
@@ -53,6 +55,7 @@ export function createHandler(): FakeHandler {
     if (!value) {
       value = {
         key,
+        guest: false,
         sequence: 0,
         refreshCount: 0,
         logoutCount: 0,
@@ -66,6 +69,14 @@ export function createHandler(): FakeHandler {
     }
     return value;
   }
+  context.authenticateGuest = (authorization) =>
+    [...actors.values()].find(
+      (state) =>
+        state.guest &&
+        !state.revoked &&
+        state.status === 200 &&
+        `Bearer ${state.access}` === authorization,
+    )?.key;
   function control(request: FakeRequest): FakeResponse {
     const state = actor(decodeURIComponent(request.url.pathname.slice('/__control/'.length)));
     if (request.method === 'POST' && object(request.body)) {
@@ -105,8 +116,9 @@ export function createHandler(): FakeHandler {
       if (typeof key !== 'string') return error(400, path);
       const state = actor(key);
       if (state.status !== 200) return error(state.status, path);
+      state.guest = path.includes('guest-auth');
       state.revoked = false;
-      const body = issue(state);
+      const body = issue(state, namespace);
       tokens.set(state.refresh, state);
       return { status: 200, body };
     }
@@ -121,7 +133,7 @@ export function createHandler(): FakeHandler {
         return error(401, path);
       }
       if (state.status !== 200) return error(state.status, path);
-      const body = issue(state);
+      const body = issue(state, namespace);
       tokens.set(state.refresh, state);
       return { status: 200, body };
     }

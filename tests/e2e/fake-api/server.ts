@@ -2,11 +2,12 @@ import { createServer, type IncomingMessage } from 'node:http';
 import { readdir } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
-import type { FakeHandler, FakeRequest, FakeResponse } from './core/types.js';
+import type { FakeApiContext, FakeHandler, FakeRequest, FakeResponse } from './core/types.js';
 
 async function handlers(): Promise<FakeHandler[]> {
   const found: FakeHandler[] = [];
-  for (const group of ['core', 'staff', 'users', 'guest']) {
+  const context: FakeApiContext = {};
+  for (const group of ['core', 'staff', 'users', 'guest', 'journey']) {
     const dir = new URL(`./${group}/`, import.meta.url);
     let entries: string[];
     try {
@@ -19,12 +20,14 @@ async function handlers(): Promise<FakeHandler[]> {
     for (const file of entries.sort()) {
       if (!file.endsWith('.ts') && !file.endsWith('.js')) continue;
       const module: unknown = await import(pathToFileURL(fileURLToPath(new URL(file, dir))).href);
-      if (isPlugin(module)) found.push(module.createHandler());
+      if (isPlugin(module)) found.push(module.createHandler(context));
     }
   }
   return found;
 }
-function isPlugin(value: unknown): value is { createHandler: () => FakeHandler } {
+function isPlugin(
+  value: unknown,
+): value is { createHandler: (context: FakeApiContext) => FakeHandler } {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -98,6 +101,9 @@ export async function startFakeApi(baseUrl: string) {
         method: req.method ?? 'GET',
         body: await body(req),
         authorization: req.headers.authorization,
+        ...(typeof req.headers['idempotency-key'] === 'string'
+          ? { idempotencyKey: req.headers['idempotency-key'] }
+          : {}),
       };
       let result: FakeResponse | undefined;
       for (const handler of registry) {
