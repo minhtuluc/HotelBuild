@@ -10,7 +10,8 @@
  * Chặn: file khoá, file bảo vệ. Cảnh báo: ngoài allow, vượt max_lines, đặc tả tự soạn (QĐ-04).
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { lstatSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { evaluateScope, parseNumstat, parseTicket, ticketIdFromBranch } from './lib/scope.mjs';
@@ -52,13 +53,38 @@ try {
 } catch (error) { fail(`${ticketPath}: ${error.message}`); }
 if (ticket.id !== id) fail(`${ticketPath}: id ${ticket.id} không khớp nhánh ${id}`);
 
+if (ownTicketPath && Object.keys(ticket.lockedDigests).length)
+  fail('locked_sha phải do lead công bố trong ticket trên nhánh nền, không tự ghim trên nhánh thi công');
+
 // So với merge-base gồm cả working tree (chạy cục bộ) lẫn file chưa track.
 const changes = parseNumstat(git('diff', '--numstat', '--no-renames', mergeBase));
 for (const file of git('ls-files', '--others', '--exclude-standard').split('\n').filter(Boolean)) {
   changes.push({ path: file, added: readFileSync(join(root, file), 'utf8').split('\n').length, deleted: 0 });
 }
 
-const { errors, warnings, lines } = evaluateScope({ ticket, changes, ownTicketPath });
+// Validate EVERY pinned file, even when removed additions disappear from the diff.
+// Missing files and symlinks cannot satisfy an immutable locked-file digest.
+const lockedContentHashes = Object.create(null);
+for (const file of Object.keys(ticket.lockedDigests)) {
+  const parts = file.split('/');
+  let path = root;
+  let regular = true;
+  try {
+    for (const [index, part] of parts.entries()) {
+      path = join(path, part);
+      const stat = lstatSync(path);
+      if (stat.isSymbolicLink() || (index === parts.length - 1 ? !stat.isFile() : !stat.isDirectory())) {
+        regular = false;
+        break;
+      }
+    }
+    if (regular) lockedContentHashes[file] = createHash('sha256').update(readFileSync(path)).digest('hex');
+  } catch {
+    // Unreadable/missing paths fail closed through the digest check below.
+  }
+}
+
+const { errors, warnings, lines } = evaluateScope({ ticket, changes, ownTicketPath, lockedContentHashes });
 const notes = [...(ownTicketPath ? [`${ownTicketPath}: đặc tả tự soạn — lead duyệt cùng PR`] : []), ...warnings];
 if (notes.length) console.warn(`Scope: ${id} cảnh báo (không chặn)\n${notes.join('\n')}`);
 if (errors.length) fail(`${id} (${ticket.risk}) ${errors.length} lỗi\n${errors.join('\n')}`);

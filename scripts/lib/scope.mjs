@@ -55,7 +55,7 @@ export const matchesAny = (file, globs) => globs.some((glob) => globToRegExp(glo
 export function parseTicket(text) {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(text);
   if (!match) throw new Error('Ticket thiếu front matter (--- ... ---) ở đầu file');
-  const fields = {};
+  const fields = Object.create(null);
   let listKey;
   for (const [index, raw] of match[1].split(/\r?\n/).entries()) {
     const line = raw.replace(/\s+#.*$/, '');
@@ -69,6 +69,8 @@ export function parseTicket(text) {
     const pair = /^([a-z_]+):\s*(.*)$/.exec(line);
     if (!pair) throw new Error(`Front matter dòng ${index + 2}: không hiểu "${raw}"`);
     const [, key, value] = pair;
+    if (Object.hasOwn(fields, key)) throw new Error(`Front matter dòng ${index + 2}: khoá trùng ${key}`);
+    if (key === 'locked_sha' && value) throw new Error('locked_sha phải là danh sách SHA-256 + đường dẫn');
     if (value) { fields[key] = value.trim().replace(/^['"]|['"]$/g, ''); listKey = undefined; } else { fields[key] = []; listKey = key; }
   }
   return validateTicket(fields);
@@ -81,8 +83,17 @@ function validateTicket(fields) {
   if (!list('allow').length) throw new Error(`${fields.id}: allow phải có ít nhất một glob`);
   const maxLines = fields.max_lines === undefined ? DEFAULT_MAX_LINES : Number(fields.max_lines);
   if (!Number.isInteger(maxLines) || maxLines < 1) throw new Error(`${fields.id}: max_lines không hợp lệ`);
+  const lockedDigests = Object.create(null);
+  for (const item of list('locked_sha')) {
+    const match = /^([a-f0-9]{64})[ \t]+(.+)$/.exec(item);
+    if (!match || !matchesAny(match[2], list('locked')) || match[2].startsWith('/') ||
+        match[2].split('/').includes('..') || /[\\\0*?]/.test(match[2]) ||
+        Object.hasOwn(lockedDigests, match[2]))
+      throw new Error(`${fields.id}: locked_sha không hợp lệ hoặc trùng đường dẫn`);
+    lockedDigests[match[2]] = match[1];
+  }
   return { id: fields.id, title: fields.title ?? '', risk: fields.risk, owner: fields.owner ?? '',
-    allow: list('allow'), locked: list('locked'), unlock: list('unlock'), maxLines };
+    allow: list('allow'), locked: list('locked'), lockedDigests, unlock: list('unlock'), maxLines };
 }
 
 export const ticketIdFromBranch = (branch) => /^ticket\/(HB-\d{3})(?:-|$)/.exec(branch ?? '')?.[1];
@@ -91,22 +102,27 @@ export const ticketIdFromBranch = (branch) => /^ticket\/(HB-\d{3})(?:-|$)/.exec(
 export const needsCodexQc = (ticket) => ticket?.risk === 'R2';
 
 /**
- * Lỗi (chặn): sửa file khoá của ticket, hoặc file trong `PROTECTED` mà không có trong `unlock`.
+ * File khoá chỉ được tạo/đưa vào diff với nội dung đúng SHA-256 do lead công bố trên nhánh nền.
+ * Lỗi (chặn): sửa file khoá không khớp SHA-256 của ticket, hoặc file trong `PROTECTED` mà không có trong `unlock`.
  * Cảnh báo (không chặn): file ngoài `allow`, diff vượt `max_lines` — giải trình trong PR (QĐ-04).
  * `ownTicketPath`: đặc tả do người làm tự soạn trên nhánh (ticket chưa có trên main) — được phép tạo.
- * @param {{ ticket: ReturnType<typeof parseTicket>, changes: { path: string, added: number, deleted: number }[], ownTicketPath?: string }} input
+ * @param {{ ticket: ReturnType<typeof parseTicket>, changes: { path: string, added: number, deleted: number, contentSha256?: string }[], ownTicketPath?: string, lockedContentHashes?: Record<string, string> }} input
  * @returns {{ errors: string[], warnings: string[], lines: number }}
  */
-export function evaluateScope({ ticket, changes, ownTicketPath }) {
+export function evaluateScope({ ticket, changes, ownTicketPath, lockedContentHashes = {} }) {
   const errors = [];
   const warnings = [];
   let lines = 0;
   for (const { path, added, deleted } of changes) {
     if (!matchesAny(path, SIZE_EXEMPT)) lines += added + deleted;
     if (path === ownTicketPath) continue;
-    if (matchesAny(path, ticket.locked)) errors.push(`${path}: file khoá của ${ticket.id} — không được sửa`);
+    if (matchesAny(path, ticket.locked) && !Object.hasOwn(ticket.lockedDigests ?? {}, path)) errors.push(`${path}: file khoá của ${ticket.id} — không được sửa`);
     else if (matchesAny(path, PROTECTED) && !matchesAny(path, ticket.unlock)) errors.push(`${path}: file được bảo vệ — báo lead nếu thật sự cần sửa`);
     else if (!matchesAny(path, [...ticket.allow, ...ticket.unlock])) warnings.push(`${path}: ngoài allow của ${ticket.id} — ghi lý do vào mục "Ngoài phạm vi đã sửa" của PR`);
+  }
+  for (const [path, sha] of Object.entries(ticket.lockedDigests ?? {})) {
+    const actual = lockedContentHashes[path] ?? changes.find((change) => change.path === path)?.contentSha256;
+    if (actual !== sha) errors.push(`${path}: file khoá thiếu hoặc sai SHA-256 do lead công bố`);
   }
   if (lines > ticket.maxLines) warnings.push(`Diff ${lines} dòng > max_lines ${ticket.maxLines} — ghi lý do vào PR (không chặn)`);
   return { errors, warnings, lines };
