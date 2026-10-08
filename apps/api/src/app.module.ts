@@ -1,16 +1,20 @@
 import { Module } from '@nestjs/common';
 import type { DynamicModule } from '@nestjs/common';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 import { CONFIG } from './config/env.js';
 import type { ApiConfig } from './config/env.js';
 import { AllExceptionsFilter } from './common/all-exceptions.filter.js';
 import { CorrelationInterceptor } from './common/correlation.interceptor.js';
+import { AuthGuard } from './common/guards/auth.guard.js';
 import { CLOCK, ID_GENERATOR, SystemClock, UuidGenerator } from './infrastructure/ports.js';
+import { PrismaModule } from './infrastructure/prisma/prisma.module.js';
+import { RedisModule } from './infrastructure/redis/redis.module.js';
 import { HEALTH_PROBES } from './infrastructure/health/health-probe.js';
 import type { HealthProbe } from './infrastructure/health/health-probe.js';
 import { PostgresHealthProbe } from './infrastructure/health/postgres-health-probe.js';
 import { RedisHealthProbe } from './infrastructure/health/redis-health-probe.js';
+import { AuthModule } from './modules/auth/auth.module.js';
 import { SysModule } from './modules/sys/sys.module.js';
 
 @Module({})
@@ -31,6 +35,9 @@ export class AppModule {
           },
         }),
         SysModule,
+        PrismaModule.register(),
+        RedisModule.register(),
+        AuthModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },
@@ -43,6 +50,7 @@ export class AppModule {
             new RedisHealthProbe(config.REDIS_URL),
           ],
         },
+        { provide: APP_GUARD, useClass: AuthGuard },
         { provide: APP_INTERCEPTOR, useClass: CorrelationInterceptor },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
       ],
