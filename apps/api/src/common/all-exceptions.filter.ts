@@ -42,12 +42,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
     reply.header('X-Trace-Id', correlationId);
 
     const classified = this.classify(exception, correlationId, request.url);
+    if (classified.retryAfterSeconds !== undefined) {
+      reply.header('Retry-After', String(classified.retryAfterSeconds));
+    }
     const candidate: ErrorBody = {
       code: classified.code,
       message: classified.message,
       traceId: correlationId,
       timestamp: this.clock.now().toISOString(),
       path: request.url,
+      ...(classified.retryAfterSeconds === undefined
+        ? {}
+        : { retryAfterSeconds: classified.retryAfterSeconds }),
     };
     const parsed = errorBodySchema.safeParse(candidate);
     if (!parsed.success) {
@@ -71,9 +77,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
     exception: unknown,
     correlationId: string,
     path: string,
-  ): { status: number; code: ErrorCode; message: string } {
+  ): { status: number; code: ErrorCode; message: string; retryAfterSeconds?: number } {
     if (exception instanceof AppError) {
-      return { status: exception.status, code: exception.code, message: exception.message };
+      return {
+        status: exception.status,
+        code: exception.code,
+        message: exception.message,
+        ...(exception.retryAfterSeconds === undefined
+          ? {}
+          : { retryAfterSeconds: exception.retryAfterSeconds }),
+      };
     }
     if (exception instanceof HttpException) {
       const mapped = HTTP_ERRORS[exception.getStatus()];

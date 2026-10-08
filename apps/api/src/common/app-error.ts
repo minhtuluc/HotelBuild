@@ -6,6 +6,8 @@ export class AppError extends Error {
     readonly status: number,
     readonly code: ErrorCode,
     message: string,
+    /** Số giây client nên chờ (429/401 khoá tài khoản) — filter gửi kèm body + header `Retry-After`. */
+    readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = 'AppError';
