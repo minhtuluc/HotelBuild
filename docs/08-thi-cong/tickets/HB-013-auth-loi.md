@@ -18,6 +18,10 @@ allow:
   - pnpm-lock.yaml
 locked:
   - apps/api/test/auth/staff-auth.locked.spec.ts
+  - apps/api/test/auth/staff-auth.locked.fixture.ts
+locked_sha:
+  - cc79df831ad1714bd08691014a22a3526abaf332983e0a5b4ae45fb794b6daf0 apps/api/test/auth/staff-auth.locked.spec.ts
+  - f2c20a6f68e236d0693553df0280fa1efde159bfe91e4a4b988cc2b9685dc030 apps/api/test/auth/staff-auth.locked.fixture.ts
 ---
 
 # HB-013 — Auth lõi nhân viên
