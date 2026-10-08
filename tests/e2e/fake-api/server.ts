@@ -7,7 +7,7 @@ import type { FakeApiContext, FakeHandler, FakeRequest, FakeResponse } from './c
 async function handlers(): Promise<FakeHandler[]> {
   const found: FakeHandler[] = [];
   const context: FakeApiContext = {};
-  for (const group of ['core', 'staff', 'users', 'guest', 'journey']) {
+  for (const group of ['core', 'staff', 'users', 'guest', 'journey', 'f5']) {
     const dir = new URL(`./${group}/`, import.meta.url);
     let entries: string[];
     try {
@@ -56,16 +56,20 @@ export async function startFakeApi(baseUrl: string) {
     throw new Error('Fake API must bind loopback HTTP');
   const registry = await handlers();
   const built = await build({
-    entryPoints: [
-      fileURLToPath(new URL('../../../packages/web-session/src/client.ts', import.meta.url)),
-    ],
+    entryPoints: {
+      'session-client': fileURLToPath(
+        new URL('../../../packages/web-session/src/client.ts', import.meta.url),
+      ),
+      'f5-client': fileURLToPath(new URL('./f5/client-entry.ts', import.meta.url)),
+    },
+    outdir: 'fake-api-assets',
     bundle: true,
     write: false,
     format: 'esm',
     platform: 'browser',
     target: 'es2022',
   });
-  const asset = built.outputFiles[0]!.text;
+  const assets = new Map(built.outputFiles.map((file) => [file.path.split('/').at(-1), file.text]));
   const origins = (
     process.env.E2E_APP_ORIGINS ?? 'http://127.0.0.1:3001,http://127.0.0.1:3002'
   ).split(',');
@@ -79,6 +83,10 @@ export async function startFakeApi(baseUrl: string) {
       }
       if (origin) {
         res.setHeader('access-control-allow-origin', origin);
+        res.setHeader(
+          'access-control-expose-headers',
+          'idempotency-replayed,etag,x-trace-id,retry-after',
+        );
         res.setHeader('vary', 'Origin');
       }
       if (req.method === 'OPTIONS') {
@@ -90,10 +98,12 @@ export async function startFakeApi(baseUrl: string) {
         res.end();
         return;
       }
-      const url = new URL(req.url ?? '/', target);
-      if (url.pathname === '/__test/session-client.js') {
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('No live fake API port');
+      const url = new URL(req.url ?? '/', `http://127.0.0.1:${address.port}`);
+      if (['/__test/session-client.js', '/__test/f5-client.js'].includes(url.pathname)) {
         res.writeHead(200, { 'content-type': 'text/javascript' });
-        res.end(asset);
+        res.end(assets.get(url.pathname.split('/').at(-1)));
         return;
       }
       const request: FakeRequest = {

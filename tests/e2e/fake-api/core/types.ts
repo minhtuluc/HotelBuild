@@ -1,3 +1,14 @@
+import type { BookingSummary, UserSummary } from '../../../../packages/contracts/src/index.js';
+export interface FakeActor {
+  key: string;
+  guest: boolean;
+  role: UserSummary['role'];
+  propertyIds: string[];
+}
+export interface FakeBooking {
+  value: BookingSummary;
+  owner: string;
+}
 export interface FakeRequest {
   method: string;
   url: URL;
@@ -16,4 +27,8 @@ export type FakeHandler = (
 
 export interface FakeApiContext {
   authenticateGuest?: (authorization: string | undefined) => string | undefined;
+  authenticateActor?: (authorization: string | undefined) => FakeActor | undefined;
+  configureActor?: (key: string, role: FakeActor['role'], propertyIds: string[]) => void;
+  getBooking?: (id: string) => FakeBooking | undefined;
+  deleteBooking?: (id: string) => void;
 }

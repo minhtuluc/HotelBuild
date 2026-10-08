@@ -1,7 +1,5 @@
-import type { FakeApiContext, FakeHandler, FakeRequest, FakeResponse } from './types.js';
-interface Actor {
-  key: string;
-  guest: boolean;
+import type { FakeActor, FakeApiContext, FakeHandler, FakeRequest, FakeResponse } from './types.js';
+interface Actor extends FakeActor {
   sequence: number;
   refreshCount: number;
   logoutCount: number;
@@ -56,6 +54,8 @@ export function createHandler(context: FakeApiContext = {}): FakeHandler {
       value = {
         key,
         guest: false,
+        role: 'FRONT_DESK',
+        propertyIds: ['journey-standard'],
         sequence: 0,
         refreshCount: 0,
         logoutCount: 0,
@@ -69,14 +69,32 @@ export function createHandler(context: FakeApiContext = {}): FakeHandler {
     }
     return value;
   }
-  context.authenticateGuest = (authorization) =>
-    [...actors.values()].find(
-      (state) =>
-        state.guest &&
-        !state.revoked &&
-        state.status === 200 &&
-        `Bearer ${state.access}` === authorization,
-    )?.key;
+  context.authenticateActor = (authorization) => {
+    const state = [...actors.values()].find(
+      (value) =>
+        !value.revoked &&
+        value.status === 200 &&
+        value.access.length > 0 &&
+        `Bearer ${value.access}` === authorization,
+    );
+    return state
+      ? {
+          key: state.key,
+          guest: state.guest,
+          role: state.role,
+          propertyIds: [...state.propertyIds],
+        }
+      : undefined;
+  };
+  context.authenticateGuest = (authorization) => {
+    const state = context.authenticateActor?.(authorization);
+    return state?.guest ? state.key : undefined;
+  };
+  context.configureActor = (key, role, propertyIds) => {
+    const state = actor(key);
+    state.role = role;
+    state.propertyIds = [...propertyIds];
+  };
   function control(request: FakeRequest): FakeResponse {
     const state = actor(decodeURIComponent(request.url.pathname.slice('/__control/'.length)));
     if (request.method === 'POST' && object(request.body)) {
@@ -97,7 +115,8 @@ export function createHandler(context: FakeApiContext = {}): FakeHandler {
   }
   return async (request) => {
     const path = request.url.pathname;
-    if (path.startsWith('/__control/')) return control(request);
+    if (path.startsWith('/__control/') && !path.startsWith('/__control/f5/'))
+      return control(request);
     if (path === '/api/v1/system/health') return { status: 200, body: { status: 'ok' } };
     if (request.method !== 'POST' || !object(request.body)) {
       if (path === '/api/v1/auth/logout' && request.method === 'POST') {
