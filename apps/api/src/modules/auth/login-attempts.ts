@@ -1,15 +1,16 @@
 /**
  * Đếm thất bại đăng nhập (BR-RBAC-06) trên Redis:
- * - hạn mức **theo IP**: 10 lần thất bại trong 60 giây (dùng mốc thời gian thật từ `Clock`, không dựa TTL Redis);
+ * - hạn mức **theo IP**: 10 lần đăng nhập trong 60 giây (dùng mốc thời gian thật từ `Clock`, không dựa TTL Redis);
  * - khoá theo **tên đăng nhập không tồn tại**: 5 lần liên tiếp → khoá 15 phút, cùng thông điệp như tài khoản thật.
  */
 import { Inject, Injectable } from '@nestjs/common';
+import { z } from 'zod';
 import type { Clock } from '@pinehill/domain';
 import { CLOCK } from '../../infrastructure/ports.js';
 import { REDIS } from '../../infrastructure/redis/redis.module.js';
 import type { RedisClient } from '../../infrastructure/redis/redis.module.js';
 
-/** Số lần thất bại tối đa cho mỗi IP trong một cửa sổ (api.md §1.2). */
+/** Số lần đăng nhập tối đa cho mỗi IP trong một cửa sổ (api.md §1.2). */
 export const IP_FAILURE_LIMIT = 10;
 /** Cửa sổ đếm theo IP. */
 export const IP_FAILURE_WINDOW_MS = 60_000;
@@ -18,6 +19,13 @@ interface AttemptState {
   failures: number;
   lockedUntilMs: number | null;
 }
+
+const attemptStateSchema = z
+  .object({
+    failures: z.number().int().nonnegative(),
+    lockedUntilMs: z.number().finite().nullable(),
+  })
+  .strict();
 
 @Injectable()
 export class LoginAttempts {
@@ -41,18 +49,18 @@ export class LoginAttempts {
   /** `null` khi còn trong hạn mức; ngược lại số giây phải chờ (1..60). */
   async ipRetryAfterSeconds(ip: string): Promise<number | null> {
     const now = this.clock.now().getTime();
-    const count = Number((await this.redis.get(this.ipKey(ip, this.windowIndex(now)))) ?? '0');
-    if (!Number.isFinite(count) || count < IP_FAILURE_LIMIT) return null;
+    const count = Number(
+      await this.redis.eval(
+        "local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],ARGV[1]); end; return n",
+        1,
+        this.ipKey(ip, this.windowIndex(now)),
+        Math.ceil((IP_FAILURE_WINDOW_MS * 2) / 1000),
+      ),
+    );
+    if (count <= IP_FAILURE_LIMIT) return null;
     const windowEnd = (this.windowIndex(now) + 1) * IP_FAILURE_WINDOW_MS;
     const remaining = Math.ceil((windowEnd - now) / 1000);
     return Math.min(Math.max(remaining, 1), Math.ceil(IP_FAILURE_WINDOW_MS / 1000));
-  }
-
-  async recordIpFailure(ip: string): Promise<void> {
-    const now = this.clock.now().getTime();
-    const key = this.ipKey(ip, this.windowIndex(now));
-    const count = await this.redis.incr(key);
-    if (count === 1) await this.redis.expire(key, Math.ceil((IP_FAILURE_WINDOW_MS * 2) / 1000));
   }
 
   /** Trạng thái khoá theo tên đăng nhập chưa có trong CSDL. */
@@ -68,15 +76,29 @@ export class LoginAttempts {
     username: string,
     threshold: number,
     lockMs: number,
-  ): Promise<AttemptState> {
+  ): Promise<AttemptState & { alreadyLocked: boolean }> {
     const now = this.clock.now().getTime();
     const key = this.usernameKey(username);
-    const current = await this.read(username);
-    const failures =
-      current.lockedUntilMs !== null && current.lockedUntilMs <= now ? 1 : current.failures + 1;
-    const lockedUntilMs = failures >= threshold ? now + lockMs : null;
-    await this.redis.set(key, JSON.stringify({ failures, lockedUntilMs } satisfies AttemptState));
-    return { failures, lockedUntilMs };
+    const raw = await this.redis.eval(
+      `
+      local raw=redis.call('GET',KEYS[1]);
+      local current=raw and cjson.decode(raw) or {failures=0,lockedUntilMs=cjson.null};
+      local now=tonumber(ARGV[1]); local lock=current.lockedUntilMs;
+      if lock~=cjson.null and lock>now then current.alreadyLocked=true; return cjson.encode(current); end;
+      local failures=(lock~=cjson.null and lock<=now) and 1 or (current.failures+1);
+      local untilMs=failures>=tonumber(ARGV[2]) and (now+tonumber(ARGV[3])) or cjson.null;
+      local result=cjson.encode({failures=failures,lockedUntilMs=untilMs});
+      redis.call('SET',KEYS[1],result);
+      return cjson.encode({failures=failures,lockedUntilMs=untilMs,alreadyLocked=false});
+    `,
+      1,
+      key,
+      now,
+      threshold,
+      lockMs,
+    );
+    if (typeof raw !== 'string') throw new Error('Invalid Redis login counter response');
+    return attemptStateSchema.extend({ alreadyLocked: z.boolean() }).parse(JSON.parse(raw));
   }
 
   async clearUsername(username: string): Promise<void> {
