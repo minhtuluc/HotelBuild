@@ -62,6 +62,25 @@ export const customerCatalog = {
   'guest.rooms.summary.deposit': 'Tiền cọc',
   'guest.rooms.summary.quotedAt': 'Báo giá lúc',
   'guest.rooms.summary.expiresAt': 'Hết hạn lúc',
+  'guest.book.title': 'Chọn gói & xác nhận đặt phòng',
+  'guest.book.step': 'Bước {current}/{total} — xem lại gói và thông tin khách',
+  'guest.book.error': 'Không lấy được báo giá để xác nhận. Vui lòng thử lại.',
+  'guest.book.terms.title': 'Điều khoản huỷ của gói (xem trước khi xác nhận)',
+  'guest.book.terms.deposit': 'Đặt cọc {percent}% khi xác nhận.',
+  'guest.book.terms.freeCancel': 'Huỷ miễn phí trước {hours} giờ so với giờ nhận phòng.',
+  'guest.book.terms.freeCancelUnknown':
+    'Gói chưa công bố mốc huỷ miễn phí — vui lòng hỏi cơ sở trước khi đặt.',
+  'guest.book.terms.nights': 'Số đêm nhận: {min}–{max}.',
+  'guest.book.fullName': 'Họ tên khách',
+  'guest.book.phone': 'Số điện thoại',
+  'guest.book.note': 'Ghi chú (không bắt buộc)',
+  'guest.book.payNote':
+    'Cần thanh toán cọc {amount} sau khi tạo booking (bước xác nhận ở màn kết quả).',
+  'guest.book.submit': 'Xác nhận đặt phòng',
+  'guest.book.duplicate':
+    'Có thể bạn đã có booking trùng cho kỳ này ({code}). Bạn muốn tiếp tục với booking cũ?',
+  'guest.book.duplicate.open': 'Mở booking cũ',
+  'guest.book.duplicate.keepEditing': 'Quay lại chỉnh thông tin',
 } as const;
 
 export type CustomerMessageKey = keyof typeof customerCatalog;
