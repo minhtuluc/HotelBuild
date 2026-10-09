@@ -1,3 +1,5 @@
+import { serializeSafeRequest } from './common/safe-request.js';
+import { RoomBlocksModule } from './modules/prop/room-blocks/module.js';
 import { Module } from '@nestjs/common';
 import type { DynamicModule } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -32,6 +34,7 @@ export class AppModule {
         LoggerModule.forRoot({
           pinoHttp: {
             level: config.LOG_LEVEL,
+            serializers: { req: serializeSafeRequest },
             customProps: (request) => ({ correlationId: request.headers['x-correlation-id'] }),
             redact: {
               paths: ['req.headers.authorization', 'req.headers.cookie'],
@@ -45,6 +48,7 @@ export class AppModule {
         AuthModule,
         RbacModule,
         IdempotencyModule,
+        RoomBlocksModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },

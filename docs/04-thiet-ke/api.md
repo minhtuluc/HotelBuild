@@ -115,9 +115,9 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 | GET | `/api/v1/room-types` | Danh sách loại phòng kèm sức chứa, sàn–trần giá và `sellingUnits` (số đơn vị bán ACTIVE, dùng cho hạn mức kênh BR-INV-05) (màn SCR-20, SCR-25) | HOUSEKEEPING | `propertyId` | UC-PROP-02 | BR-PROP-03,04, BR-RATE-03,04, BR-INV-05 |
 | GET | `/api/v1/rooms` | Danh sách phòng vật lý | HOUSEKEEPING | `propertyId`, `roomTypeId`, `floor`, `status` | UC-PROP-03 | BR-PROP-05 |
 | PUT | `/api/v1/rooms/{roomId}/connecting-room` | Gán/gỡ phòng thông nhau (đối xứng hai chiều) | MANAGER | `connectingRoomId` | UC-PROP-03 | BR-OVER-15 |
-| GET | `/api/v1/room-blocks` | Danh sách khoá phòng đang có (màn SCR-22 liệt kê và cảnh báo chồng lấn) | HOUSEKEEPING | `propertyId`, `roomId`, `from`, `to` | UC-PROP-04 | BR-INV-06 |
-| POST | `/api/v1/room-blocks` | Khoá phòng/ngừng bán | MANAGER | `roomId`, `startDate`, `endDate`, `reason` | UC-PROP-04 | BR-INV-06, BR-PROP-06 |
-| DELETE | `/api/v1/room-blocks/{roomBlockId}` | Gỡ khoá phòng (204) | MANAGER | `reason` | UC-PROP-04 | BR-INV-06 |
+| GET | `/api/v1/room-blocks` | Danh sách khoá phòng đang có (màn SCR-22 liệt kê và cảnh báo chồng lấn) | HOUSEKEEPING, FRONT_DESK, MANAGER, OWNER | `propertyId`, `roomId`, `from`, `to` | UC-PROP-04 | BR-INV-06 |
+| POST | `/api/v1/room-blocks` | Khoá phòng/ngừng bán (đè assignment cần MANAGER/OWNER) | FRONT_DESK, MANAGER, OWNER | `roomId`, `startDate`, `endDate`, `reason` | UC-PROP-04 | BR-INV-06, BR-PROP-06 |
+| DELETE | `/api/v1/room-blocks/{roomBlockId}` | Gỡ khoá phòng (204) | MANAGER, OWNER | `reason` | UC-PROP-04 | BR-INV-06 |
 
 ### 2.3. INV — Tồn phòng (3 UC)
 

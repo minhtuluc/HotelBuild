@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { RequestMethod } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants.js';
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
@@ -41,7 +42,11 @@ function handlerRoute(
   const prefix: unknown = Reflect.getMetadata(PATH_METADATA, controller);
   const path: unknown = Reflect.getMetadata(PATH_METADATA, handler);
   if (typeof prefix !== 'string' || typeof path !== 'string') throw new Error('Uncovered path');
-  if (method !== RequestMethod.GET && method !== RequestMethod.POST)
+  if (
+    method !== RequestMethod.GET &&
+    method !== RequestMethod.POST &&
+    method !== RequestMethod.DELETE
+  )
     throw new Error('Uncovered HTTP method');
   return { path: `${prefix}/${path}`.replaceAll(/\/+$/g, ''), method };
 }
@@ -64,24 +69,51 @@ function independentOracle(): Record<string, Expected> {
   expected['auth/logout'] = { roles, status: 204, method: RequestMethod.POST };
   // Valid authentication/permission must reach input validation; password behavior has locked tests.
   expected['auth/password'] = { roles, status: 400, method: RequestMethod.POST };
-  return expected;
+  // Sources: HB-034 AC2, BR-INV-06 and api.md §2.2; independent of module permissions.
+  const keyed = Object.fromEntries(
+    Object.entries(expected).map(([path, rule]) => [`${rule.method}:${path}`, rule]),
+  );
+  keyed[`${RequestMethod.GET}:room-blocks`] = {
+    roles: ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER', 'OWNER'],
+    status: 200,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.POST}:room-blocks`] = {
+    roles: ['FRONT_DESK', 'MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
+  keyed[`${RequestMethod.DELETE}:room-blocks/:roomBlockId`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 404,
+    method: RequestMethod.DELETE,
+  };
+  return keyed;
 }
 
 test('every discovered protected HTTP route has an independent oracle and runs against all seven roles', async () => {
   const routes = protectedRoutes();
   const oracle = independentOracle();
-  expect(routes.map(({ path }) => path).sort()).toEqual(Object.keys(oracle).sort());
+  expect(routes.map(({ path, method }) => `${method}:${path}`).sort()).toEqual(
+    Object.keys(oracle).sort(),
+  );
   let checked = 0;
   for (const route of routes) {
-    const expected = oracle[route.path]!;
+    const expected = oracle[`${route.method}:${route.path}`]!;
     expect(route.method).toBe(expected.method);
     for (const role of roles) {
       clock.value += 61000;
       const token = await login(role);
-      const path = `/api/v1/${route.path.replace(':id', roomId)}`;
-      const pending = route.method === RequestMethod.GET ? http().get(path) : http().post(path);
+      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':roomBlockId', roomId)}`;
+      const pending =
+        route.method === RequestMethod.GET
+          ? http().get(path)
+          : route.method === RequestMethod.DELETE
+            ? http().delete(path).query({ reason: 'Synthetic oracle removal' })
+            : http().post(path);
       const result = await pending
         .set('Authorization', `Bearer ${token}`)
+        .set('Idempotency-Key', randomUUID())
         .send({ role: 'OWNER', propertyScope: ['untrusted-body-scope'] });
       const allowed = expected.roles.includes(role);
       expect(result.status, `${role} ${route.path}`).toBe(allowed ? expected.status : 403);

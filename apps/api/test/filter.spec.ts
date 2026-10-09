@@ -77,3 +77,12 @@ describe('AllExceptionsFilter — đối chiếu errorBodySchema trước khi g�
     );
   });
 });
+
+it('query values never enter error-body paths or fallback error log paths', async () => {
+  const { server, errors } = await start();
+  for (const path of ['/probe/known', '/probe/invalid-body']) {
+    const response = await request(server).get(path).query({ reason: 'CCCD012345678934' });
+    expect(errorBodySchema.parse(response.body).path).toBe(path);
+  }
+  expect(JSON.stringify(errors.mock.calls)).not.toContain('012345678934');
+});

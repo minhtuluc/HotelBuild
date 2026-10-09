@@ -6,6 +6,7 @@ import type { Clock, IdGenerator } from '@pinehill/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { InjectPinoLogger } from 'nestjs-pino';
 import { CLOCK, ID_GENERATOR } from '../infrastructure/ports.js';
+import { requestPath } from './safe-request.js';
 import { AppError } from './app-error.js';
 import { resolveCorrelationId } from './request-id.js';
 
@@ -41,7 +42,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     request.headers['x-correlation-id'] = correlationId;
     reply.header('X-Trace-Id', correlationId);
 
-    const classified = this.classify(exception, correlationId, request.url);
+    const path = requestPath(request.url);
+    const classified = this.classify(exception, correlationId, path);
     if (classified.retryAfterSeconds !== undefined) {
       reply.header('Retry-After', String(classified.retryAfterSeconds));
     }
@@ -50,7 +52,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message: classified.message,
       traceId: correlationId,
       timestamp: this.clock.now().toISOString(),
-      path: request.url,
+      path,
       ...(classified.retryAfterSeconds === undefined
         ? {}
         : { retryAfterSeconds: classified.retryAfterSeconds }),
@@ -58,14 +60,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const parsed = errorBodySchema.safeParse(candidate);
     if (!parsed.success) {
       this.logger.error(
-        { issues: parsed.error.issues, correlationId, path: request.url },
+        { issues: parsed.error.issues, correlationId, path },
         'Body lỗi không khớp hợp đồng — trả lỗi hệ thống',
       );
       reply.status(500).send({
         ...UNAVAILABLE,
         traceId: correlationId,
         timestamp: candidate.timestamp,
-        path: request.url,
+        path,
       });
       return;
     }

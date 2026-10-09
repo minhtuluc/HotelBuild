@@ -71,3 +71,13 @@ Các test `test/idempotency/` bắt buộc PostgreSQL 16 và Redis 7 thật; thi
 thì fail, không skip. Dùng DB tạm riêng, Redis DB11 và dữ liệu tổng hợp. Bộ test có
 HTTP đồng thời, sửa quyền/phạm vi sau lệnh đầu, lỗi audit/lưu response, SIGKILL trước
 và trong transaction, lease fencing, mất Redis và TTL có row lock.
+
+### Retry toàn transaction theo ADR-014
+
+Workflow DB có thể ném `RetryTransaction(AppError)` để yêu cầu bỏ **toàn bộ**
+transaction nghiệp vụ và chạy lại handler với transaction mới. Tối đa ba lần,
+Có jitter giữa các lần, ngoài transaction. Claim bền không bị bù trong lúc retry;
+mỗi lần vẫn khoá và kiểm token/lease trước khi chạy. Hết ba lần trả AppError
+đã chỉ định và bù claim. Mọi lỗi khác giữ hành vi rollback/bù cũ, không tự retry.
+Workflow phải đọc lại facts, quyền đối tượng và trạng thái sau các khoá; không
+thực hiện I/O ngoài DB, thay đổi response header hoặc giữ dữ liệu attempt trước.

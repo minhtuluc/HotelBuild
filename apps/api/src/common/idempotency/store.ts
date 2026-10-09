@@ -1,3 +1,6 @@
+import { randomInt } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
+import { RetryTransaction } from './transaction-retry.js';
 import { Prisma } from '@prisma/client';
 import type { PrismaClient, idempotency_keys } from '@prisma/client';
 import type { Clock, IdGenerator } from '@pinehill/domain';
@@ -124,34 +127,43 @@ export class IdempotencyStore {
     operation: (tx: Prisma.TransactionClient) => Promise<CommandResponse>,
   ): Promise<CommandResponse> {
     try {
-      return await this.db.$transaction(async (tx) => {
-        await tx.$executeRaw`SET LOCAL lock_timeout = '250ms'`;
-        await tx.$queryRaw`SELECT id FROM idempotency_keys WHERE id=${claim.id}::uuid FOR UPDATE`;
-        const row = await tx.idempotency_keys.findUnique({ where: { id: claim.id } });
-        if (
-          !row ||
-          row.status !== 'IN_PROGRESS' ||
-          row.lease_token !== claim.token ||
-          row.lease_expires_at.getTime() <= this.clock.now().getTime()
-        )
-          throw inProgress();
-        // The fence row stays locked; each use case owns policy for its business resource locks.
-        await tx.$executeRaw`SET LOCAL lock_timeout = DEFAULT`;
-        const result = await operation(tx);
-        const response = normalizeResponse(result.status, result.body, result.headers);
-        const saved = await tx.idempotency_keys.updateMany({
-          where: { id: claim.id, lease_token: claim.token, status: 'IN_PROGRESS' },
-          data: {
-            status: 'COMPLETED',
-            response_status: response.status,
-            response_body_json: response.body === null ? Prisma.JsonNull : response.body,
-            response_headers_json: { ...response.headers },
-            updated_at: this.clock.now(),
-          },
-        });
-        if (saved.count !== 1) throw inProgress();
-        return response;
-      }, transactionOptions);
+      for (let attempt = 1; ; attempt++) {
+        try {
+          return await this.db.$transaction(async (tx) => {
+            await tx.$executeRaw`SET LOCAL lock_timeout = '250ms'`;
+            await tx.$queryRaw`SELECT id FROM idempotency_keys WHERE id=${claim.id}::uuid FOR UPDATE`;
+            const row = await tx.idempotency_keys.findUnique({ where: { id: claim.id } });
+            if (
+              !row ||
+              row.status !== 'IN_PROGRESS' ||
+              row.lease_token !== claim.token ||
+              row.lease_expires_at.getTime() <= this.clock.now().getTime()
+            )
+              throw inProgress();
+            // The fence row stays locked; each use case owns policy for its business resource locks.
+            await tx.$executeRaw`SET LOCAL lock_timeout = DEFAULT`;
+            const result = await operation(tx);
+            const response = normalizeResponse(result.status, result.body, result.headers);
+            const saved = await tx.idempotency_keys.updateMany({
+              where: { id: claim.id, lease_token: claim.token, status: 'IN_PROGRESS' },
+              data: {
+                status: 'COMPLETED',
+                response_status: response.status,
+                response_body_json: response.body === null ? Prisma.JsonNull : response.body,
+                response_headers_json: { ...response.headers },
+                updated_at: this.clock.now(),
+              },
+            });
+            if (saved.count !== 1) throw inProgress();
+            return response;
+          }, transactionOptions);
+        } catch (error) {
+          if (!(error instanceof RetryTransaction)) throw error;
+          if (attempt >= 3) throw error.exhausted;
+          // Outside the discarded transaction; recheck the claim fence on every new attempt.
+          await delay(randomInt(5, 26));
+        }
+      }
     } catch (error) {
       // A killed process cannot compensate; its committed claim remains recoverable by lease takeover.
       await this.db.$executeRaw`WITH owned AS (
