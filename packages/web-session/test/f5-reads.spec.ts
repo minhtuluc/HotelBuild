@@ -77,3 +77,15 @@ test('self profile endpoints reject unauthenticated and staff sessions', async (
     expect((await f.raw(path, undefined, staff.accessToken)).status).toBe(403);
   }
 });
+
+test('matching channel filters preserve the original channel code rather than the opaque channelId', async () => {
+  const owner = await f.actor();
+  const web = await f.booking(owner);
+  const phone = await f.booking(owner, 'journey-standard', 'FLEX7', 'PHONE');
+  expect(
+    (await owner.bookings.list({ channelCode: 'WEB' })).data.data.map((row) => row.id),
+  ).toEqual([web.id]);
+  expect(
+    (await owner.bookings.list({ channelCode: 'PHONE' })).data.data.map((row) => row.id),
+  ).toEqual([phone.id]);
+});

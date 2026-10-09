@@ -6,7 +6,12 @@ import {
   createQuoteApi,
   createRefundApi,
 } from '@pinehill/api-client';
-import { tokenPairSchema, pinTokenSchema, type BookingSummary } from '@pinehill/contracts';
+import {
+  tokenPairSchema,
+  pinTokenSchema,
+  type BookingSummary,
+  type BookingCreateRequest,
+} from '@pinehill/contracts';
 import { startFakeApi } from '../../../tests/e2e/fake-api/server.js';
 import { quoteInput, bookingInput } from './journey-fixtures.js';
 export function setup() {
@@ -86,15 +91,22 @@ export function setup() {
     owner: Awaited<ReturnType<typeof actor>>,
     propertyId = 'journey-standard',
     ratePlanCode: typeof quoteInput.ratePlanCode = 'FLEX7',
+    channelCode: BookingCreateRequest['channelCode'] = 'WEB',
   ): Promise<BookingSummary> {
     const quote = (
-      await createQuoteApi(owner.client).quote({ ...quoteInput, propertyId, ratePlanCode })
+      await createQuoteApi(owner.client).quote({
+        ...quoteInput,
+        propertyId,
+        ratePlanCode,
+        channelCode,
+      })
     ).data;
     return (
       await owner.bookings.create({
         ...bookingInput,
         propertyId,
         ratePlanCode,
+        channelCode,
         quoteId: quote.quoteId,
       })
     ).data;

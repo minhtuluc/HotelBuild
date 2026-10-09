@@ -55,12 +55,12 @@ export function readResponse(
   if (query.sort && !['createdAt', '-createdAt'].includes(query.sort))
     return error(request, 400, 'E_GEN_VALIDATION_FAILED');
   const all = (state.context.listBookings?.() ?? [])
-    .filter((stored) => state.booking(stored.value.id, actor) !== undefined)
+    .filter((stored) => state.booking(stored.value.id, actor) !== undefined &&
+      (!query.channelCode || stored.channelCode === query.channelCode))
     .map((stored) => stored.value)
     .filter((value) =>
       (!query.propertyId || value.propertyId === query.propertyId) &&
       (!query.status || value.status === query.status) &&
-      (!query.channelCode || value.channelId === query.channelCode) &&
       (!query.from || value.checkIn >= query.from) &&
       (!query.to || value.checkIn <= query.to) &&
       (!query.q || value.code.toLowerCase().includes(query.q.toLowerCase())),

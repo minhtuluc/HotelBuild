@@ -11,7 +11,7 @@ import {
   type BookingSummary,
   type Hold,
 } from '../../../../packages/contracts/src/index.js';
-import type { FakeApiContext, FakeHandler, FakeRequest, FakeResponse } from '../core/types.js';
+import type { FakeApiContext, FakeHandler, FakeRequest, FakeResponse, FakeBooking } from '../core/types.js';
 import { ratePlans, dates, quoted, held, booked, publicProperties } from './fixtures.js';
 interface StoredQuote {
   input: QuoteRequest;
@@ -53,7 +53,7 @@ export function createHandler(context: FakeApiContext): FakeHandler {
   const quotes = new Map<string, StoredQuote>();
   const holds = new Map<string, { value: Hold; owner: string }>();
   const duplicateBookings = new Map<string, BookingSummary>();
-  const bookings = new Map<string, { value: BookingSummary; owner: string }>();
+  const bookings = new Map<string, FakeBooking>();
   const guestIds = new Map<string, string>();
   const getGuestId = (owner: string) => {
     let id = guestIds.get(owner);
@@ -112,7 +112,7 @@ export function createHandler(context: FakeApiContext): FakeHandler {
       input.propertyId === 'journey-duplicate' ? duplicateBookings.get(duplicateKey) : undefined;
     const value = prior ?? { ...booked(input, stored.value), guestId: getGuestId(owner) };
     if (input.propertyId === 'journey-duplicate') duplicateBookings.set(duplicateKey, value);
-    bookings.set(value.id, { value, owner });
+    bookings.set(value.id, { value, owner, channelCode: input.channelCode });
     return { status: 201, body: value };
   }
   function idempotent(

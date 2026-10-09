@@ -1,4 +1,4 @@
-import type { BookingSummary, UserSummary } from '../../../../packages/contracts/src/index.js';
+import type { BookingSummary, UserSummary, ChannelCode } from '../../../../packages/contracts/src/index.js';
 export interface FakeActor {
   key: string;
   guest: boolean;
@@ -6,6 +6,7 @@ export interface FakeActor {
   propertyIds: string[];
 }
 export interface FakeBooking {
+  channelCode: ChannelCode;
   value: BookingSummary;
   owner: string;
 }
