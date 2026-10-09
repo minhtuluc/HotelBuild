@@ -243,5 +243,33 @@ test('mọi app Expo có build Android Hermes để products:build không bỏ q
     assert.match(build, /expo export/, entry.name);
     assert.match(build, /--platform android/, entry.name);
     assert.doesNotMatch(build, /--no-bytecode|--dev/, entry.name);
+    assert.match(build, /check-android-hermes\.mjs/, entry.name);
+  }
+});
+
+test('Hermes build gate validates the exported Android artifact and rejects JSC/missing/empty bundles', async () => {
+  const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = await import('node:path');
+  const { spawnSync } = await import('node:child_process');
+  const { fileURLToPath } = await import('node:url');
+  const script = new URL('../scripts/check-android-hermes.mjs', import.meta.url);
+async function fixture(bundle, content) {
+  const root = await mkdtemp(path.join(tmpdir(), 'pinehill-hermes-'));
+  const dist = path.join(root, 'dist');
+  await mkdir(dist);
+  await writeFile(path.join(dist, 'metadata.json'), JSON.stringify({ fileMetadata: { android: { bundle } } }));
+  if (content !== undefined) await writeFile(path.join(dist, bundle), content);
+  return { root, run: () => spawnSync(process.execPath, [fileURLToPath(script), dist], { encoding: 'utf8' }) };
+}
+  for (const [bundle, content, succeeds] of [
+    ['entry.hbc', 'synthetic-bytecode-fixture', true],
+    ['entry.js', 'synthetic-JSC', false],
+    ['entry.hbc', undefined, false],
+    ['entry.hbc', '', false],
+  ]) {
+    const f = await fixture(bundle, content);
+    try { assert.equal(f.run().status === 0, succeeds, bundle); }
+    finally { await rm(f.root, { recursive: true, force: true }); }
   }
 });

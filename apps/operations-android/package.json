@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "build": "expo export --platform android --output-dir dist --max-workers 2"
+    "build": "expo export --platform android --output-dir dist --max-workers 2 && node ../../scripts/check-android-hermes.mjs dist"
   },
   "dependencies": {
     "@expo/metro-runtime": "^57.0.16",
