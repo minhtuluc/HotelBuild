@@ -19,6 +19,8 @@ import { RedisHealthProbe } from './infrastructure/health/redis-health-probe.js'
 import { RbacModule } from './common/rbac/rbac.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { SysModule } from './modules/sys/sys.module.js';
+import { IdempotencyModule } from './modules/sys/idempotency/idempotency.module.js';
+import { IdempotencyInterceptor } from './common/idempotency/interceptor.js';
 
 @Module({})
 export class AppModule {
@@ -42,6 +44,7 @@ export class AppModule {
         RedisModule.register(),
         AuthModule,
         RbacModule,
+        IdempotencyModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },
@@ -58,6 +61,7 @@ export class AppModule {
         { provide: APP_GUARD, useClass: RbacGuard },
         { provide: APP_INTERCEPTOR, useClass: ScopeDenialInterceptor },
         { provide: APP_INTERCEPTOR, useClass: CorrelationInterceptor },
+        { provide: APP_INTERCEPTOR, useExisting: IdempotencyInterceptor },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
       ],
       exports: [CONFIG, ID_GENERATOR, CLOCK, HEALTH_PROBES],
