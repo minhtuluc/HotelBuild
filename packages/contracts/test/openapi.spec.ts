@@ -124,6 +124,9 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['patch', '/api/v1/housekeeping/tasks/{taskId}', 'bearer'],
   ['get', '/api/v1/guests', 'bearer'],
   ['post', '/api/v1/guests', 'bearer'],
+  // HB-105: khách tự đọc hồ sơ/điểm của chính mình (phiên khách).
+  ['get', '/api/v1/guests/me', 'bearer'],
+  ['get', '/api/v1/guests/me/loyalty', 'bearer'],
   ['post', '/api/v1/reconciliation/daily/close', 'bearer'],
   // F8 (HB-160): báo cáo, xuất báo cáo, thông báo, CRM quản trị.
   ['get', '/api/v1/reports/occupancy', 'bearer'],
@@ -157,7 +160,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 83 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3)', () => {
+  it('có đủ 85 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3 và tuyến self của HB-105)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -228,6 +231,8 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/housekeeping/tasks',
         '/api/v1/housekeeping/tasks/{taskId}',
         '/api/v1/guests',
+        '/api/v1/guests/me',
+        '/api/v1/guests/me/loyalty',
         '/api/v1/reconciliation/daily/close',
         '/api/v1/reports/occupancy',
         '/api/v1/reports/adr-revpar',

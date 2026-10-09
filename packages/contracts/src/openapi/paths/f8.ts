@@ -178,6 +178,34 @@ export function registerF8Paths(registry: OpenAPIRegistry, errorBodyComponent: z
   });
 
   registry.registerPath({
+    method: 'get',
+    path: '/api/v1/guests/me',
+    operationId: 'guestsMe',
+    summary: 'Hồ sơ của chính khách đang đăng nhập (phiên khách, UC-CRM-01, HB-105)',
+    tags: ['crm'],
+    ...bearerRead,
+    responses: {
+      200: { description: 'Hồ sơ khách', ...jsonBody(guestSummarySchema) },
+      401: errorResponse('E_AUTH_INVALID_CREDENTIALS'),
+      403: errorResponse('E_RBAC_FORBIDDEN'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/guests/me/loyalty',
+    operationId: 'guestsMeLoyalty',
+    summary: 'Hạng, điểm và số đêm tích luỹ của chính khách (phiên khách, UC-CRM-02, HB-105)',
+    tags: ['crm'],
+    ...bearerRead,
+    responses: {
+      200: { description: 'Hồ sơ khách hàng thân thiết', ...jsonBody(guestLoyaltySchema) },
+      401: errorResponse('E_AUTH_INVALID_CREDENTIALS'),
+      403: errorResponse('E_RBAC_FORBIDDEN'),
+    },
+  });
+
+  registry.registerPath({
     method: 'post',
     path: '/api/v1/guests/{guestId}/blacklist',
     operationId: 'guestsBlacklistAdd',
