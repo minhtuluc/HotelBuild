@@ -13,6 +13,7 @@ import {
   cancelRequestSchema,
   cancelResponseSchema,
   listResponseSchema,
+  rescheduleRequestSchema,
 } from '@pinehill/contracts';
 import type {
   BookingBalance,
@@ -22,6 +23,7 @@ import type {
   CancelRequest,
   CancelResponse,
   ListPage,
+  RescheduleRequest,
 } from '@pinehill/contracts';
 import type { BookingFilters } from './model';
 
@@ -90,6 +92,22 @@ export async function cancelBooking(
     path: `/bookings/${encodeURIComponent(bookingId)}/cancel`,
     body: cancelRequestSchema.parse(request),
     decoder: cancelResponseSchema,
+  });
+  return response.data;
+}
+
+/** SCR-12: đổi ngày — máy chủ giữ PriceSnapshot cũ và **không** đổi trạng thái booking (BR-BOOK-12,13). */
+export async function rescheduleBooking(
+  session: JourneySession,
+  bookingId: string,
+  request: RescheduleRequest,
+): Promise<BookingSummary> {
+  const client = createJourneyApiClient({ baseUrl: window.location.origin, session });
+  const response = await client.request({
+    method: 'POST',
+    path: `/bookings/${encodeURIComponent(bookingId)}/reschedule`,
+    body: rescheduleRequestSchema.parse(request),
+    decoder: bookingSummarySchema,
   });
   return response.data;
 }
