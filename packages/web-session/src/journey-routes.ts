@@ -12,6 +12,8 @@ import {
   holdCreateRequestSchema,
   holdReleaseQuerySchema,
   holdSchema,
+  guestLoyaltySchema,
+  guestSummarySchema,
   listResponseSchema,
   propertyPublicSummarySchema,
   quoteRequestSchema,
@@ -105,6 +107,24 @@ const staticRoutes = new Map<string, JourneyRoute>([
       protected: false,
       decoder: quoteSchema,
       body: quoteRequestSchema,
+    },
+  ],
+  [
+    'GET guests/me',
+    {
+      method: 'GET',
+      path: '/guests/me',
+      protected: true,
+      decoder: guestSummarySchema,
+    },
+  ],
+  [
+    'GET guests/me/loyalty',
+    {
+      method: 'GET',
+      path: '/guests/me/loyalty',
+      protected: true,
+      decoder: guestLoyaltySchema,
     },
   ],
   [
