@@ -28,6 +28,7 @@ export function displayPhone(raw: string): string {
 export class Session {
   private accessToken: string | null = null;
   private readonly auth: AuthApi;
+  private readonly client: ApiClient;
 
   constructor(private readonly deps: SessionDeps) {
     const client = new ApiClient({
@@ -39,7 +40,16 @@ export class Session {
       ...(deps.fetchImpl === undefined ? {} : { fetchImpl: deps.fetchImpl }),
       ...(deps.sleep === undefined ? {} : { sleep: deps.sleep }),
     });
+    this.client = client;
     this.auth = createAuthApi(client);
+  }
+
+  /**
+   * Client đã gắn access token của phiên (tự refresh im lặng một lần khi 401) — dùng cho các tuyến nghiệp
+   * vụ cần đăng nhập như `POST /holds`, `POST /bookings` (HB-087). Không trả token ra ngoài.
+   */
+  apiClient(): ApiClient {
+    return this.client;
   }
 
   hasAccessToken(): boolean {

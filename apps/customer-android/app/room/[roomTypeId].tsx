@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   color,
   radius,
@@ -261,6 +261,7 @@ function RoomView({
   onSelect,
   onRetry,
   onRenew,
+  onContinue,
 }: {
   view: DetailView;
   selected: RatePlanCode | null;
@@ -268,6 +269,7 @@ function RoomView({
   onSelect: (code: string) => void;
   onRetry: () => void;
   onRenew: () => void;
+  onContinue: () => void;
 }): ReactElement {
   if (view.kind === 'invalid')
     return (
@@ -285,7 +287,10 @@ function RoomView({
     <>
       <PlanPicker plans={view.plans} selected={selected} busy={busy} onSelect={onSelect} />
       {view.quote === null ? null : (
-        <QuoteBlock quote={view.quote} plan={plan} expired={view.expired} onRenew={onRenew} />
+        <>
+          <QuoteBlock quote={view.quote} plan={plan} expired={view.expired} onRenew={onRenew} />
+          <TextAction label={t('hold.open')} onPress={onContinue} />
+        </>
       )}
     </>
   );
@@ -293,6 +298,7 @@ function RoomView({
 
 export default function RoomDetailScreen(): ReactElement {
   const params = useLocalSearchParams<Record<string, string>>();
+  const router = useRouter();
   const criteria: RoomCriteria | null = useMemo(() => criteriaFromParams(params), [params]);
   const roomName =
     typeof params.name === 'string' && params.name !== ''
@@ -360,6 +366,29 @@ export default function RoomDetailScreen(): ReactElement {
         onRetry={retry}
         onRenew={() => {
           if (selected !== null) void runQuote(selected);
+        }}
+        onContinue={() => {
+          if (
+            view.kind !== 'ready' ||
+            view.quote === null ||
+            selected === null ||
+            criteria === null
+          )
+            return;
+          router.push({
+            pathname: '/booking/confirm',
+            params: {
+              propertyId: criteria.propertyId,
+              roomTypeId: criteria.roomTypeId,
+              checkIn: criteria.checkIn,
+              checkOut: criteria.checkOut,
+              adults: String(criteria.adults),
+              children: String(criteria.children),
+              roomCount: String(criteria.roomCount),
+              ratePlanCode: selected,
+              quoteId: view.quote.quoteId,
+            },
+          });
         }}
       />
     </ScrollView>
