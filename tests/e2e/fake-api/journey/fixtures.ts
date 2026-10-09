@@ -6,6 +6,16 @@ import type {
   BookingCreateRequest,
   Hold,
 } from '../../../../packages/contracts/src/index.js';
+/** Cơ sở công khai cho journey khách — chỉ trường công khai (HB-080, `GET /public/properties`). */
+export const publicProperties = [
+  {
+    id: 'synthetic-property',
+    name: 'Synthetic Pine Hill',
+    checkInTime: '14:00',
+    checkOutTime: '12:00',
+  },
+];
+
 export const ratePlans = {
   data: [
     { code: 'FLEX7', name: 'Synthetic flexible', minNights: 1, maxNights: 30, depositPercent: 30 },

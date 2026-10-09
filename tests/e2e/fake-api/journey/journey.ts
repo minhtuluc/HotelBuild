@@ -12,7 +12,7 @@ import {
   type Hold,
 } from '../../../../packages/contracts/src/index.js';
 import type { FakeApiContext, FakeHandler, FakeRequest, FakeResponse } from '../core/types.js';
-import { ratePlans, dates, quoted, held, booked } from './fixtures.js';
+import { ratePlans, dates, quoted, held, booked, publicProperties } from './fixtures.js';
 interface StoredQuote {
   input: QuoteRequest;
   value: Quote;
@@ -125,6 +125,8 @@ export function createHandler(context: FakeApiContext): FakeHandler {
   }
   return (request) => {
     const path = request.url.pathname;
+    if (request.method === 'GET' && path === '/api/v1/public/properties')
+      return { status: 200, body: { data: publicProperties, meta: { limit: 20, nextCursor: null, hasMore: false, total: publicProperties.length } } };
     if (request.method === 'GET' && path === '/api/v1/rate-plans')
       return { status: 200, body: ratePlans };
     if (request.method === 'GET' && path === '/api/v1/inventory/availability') {

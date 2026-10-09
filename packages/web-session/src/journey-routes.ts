@@ -8,6 +8,7 @@ import {
   holdReleaseQuerySchema,
   holdSchema,
   listResponseSchema,
+  propertyPublicSummarySchema,
   quoteRequestSchema,
   quoteSchema,
   ratePlanPublicSchema,
@@ -51,6 +52,15 @@ const staticRoutes = new Map<string, JourneyRoute>([
       protected: false,
       decoder: availabilitySchema,
       query: (input) => parseInput(availabilityQuerySchema, input),
+    },
+  ],
+  [
+    'GET public/properties',
+    {
+      method: 'GET',
+      path: '/public/properties',
+      protected: false,
+      decoder: listResponseSchema(propertyPublicSummarySchema),
     },
   ],
   [

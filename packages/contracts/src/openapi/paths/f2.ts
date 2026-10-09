@@ -20,6 +20,7 @@ import {
 } from '../../inventory.js';
 import {
   connectingRoomRequestSchema,
+  propertyPublicSummarySchema,
   propertySummarySchema,
   propertyUpdateRequestSchema,
   roomBlockCreateRequestSchema,
@@ -64,6 +65,21 @@ export function registerF2Paths(registry: OpenAPIRegistry, errorBodyComponent: z
         ...jsonBody(listResponseSchema(propertySummarySchema)),
       },
       403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/public/properties',
+    operationId: 'publicPropertiesList',
+    summary: 'Danh sách cơ sở cho journey khách — chỉ trường công khai (UC-INV-02)',
+    tags: ['prop'],
+    // Công khai: khách chọn cơ sở trước khi đăng nhập/giữ chỗ; không lộ cờ nội bộ.
+    responses: {
+      200: {
+        description: 'Danh sách cơ sở công khai',
+        ...jsonBody(listResponseSchema(propertyPublicSummarySchema)),
+      },
     },
   });
 
