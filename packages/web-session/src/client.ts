@@ -11,8 +11,8 @@ export interface SessionClientOptions {
   onExpired?: () => void;
 }
 export function createSessionClient(options: SessionClientOptions) {
-  const coordinator =
-    options.coordinator ?? new SessionCoordinator({ name: `pinehill-session-${options.kind}` });
+  let coordinator = options.coordinator;
+  let unsubscribe: (() => void) | undefined;
   const now = options.now ?? Date.now;
   const fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
   let inFlight: Promise<string | null> | undefined,
@@ -41,7 +41,13 @@ export function createSessionClient(options: SessionClientOptions) {
       Math.min(2147483647, Math.max(1, state.expiresAt - now() - margin(state))),
     );
   };
-  const unsubscribe = coordinator.subscribe(changed);
+  function getCoordinator(): SessionCoordinator {
+    if (disposed) throw new Error('Session client is disposed');
+    // Client components also render on the server. Browser resources belong to operations.
+    coordinator ??= new SessionCoordinator({ name: `pinehill-session-${options.kind}` });
+    unsubscribe ??= coordinator.subscribe(changed);
+    return coordinator;
+  }
   async function post(action: string, body?: unknown, token?: string): Promise<unknown> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
@@ -83,11 +89,12 @@ export function createSessionClient(options: SessionClientOptions) {
       expiresInSeconds: data.expiresInSeconds,
       mustChangePassword: data.mustChangePassword,
     };
-    coordinator.publish({ ...session, expiresAt: now() + session.expiresInSeconds * 1000 });
+    getCoordinator().publish({ ...session, expiresAt: now() + session.expiresInSeconds * 1000 });
     return session;
   }
-  function refresh(rejectedToken?: string): Promise<string | null> {
-    if (disposed) return Promise.resolve(null);
+  async function refresh(rejectedToken?: string): Promise<string | null> {
+    if (disposed) return null;
+    const coordinator = getCoordinator();
     inFlight ??= coordinator
       .run(async () => {
         try {
@@ -107,31 +114,34 @@ export function createSessionClient(options: SessionClientOptions) {
     return inFlight;
   }
   return {
-    login: (input: unknown) => coordinator.run(() => issue('login', input)),
+    login: async (input: unknown) => getCoordinator().run(() => issue('login', input)),
     refresh,
     getAccessToken: async (): Promise<string | null> => {
       if (disposed || expired) return null;
-      const state = coordinator.current();
+      const state = getCoordinator().current();
       return valid(state) ? state.accessToken : refresh();
     },
     onUnauthorized: async (rejectedToken?: string): Promise<boolean> => {
-      const used = rejectedToken ?? coordinator.current()?.accessToken;
+      if (disposed) return false;
+      const used = rejectedToken ?? getCoordinator().current()?.accessToken;
       return (await refresh(used)) !== null;
     },
-    logout: () =>
-      coordinator.run(async () => {
+    logout: async () => {
+      const coordinator = getCoordinator();
+      return coordinator.run(async () => {
         try {
           const state = await coordinator.readShared();
           await post('logout', undefined, state?.accessToken);
         } finally {
           coordinator.publish(undefined);
         }
-      }),
+      });
+    },
     dispose: () => {
       disposed = true;
       clearTimeout(timer);
-      unsubscribe();
-      coordinator.dispose();
+      unsubscribe?.();
+      coordinator?.dispose();
     },
   };
 }
