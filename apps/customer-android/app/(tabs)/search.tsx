@@ -7,6 +7,7 @@
  */
 import { useCallback, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { color, radius, space, touchTargetDp, typography } from '@pinehill/ui-native';
 import { createAppApiClient } from '../../src/api';
 import { createPublicJourneyApi } from '../../src/public-client';
@@ -74,7 +75,7 @@ function Field({
   );
 }
 
-function ResultRow({ row }: { row: SearchRow }): ReactElement {
+function ResultRow({ row, onOpen }: { row: SearchRow; onOpen: () => void }): ReactElement {
   const availability = row.soldOut
     ? t('search.row.soldOut')
     : t('search.row.available', { count: row.availableCount });
@@ -104,11 +105,20 @@ function ResultRow({ row }: { row: SearchRow }): ReactElement {
         {t('search.row.nights', { min: row.minNights, max: row.maxNights })} ·{' '}
         {t('search.row.capacity', { count: row.capacityAdults })}
       </Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${t('room.open')} ${row.name}`}
+        onPress={onOpen}
+        style={{ minHeight: touchTargetDp, justifyContent: 'center' }}
+      >
+        <Text style={{ color: color.primary, fontWeight: '700' }}>{t('room.open')}</Text>
+      </Pressable>
     </View>
   );
 }
 
 export default function SearchScreen(): ReactElement {
+  const router = useRouter();
   const api = useMemo(() => createPublicJourneyApi(createAppApiClient()), []);
   const net = useMemo(() => netInfoSource(), []);
   const [criteria, setCriteria] = useState<SearchCriteria>(EMPTY_CRITERIA);
@@ -280,7 +290,25 @@ export default function SearchScreen(): ReactElement {
             {t('search.results.title')}
           </Text>
           {searchRows(outcome.availability).map((row) => (
-            <ResultRow key={row.roomTypeId} row={row} />
+            <ResultRow
+              key={row.roomTypeId}
+              row={row}
+              onOpen={() => {
+                router.push({
+                  pathname: '/room/[roomTypeId]',
+                  params: {
+                    roomTypeId: row.roomTypeId,
+                    name: row.name,
+                    propertyId: criteria.propertyId,
+                    checkIn: criteria.checkIn,
+                    checkOut: criteria.checkOut,
+                    adults: String(criteria.adults),
+                    children: String(criteria.children),
+                    roomCount: String(criteria.roomCount),
+                  },
+                });
+              }}
+            />
           ))}
         </View>
       )}
