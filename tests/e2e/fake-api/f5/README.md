@@ -72,3 +72,5 @@ E2E này kiểm plumbing phiên/client/fixture trên shell hiện có. Các màn
 - `GET /bookings`: xác thực guest/staff; guest chỉ đơn của mình, staff chỉ cơ sở trong phạm vi và vai trò được đọc booking. Hỗ trợ `limit`, `cursor`, `propertyId`, `status`, `channelCode`, `q` (mã đơn), `from`/`to` (ngày đến), `sort=createdAt|-createdAt`. Cursor thuộc kết quả sau lọc; sai cursor trả 400. Đọc collection cùng các lệnh cancel/reschedule/delete, không dựng danh sách độc lập.
 - `GET /guests/me`, `/guests/me/loyalty`: chỉ phiên guest; hồ sơ synthetic theo actor, cùng guestId với đơn tạo mới. Không sao chép phone/token đăng nhập vào hồ sơ giả.
 - Fake PIN/counter payment/refund maker-checker đã có để thi công UI_ONLY HB-109/110. Đây không phải bằng chứng cho backend HB-015/096/099/100; binding purpose/amount và payout thật chưa được fake xác nhận.
+
+- `GET /auth/me`: staff-only identity dùng cùng actorId với `RefundRequest.requestedBy`, role/propertyScope theo cấu hình fixture; PIN mặc định synthetic `123456` được phản ánh bằng `hasPin=true`. Dùng để HB-110 ẩn tự duyệt, không giải mã token để lấy ID. Guest bị403, thiếu phiên401.

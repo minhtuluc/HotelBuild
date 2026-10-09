@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { guestLoyaltySchema, guestSummarySchema } from '@pinehill/contracts';
+import { guestLoyaltySchema, guestSummarySchema, userMeSchema } from '@pinehill/contracts';
 import { setup } from './f5-fixtures.js';
 const f = setup();
 test('booking list requires a valid actor and only exposes the guest own bookings', async () => {
@@ -88,4 +88,47 @@ test('matching channel filters preserve the original channel code rather than th
   expect(
     (await owner.bookings.list({ channelCode: 'PHONE' })).data.data.map((row) => row.id),
   ).toEqual([phone.id]);
+});
+
+test('staff self identity matches the refund maker and reflects configured role/property scope', async () => {
+  const guest = await f.actor();
+  const maker = await f.actor('synthetic-maker', 'FRONT_DESK');
+  const checker = await f.actor('synthetic-checker', 'MANAGER');
+  const booking = await f.booking(guest);
+  await maker.verify(booking.id);
+  const payment = (
+    await maker.payments.create({
+      bookingId: booking.id,
+      type: 'DEPOSIT',
+      method: 'CASH',
+      amount: booking.depositAmount,
+    })
+  ).data;
+  const refund = (
+    await maker.refunds.create({
+      bookingId: booking.id,
+      paymentId: payment.paymentId,
+      reason: 'GUEST_REQUEST',
+      isForceMajeure: false,
+    })
+  ).data;
+  const response = await f.raw('/auth/me', undefined, maker.accessToken);
+  expect(response.status).toBe(200);
+  const me = userMeSchema.parse(await response.json());
+  expect(me).toMatchObject({
+    userId: refund.requestedBy,
+    role: 'FRONT_DESK',
+    propertyScope: ['journey-standard'],
+    hasPin: true,
+    mustChangePassword: false,
+  });
+  const checkerResponse = await f.raw('/auth/me', undefined, checker.accessToken);
+  expect(checkerResponse.status).toBe(200);
+  expect(userMeSchema.parse(await checkerResponse.json())).toMatchObject({
+    userId: checker.name,
+    role: 'MANAGER',
+  });
+  expect(me.userId).not.toBe(checker.name);
+  expect((await f.raw('/auth/me')).status).toBe(401);
+  expect((await f.raw('/auth/me', undefined, guest.accessToken)).status).toBe(403);
 });

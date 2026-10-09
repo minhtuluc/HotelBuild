@@ -13,6 +13,14 @@ export function readResponse(
 ): FakeResponse | undefined {
   const path = request.url.pathname;
   if (request.method !== 'GET') return undefined;
+  if (path === '/api/v1/auth/me') {
+    if (actor.guest) return error(request, 403, 'E_RBAC_FORBIDDEN');
+    return { status: 200, body: {
+      userId: actor.key, username: actor.key, fullName: 'Nhân viên mô phỏng',
+      role: actor.role, propertyScope: [...actor.propertyIds],
+      hasPin: true, mustChangePassword: false,
+    } };
+  }
   if (path === '/api/v1/guests/me' || path === '/api/v1/guests/me/loyalty') {
     if (!actor.guest) return error(request, 403, 'E_RBAC_FORBIDDEN');
     let profile = profiles.get(actor.key);

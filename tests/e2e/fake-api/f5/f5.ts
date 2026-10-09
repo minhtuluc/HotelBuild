@@ -123,7 +123,7 @@ export function createHandler(context: FakeApiContext): FakeHandler {
       return { status: 200, body: { fixture: true, settled: false } };
     if (
       !path.startsWith('/__control/f5/') &&
-      !/^\/api\/v1\/(payments(?:\/|$)|refund-requests(?:\/|$)|bookings(?:\/|$)|guests\/me(?:\/loyalty)?$|auth\/pin\/verify$)/.test(
+      !/^\/api\/v1\/(payments(?:\/|$)|refund-requests(?:\/|$)|bookings(?:\/|$)|guests\/me(?:\/loyalty)?$|auth\/(?:me|pin\/verify)$)/.test(
         path,
       )
     )
