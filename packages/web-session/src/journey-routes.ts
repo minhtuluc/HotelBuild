@@ -5,6 +5,10 @@ import {
   bookingCreateRequestSchema,
   bookingsQuerySchema,
   bookingSummarySchema,
+  cancelPreviewRequestSchema,
+  cancelPreviewSchema,
+  cancelRequestSchema,
+  cancelResponseSchema,
   holdCreateRequestSchema,
   holdReleaseQuerySchema,
   holdSchema,
@@ -144,22 +148,49 @@ function decodedId(value: string): string | undefined {
     return undefined;
   return id;
 }
-function dynamicRoute(method: string, path: string): JourneyRoute | undefined {
-  const dynamic = /^(holds|bookings)\/([^/]+)$/.exec(path);
-  if (!dynamic) return undefined;
-  const id = decodedId(dynamic[2]!);
-  if (id === undefined) return undefined;
-  const target = `/${dynamic[1]}/${encodeURIComponent(id)}`;
-  if (method === 'GET' && dynamic[1] === 'bookings')
-    return { method: 'GET', path: target, protected: true, decoder: bookingSummarySchema };
-  if (method === 'DELETE' && dynamic[1] === 'holds')
+/**
+ * Hành động trên một booking (SCR-11): chỉ những tên có trong bảng này mới được chuyển tiếp, kèm bộ
+ * giải mã/bộ kiểm thân lệnh theo hợp đồng F5.
+ */
+const BOOKING_ACTIONS: Readonly<
+  Record<string, { readonly decoder: Decoder<unknown>; readonly body: Decoder<unknown> }>
+> = {
+  'cancel-preview': { decoder: cancelPreviewSchema, body: cancelPreviewRequestSchema },
+  cancel: { decoder: cancelResponseSchema, body: cancelRequestSchema },
+};
+
+/** Tuyến trên chính đối tượng (không có hành động phía sau). */
+function objectRoute(method: string, resource: string, base: string): JourneyRoute | undefined {
+  if (method === 'GET' && resource === 'bookings')
+    return { method: 'GET', path: base, protected: true, decoder: bookingSummarySchema };
+  if (method === 'DELETE' && resource === 'holds')
     return {
       method: 'DELETE',
-      path: target,
+      path: base,
       protected: true,
       query: (input) => parseInput(holdReleaseQuerySchema, input),
     };
   return undefined;
+}
+
+function dynamicRoute(method: string, path: string): JourneyRoute | undefined {
+  const dynamic = /^(holds|bookings)\/([^/]+)(?:\/([^/]+))?$/.exec(path);
+  if (!dynamic) return undefined;
+  const resource = dynamic[1]!;
+  const id = decodedId(dynamic[2]!);
+  if (id === undefined) return undefined;
+  const action = dynamic[3];
+  const base = `/${resource}/${encodeURIComponent(id)}`;
+  if (action === undefined) return objectRoute(method, resource, base);
+  const spec = BOOKING_ACTIONS[action];
+  if (method !== 'POST' || resource !== 'bookings' || spec === undefined) return undefined;
+  return {
+    method: 'POST',
+    path: `${base}/${action}`,
+    protected: true,
+    decoder: spec.decoder,
+    body: spec.body,
+  };
 }
 
 export function journeyRoute(request: Request): JourneyRoute | undefined {
