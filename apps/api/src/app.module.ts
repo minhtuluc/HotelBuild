@@ -6,6 +6,8 @@ import { CONFIG } from './config/env.js';
 import type { ApiConfig } from './config/env.js';
 import { AllExceptionsFilter } from './common/all-exceptions.filter.js';
 import { CorrelationInterceptor } from './common/correlation.interceptor.js';
+import { RbacGuard } from './common/guards/rbac.guard.js';
+import { ScopeDenialInterceptor } from './common/rbac/scope-denial.interceptor.js';
 import { AuthGuard } from './common/guards/auth.guard.js';
 import { CLOCK, ID_GENERATOR, SystemClock, UuidGenerator } from './infrastructure/ports.js';
 import { PrismaModule } from './infrastructure/prisma/prisma.module.js';
@@ -14,6 +16,7 @@ import { HEALTH_PROBES } from './infrastructure/health/health-probe.js';
 import type { HealthProbe } from './infrastructure/health/health-probe.js';
 import { PostgresHealthProbe } from './infrastructure/health/postgres-health-probe.js';
 import { RedisHealthProbe } from './infrastructure/health/redis-health-probe.js';
+import { RbacModule } from './common/rbac/rbac.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { SysModule } from './modules/sys/sys.module.js';
 
@@ -38,6 +41,7 @@ export class AppModule {
         PrismaModule.register(),
         RedisModule.register(),
         AuthModule,
+        RbacModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },
@@ -51,6 +55,8 @@ export class AppModule {
           ],
         },
         { provide: APP_GUARD, useClass: AuthGuard },
+        { provide: APP_GUARD, useClass: RbacGuard },
+        { provide: APP_INTERCEPTOR, useClass: ScopeDenialInterceptor },
         { provide: APP_INTERCEPTOR, useClass: CorrelationInterceptor },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
       ],

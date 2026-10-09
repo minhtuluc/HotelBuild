@@ -5,6 +5,7 @@ import { AuditWriter } from '../../infrastructure/audit/audit-writer.js';
 import { CLOCK } from '../../infrastructure/ports.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
+import { authPermissions } from './permissions.js';
 import { LoginAttempts } from './login-attempts.js';
 
 const auditWriterProvider: Provider = {
@@ -15,7 +16,7 @@ const auditWriterProvider: Provider = {
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, LoginAttempts, auditWriterProvider],
+  providers: [AuthService, LoginAttempts, auditWriterProvider, authPermissions],
   exports: [AuthService],
 })
 export class AuthModule {}

@@ -14,6 +14,7 @@ import { AppError } from '../../common/app-error.js';
 import { invalidCredentials } from '../../common/guards/auth.guard.js';
 import { AllowPasswordChange, Public } from '../../common/guards/decorators.js';
 import type { AuthenticatedActor } from '../../common/actor/actor-context.js';
+import { Permission } from '../../common/rbac/permissions.js';
 import { AuthService } from './auth.service.js';
 
 function validationError(): AppError {
@@ -56,6 +57,7 @@ export class AuthController {
   }
 
   @AllowPasswordChange()
+  @Permission('auth.logout')
   @Post('logout')
   @HttpCode(204)
   async logout(@Req() request: FastifyRequest): Promise<void> {
@@ -63,6 +65,7 @@ export class AuthController {
   }
 
   @AllowPasswordChange()
+  @Permission('auth.password')
   @Post('password')
   @HttpCode(204)
   async changePassword(@Body() body: unknown, @Req() request: FastifyRequest): Promise<void> {
@@ -75,6 +78,7 @@ export class AuthController {
     });
   }
 
+  @Permission('auth.me')
   @Get('me')
   @HttpCode(200)
   async me(@Req() request: FastifyRequest): Promise<UserMe> {
