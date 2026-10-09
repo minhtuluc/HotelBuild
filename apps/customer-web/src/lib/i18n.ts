@@ -11,6 +11,17 @@ export const customerCatalog = {
   'guest.home.states': 'Bộ trạng thái UI dùng chung',
   'guest.home.openState': 'Mở trạng thái',
   'guest.demo.only': 'Dữ liệu minh hoạ — chưa gọi API nghiệp vụ (F0).',
+  'guest.search.title': 'Tìm phòng trống',
+  'guest.search.intro':
+    'Chọn cơ sở, ngày nhận/trả và số khách. Kết quả tìm phòng là tồn khả dụng theo kỳ đã chọn (UC-INV-02).',
+  'guest.search.property': 'Cơ sở',
+  'guest.search.checkIn': 'Nhận phòng',
+  'guest.search.checkOut': 'Trả phòng',
+  'guest.search.adults': 'Người lớn',
+  'guest.search.children': 'Trẻ em',
+  'guest.search.submit': 'Tìm phòng',
+  'guest.search.error': 'Không tải được danh sách cơ sở. Vui lòng thử lại.',
+  'guest.search.retry': 'Thử lại',
 } as const;
 
 export type CustomerMessageKey = keyof typeof customerCatalog;

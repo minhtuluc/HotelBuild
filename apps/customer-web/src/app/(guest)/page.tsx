@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { webEnv } from '../../config';
 import { t } from '../../lib/i18n';
 import { ApiProbe } from './api-probe';
+import { SearchBlock } from './search/search-block';
 import { STATE_SLUGS } from './states/fixtures';
 
 /** Trang chủ là tuyến động vì đọc cấu hình API ở thời điểm gọi (kiến trúc §7.5). */
@@ -12,6 +13,7 @@ export default function GuestHomePage(): ReactElement {
     <section style={{ padding: 'var(--space-s6, 24px)' }}>
       <h1>t('guest.home.title')</h1>
       <p>t('guest.home.intro')</p>
+      <SearchBlock />
       <section style={{ display: 'grid', gap: 'var(--space-s2, 8px)' }}>
         <h2 style={{ fontSize: 'var(--text-h2, 18px)', margin: 0 }}>{t('api.probe.title')}</h2>
         <ApiProbe baseUrl={webEnv().NEXT_PUBLIC_API_BASE_URL} />

@@ -16,6 +16,17 @@ export const propertySummarySchema = z.object({
   version: z.number().int().min(0),
 });
 
+/**
+ * `GET /api/v1/public/properties` cho journey khách: **chỉ** trường công khai (mã, tên, giờ nhận/trả).
+ * Không lộ số phòng, trần bán vượt, phiên bản hay cấu hình nội bộ (BR-PROP-01,02; api.md §2.14).
+ */
+export const propertyPublicSummarySchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).max(120),
+  checkInTime: clockTime,
+  checkOutTime: clockTime,
+});
+
 /** `PATCH /properties/{propertyId}` — sửa cơ sở, đổi trần bán vượt và giờ nhận/trả (BR-OVER-01,02). */
 export const propertyUpdateRequestSchema = z.strictObject({
   name: z.string().min(1).max(120).optional(),
@@ -96,6 +107,7 @@ export type RoomTypeSummary = z.infer<typeof roomTypeSummarySchema>;
 export type RoomBlock = z.infer<typeof roomBlockSchema>;
 
 export type PropertySummary = z.infer<typeof propertySummarySchema>;
+export type PropertyPublicSummary = z.infer<typeof propertyPublicSummarySchema>;
 export type PropertyUpdateRequest = z.infer<typeof propertyUpdateRequestSchema>;
 export type RoomTypeCreateRequest = z.infer<typeof roomTypeCreateRequestSchema>;
 export type RoomSummary = z.infer<typeof roomSummarySchema>;
