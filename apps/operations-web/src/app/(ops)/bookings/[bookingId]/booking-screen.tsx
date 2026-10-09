@@ -170,6 +170,17 @@ export function BookingScreen({ baseUrl }: { baseUrl: string }): ReactElement {
             <p style={{ margin: 0 }} data-testid="booking-payments-pending">
               {t('ops.bookings.detail.paymentsPending')}
             </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Link href={`/bookings/${bookingId}/cancel`} data-testid="booking-open-cancel">
+                {t('ops.bookings.action.cancel')}
+              </Link>
+              <Link
+                href={`/bookings/${bookingId}/reschedule`}
+                data-testid="booking-open-reschedule"
+              >
+                {t('ops.bookings.action.reschedule')}
+              </Link>
+            </div>
             <p style={{ margin: 0 }} data-testid="booking-actions-pending">
               {t('ops.bookings.detail.actionsPending')}
             </p>
