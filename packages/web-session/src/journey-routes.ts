@@ -3,6 +3,7 @@ import {
   availabilitySchema,
   businessDateSchema,
   bookingCreateRequestSchema,
+  bookingsQuerySchema,
   bookingSummarySchema,
   holdCreateRequestSchema,
   holdReleaseQuerySchema,
@@ -30,6 +31,24 @@ export function parseInput<T>(decoder: Decoder<T>, input: unknown): T {
     throw new JourneyInputError();
   }
 }
+/**
+ * `GET /bookings` — chỉ giữ các khoá `bookingsQuerySchema` cho phép (HB-102); truy vấn lạ bị từ chối
+ * thay vì chuyển tiếp mù sang API (cùng nguyên tắc với `planQuery`).
+ */
+function bookingsQuery(input: Record<string, string>): Record<string, QueryValue> {
+  const parsed = parseInput(bookingsQuerySchema, input);
+  const result: Record<string, QueryValue> = { limit: parsed.limit };
+  if (parsed.cursor !== undefined) result.cursor = parsed.cursor;
+  if (parsed.sort !== undefined) result.sort = parsed.sort;
+  if (parsed.from !== undefined) result.from = parsed.from;
+  if (parsed.to !== undefined) result.to = parsed.to;
+  if (parsed.q !== undefined) result.q = parsed.q;
+  if (parsed.propertyId !== undefined) result.propertyId = parsed.propertyId;
+  if (parsed.status !== undefined) result.status = parsed.status;
+  if (parsed.channelCode !== undefined) result.channelCode = parsed.channelCode;
+  return result;
+}
+
 function planQuery(input: Record<string, string>): Record<string, QueryValue> {
   const validators: Readonly<Record<string, Decoder<string>>> = {
     propertyId: quoteRequestSchema.shape.propertyId,
@@ -81,6 +100,16 @@ const staticRoutes = new Map<string, JourneyRoute>([
       protected: false,
       decoder: quoteSchema,
       body: quoteRequestSchema,
+    },
+  ],
+  [
+    'GET bookings',
+    {
+      method: 'GET',
+      path: '/bookings',
+      protected: true,
+      decoder: listResponseSchema(bookingSummarySchema),
+      query: bookingsQuery,
     },
   ],
   [
