@@ -40,8 +40,7 @@ function passwordChangeRequired(): AppError {
 
 function bearerToken(header: string | undefined): string | null {
   if (header === undefined) return null;
-  const [scheme, value] = header.split(' ');
-  return scheme?.toLowerCase() === 'bearer' && value ? value : null;
+  return /^Bearer +(\S+)$/i.exec(header)?.[1] ?? null;
 }
 
 /** Phiên kèm người dùng (guard xác thực cần cả hai để kiểm trạng thái). */
