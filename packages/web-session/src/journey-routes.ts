@@ -17,6 +17,7 @@ import {
   quoteRequestSchema,
   quoteSchema,
   ratePlanPublicSchema,
+  rescheduleRequestSchema,
 } from '@pinehill/contracts';
 import type { Decoder, HttpMethod, QueryValue } from '@pinehill/api-client';
 export class JourneyInputError extends Error {}
@@ -157,6 +158,7 @@ const BOOKING_ACTIONS: Readonly<
 > = {
   'cancel-preview': { decoder: cancelPreviewSchema, body: cancelPreviewRequestSchema },
   cancel: { decoder: cancelResponseSchema, body: cancelRequestSchema },
+  reschedule: { decoder: bookingSummarySchema, body: rescheduleRequestSchema },
 };
 
 /** Tuyến trên chính đối tượng (không có hành động phía sau). */
