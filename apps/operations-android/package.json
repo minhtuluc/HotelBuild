@@ -9,7 +9,8 @@
     "android": "expo start --android",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "build": "expo export --platform android --output-dir dist --max-workers 2"
   },
   "dependencies": {
     "@expo/metro-runtime": "^57.0.16",

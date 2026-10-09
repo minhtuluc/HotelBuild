@@ -231,3 +231,17 @@ test('mọi workspace chạy vitest đều có test:coverage để CI không b�
   }
   assert.deepEqual(missing, []);
 });
+
+test('mọi app Expo có build Android Hermes để products:build không bỏ qua', async () => {
+  const { readdir, readFile } = await import('node:fs/promises');
+  const apps = new URL('../apps/', import.meta.url);
+  for (const entry of await readdir(apps, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const pkg = JSON.parse(await readFile(new URL(`${entry.name}/package.json`, apps), 'utf8'));
+    if (!pkg.dependencies?.expo) continue;
+    const build = pkg.scripts?.build ?? '';
+    assert.match(build, /expo export/, entry.name);
+    assert.match(build, /--platform android/, entry.name);
+    assert.doesNotMatch(build, /--no-bytecode|--dev/, entry.name);
+  }
+});
