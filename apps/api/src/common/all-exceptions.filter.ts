@@ -53,6 +53,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       traceId: correlationId,
       timestamp: this.clock.now().toISOString(),
       path,
+      ...(classified.details === undefined ? {} : { details: classified.details }),
       ...(classified.retryAfterSeconds === undefined
         ? {}
         : { retryAfterSeconds: classified.retryAfterSeconds }),
@@ -79,12 +80,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
     exception: unknown,
     correlationId: string,
     path: string,
-  ): { status: number; code: ErrorCode; message: string; retryAfterSeconds?: number } {
+  ): {
+    status: number;
+    code: ErrorCode;
+    message: string;
+    retryAfterSeconds?: number;
+    details?: ErrorBody['details'];
+  } {
     if (exception instanceof AppError) {
       return {
         status: exception.status,
         code: exception.code,
         message: exception.message,
+        ...(exception.details === undefined ? {} : { details: exception.details }),
         ...(exception.retryAfterSeconds === undefined
           ? {}
           : { retryAfterSeconds: exception.retryAfterSeconds }),

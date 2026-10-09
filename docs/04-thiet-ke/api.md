@@ -149,6 +149,16 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 | GET | `/api/v1/cancellation-policies` | Chính sách và toàn bộ bậc cùng version | OWNER | `status` | UC-RATE-06 | BR-CANCEL-01,02 |
 | PUT | `/api/v1/cancellation-policies/{policyId}` | Thay toàn bộ bậc trong một transaction; validate mốc, phần trăm, bậc bắt tất | OWNER | `tiers[]`, `earlyCheckoutFreeHours`, `earlyCheckoutRefundPct`, `reason` | UC-RATE-06 | BR-CANCEL-01,02,09 |
 
+Wire tier tương thích HB-050/SCR-70: `hoursBeforeCheckIn = 0` biểu diễn bậc bắt tất
+`offsetHours = -1` của engine/CSDL. `earlyCheckoutFreeHours=0` là sentinel cho
+ngưỡng `null` của engine/CSDL và chỉ đi cùng `earlyCheckoutRefundPct=0` (I6).
+`offsetHours` và `chargeFirstNight` là trường
+tùy chọn bổ sung; nếu có canonical offset thì trường legacy bằng `max(0, offsetHours)`.
+Omit cờ first-night khi cập nhật giữ cờ tier cũ cùng offset (offset mới mặc định false);
+gửi `false` rõ ràng để bỏ cờ. Response trả đủ canonical metadata cho client mới.
+PUT giữ quyền OWNER, If-Match, audit/outbox cùng transaction; `details[].field`
+theo `tiers[i].hoursBeforeCheckIn/refundPercent/chargeFirstNight` chỉ ra dòng sai.
+
 ### 2.5. BOOK — Đặt phòng (8 UC)
 
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |

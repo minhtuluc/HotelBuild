@@ -6,6 +6,10 @@ const percent = z.number().min(0).max(100);
 /** Một bậc huỷ là **dữ liệu** (BR-CANCEL-01); mốc giờ ≥ 0, phần trăm 0–100. */
 export const cancellationTierSchema = z.object({
   hoursBeforeCheckIn: z.number().int().min(0),
+  /** Canonical engine/DB offset; legacy 0h without this field means catch-all -1. */
+  offsetHours: z.number().int().min(-1).optional(),
+  /** Omission preserves the existing tier flag at its offset; new offsets default false. */
+  chargeFirstNight: z.boolean().optional(),
   refundPercent: percent,
   label: z.string().min(1).max(60).optional(),
 });

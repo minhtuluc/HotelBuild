@@ -6813,6 +6813,13 @@
                                   "type": "integer",
                                   "minimum": 0
                                 },
+                                "offsetHours": {
+                                  "type": "integer",
+                                  "minimum": -1
+                                },
+                                "chargeFirstNight": {
+                                  "type": "boolean"
+                                },
                                 "refundPercent": {
                                   "type": "number",
                                   "minimum": 0,
@@ -6973,6 +6980,13 @@
                           "type": "integer",
                           "minimum": 0
                         },
+                        "offsetHours": {
+                          "type": "integer",
+                          "minimum": -1
+                        },
+                        "chargeFirstNight": {
+                          "type": "boolean"
+                        },
                         "refundPercent": {
                           "type": "number",
                           "minimum": 0,
@@ -7049,6 +7063,13 @@
                           "hoursBeforeCheckIn": {
                             "type": "integer",
                             "minimum": 0
+                          },
+                          "offsetHours": {
+                            "type": "integer",
+                            "minimum": -1
+                          },
+                          "chargeFirstNight": {
+                            "type": "boolean"
                           },
                           "refundPercent": {
                             "type": "number",

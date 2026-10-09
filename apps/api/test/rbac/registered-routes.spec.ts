@@ -45,7 +45,8 @@ function handlerRoute(
   if (
     method !== RequestMethod.GET &&
     method !== RequestMethod.POST &&
-    method !== RequestMethod.DELETE
+    method !== RequestMethod.DELETE &&
+    method !== RequestMethod.PUT
   )
     throw new Error('Uncovered HTTP method');
   return { path: `${prefix}/${path}`.replaceAll(/\/+$/g, ''), method };
@@ -88,6 +89,19 @@ function independentOracle(): Record<string, Expected> {
     status: 404,
     method: RequestMethod.DELETE,
   };
+  // HB-057 / BR-RATE-20 / api.md §2.4: only OWNER sees or changes global configuration.
+  for (const path of ['rate-plans/admin', 'cancellation-policies'])
+    keyed[`${RequestMethod.GET}:${path}`] = {
+      roles: ['OWNER'],
+      status: 200,
+      method: RequestMethod.GET,
+    };
+  for (const path of ['rate-plans/:ratePlanId', 'cancellation-policies/:policyId'])
+    keyed[`${RequestMethod.PUT}:${path}`] = {
+      roles: ['OWNER'],
+      status: 428,
+      method: RequestMethod.PUT,
+    };
   return keyed;
 }
 
@@ -104,13 +118,15 @@ test('every discovered protected HTTP route has an independent oracle and runs a
     for (const role of roles) {
       clock.value += 61000;
       const token = await login(role);
-      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':roomBlockId', roomId)}`;
+      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId)}`;
       const pending =
         route.method === RequestMethod.GET
           ? http().get(path)
           : route.method === RequestMethod.DELETE
             ? http().delete(path).query({ reason: 'Synthetic oracle removal' })
-            : http().post(path);
+            : route.method === RequestMethod.PUT
+              ? http().put(path)
+              : http().post(path);
       const result = await pending
         .set('Authorization', `Bearer ${token}`)
         .set('Idempotency-Key', randomUUID())

@@ -13,6 +13,12 @@ import { SystemClock, UuidGenerator } from '../src/infrastructure/ports.js';
 
 @Controller('probe')
 class ProbeController {
+  @Get('details')
+  details(): never {
+    throw new AppError(422, 'E_RATE_CONFIGURATION_INVALID', 'Invalid policy.', undefined, [
+      { field: 'tiers[2].refundPercent', issue: 'NONMONOTONIC' },
+    ]);
+  }
   @Get('known')
   known(): never {
     throw new AppError(404, 'E_GEN_NOT_FOUND', 'Không tìm thấy tài nguyên.');
@@ -29,6 +35,16 @@ class ProbeController {
 class ProbeModule {}
 
 const opened: NestFastifyApplication[] = [];
+
+it('known validation errors retain safe row details for configuration editors', async () => {
+  const { server, errors } = await start();
+  const response = await request(server).get('/probe/details');
+  expect(response.status).toBe(422);
+  expect(errorBodySchema.parse(response.body).details).toEqual([
+    { field: 'tiers[2].refundPercent', issue: 'NONMONOTONIC' },
+  ]);
+  expect(errors).not.toHaveBeenCalled();
+});
 
 function isFastifyInstance(value: unknown): value is FastifyInstance {
   return typeof value === 'object' && value !== null && 'server' in value && 'ready' in value;
