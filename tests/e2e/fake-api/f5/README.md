@@ -66,3 +66,9 @@ Reschedule mô phỏng kỳ mới còn tồn, giữ trạng thái/cọc/cam kế
 Vitest chạy ApiClient/factories thật qua socket HTTP, kiểm phiên/scope/role/PIN/replay và các trạng thái trên. Playwright `f5.spec.ts` chạy cả hai Next app đã build, SessionClient qua cookie HttpOnly/Secure/Strict rồi bearer memory qua CORS đến API giả; không `page.route` F5. Asset `/__test/f5-client.js` chỉ bundle lại client/factories sản phẩm cho browser test, không phải code cho frontend import.
 
 E2E này kiểm plumbing phiên/client/fixture trên shell hiện có. Các màn F5 chưa thi công và chưa có Maestro cho màn F5, nên không nhận đã nghiệm thu UI F5 hoặc thiết bị Android. Làn UI có thể dùng fixture ngay khi HB-116 land, tiếp tục chạy bộ test màn riêng theo ticket.
+
+## Read models dùng chung (bổ sung HB-116)
+
+- `GET /bookings`: xác thực guest/staff; guest chỉ đơn của mình, staff chỉ cơ sở trong phạm vi và vai trò được đọc booking. Hỗ trợ `limit`, `cursor`, `propertyId`, `status`, `channelCode`, `q` (mã đơn), `from`/`to` (ngày đến), `sort=createdAt|-createdAt`. Cursor thuộc kết quả sau lọc; sai cursor trả 400. Đọc collection cùng các lệnh cancel/reschedule/delete, không dựng danh sách độc lập.
+- `GET /guests/me`, `/guests/me/loyalty`: chỉ phiên guest; hồ sơ synthetic theo actor, cùng guestId với đơn tạo mới. Không sao chép phone/token đăng nhập vào hồ sơ giả.
+- Fake PIN/counter payment/refund maker-checker đã có để thi công UI_ONLY HB-109/110. Đây không phải bằng chứng cho backend HB-015/096/099/100; binding purpose/amount và payout thật chưa được fake xác nhận.

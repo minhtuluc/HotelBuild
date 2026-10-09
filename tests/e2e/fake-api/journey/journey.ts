@@ -54,6 +54,17 @@ export function createHandler(context: FakeApiContext): FakeHandler {
   const holds = new Map<string, { value: Hold; owner: string }>();
   const duplicateBookings = new Map<string, BookingSummary>();
   const bookings = new Map<string, { value: BookingSummary; owner: string }>();
+  const guestIds = new Map<string, string>();
+  const getGuestId = (owner: string) => {
+    let id = guestIds.get(owner);
+    if (!id) {
+      id = `synthetic-guest-${crypto.randomUUID()}`;
+      guestIds.set(owner, id);
+    }
+    return id;
+  };
+  context.getGuestId = getGuestId;
+  context.listBookings = () => [...bookings.values()];
   context.getBooking = (id) => bookings.get(id);
   context.deleteBooking = (id) => {
     bookings.delete(id);
@@ -99,7 +110,7 @@ export function createHandler(context: FakeApiContext): FakeHandler {
     ]);
     const prior =
       input.propertyId === 'journey-duplicate' ? duplicateBookings.get(duplicateKey) : undefined;
-    const value = prior ?? booked(input, stored.value);
+    const value = prior ?? { ...booked(input, stored.value), guestId: getGuestId(owner) };
     if (input.propertyId === 'journey-duplicate') duplicateBookings.set(duplicateKey, value);
     bookings.set(value.id, { value, owner });
     return { status: 201, body: value };

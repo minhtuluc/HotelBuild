@@ -10,6 +10,8 @@ import type {
 import { FixtureState, error, now } from './state.js';
 import { paymentResponse, settle } from './payments.js';
 import { refundResponse } from './refunds.js';
+import { readResponse } from './reads.js';
+import type { GuestSummary } from '../../../../packages/contracts/src/index.js';
 import { bookingResponse } from './bookings.js';
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -114,13 +116,14 @@ function control(state: FixtureState, request: FakeRequest, actor: FakeActor): F
 }
 export function createHandler(context: FakeApiContext): FakeHandler {
   const state = new FixtureState(context);
+  const profiles = new Map<string, GuestSummary>();
   return (request) => {
     const path = request.url.pathname;
     if (/^\/__test\/f5\/payments\/[^/]+$/.test(path) && request.method === 'GET')
       return { status: 200, body: { fixture: true, settled: false } };
     if (
       !path.startsWith('/__control/f5/') &&
-      !/^\/api\/v1\/(payments(?:\/|$)|refund-requests(?:\/|$)|bookings\/|auth\/pin\/verify$)/.test(
+      !/^\/api\/v1\/(payments(?:\/|$)|refund-requests(?:\/|$)|bookings(?:\/|$)|guests\/me(?:\/loyalty)?$|auth\/pin\/verify$)/.test(
         path,
       )
     )
@@ -129,6 +132,7 @@ export function createHandler(context: FakeApiContext): FakeHandler {
     if (!actor) return error(request, 401, 'E_AUTH_INVALID_CREDENTIALS');
     if (path.startsWith('/__control/f5/')) return control(state, request, actor);
     return (
+      readResponse(state, profiles, request, actor) ??
       paymentResponse(state, request, actor) ??
       refundResponse(state, request, actor) ??
       bookingResponse(state, request, actor)
