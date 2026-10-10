@@ -66,6 +66,19 @@ async function closeQueues(
   }
 }
 
+async function closeQueuesAndBlocker(
+  queue: QueueLike,
+  admin: QueueLike,
+  proxy: Awaited<ReturnType<typeof redisProxy>>,
+  blocker: ReturnType<typeof createServer>,
+): Promise<void> {
+  try {
+    await Promise.all([queue.close(), admin.close(), proxy.close()]);
+  } finally {
+    if (blocker.listening) await new Promise<void>((resolve) => blocker.close(() => resolve()));
+  }
+}
+
 export async function checkRedisRecovery(initiallyDown: boolean): Promise<void> {
   const proxy = await redisProxy(requiredRedisUrl());
   if (initiallyDown) await proxy.cut();
@@ -159,8 +172,7 @@ export async function checkRestoreFailureCleanup(): Promise<void> {
       try {
         (await queue.client).disconnect();
       } finally {
-        await Promise.all([queue.close(), admin.close(), proxy.close()]);
-        if (blocker.listening) await new Promise<void>((resolve) => blocker.close(() => resolve()));
+        await closeQueuesAndBlocker(queue, admin, proxy, blocker);
       }
     }
   }
