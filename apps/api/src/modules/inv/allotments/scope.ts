@@ -32,7 +32,7 @@ const configurationRow = z.object({
   closedAt: z.string().nullable(),
 });
 
-/** Validated scope/dates; [from,to). One statement snapshot, no lock/write; used is not configuration. */
+/** Validated scope/dates; inclusive [from,to] per api.md§1.5. One statement snapshot, no lock/write; used is not configuration. */
 export async function readAllotmentConfiguration(
   tx: Prisma.TransactionClient,
   scope: AllotmentScope,
@@ -51,7 +51,7 @@ export async function readAllotmentConfiguration(
     FROM (SELECT ${scope.channelId}::uuid AS channel_id, ${scope.roomTypeId}::uuid AS room_type_id) pair
     LEFT JOIN channel_allotment_scopes s USING(channel_id,room_type_id)
     LEFT JOIN channel_allotments a ON a.channel_id=pair.channel_id AND a.room_type_id=pair.room_type_id
-      AND a.date>=${from}::date AND a.date<${to}::date
+      AND a.date>=${from}::date AND a.date<=${to}::date
     ORDER BY a.date
   `,
     );

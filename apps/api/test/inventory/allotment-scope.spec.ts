@@ -14,7 +14,7 @@ describe('HB035 transaction-bound scope helper on PostgreSQL16', () => {
   const scope = () => ({ channelId: channel, roomTypeId: f.type });
   const read = () =>
     prisma.$transaction((tx) =>
-      readAllotmentConfiguration(tx, scope(), '2030-02-01', '2030-02-02'),
+      readAllotmentConfiguration(tx, scope(), '2030-02-01', '2030-02-01'),
     );
   beforeAll(async () => {
     f = await allotmentFixture();
@@ -36,7 +36,7 @@ describe('HB035 transaction-bound scope helper on PostgreSQL16', () => {
     ).toEqual([]);
   });
 
-  it('returns configuration fields in date order and uses an exclusive end date', async () => {
+  it('returns configuration fields in date order and includes both boundary dates', async () => {
     await prisma.$transaction(async (tx) => {
       await lockAllotmentScope(tx, scope(), 1n);
       await tx.channel_allotments.createMany({
@@ -52,13 +52,17 @@ describe('HB035 transaction-bound scope helper on PostgreSQL16', () => {
         { date: '2030-02-01', allotment: 2, isClosed: false, closedReason: null, closedAt: null },
       ],
     });
+    const full = await prisma.$transaction((tx) =>
+      readAllotmentConfiguration(tx, scope(), '2030-02-01', '2030-02-02'),
+    );
+    expect(full.items.map((item) => item.date)).toEqual(['2030-02-01', '2030-02-02']);
     expect(allotmentETag((await read()).version)).toBe('"3"');
   });
 
   it('rejects the old group token after a low-version row changes outside the read range', async () => {
     const legacyScope = { channelId: f.legacyChannel, roomTypeId: f.type };
     const before = await prisma.$transaction((tx) =>
-      readAllotmentConfiguration(tx, legacyScope, '2030-01-01', '2030-01-02'),
+      readAllotmentConfiguration(tx, legacyScope, '2030-01-01', '2030-01-01'),
     );
     expect(before.version).toBe(1n);
     await prisma.channel_allotments.updateMany({
@@ -69,7 +73,7 @@ describe('HB035 transaction-bound scope helper on PostgreSQL16', () => {
       prisma.$transaction((tx) => lockAllotmentScope(tx, legacyScope, 1n)),
     ).rejects.toMatchObject({ status: 412, code: 'E_GEN_VERSION_CONFLICT' });
     const after = await prisma.$transaction((tx) =>
-      readAllotmentConfiguration(tx, legacyScope, '2030-01-01', '2030-01-02'),
+      readAllotmentConfiguration(tx, legacyScope, '2030-01-01', '2030-01-01'),
     );
     expect(after.items).toEqual(before.items);
     expect(after.version).toBe(2n);
@@ -281,7 +285,7 @@ describe('HB035 transaction-bound scope helper on PostgreSQL16', () => {
     });
     try {
       await traced.$transaction((tx) =>
-        readAllotmentConfiguration(tx, scope(), '2030-02-01', '2030-02-02'),
+        readAllotmentConfiguration(tx, scope(), '2030-02-01', '2030-02-01'),
       );
       const selects = queries.filter((query) => query.trim().startsWith('SELECT'));
       expect(selects).toHaveLength(1);

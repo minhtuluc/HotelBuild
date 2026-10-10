@@ -34,18 +34,23 @@ describe('HB035 persisted configuration scope on real PostgreSQL16', () => {
   });
 
   it('invalidates the group when MAX(row.version) stays unchanged', async () => {
-    await f.db.query(
-      "UPDATE channel_allotments SET allotment=2 WHERE channel_id=$1 AND date='2030-01-02'",
-      [f.legacyChannel],
-    );
-    expect(
-      (
-        await f.db.query('SELECT MAX(version) FROM channel_allotments WHERE channel_id=$1', [
-          f.legacyChannel,
-        ])
-      ).rows,
-    ).toEqual([{ max: '9' }]);
-    expect(await version(f.legacyChannel)).toEqual([{ version: '2' }]);
+    await f.db.query('BEGIN');
+    try {
+      await f.db.query(
+        "UPDATE channel_allotments SET allotment=2 WHERE channel_id=$1 AND date='2030-01-02'",
+        [f.legacyChannel],
+      );
+      expect(
+        (
+          await f.db.query('SELECT MAX(version) FROM channel_allotments WHERE channel_id=$1', [
+            f.legacyChannel,
+          ])
+        ).rows,
+      ).toEqual([{ max: '9' }]);
+      expect(await version(f.legacyChannel)).toEqual([{ version: '2' }]);
+    } finally {
+      await f.db.query('ROLLBACK');
+    }
   });
 
   it('covers all dates in a pair, separates channels, and ignores cached used-only updates', async () => {
@@ -154,6 +159,8 @@ describe('HB035 persisted configuration scope on real PostgreSQL16', () => {
         ),
       ).rejects.toMatchObject({ code: invalid === null ? '23502' : '23514' });
     }
+    const prior = await version(f.legacyChannel);
+    expect(prior).toHaveLength(1);
     await f.db.query('BEGIN');
     try {
       expect(
@@ -163,7 +170,7 @@ describe('HB035 persisted configuration scope on real PostgreSQL16', () => {
             [f.legacyChannel],
           )
         ).rows,
-      ).toEqual([{ version: '3' }]);
+      ).toEqual([{ version: String(BigInt(prior[0]!.version) + 1n) }]);
     } finally {
       await f.db.query('ROLLBACK');
     }
