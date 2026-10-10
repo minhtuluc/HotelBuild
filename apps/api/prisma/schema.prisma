@@ -205,6 +205,7 @@ model channel_allotments {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model channel_mappings {
+  version                 BigInt     @default(1)
   id                      String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   channel_id              String     @db.Uuid
   room_type_id            String     @db.Uuid
@@ -438,6 +439,7 @@ model outbox_events {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model overbooking_cases {
+  version        BigInt     @default(1)
   id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   property_id    String     @db.Uuid
   date           DateTime   @db.Date

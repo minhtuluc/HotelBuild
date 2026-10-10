@@ -1321,6 +1321,7 @@ DECLARE t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY['bookings','refund_requests','room_moves','room_merges','housekeeping_tasks','properties','room_types',
     'channels','channel_property_settings','channel_allotments','cancellation_policies',
+    'channel_mappings','overbooking_cases',
     'cancellation_tiers','rate_plans','seasons','rate_calendars','promotions','system_settings']
   LOOP
     EXECUTE format('ALTER TABLE %I ADD COLUMN version bigint NOT NULL DEFAULT 1 CHECK (version > 0)', t);
