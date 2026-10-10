@@ -183,6 +183,16 @@ model cancellation_tiers {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model channel_allotment_scopes {
+  channel_id   String     @db.Uuid
+  room_type_id String     @db.Uuid
+  version      BigInt     @default(1)
+  channels     channels   @relation(fields: [channel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  room_types   room_types @relation(fields: [room_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([channel_id, room_type_id])
+}
+
 model channel_allotments {
   id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   channel_id    String     @db.Uuid
@@ -258,6 +268,7 @@ model channels {
   updated_at                DateTime                    @default(now()) @db.Timestamptz(6)
   version                   BigInt                      @default(1)
   bookings                  bookings[]
+  channel_allotment_scopes  channel_allotment_scopes[]
   channel_allotments        channel_allotments[]
   channel_mappings          channel_mappings[]
   channel_property_settings channel_property_settings[]
@@ -796,29 +807,30 @@ model room_moves {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model room_types {
-  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  property_id         String                @db.Uuid
-  code                String
-  name                String
-  capacity_adults     Int                   @db.SmallInt
-  capacity_children   Int                   @default(0) @db.SmallInt
-  base_price          BigInt
-  min_price           BigInt
-  max_price           BigInt
-  allow_shared        Boolean               @default(false)
-  status              String                @default("ACTIVE")
-  created_at          DateTime              @default(now()) @db.Timestamptz(6)
-  updated_at          DateTime              @default(now()) @db.Timestamptz(6)
-  version             BigInt                @default(1)
-  booking_rooms       booking_rooms[]
-  bookings            bookings[]
-  channel_allotments  channel_allotments[]
-  channel_mappings    channel_mappings[]
-  occupancy_snapshots occupancy_snapshots[]
-  overbooking_cases   overbooking_cases[]
-  rate_calendars      rate_calendars[]
-  properties          properties            @relation(fields: [property_id], references: [id], onUpdate: NoAction)
-  rooms               rooms[]
+  id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  property_id              String                     @db.Uuid
+  code                     String
+  name                     String
+  capacity_adults          Int                        @db.SmallInt
+  capacity_children        Int                        @default(0) @db.SmallInt
+  base_price               BigInt
+  min_price                BigInt
+  max_price                BigInt
+  allow_shared             Boolean                    @default(false)
+  status                   String                     @default("ACTIVE")
+  created_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  version                  BigInt                     @default(1)
+  booking_rooms            booking_rooms[]
+  bookings                 bookings[]
+  channel_allotment_scopes channel_allotment_scopes[]
+  channel_allotments       channel_allotments[]
+  channel_mappings         channel_mappings[]
+  occupancy_snapshots      occupancy_snapshots[]
+  overbooking_cases        overbooking_cases[]
+  rate_calendars           rate_calendars[]
+  properties               properties                 @relation(fields: [property_id], references: [id], onUpdate: NoAction)
+  rooms                    rooms[]
 
   @@unique([property_id, code], map: "uq_room_types_property_code")
 }

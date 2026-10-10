@@ -242,6 +242,13 @@ export function registerF2Paths(registry: OpenAPIRegistry, errorBodyComponent: z
     },
   });
 
+  const allotmentETag = {
+    ETag: {
+      description:
+        'Phiên bản cấu hình toàn bộ cặp channelId × roomTypeId, kể cả ngày ngoài khoảng đọc; không lấy MAX phiên bản dòng.',
+      schema: { type: 'string' as const },
+    },
+  };
   registry.registerPath({
     method: 'get',
     path: '/api/v1/channel-allotments',
@@ -253,6 +260,7 @@ export function registerF2Paths(registry: OpenAPIRegistry, errorBodyComponent: z
     responses: {
       200: {
         description: 'Danh sách allotment',
+        headers: allotmentETag,
         ...jsonBody(listResponseSchema(allotmentRowSchema)),
       },
       403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
@@ -268,9 +276,9 @@ export function registerF2Paths(registry: OpenAPIRegistry, errorBodyComponent: z
     parameters: [...idempotencyHeaders, ifMatchHeader],
     request: { body: jsonBody(allotmentPutRequestSchema) },
     responses: {
-      204: { description: 'Đã cập nhật lô allotment' },
+      204: { description: 'Đã cập nhật lô allotment', headers: allotmentETag },
       403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
-      409: errorResponse('E_INV_LOCK_TIMEOUT'),
+      409: errorResponse('E_INV_LOCK_TIMEOUT', 'E_INV_ALLOTMENT_EXCEEDS_ROOMS'),
       412: errorResponse('E_GEN_VERSION_CONFLICT'),
       428: errorResponse('E_GEN_PRECONDITION_REQUIRED'),
     },

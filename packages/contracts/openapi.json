@@ -3622,6 +3622,14 @@
         "responses": {
           "200": {
             "description": "Danh sách allotment",
+            "headers": {
+              "ETag": {
+                "description": "Phiên bản cấu hình toàn bộ cặp channelId × roomTypeId, kể cả ngày ngoài khoảng đọc; không lấy MAX phiên bản dòng.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -3799,7 +3807,15 @@
         },
         "responses": {
           "204": {
-            "description": "Đã cập nhật lô allotment"
+            "description": "Đã cập nhật lô allotment",
+            "headers": {
+              "ETag": {
+                "description": "Phiên bản cấu hình toàn bộ cặp channelId × roomTypeId, kể cả ngày ngoài khoảng đọc; không lấy MAX phiên bản dòng.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "403": {
             "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
@@ -3812,7 +3828,7 @@
             }
           },
           "409": {
-            "description": "E_INV_LOCK_TIMEOUT",
+            "description": "E_INV_LOCK_TIMEOUT, E_INV_ALLOTMENT_EXCEEDS_ROOMS",
             "content": {
               "application/json": {
                 "schema": {

@@ -24,6 +24,7 @@ export const errorCatalogue = {
   E_AUTH_OUT_OF_SCOPE: { httpStatus: 403, module: 'AUTH' },
   E_INV_NO_AVAILABILITY: { httpStatus: 409, module: 'INV' },
   E_INV_ROOM_TAKEN: { httpStatus: 409, module: 'INV' },
+  E_INV_ALLOTMENT_EXCEEDS_ROOMS: { httpStatus: 409, module: 'INV' },
   E_INV_LOCK_TIMEOUT: { httpStatus: 409, module: 'INV' },
   E_RATE_BELOW_FLOOR: { httpStatus: 422, module: 'RATE' },
   E_RATE_QUOTE_EXPIRED: { httpStatus: 410, module: 'RATE' },

@@ -128,6 +128,8 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 | GET | `/api/v1/channel-allotments` | Allotment theo kênh × loại phòng × ngày | MANAGER | `channelId`, `roomTypeId`, `from`, `to` | UC-INV-03 | BR-INV-05, BR-CHAN-01,08 |
 | PUT | `/api/v1/channel-allotments` | Đặt lại allotment theo lô trong một transaction | MANAGER | `channelId`, `roomTypeId`, `date`, `allotment` | UC-INV-03 | BR-INV-05, BR-CHAN-01,06 |
 
+**Phiên bản cấu hình allotment (HB-035):** GET `/channel-allotments` đọc các dòng cấu hình và phiên bản của **toàn bộ cặp `(channelId, roomTypeId)`** trong một snapshot SQL; trả `ETag: "<version>"`. Cặp chưa có cấu hình có phiên bản 1. PUT khoá dòng `channel_allotment_scopes` trước khi ghi bất kỳ dòng ngày nào, đối chiếu `If-Match` rồi giữ khoá đến khi transaction chứa batch + AuditLog kết thúc. Thiếu header → 428; token không hợp lệ hoặc cũ → 412. Mọi thay đổi cấu hình, kể cả ngày ngoài khoảng GET, tăng phiên bản; xoá rồi thêm lại không đặt lại bộ đếm. Cột cache `used` không phải cấu hình; cập nhật cache không thay token này. Token phục vụ điều kiện sửa cấu hình, không dùng làm cache validator cho demand động; GET cần `Cache-Control: no-store`. Không lấy `MAX(version)` của các dòng ngày. Writer dùng READ COMMITTED; retry toàn transaction khi gặp 40P01/40001 theo cơ chế hiện có. Đổi scope phải khoá cả hai scope theo thứ tự `(channel_id, room_type_id)` trước khi sửa dòng con.
+
 ### 2.4. RATE — Giá, mùa, kênh và chính sách
 
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |
@@ -632,6 +634,7 @@ Lỗi 5xx **PHẢI** có `traceId` và được ghi log JSON cùng mã đó, **k
 | `E_AUTH_OUT_OF_SCOPE` | 403 | Bạn không được truy cập dữ liệu của cơ sở này. | Ngoài `User.propertyScope` | Chỉ thao tác trên cơ sở được giao (BR-RBAC-02) |
 | `E_INV_NO_AVAILABILITY` | 409 | Loại phòng đã hết trong khoảng ngày đã chọn. | Tồn khả dụng bằng 0 ở ít nhất một đêm — tầng nghiệp vụ | Chọn ngày/loại phòng khác (BR-INV-07) |
 | `E_INV_ROOM_TAKEN` | 409 | Đơn vị bán (phòng hoặc giường) vừa được gán cho khách khác, vui lòng chọn lại. | Ràng buộc loại trừ CSDL từ chối (`23P01`); hệ thống **KHÔNG** nuốt lỗi rồi báo thành công | Tải lại tồn phòng rồi thử lại (BR-INV-03) |
+| `E_INV_ALLOTMENT_EXCEEDS_ROOMS` | 409 | Allotment vượt số đơn vị bán đang hoạt động. | Một hoặc nhiều ngày của batch vượt trần từng kênh (BR-INV-05); rollback cả batch | Sửa các ngày được trả trong details rồi gửi lại |
 | `E_INV_LOCK_TIMEOUT` | 409 | Hệ thống đang xử lý nhiều yêu cầu, vui lòng thử lại. | Không lấy được khoá `(roomTypeId, date)` | Thử lại sau vài trăm ms (BR-INV-02) |
 | `E_RATE_BELOW_FLOOR` | **422** khi áp khuyến mãi ở màn hình cấu hình; **200/201 trong `warnings[]`** khi báo giá trực tuyến | Mã khuyến mãi làm giá thấp hơn giá sàn. | Tổng sau giảm < tổng giá sàn | Cấu hình: chặn lưu, yêu cầu sửa mức giảm. Báo giá: bỏ mã, giữ giá gốc, vẫn cho xác nhận và trả cảnh báo (BR-RATE-12) |
 | `E_RATE_QUOTE_EXPIRED` | 410 | Báo giá đã hết hiệu lực, vui lòng lấy giá mới. | Quá 15 phút kể từ `quotedAt` | Gọi lại `/quotes` (BR-RATE-15) |
