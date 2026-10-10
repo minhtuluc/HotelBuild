@@ -8,7 +8,11 @@ import type { Job } from 'bullmq';
 import { afterEach, describe, expect, it } from 'vitest';
 import { bullmqConstructors, redisOptions } from '../src/bullmq.factory.js';
 import type { JobLike } from '../src/worker-app.js';
-import { checkRedisRecovery, checkSafeErrorsAndDefaultWiring } from './redis-errors.js';
+import {
+  checkRedisRecovery,
+  checkSafeErrorsAndDefaultWiring,
+  checkRestoreFailureCleanup,
+} from './redis-errors.js';
 
 const redisUrl = process.env.REDIS_URL;
 if (!redisUrl) {
@@ -18,6 +22,11 @@ if (!redisUrl) {
 const opened: { close: () => Promise<void> }[] = [];
 
 describe('HB-078 TD-01 — lỗi kết nối BullMQ', () => {
+  it(
+    'đóng client kể cả khi cổng proxy bị chiếm, không nuốt lỗi restore',
+    checkRestoreFailureCleanup,
+    20_000,
+  );
   it(
     'log qua logger đã cấu hình, không đưa nội dung lỗi thô vào log',
     checkSafeErrorsAndDefaultWiring,

@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { createServer } from 'node:net';
 import { Queue, Worker } from 'bullmq';
 import { expect, vi } from 'vitest';
 import { bullmqConstructors, createBullmqDeps, redisOptions } from '../src/bullmq.factory.js';
 import { loadWorkerConfig } from '../src/config/env.js';
 import type { WorkerLogger } from '../src/logger.js';
+import type { QueueLike, WorkerLike } from '../src/worker-app.js';
 import { redisProxy } from './redis-proxy.js';
 
 function logSink() {
@@ -21,6 +23,35 @@ function requiredRedisUrl(): string {
   const url = process.env.REDIS_URL;
   if (!url) throw new Error('HB-078 cần REDIS_URL để kiểm lỗi BullMQ thật');
   return url;
+}
+
+async function closeProbe(
+  proxy: Awaited<ReturnType<typeof redisProxy>>,
+  queue: QueueLike,
+  worker: WorkerLike,
+  admin: Queue,
+): Promise<void> {
+  let restored = false;
+  try {
+    await proxy.restore();
+    restored = true;
+  } finally {
+    try {
+      if (!restored && worker instanceof Worker) await worker.close(true);
+      else await worker.close();
+    } finally {
+      try {
+        await admin.obliterate({ force: true });
+      } finally {
+        try {
+          if (!restored && queue instanceof Queue) await queue.connection.close(true);
+          await Promise.all([queue.close(), admin.close()]);
+        } finally {
+          await proxy.close();
+        }
+      }
+    }
+  }
 }
 
 export async function checkRedisRecovery(initiallyDown: boolean): Promise<void> {
@@ -66,18 +97,46 @@ export async function checkRedisRecovery(initiallyDown: boolean): Promise<void> 
     );
     expect(received).toHaveLength(initiallyDown ? 1 : 2);
   } finally {
-    await proxy.restore();
+    await closeProbe(proxy, queue, worker, admin);
+  }
+}
+
+export async function checkRestoreFailureCleanup(): Promise<void> {
+  const proxy = await redisProxy(requiredRedisUrl());
+  const name = `hb078-cleanup-${randomUUID()}`;
+  const { logger } = logSink();
+  const ctors = bullmqConstructors(logger);
+  const connection = redisOptions(proxy.url);
+  const queue = ctors.createQueue(name, connection);
+  const worker = ctors.createWorker(name, connection, 1, async () => undefined);
+  const admin = new Queue(name, { connection: redisOptions(requiredRedisUrl()) });
+  const blocker = createServer((socket) => socket.destroy());
+  if (!(queue instanceof Queue) || !(worker instanceof Worker)) throw new Error('Cần client thật');
+  try {
+    await Promise.all([queue.waitUntilReady(), worker.waitUntilReady()]);
+    await proxy.cut();
+    await new Promise<void>((resolve, reject) => {
+      blocker.once('error', reject);
+      blocker.listen(Number(new URL(proxy.url).port), '127.0.0.1', () => {
+        blocker.removeListener('error', reject);
+        resolve();
+      });
+    });
+    await expect(closeProbe(proxy, queue, worker, admin)).rejects.toMatchObject({
+      code: 'EADDRINUSE',
+    });
+    expect(queue.closed).toBe(true);
+    expect(worker.closed).toBe(true);
+    expect(admin.closed).toBe(true);
+  } finally {
     try {
-      await worker.close();
+      await worker.close(true);
     } finally {
       try {
-        await admin.obliterate({ force: true });
+        await queue.connection.close(true);
       } finally {
-        try {
-          await Promise.all([queue.close(), admin.close()]);
-        } finally {
-          await proxy.close();
-        }
+        await Promise.all([queue.close(), admin.close(), proxy.close()]);
+        if (blocker.listening) await new Promise<void>((resolve) => blocker.close(() => resolve()));
       }
     }
   }
