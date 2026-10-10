@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { afterAll, afterEach, beforeAll, beforeEach, expect, test } from 'vitest';
+import { expectMigrationHistory } from './baseline-fixture.js';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const owner = process.env.DATABASE_MIGRATION_URL;
@@ -170,9 +171,7 @@ test('HB010 forward deploy adds five auth tables and preserves legacy records', 
   expect(await rows('SELECT phone FROM guests WHERE id=$1', [guest])).toEqual([
     { phone: '+84900000009' },
   ]);
-  expect(
-    await rows('SELECT migration_name FROM _prisma_migrations ORDER BY migration_name'),
-  ).toEqual([{ migration_name: '0001_baseline' }, { migration_name: '0002_auth_sessions' }]);
+  await expectMigrationHistory(db, root);
 });
 
 test('HB010 actual migration catalog equals independent current csdl§3 and redeploy is idempotent', async () => {
