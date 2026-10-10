@@ -5,6 +5,7 @@
  * bảng §4.2 có 54 dòng, trong khi ba tài liệu khác ghi "45 mã". Bản thi công bám theo
  * bảng §4.2 (đúng 54 mã) để không bỏ sót mã; ba tài liệu kia phải được cập nhật.
  * QĐ-03 (T5) thêm 7 mã F1 → bảng §4.2 thành 61 mã.
+ * HB-035 thêm mã quota đã có ở trigger CSDL → danh mục hiện có 62 mã.
  *
  * `httpStatus = null` nghĩa là mã không đi ra như một lỗi HTTP nghiệp vụ (ACK theo giao thức provider).
  */
