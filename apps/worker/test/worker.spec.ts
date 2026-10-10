@@ -104,7 +104,7 @@ describe('createWorkerApp', () => {
   it('handler chỉ log rồi trả về', async () => {
     const h = harness();
     await createWorkerApp(config(), h.deps).start();
-    await h.handlers.get('q.outbox-relay')?.({ id: '1', name: 'relay' });
+    await h.handlers.get('q.outbox-relay')?.({ id: '1', name: 'relay', data: {} });
     expect(h.logs).toEqual(['q.outbox-relay:nhận job relay']);
   });
   it('stop() đóng hết, gọi lại an toàn, không chờ job treo', async () => {

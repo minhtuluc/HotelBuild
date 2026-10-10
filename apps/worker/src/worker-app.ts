@@ -16,6 +16,8 @@ export interface WorkerLike {
 export interface JobLike {
   id?: string | undefined;
   name: string;
+  /** Payload từ hàng đợi; consumer kiểm schema trước khi dùng. */
+  data: unknown;
 }
 
 export interface WorkerDeps {

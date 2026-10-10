@@ -32,10 +32,14 @@ export function bullmqConstructors(): BullmqConstructors {
   return {
     createQueue: (name, connection) => new Queue(name, { connection }),
     createWorker: (name, connection, concurrency, handler) =>
-      new Worker(name, (job) => handler({ id: job.id, name: job.name }), {
-        connection,
-        concurrency,
-      }),
+      new Worker<unknown, void>(
+        name,
+        (job) => handler({ id: job.id, name: job.name, data: job.data }),
+        {
+          connection,
+          concurrency,
+        },
+      ),
   };
 }
 
