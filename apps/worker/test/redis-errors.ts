@@ -43,14 +43,26 @@ async function closeProbe(
       try {
         await admin.obliterate({ force: true });
       } finally {
-        try {
-          if (!restored && queue instanceof Queue) await queue.connection.close(true);
-          await Promise.all([queue.close(), admin.close()]);
-        } finally {
-          await proxy.close();
-        }
+        await closeQueues(proxy, queue, admin, restored);
       }
     }
+  }
+}
+
+async function closeQueues(
+  proxy: Awaited<ReturnType<typeof redisProxy>>,
+  queue: QueueLike,
+  admin: Queue,
+  restored: boolean,
+): Promise<void> {
+  try {
+    if (!restored && queue instanceof Queue) {
+      // ioredis dừng retry ngay; Queue.disconnect() có thể chờ event end đã phát trước đó.
+      (await queue.client).disconnect();
+    }
+    await Promise.all([queue.close(), admin.close()]);
+  } finally {
+    await proxy.close();
   }
 }
 
@@ -113,7 +125,18 @@ export async function checkRestoreFailureCleanup(): Promise<void> {
   const blocker = createServer((socket) => socket.destroy());
   if (!(queue instanceof Queue) || !(worker instanceof Worker)) throw new Error('Cần client thật');
   try {
-    await Promise.all([queue.waitUntilReady(), worker.waitUntilReady()]);
+    const [queueClient, workerClient, adminClient] = await Promise.all([
+      queue.waitUntilReady(),
+      worker.waitUntilReady(),
+      admin.waitUntilReady(),
+    ]);
+    const job = await queue.add('cleanup-fixture', {});
+    await vi.waitFor(async () => {
+      const persisted = await admin.getJob(
+        job instanceof Object && 'id' in job && typeof job.id === 'string' ? job.id : '',
+      );
+      expect(await persisted?.getState()).toBe('completed');
+    });
     await proxy.cut();
     await new Promise<void>((resolve, reject) => {
       blocker.once('error', reject);
@@ -125,15 +148,16 @@ export async function checkRestoreFailureCleanup(): Promise<void> {
     await expect(closeProbe(proxy, queue, worker, admin)).rejects.toMatchObject({
       code: 'EADDRINUSE',
     });
-    expect(queue.closed).toBe(true);
-    expect(worker.closed).toBe(true);
-    expect(admin.closed).toBe(true);
+    expect(queueClient.status).toBe('end');
+    expect(workerClient.status).toBe('end');
+    expect(adminClient.status).toBe('end');
+    expect(worker.isRunning()).toBe(false);
   } finally {
     try {
       await worker.close(true);
     } finally {
       try {
-        await queue.connection.close(true);
+        (await queue.client).disconnect();
       } finally {
         await Promise.all([queue.close(), admin.close(), proxy.close()]);
         if (blocker.listening) await new Promise<void>((resolve) => blocker.close(() => resolve()));
