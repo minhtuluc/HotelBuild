@@ -3,6 +3,34 @@ import type { ConnectionOptions } from 'bullmq';
 import type { WorkerConfig } from './config/env.js';
 import type { WorkerLogger } from './logger.js';
 import type { JobLike, QueueLike, WorkerDeps, WorkerLike } from './worker-app.js';
+import { createLogger } from './pino.logger.js';
+
+const connectionErrorCodes = new Set([
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'EPIPE',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+]);
+
+/** Không chuyển message/stack/payload từ thư viện vào log (có thể chứa bí mật/PII). */
+function reportBullmqError(
+  logger: WorkerLogger,
+  queue: string,
+  component: 'queue' | 'worker',
+  error: unknown,
+): void {
+  const errorCode =
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof error.code === 'string' &&
+    connectionErrorCodes.has(error.code)
+      ? error.code
+      : 'UNKNOWN';
+  logger.error({ queue, component, errorCode }, 'BullMQ phát lỗi');
+}
 
 /** `REDIS_URL` → tuỳ chọn kết nối (không kèm khoá nào bằng `undefined`). */
 export function redisOptions(url: string): ConnectionOptions {
@@ -28,18 +56,27 @@ export interface BullmqConstructors {
   ): WorkerLike;
 }
 
-export function bullmqConstructors(): BullmqConstructors {
+export function bullmqConstructors(
+  logger: WorkerLogger = createLogger('info'),
+): BullmqConstructors {
   return {
-    createQueue: (name, connection) => new Queue(name, { connection }),
-    createWorker: (name, connection, concurrency, handler) =>
-      new Worker<unknown, void>(
+    createQueue: (name, connection) => {
+      const queue = new Queue(name, { connection });
+      queue.on('error', (error: unknown) => reportBullmqError(logger, name, 'queue', error));
+      return queue;
+    },
+    createWorker: (name, connection, concurrency, handler) => {
+      const worker = new Worker<unknown, void>(
         name,
         (job) => handler({ id: job.id, name: job.name, data: job.data }),
         {
           connection,
           concurrency,
         },
-      ),
+      );
+      worker.on('error', (error: unknown) => reportBullmqError(logger, name, 'worker', error));
+      return worker;
+    },
   };
 }
 
@@ -47,7 +84,7 @@ export function bullmqConstructors(): BullmqConstructors {
 export function createBullmqDeps(
   config: WorkerConfig,
   logger: WorkerLogger,
-  ctors: BullmqConstructors = bullmqConstructors(),
+  ctors: BullmqConstructors = bullmqConstructors(logger),
 ): WorkerDeps {
   const connection = redisOptions(config.REDIS_URL);
   return {

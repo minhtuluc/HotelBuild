@@ -8,6 +8,7 @@ import type { Job } from 'bullmq';
 import { afterEach, describe, expect, it } from 'vitest';
 import { bullmqConstructors, redisOptions } from '../src/bullmq.factory.js';
 import type { JobLike } from '../src/worker-app.js';
+import { checkRedisRecovery, checkSafeErrorsAndDefaultWiring } from './redis-errors.js';
 
 const redisUrl = process.env.REDIS_URL;
 if (!redisUrl) {
@@ -15,6 +16,19 @@ if (!redisUrl) {
 }
 
 const opened: { close: () => Promise<void> }[] = [];
+
+describe('HB-078 TD-01 — lỗi kết nối BullMQ', () => {
+  it(
+    'log qua logger đã cấu hình, không đưa nội dung lỗi thô vào log',
+    checkSafeErrorsAndDefaultWiring,
+    20_000,
+  );
+  it.each([false, true])(
+    'log và phục hồi Redis, unavailable ngay khi khởi động: %s',
+    checkRedisRecovery,
+    20_000,
+  );
+});
 
 afterEach(async () => {
   await Promise.all(opened.splice(0).map((item) => item.close()));
