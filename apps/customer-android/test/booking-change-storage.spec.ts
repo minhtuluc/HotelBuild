@@ -77,6 +77,32 @@ describe('HB-114 secure intent boundary', () => {
     await f.controller.confirm();
     expect(f.controller.state.phase).toBe('unknown');
   });
+  it('authorization denial remains denied even when persisted-intent cleanup fails', async () => {
+    const f = fixture();
+    const controller = new ChangeController({
+      kind: 'cancel',
+      bookingId: 'b1',
+      etag: '"4"',
+      api: f.api,
+      net: { getConnected: async () => true },
+      now: () => 1000,
+      createId: () => intent.key,
+      store: {
+        load: async () => null,
+        save: async () => {},
+        clear: async () => {
+          throw new Error('synthetic');
+        },
+      },
+    });
+    controller.edit(draft);
+    await controller.preview();
+    f.setError(new ApiError({ kind: 'http', status: 403, message: 'synthetic' }));
+    await controller.confirm();
+    expect(controller.state.phase).toBe('denied');
+    expect(controller.state.notice).toBe('forbidden');
+    expect(controller.state.preview).toBeNull();
+  });
   it('preserves confirmed server receipt if local cleanup fails', async () => {
     const f = fixture();
     const controller = new ChangeController({

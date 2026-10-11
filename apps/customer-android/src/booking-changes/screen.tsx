@@ -150,7 +150,7 @@ function LoadedBody({
             }}
           />
           {view?.preview ? <PreviewBody preview={view.preview} /> : null}
-          <Actions controller={controller} view={view} />
+          <Actions controller={controller} view={view} kind={kind} />
         </>
       )}
     </>
@@ -159,11 +159,17 @@ function LoadedBody({
 function Actions({
   controller,
   view,
+  kind,
 }: {
   controller: ChangeController | null;
   view: ChangeState | null;
+  kind: ChangeKind;
 }): ReactElement | null {
   if (!controller || !view) return null;
+  if (kind === 'reschedule')
+    return view.phase === 'previewed' || view.phase === 'editing' ? (
+      <ChangeButton label={changeText('preview')} onPress={() => void controller.preview()} />
+    ) : null;
   if (view.phase === 'unknown')
     return (
       <ChangeButton

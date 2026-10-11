@@ -26,7 +26,10 @@ const catalog = {
   quoted: 'Giá phòng kỳ mới: {amount}',
   expiry: 'Báo giá hết hạn lúc {time}',
   roomPriceOnly:
-    'Giá này là giá phòng. Phí đổi ngày chưa có trong bản xem trước; nếu có, khách sạn sẽ xác nhận riêng.',
+    'Đây là báo giá phòng để tham khảo. Chưa thể xác nhận đổi ngày khi chưa có tổng tiền, cọc giữ lại, số dư và phí do khách sạn xác nhận.',
+  feeUnavailable:
+    'Chưa thể xác nhận đổi ngày: thiếu bản xem trước tổng nghĩa vụ tiền và phí. Vui lòng liên hệ lễ tân.',
+  contactStaff: 'Cần hỗ trợ huỷ trong trường hợp đặc biệt? Vui lòng liên hệ lễ tân.',
   doneCancel: 'Máy chủ đã xác nhận huỷ. Trạng thái yêu cầu hoàn: {status}.',
   doneReschedule: 'Máy chủ đã xác nhận kỳ mới: {checkIn} → {checkOut}.',
   noRefund: 'Không có yêu cầu hoàn',

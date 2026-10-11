@@ -173,6 +173,24 @@ describe('HB-114 screen loading boundary', () => {
   });
 });
 describe('HB-114 published contracts over real TCP', () => {
+  it('guest FORCE_MAJEURE is not an offered operation, preview and commit reject before sending', async () => {
+    const api = changeApiFrom(client, bookingSummarySchema.parse(row), 'cancel');
+    const count = requests.length;
+    await expect(api.preview({ ...draft, reason: 'FORCE_MAJEURE' })).rejects.toMatchObject({
+      status: 403,
+    });
+    await expect(
+      api.commit({
+        kind: 'cancel',
+        bookingId: 'b1',
+        etag: '"4"',
+        key: '11111111-1111-4111-8111-111111111111',
+        createdAt: 1000,
+        body: { reason: 'FORCE_MAJEURE', isForceMajeure: true },
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(requests).toHaveLength(count);
+  });
   it('cancel preview decodes raw server numbers, whole-booking cancellation only', async () => {
     const api = changeApiFrom(client, bookingSummarySchema.parse(row), 'cancel');
     const result = await api.preview(draft);

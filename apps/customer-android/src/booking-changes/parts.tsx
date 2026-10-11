@@ -86,39 +86,9 @@ export function ChangeForm({
   return (
     <View style={{ gap: space.s3 }}>
       {kind === 'cancel' ? (
-        <>
-          {(['GUEST_REQUEST', 'FORCE_MAJEURE'] as const).map((reason) => (
-            <Pressable
-              key={reason}
-              accessibilityRole="radio"
-              accessibilityLabel={changeText(
-                reason === 'GUEST_REQUEST' ? 'guestReason' : 'forceReason',
-              )}
-              accessibilityState={{ checked: draft.reason === reason, disabled }}
-              disabled={disabled}
-              onPress={() => edit({ ...draft, reason })}
-              style={{ minHeight: touchTargetDp, justifyContent: 'center' }}
-            >
-              <Text style={{ color: color.text }}>
-                {draft.reason === reason ? '◉' : '○'}{' '}
-                {changeText(reason === 'GUEST_REQUEST' ? 'guestReason' : 'forceReason')}
-              </Text>
-            </Pressable>
-          ))}
-          {draft.reason === 'FORCE_MAJEURE' ? (
-            <Field
-              label={changeText('evidence')}
-              value={draft.evidenceRefs.join(',')}
-              disabled={disabled}
-              onChangeText={(value) =>
-                edit({
-                  ...draft,
-                  evidenceRefs: value.split(','),
-                })
-              }
-            />
-          ) : null}
-        </>
+        <Text style={{ color: color.text }}>
+          {changeText('guestReason')} · {changeText('contactStaff')}
+        </Text>
       ) : (
         <>
           <Field

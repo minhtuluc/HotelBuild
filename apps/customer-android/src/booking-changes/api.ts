@@ -27,6 +27,15 @@ export function validateStay(checkIn: string, checkOut: string, booking: Booking
 function invalid(code = 'E_GEN_VALIDATION_FAILED'): never {
   throw new ApiError({ kind: 'http', status: 422, code, message: 'Invalid change input' });
 }
+function assertGuestCancellation(reason: string, force: boolean): void {
+  if (reason !== 'GUEST_REQUEST' || force)
+    throw new ApiError({
+      kind: 'http',
+      status: 403,
+      code: 'E_RBAC_FORBIDDEN',
+      message: 'Guest cancellation only',
+    });
+}
 export function changeApiFrom(
   client: ApiClient,
   booking: BookingSummary,
@@ -37,6 +46,8 @@ export function changeApiFrom(
   return {
     preview: async (draft) => {
       if (kind === 'cancel')
+        assertGuestCancellation(draft.reason, draft.reason === 'FORCE_MAJEURE');
+      if (kind === 'cancel') {
         return {
           kind,
           data: (
@@ -46,6 +57,7 @@ export function changeApiFrom(
             })
           ).data,
         };
+      }
       if (!validateStay(draft.checkIn, draft.checkOut, booking)) invalid();
       const channel = channelCodeSchema.safeParse(booking.channelCode);
       const plan = ratePlanCodeSchema.safeParse(booking.ratePlanCode);
@@ -74,17 +86,20 @@ export function changeApiFrom(
         idempotencyKey: intent.key,
         maxAttempts: 1,
       };
-      if (kind === 'cancel')
+      if (kind === 'cancel') {
+        const request = cancelRequestSchema.parse(intent.body);
+        assertGuestCancellation(request.reason, request.isForceMajeure);
         return {
           kind,
           data: (
             await client.request({
               ...common,
-              body: cancelRequestSchema.parse(intent.body),
+              body: request,
               decoder: cancelResponseSchema,
             })
           ).data,
         };
+      }
       return {
         kind,
         data: (

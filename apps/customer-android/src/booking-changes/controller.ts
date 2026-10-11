@@ -57,6 +57,10 @@ export class ChangeController {
   async confirm(): Promise<void> {
     if (this.state.phase !== 'previewed' || this.state.preview === null || this.draft === null)
       return;
+    if (this.deps.kind === 'reschedule') {
+      this.update({ notice: 'feeUnavailable' });
+      return;
+    }
     const shown = this.state.preview;
     this.update({ phase: 'submitting', notice: null });
     try {
@@ -120,6 +124,10 @@ export class ChangeController {
       try {
         await this.deps.store?.clear();
       } catch {
+        if (patch.phase === 'denied') {
+          this.update(patch);
+          return;
+        }
         this.update({ phase: 'conflict', preview: null, notice: 'storage' });
         return;
       }
