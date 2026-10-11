@@ -1,4 +1,6 @@
 import { serializeSafeRequest } from './common/safe-request.js';
+import { GridModule } from './modules/inv/grid/module.js';
+import { AllotmentsModule } from './modules/inv/allotments/module.js';
 import { RoomBlocksModule } from './modules/prop/room-blocks/module.js';
 import { RatePlansModule } from './modules/rate/rate-plans/module.js';
 import { CancellationPoliciesModule } from './modules/rate/cancellation-policies/module.js';
@@ -51,6 +53,8 @@ export class AppModule {
         RbacModule,
         IdempotencyModule,
         RoomBlocksModule,
+        AllotmentsModule,
+        GridModule,
         RatePlansModule,
         CancellationPoliciesModule,
       ],

@@ -149,6 +149,7 @@ export interface InventoryApi {
     from: string;
     to: string;
     roomTypeId?: string;
+    channelCode?: string;
   }): Promise<ApiResponse<InventoryGrid>>;
   availability(query: {
     propertyId: string;

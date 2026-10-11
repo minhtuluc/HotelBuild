@@ -236,7 +236,11 @@ export function registerF2Paths(registry: OpenAPIRegistry, errorBodyComponent: z
     ...bearerRead,
     request: { query: inventoryGridQuerySchema },
     responses: {
-      200: { description: 'Lưới tồn', ...jsonBody(inventoryGridSchema) },
+      200: {
+        description: 'Lưới tồn; không lọc loại phòng trả grids và root là loại đầu theo code/id',
+        ...jsonBody(inventoryGridSchema),
+      },
+      404: errorResponse('E_GEN_NOT_FOUND'),
       400: errorResponse('E_GEN_VALIDATION_FAILED'),
       403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
     },

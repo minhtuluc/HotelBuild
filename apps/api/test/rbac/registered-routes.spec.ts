@@ -102,6 +102,22 @@ function independentOracle(): Record<string, Expected> {
       status: 428,
       method: RequestMethod.PUT,
     };
+  // HB-035 AC4 / api.md §2.3: independent roles, not imported module configuration.
+  keyed[`${RequestMethod.GET}:inventory/grid`] = {
+    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.GET}:channel-allotments`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.PUT}:channel-allotments`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 428,
+    method: RequestMethod.PUT,
+  };
   return keyed;
 }
 

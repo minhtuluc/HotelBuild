@@ -123,10 +123,14 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |
 |--------|-----------|-------|-------------------|---------------|----|----|
-| GET | `/api/v1/inventory/grid` | Lịch tồn phòng dạng lưới ngày × loại phòng | HOUSEKEEPING | `propertyId`, `from`, `to`, `roomTypeId`, `channelCode` | UC-INV-01 | BR-INV-01,07, NFR-PERF-01 |
+| GET | `/api/v1/inventory/grid` | Lịch tồn phòng dạng lưới ngày × loại phòng | FRONT_DESK, RESERVATION_AGENT, MANAGER, OWNER | `propertyId`, `from`, `to`, `roomTypeId`, `channelCode` | UC-INV-01 | BR-INV-01,07, NFR-PERF-01 |
 | GET | `/api/v1/inventory/availability` | **Tìm phòng trống** theo kỳ lưu trú (§3.8) | — | `propertyId`, `roomTypeId`, `checkIn`, `checkOut`, `adults`, `children`, `roomCount`, `channelCode` | UC-INV-02 | BR-INV-01,02,07, BR-PROP-06 |
 | GET | `/api/v1/channel-allotments` | Allotment theo kênh × loại phòng × ngày | MANAGER | `channelId`, `roomTypeId`, `from`, `to` | UC-INV-03 | BR-INV-05, BR-CHAN-01,08 |
 | PUT | `/api/v1/channel-allotments` | Đặt lại allotment theo lô trong một transaction | MANAGER | `channelId`, `roomTypeId`, `date`, `allotment` | UC-INV-03 | BR-INV-05, BR-CHAN-01,06 |
+
+**Quyền lưới tồn:** theo BR-RBAC-03 và UC-INV-01, cấp FRONT_DESK, RESERVATION_AGENT, MANAGER, OWNER trong scope; không cấp HOUSEKEEPING/ACCOUNTANT/SYSADMIN quyền đọc lịch tồn vận hành đầy đủ. Đây là đồng bộ thiết kế theo nguồn nghiệp vụ, không dùng thứ bậc role.
+
+**Biểu diễn lưới tồn (HB-035):** `from` và `to` bao gồm hai đầu, tối đa 31 ngày. Ô trả `published` từ tồn công bố của engine; có `channelCode` thì thêm `channelAvailable` (kênh không hoạt động trả 0). Khi lọc `roomTypeId`, phản hồi giữ cấu trúc một loại phòng. Khi không lọc, trường bổ sung `grids` chứa mọi loại thuộc cơ sở, sắp theo `code`, `id`; các trường gốc là bản chiếu của loại đầu tiên để tương thích client cũ, không phải tổng toàn cơ sở. Cơ sở chưa có loại phòng trả 404 `E_GEN_NOT_FOUND`. GET đọc snapshot, `Cache-Control: no-store`, không giữ khoá hàng hay ghi dữ liệu.
 
 **Phiên bản cấu hình allotment (HB-035):** GET `/channel-allotments` đọc các dòng cấu hình và phiên bản của **toàn bộ cặp `(channelId, roomTypeId)`** trong một snapshot SQL, khoảng ngày bao gồm hai đầu theo §1.5; trả `ETag: "<version>"`. Cặp chưa có cấu hình có phiên bản 1. PUT khoá dòng `channel_allotment_scopes` trước khi ghi bất kỳ dòng ngày nào, đối chiếu `If-Match` rồi giữ khoá đến khi transaction chứa batch + AuditLog kết thúc. Thiếu header → 428; token không hợp lệ hoặc cũ → 412. Mọi thay đổi cấu hình, kể cả ngày ngoài khoảng GET, tăng phiên bản; xoá rồi thêm lại không đặt lại bộ đếm. Cột cache `used` không phải cấu hình; cập nhật cache không thay token này. Token phục vụ điều kiện sửa cấu hình, không dùng làm cache validator cho demand động; GET cần `Cache-Control: no-store`. Không lấy `MAX(version)` của các dòng ngày. Writer dùng READ COMMITTED; retry toàn transaction khi gặp 40P01/40001 theo cơ chế hiện có. Đổi scope phải khoá cả hai scope theo thứ tự `(channel_id, room_type_id)` trước khi sửa dòng con.
 

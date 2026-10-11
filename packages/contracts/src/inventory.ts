@@ -23,7 +23,7 @@ export const inventoryGridQuerySchema = z
     message: '`to` phải không trước `from`',
     path: ['to'],
   })
-  .refine((value) => daysBetween(value.from, value.to) <= 31, {
+  .refine((value) => daysBetween(value.from, value.to) <= 30, {
     message: 'Khoảng lưới tồn tối đa 31 ngày',
     path: ['to'],
   });
@@ -34,14 +34,21 @@ export const inventoryGridCellSchema = z.object({
   demand: z.number().int().min(0),
   pool: z.number().int(),
   blocked: z.number().int().min(0),
+  published: z.number().int().min(0).optional(),
+  channelAvailable: z.number().int().min(0).optional(),
 });
 
-export const inventoryGridSchema = z.object({
+export const inventoryRoomTypeGridSchema = z.object({
   propertyId: z.string().min(1),
   roomTypeId: z.string().min(1),
   from: businessDateSchema,
   to: businessDateSchema,
   cells: z.array(inventoryGridCellSchema),
+});
+
+/** Root remains the first room type projection; grids includes every type when no filter is supplied. */
+export const inventoryGridSchema = inventoryRoomTypeGridSchema.extend({
+  grids: z.array(inventoryRoomTypeGridSchema).optional(),
 });
 
 export const allotmentQuerySchema = z.strictObject({
@@ -121,6 +128,7 @@ export const availabilitySchema = z.object({
   }),
 });
 
+export type InventoryRoomTypeGrid = z.infer<typeof inventoryRoomTypeGridSchema>;
 export type InventoryGrid = z.infer<typeof inventoryGridSchema>;
 export type AllotmentRow = z.infer<typeof allotmentRowSchema>;
 export type AllotmentPutRequest = z.infer<typeof allotmentPutRequestSchema>;

@@ -210,6 +210,35 @@ describe('hợp đồng F2 qua HTTP thật', () => {
     expect(recorded(0).url).toContain('from=2026-11-01');
   });
 
+  it('grid forwards channelCode and preserves all property types with published channel inventory', async () => {
+    const cell = {
+      date: '2026-11-01',
+      supply: 2,
+      demand: 1,
+      pool: 1,
+      blocked: 0,
+      published: 1,
+      channelAvailable: 0,
+    };
+    const primary = {
+      propertyId: 'p1',
+      roomTypeId: 'rt1',
+      from: cell.date,
+      to: cell.date,
+      cells: [cell],
+    };
+    const body = { ...primary, grids: [primary, { ...primary, roomTypeId: 'rt2' }] };
+    handler = () => ({ status: 200, body });
+    const grid = await createInventoryApi(client()).grid({
+      propertyId: 'p1',
+      from: cell.date,
+      to: cell.date,
+      channelCode: 'OTA_BOOKING',
+    });
+    expect(recorded(0).url).toContain('channelCode=OTA_BOOKING');
+    expect(grid.data).toEqual(body);
+  });
+
   it('PUT /channel-allotments gửi lô trong một yêu cầu kèm If-Match', async () => {
     await createInventoryApi(client()).putAllotments(
       {
