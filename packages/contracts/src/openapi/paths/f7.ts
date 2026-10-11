@@ -114,6 +114,7 @@ export function registerF7Paths(registry: OpenAPIRegistry, errorBodyComponent: z
       200: { description: 'Nhiệm vụ sau cập nhật', ...jsonBody(housekeepingTaskSchema) },
       403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
       404: errorResponse('E_GEN_NOT_FOUND'),
+      409: errorResponse('E_FO_TASK_TRANSITION_NOT_ALLOWED', 'E_SYS_REQUEST_IN_PROGRESS'),
       412: errorResponse('E_GEN_VERSION_CONFLICT'),
       428: errorResponse('E_GEN_PRECONDITION_REQUIRED'),
     },

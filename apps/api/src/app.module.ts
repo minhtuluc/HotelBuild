@@ -1,4 +1,5 @@
 import { serializeSafeRequest } from './common/safe-request.js';
+import { HousekeepingModule } from './modules/fo/housekeeping/module.js';
 import { GridModule } from './modules/inv/grid/module.js';
 import { AllotmentsModule } from './modules/inv/allotments/module.js';
 import { RoomBlocksModule } from './modules/prop/room-blocks/module.js';
@@ -57,6 +58,7 @@ export class AppModule {
         GridModule,
         RatePlansModule,
         CancellationPoliciesModule,
+        HousekeepingModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },

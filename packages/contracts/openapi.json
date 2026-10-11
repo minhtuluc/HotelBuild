@@ -15355,6 +15355,16 @@
               }
             }
           },
+          "409": {
+            "description": "E_FO_TASK_TRANSITION_NOT_ALLOWED, E_SYS_REQUEST_IN_PROGRESS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
           "412": {
             "description": "E_GEN_VERSION_CONFLICT",
             "content": {

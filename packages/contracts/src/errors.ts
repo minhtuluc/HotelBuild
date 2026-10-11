@@ -5,7 +5,7 @@
  * bảng §4.2 có 54 dòng, trong khi ba tài liệu khác ghi "45 mã". Bản thi công bám theo
  * bảng §4.2 (đúng 54 mã) để không bỏ sót mã; ba tài liệu kia phải được cập nhật.
  * QĐ-03 (T5) thêm 7 mã F1 → bảng §4.2 thành 61 mã.
- * HB-035 thêm mã quota đã có ở trigger CSDL → danh mục hiện có 62 mã.
+ * HB-035 thêm mã quota đã có ở trigger CSDL; HB-148 thêm chuyển trạng thái task → 63 mã.
  *
  * `httpStatus = null` nghĩa là mã không đi ra như một lỗi HTTP nghiệp vụ (ACK theo giao thức provider).
  */
@@ -63,6 +63,7 @@ export const errorCatalogue = {
   E_OVER_CROSS_CITY_NO_CONSENT: { httpStatus: 409, module: 'OVER' },
   E_OVER_CASE_DEADLINE_PASSED: { httpStatus: 409, module: 'OVER' },
   E_FO_CHECKIN_NOT_ALLOWED: { httpStatus: 409, module: 'FO' },
+  E_FO_TASK_TRANSITION_NOT_ALLOWED: { httpStatus: 409, module: 'FO' },
   E_CRM_PHONE_INVALID: { httpStatus: 422, module: 'CRM' },
   E_GEN_SERVICE_UNAVAILABLE: { httpStatus: 503, module: 'GEN' },
   E_SYS_AUDIT_IMMUTABLE: { httpStatus: 405, module: 'SYS' },

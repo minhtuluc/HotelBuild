@@ -42,14 +42,17 @@ function handlerRoute(
   const prefix: unknown = Reflect.getMetadata(PATH_METADATA, controller);
   const path: unknown = Reflect.getMetadata(PATH_METADATA, handler);
   if (typeof prefix !== 'string' || typeof path !== 'string') throw new Error('Uncovered path');
-  if (
-    method !== RequestMethod.GET &&
-    method !== RequestMethod.POST &&
-    method !== RequestMethod.DELETE &&
-    method !== RequestMethod.PUT
-  )
-    throw new Error('Uncovered HTTP method');
+  if (!supportedMethod(method)) throw new Error('Uncovered HTTP method');
   return { path: `${prefix}/${path}`.replaceAll(/\/+$/g, ''), method };
+}
+function supportedMethod(value: unknown): value is RequestMethod {
+  return (
+    value === RequestMethod.GET ||
+    value === RequestMethod.POST ||
+    value === RequestMethod.DELETE ||
+    value === RequestMethod.PUT ||
+    value === RequestMethod.PATCH
+  );
 }
 interface Expected {
   roles: readonly string[];
@@ -118,7 +121,26 @@ function independentOracle(): Record<string, Expected> {
     status: 428,
     method: RequestMethod.PUT,
   };
+  keyed[`${RequestMethod.GET}:housekeeping/tasks`] = {
+    roles: ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.PATCH}:housekeeping/tasks/:taskId`] = {
+    roles: ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER', 'OWNER'],
+    status: 428,
+    method: RequestMethod.PATCH,
+  };
   return keyed;
+}
+
+function routeRequest(method: RequestMethod, path: string) {
+  if (method === RequestMethod.GET) return http().get(path);
+  if (method === RequestMethod.DELETE)
+    return http().delete(path).query({ reason: 'Synthetic oracle removal' });
+  if (method === RequestMethod.PUT) return http().put(path);
+  if (method === RequestMethod.PATCH) return http().patch(path);
+  return http().post(path);
 }
 
 test('every discovered protected HTTP route has an independent oracle and runs against all seven roles', async () => {
@@ -134,15 +156,8 @@ test('every discovered protected HTTP route has an independent oracle and runs a
     for (const role of roles) {
       clock.value += 61000;
       const token = await login(role);
-      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId)}`;
-      const pending =
-        route.method === RequestMethod.GET
-          ? http().get(path)
-          : route.method === RequestMethod.DELETE
-            ? http().delete(path).query({ reason: 'Synthetic oracle removal' })
-            : route.method === RequestMethod.PUT
-              ? http().put(path)
-              : http().post(path);
+      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId).replace(':taskId', roomId)}`;
+      const pending = routeRequest(route.method, path);
       const result = await pending
         .set('Authorization', `Bearer ${token}`)
         .set('Idempotency-Key', randomUUID())
