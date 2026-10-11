@@ -2404,6 +2404,21 @@ Giả định thiết kế: **75 đơn vị bán** (34 + 23 + 18 — BR-PROP-03)
 
 ---
 
+## 10.1. Migration 0005 — phiên bản phòng từ updated_at (HB-033)
+
+Room không có cột version; API dùng epoch microseconds của updated_at làm token
+optimistic concurrency. Trigger touch chung dùng now() (thời điểm bắt đầu
+transaction), có thể lùi sau khi chờ khoá hoặc ghi lại trong cùng transaction.
+Migration `0005_room_updated_at` thay **riêng** trg_rooms_touch bằng hàm
+fn_touch_room_updated_at: `GREATEST(OLD.updated_at + interval '1 microsecond',
+NEW.updated_at, clock_timestamp())`. Các cột/trigger version bigint khác giữ
+nguyên; không thêm cột, không thay Prisma model hay thời gian nghiệp vụ booking.
+Timestamp này phục vụ phiên bản phòng; không dùng nó thay Clock của tính phí.
+Migration được deploy/redeploy trên PostgreSQL16 bởi runner hiện có; test HB033
+kiểm microsecond chính xác, hai lệnh cùng version, quyền đổi lúc chờ và rollback
+cả cặp liên kết khi audit lỗi. Schema baseline vẫn là nguồn tạo bảng, migration
+này là bước tiến riêng, không sửa migration đã áp dụng.
+
 ## 11. Đề xuất bổ sung
 
 Các mục dưới đây **chưa có trong [00 §7](../00-tong-quan.md#7-từ-điển-thực-thể-nguồn-chân-lý-về-định-danh)** (bản đóng băng 139 BR) nhưng cần thiết để CSDL chứa đủ dữ liệu mà quy tắc nghiệp vụ yêu cầu. Đây là **đề xuất**, không tự thêm vào xương sống.

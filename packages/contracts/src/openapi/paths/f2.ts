@@ -1,3 +1,4 @@
+import { registerPropertyAdminPaths } from './property-admin.js';
 /**
  * Path OpenAPI pha F2 (PROP/INV/SYS) — HB-030. `registry.ts` chỉ gọi `registerF2Paths`.
  * Ràng buộc âm (§2.14): không khai `PUT/PATCH/DELETE /audit-logs/**`, không có tuyến ghi price snapshot,
@@ -166,6 +167,8 @@ export function registerF2Paths(registry: OpenAPIRegistry, errorBodyComponent: z
       412: errorResponse('E_GEN_VERSION_CONFLICT'),
     },
   });
+
+  registerPropertyAdminPaths(registry, errorBodyComponent);
 
   // Bổ sung tuyến đọc (HB-039, QĐ-04 mục 7): api.md §2.2 chỉ có POST/DELETE nên SCR-22 không liệt kê
   // được khoá đang có và không cảnh báo chồng lấn. Thay đổi tương thích (thêm tuyến), 0 phá vỡ.

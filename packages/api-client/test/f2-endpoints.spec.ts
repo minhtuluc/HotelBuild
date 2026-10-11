@@ -274,3 +274,62 @@ describe('hợp đồng F2 qua HTTP thật', () => {
     expect(operation.data.status).toBe('RUNNING');
   });
 });
+
+describe('HB033 additive property commands', () => {
+  it('PATCH room type forwards version, reason and decodes updated price', async () => {
+    handler = () => ({ status: 200, body: ROOM_TYPE });
+    const result = await createPropertyApi(client()).updateRoomType(
+      'rt1',
+      { basePrice: 900000, reason: 'Synthetic' },
+      '"2"',
+    );
+    expect(result.data.basePrice).toBe(900000);
+    expect(recorded(0).method).toBe('PATCH');
+    expect(recorded(0).url).toBe('/api/v1/room-types/rt1');
+    expect(recorded(0).headers['if-match']).toBe('"2"');
+    expect(recorded(0).headers['idempotency-key']).toBeTruthy();
+  });
+  it('POST room decodes published room DTO over real HTTP', async () => {
+    handler = () => ({
+      status: 201,
+      body: {
+        id: 'r1',
+        propertyId: 'p1',
+        roomTypeId: 'rt1',
+        code: 'CS01-901',
+        floor: 9,
+        status: 'ACTIVE',
+        connectingRoomId: null,
+        version: 1,
+      },
+    });
+    const result = await createPropertyApi(client()).createRoom({
+      propertyId: 'p1',
+      roomTypeId: 'rt1',
+      code: 'CS01-901',
+      floor: 9,
+    });
+    expect(result.status).toBe(201);
+    expect(recorded(0).url).toBe('/api/v1/rooms');
+    expect(recorded(0).headers['idempotency-key']).toBeTruthy();
+  });
+  it('PATCH room keeps original version header and sanitization authority on server', async () => {
+    handler = () => ({
+      status: 200,
+      body: {
+        id: 'r1',
+        propertyId: 'p1',
+        roomTypeId: 'rt1',
+        code: 'CS01-901',
+        floor: 9,
+        status: 'ACTIVE',
+        connectingRoomId: null,
+        version: 2,
+      },
+    });
+    await createPropertyApi(client()).updateRoom('r1', { floor: 9, note: 'Synthetic' }, '"1"');
+    expect(recorded(0).method).toBe('PATCH');
+    expect(recorded(0).headers['if-match']).toBe('"1"');
+    expect(JSON.parse(recorded(0).bodyText)).toEqual({ floor: 9, note: 'Synthetic' });
+  });
+});

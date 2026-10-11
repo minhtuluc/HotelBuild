@@ -10,6 +10,7 @@
  * `httpStatus = null` nghĩa là mã không đi ra như một lỗi HTTP nghiệp vụ (ACK theo giao thức provider).
  */
 export const errorCatalogue = {
+  E_PROP_CODE_TAKEN: { httpStatus: 409, module: 'PROP' },
   E_GEN_VALIDATION_FAILED: { httpStatus: 400, module: 'GEN' },
   E_GEN_RATE_LIMITED: { httpStatus: 429, module: 'GEN' },
   E_SYS_IDEMPOTENCY_KEY_REUSED: { httpStatus: 409, module: 'SYS' },

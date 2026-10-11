@@ -114,10 +114,37 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 | POST | `/api/v1/room-types` | Tạo loại phòng (sức chứa, giá cơ bản, sàn/trần) | OWNER | `propertyId`, `code`, `capacityAdults`, `capacityChildren`, `basePrice`, `minPrice`, `maxPrice`, `allowShared` | UC-PROP-02 | BR-PROP-03,04, BR-RATE-03,04 |
 | GET | `/api/v1/room-types` | Danh sách loại phòng kèm sức chứa, sàn–trần giá và `sellingUnits` (số đơn vị bán ACTIVE, dùng cho hạn mức kênh BR-INV-05) (màn SCR-20, SCR-25) | HOUSEKEEPING | `propertyId` | UC-PROP-02 | BR-PROP-03,04, BR-RATE-03,04, BR-INV-05 |
 | GET | `/api/v1/rooms` | Danh sách phòng vật lý | HOUSEKEEPING | `propertyId`, `roomTypeId`, `floor`, `status` | UC-PROP-03 | BR-PROP-05 |
+| PATCH | `/api/v1/room-types/{roomTypeId}` | Sửa giá cơ bản/sàn/trần, sức chứa và trạng thái; lý do bắt buộc | OWNER | `If-Match`, `reason` | UC-PROP-02 | BR-PROP-04, BR-RATE-03,04 |
+| POST | `/api/v1/rooms` | Tạo phòng vật lý theo mã BR; loại phòng cùng cơ sở | MANAGER, OWNER | `propertyId`, `roomTypeId`, `code`, `floor` | UC-PROP-03 | BR-PROP-05 |
+| PATCH | `/api/v1/rooms/{roomId}` | Sửa tầng, trạng thái, ghi chú; không đổi cơ sở/loại phòng | MANAGER, OWNER | `floor`, `status`, `note`, `If-Match` | UC-PROP-03 | BR-PROP-06 |
 | PUT | `/api/v1/rooms/{roomId}/connecting-room` | Gán/gỡ phòng thông nhau (đối xứng hai chiều) | MANAGER | `connectingRoomId` | UC-PROP-03 | BR-OVER-15 |
 | GET | `/api/v1/room-blocks` | Danh sách khoá phòng đang có (màn SCR-22 liệt kê và cảnh báo chồng lấn) | HOUSEKEEPING, FRONT_DESK, MANAGER, OWNER | `propertyId`, `roomId`, `from`, `to` | UC-PROP-04 | BR-INV-06 |
 | POST | `/api/v1/room-blocks` | Khoá phòng/ngừng bán (đè assignment cần MANAGER/OWNER) | FRONT_DESK, MANAGER, OWNER | `roomId`, `startDate`, `endDate`, `reason` | UC-PROP-04 | BR-INV-06, BR-PROP-06 |
 | DELETE | `/api/v1/room-blocks/{roomBlockId}` | Gỡ khoá phòng (204) | MANAGER, OWNER | `reason` | UC-PROP-04 | BR-INV-06 |
+
+**Triển khai HB-033:** quyền đọc nội bộ được cấp tường minh cho HOUSEKEEPING,
+FRONT_DESK, MANAGER và OWNER; cấu hình cơ sở/loại phòng chỉ OWNER; ghi phòng/liên
+kết chỉ MANAGER/OWNER. Scope được áp tại DB; query ngoài scope bị403, không suy
+ra quyền bằng thứ bậc vai trò. GET có `no-store`, phân trang ID ASC/cursor thuộc tập
+lọc, `limit`1–100 (mặc định100). Tuyến công khai chỉ trả metadata đã phát hành của
+cơ sở ACTIVE, không trả số phòng/trần bán vượt/version.
+
+Property/RoomType dùng version bigint; Room dùng epoch microseconds của
+`updated_at` làm version numeric safe integer. If-Match mạnh dạng `"<version>"`;
+thiếu428/cũ hoặc sai412; create không cần If-Match (§1.3). Migration0005 chỉ đổi
+trigger touch của Room để timestamp tăng đơn điệu kể cả transaction chờ khoá.
+Ghi/replay trả ETag, dùng cùng transaction idempotency/audit; recheck role,
+active và scope sau resource lock. Gán/gỡ liên kết khoá property rồi các loại/phòng
+ID ASC trong cơ sở; cả nguồn/đích/đối ứng cũ được cập nhật và audit nguyên tử.
+
+Sàn≤giá cơ bản≤trần và tiền nguyên an toàn; trần bán vượt≤5% theo BR-OVER02.
+Năm mã loại phòng chuẩn/sức chứa theo BR-PROP04 và CHECK hiện có; `bedCount` DTO
+loại phòng suy ra DOR6 hoặc capacityAdults, input khác giá trị chuẩn bị422.
+`sellingUnits` đếm room ACTIVE bằng bed_count khi allow_shared, còn lại1.
+Phòng mới nhận mã `<CS01|CS02|CS03>-<tầng><số>`; chuẩn hoá tiền tố cơ sở seed
+`CS-01` thành CS01 để kiểm, không sửa ID/mã legacy đã lưu. Mã trùng trong cơ sở
+→409 `E_PROP_CODE_TAKEN`. Ghi chú/lý do/nhãn trong audit che PII/bí mật có nhãn;
+không có tuyến xoá cứng. Không thay dữ liệu snapshot booking đã chốt.
 
 ### 2.3. INV — Tồn phòng (3 UC)
 
@@ -711,6 +738,7 @@ Lỗi 5xx **PHẢI** có `traceId` và được ghi log JSON cùng mã đó, **k
 | `E_GEN_SERVICE_UNAVAILABLE` | 503 | Hệ thống tạm thời không sẵn sàng. | Bảo trì, phụ thuộc lỗi hoặc lỗi lập trình đã che chi tiết | Thử lại; theo dõi `GET /system/health` (NFR-USE-01) |
 | `E_SYS_AUDIT_IMMUTABLE` | 405 | Nhật ký kiểm toán chỉ được ghi thêm. | Yêu cầu `PATCH`/`DELETE` | Không thao tác (BR-SYS-01) |
 | `E_GEN_NOT_FOUND` | 404 | Không tìm thấy dữ liệu. | Không tồn tại hoặc khách không sở hữu đối tượng | Không tiết lộ dữ liệu người khác |
+| `E_PROP_CODE_TAKEN` | 409 | Mã đã được sử dụng trong cơ sở. | Trùng mã phòng/loại phòng | Chọn mã khác hoặc tải lại danh sách |
 | `E_GEN_PRECONDITION_REQUIRED` | 428 | Cần phiên bản dữ liệu trước khi cập nhật. | Thiếu If-Match | Đọc chi tiết và dùng ETag |
 | `E_GEN_VERSION_CONFLICT` | 412 | Dữ liệu đã được thay đổi. | If-Match không khớp version | Tải lại, so sánh, xác nhận thao tác mới |
 | `E_SYS_REQUEST_IN_PROGRESS` | 409 | Yêu cầu đang được xử lý. | Khoá idempotency đang có chủ thực hiện | Retry cùng khoá sau Retry-After |

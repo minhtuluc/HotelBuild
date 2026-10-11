@@ -84,6 +84,8 @@ export const roomTypeSummarySchema = z.object({
   minPrice: z.number().int().positive(),
   maxPrice: z.number().int().positive(),
   allowShared: z.boolean(),
+  /** Admin status, additive for HB033; legacy readers may omit it. */
+  status: propertyStatusSchema.optional(),
   bedCount: z.number().int().min(1),
   /**
    * Số đơn vị bán **đang hoạt động** của loại phòng (DOR bán theo giường, BR-PROP-03) — dùng cho
@@ -113,3 +115,32 @@ export type RoomTypeCreateRequest = z.infer<typeof roomTypeCreateRequestSchema>;
 export type RoomSummary = z.infer<typeof roomSummarySchema>;
 export type ConnectingRoomRequest = z.infer<typeof connectingRoomRequestSchema>;
 export type RoomBlockCreateRequest = z.infer<typeof roomBlockCreateRequestSchema>;
+
+/** HB033 additive admin commands; create has no If-Match (§1.3). */
+export const roomTypeUpdateRequestSchema = z.strictObject({
+  capacityAdults: z.number().int().min(1).max(20).optional(),
+  capacityChildren: z.number().int().min(0).max(20).optional(),
+  basePrice: z.number().int().positive().optional(),
+  minPrice: z.number().int().positive().optional(),
+  maxPrice: z.number().int().positive().optional(),
+  status: propertyStatusSchema.optional(),
+  reason: z.string().min(1).max(500),
+});
+export const roomCreateRequestSchema = z.strictObject({
+  propertyId: z.string().min(1),
+  roomTypeId: z.string().min(1),
+  code: z.string().min(1).max(20),
+  floor: z.number().int().min(-32768).max(32767),
+  status: roomStatusSchema.optional(),
+  note: z.string().min(1).max(500).optional(),
+  reason: z.string().min(1).max(500).optional(),
+});
+export const roomUpdateRequestSchema = z.strictObject({
+  floor: z.number().int().min(-32768).max(32767).optional(),
+  status: roomStatusSchema.optional(),
+  note: z.string().max(500).nullable().optional(),
+  reason: z.string().min(1).max(500).optional(),
+});
+export type RoomTypeUpdateRequest = z.infer<typeof roomTypeUpdateRequestSchema>;
+export type RoomCreateRequest = z.infer<typeof roomCreateRequestSchema>;
+export type RoomUpdateRequest = z.infer<typeof roomUpdateRequestSchema>;

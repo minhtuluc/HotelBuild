@@ -17,6 +17,12 @@ import {
   roomSummarySchema,
   roomTypeCreateRequestSchema,
   roomTypeSummarySchema,
+  roomTypeUpdateRequestSchema,
+  roomCreateRequestSchema,
+  roomUpdateRequestSchema,
+  type RoomTypeUpdateRequest,
+  type RoomCreateRequest,
+  type RoomUpdateRequest,
   systemSettingSchema,
   systemSettingUpdateRequestSchema,
   backupRequestSchema,
@@ -45,6 +51,17 @@ import {
 import { ApiClient, type ApiResponse } from './client.js';
 
 export interface PropertyApi {
+  updateRoomType(
+    id: string,
+    input: RoomTypeUpdateRequest,
+    ifMatch: string,
+  ): Promise<ApiResponse<RoomTypeSummary>>;
+  createRoom(input: RoomCreateRequest): Promise<ApiResponse<RoomSummary>>;
+  updateRoom(
+    id: string,
+    input: RoomUpdateRequest,
+    ifMatch: string,
+  ): Promise<ApiResponse<RoomSummary>>;
   list(): Promise<ApiResponse<ListPage<PropertySummary>>>;
   update(
     propertyId: string,
@@ -77,6 +94,29 @@ export interface PropertyApi {
 
 export function createPropertyApi(client: ApiClient): PropertyApi {
   return {
+    updateRoomType: (id, input, ifMatch) =>
+      client.request({
+        method: 'PATCH',
+        path: `/room-types/${encodeURIComponent(id)}`,
+        body: roomTypeUpdateRequestSchema.parse(input),
+        ifMatch,
+        decoder: roomTypeSummarySchema,
+      }),
+    createRoom: (input) =>
+      client.request({
+        method: 'POST',
+        path: '/rooms',
+        body: roomCreateRequestSchema.parse(input),
+        decoder: roomSummarySchema,
+      }),
+    updateRoom: (id, input, ifMatch) =>
+      client.request({
+        method: 'PATCH',
+        path: `/rooms/${encodeURIComponent(id)}`,
+        body: roomUpdateRequestSchema.parse(input),
+        ifMatch,
+        decoder: roomSummarySchema,
+      }),
     list: () =>
       client.request({
         method: 'GET',

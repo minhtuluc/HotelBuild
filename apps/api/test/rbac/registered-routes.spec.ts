@@ -43,7 +43,7 @@ function handlerRoute(
   const path: unknown = Reflect.getMetadata(PATH_METADATA, handler);
   if (typeof prefix !== 'string' || typeof path !== 'string') throw new Error('Uncovered path');
   if (!supportedMethod(method)) throw new Error('Uncovered HTTP method');
-  return { path: `${prefix}/${path}`.replaceAll(/\/+$/g, ''), method };
+  return { path: `${prefix}/${path}`.replaceAll(/\/+/g, '/').replaceAll(/^\/|\/$/g, ''), method };
 }
 function supportedMethod(value: unknown): value is RequestMethod {
   return (
@@ -147,6 +147,38 @@ function independentOracle(): Record<string, Expected> {
     status: 428,
     method: RequestMethod.PUT,
   };
+  for (const path of ['properties', 'room-types', 'rooms'])
+    keyed[`${RequestMethod.GET}:${path}`] = {
+      roles: ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER', 'OWNER'],
+      status: 200,
+      method: RequestMethod.GET,
+    };
+  for (const path of ['properties/:propertyId', 'room-types/:roomTypeId'])
+    keyed[`${RequestMethod.PATCH}:${path}`] = {
+      roles: ['OWNER'],
+      status: 428,
+      method: RequestMethod.PATCH,
+    };
+  keyed[`${RequestMethod.POST}:room-types`] = {
+    roles: ['OWNER'],
+    status: 422,
+    method: RequestMethod.POST,
+  };
+  keyed[`${RequestMethod.POST}:rooms`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
+  keyed[`${RequestMethod.PATCH}:rooms/:roomId`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 428,
+    method: RequestMethod.PATCH,
+  };
+  keyed[`${RequestMethod.PUT}:rooms/:roomId/connecting-room`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 428,
+    method: RequestMethod.PUT,
+  };
   return keyed;
 }
 
@@ -172,7 +204,7 @@ test('every discovered protected HTTP route has an independent oracle and runs a
     for (const role of roles) {
       clock.value += 61000;
       const token = await login(role);
-      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId).replace(':taskId', roomId).replace(':key', 'refund.feeAmount')}`;
+      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId).replace(':taskId', roomId).replace(':key', 'refund.feeAmount').replace(':propertyId', roomId).replace(':roomTypeId', roomId).replace(':roomId', roomId)}`;
       const pending = routeRequest(route.method, path);
       const result = await pending
         .set('Authorization', `Bearer ${token}`)

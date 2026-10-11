@@ -11,9 +11,9 @@ import { bookingStatusSchema, paymentMethodSchema, userRoleSchema } from '../src
 import { errorCatalogue, errorCodePattern, errorCodes, isErrorCode } from '../src/errors.js';
 
 describe('danh mục mã lỗi (api.md §4.2)', () => {
-  it('có đúng 63 mã, không trùng', () => {
-    expect(errorCodes).toHaveLength(63);
-    expect(new Set(errorCodes).size).toBe(63);
+  it('có đúng 64 mã, không trùng', () => {
+    expect(errorCodes).toHaveLength(64);
+    expect(new Set(errorCodes).size).toBe(64);
     for (const code of errorCodes) expect(code).toMatch(errorCodePattern);
   });
 
@@ -33,7 +33,7 @@ describe('danh mục mã lỗi (api.md §4.2)', () => {
       '403': 8,
       '404': 1,
       '405': 1,
-      '409': 26,
+      '409': 27,
       '410': 1,
       '412': 1,
       '422': 9,

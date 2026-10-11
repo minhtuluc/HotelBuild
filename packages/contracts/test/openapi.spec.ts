@@ -60,6 +60,9 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['post', '/api/v1/room-types', 'bearer'],
   ['get', '/api/v1/room-types', 'bearer'],
   ['get', '/api/v1/rooms', 'bearer'],
+  ['post', '/api/v1/rooms', 'bearer'],
+  ['patch', '/api/v1/rooms/{roomId}', 'bearer'],
+  ['patch', '/api/v1/room-types/{roomTypeId}', 'bearer'],
   ['put', '/api/v1/rooms/{roomId}/connecting-room', 'bearer'],
   // HB-039: bổ sung tuyến đọc khoá phòng cho SCR-22 (thêm tuyến, không phá vỡ hợp đồng).
   ['get', '/api/v1/room-blocks', 'bearer'],
@@ -160,7 +163,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 85 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3 và tuyến self của HB-105)', () => {
+  it('có đủ 87 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3 và tuyến self của HB-105)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -183,7 +186,9 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/public/properties',
         '/api/v1/properties/{propertyId}',
         '/api/v1/room-types',
+        '/api/v1/room-types/{roomTypeId}',
         '/api/v1/rooms',
+        '/api/v1/rooms/{roomId}',
         '/api/v1/rooms/{roomId}/connecting-room',
         '/api/v1/room-blocks',
         '/api/v1/room-blocks/{roomBlockId}',

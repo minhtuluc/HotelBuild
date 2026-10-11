@@ -1,3 +1,4 @@
+import { PropertyAdminModule } from './modules/prop/property-admin/module.js';
 import { serializeSafeRequest } from './common/safe-request.js';
 import { AuditLogsModule } from './modules/sys/audit-logs/module.js';
 import { SettingsCommittedInterceptor } from './modules/sys/settings/committed-interceptor.js';
@@ -57,6 +58,7 @@ export class AppModule {
         RbacModule,
         IdempotencyModule,
         RoomBlocksModule,
+        PropertyAdminModule,
         AllotmentsModule,
         GridModule,
         RatePlansModule,
