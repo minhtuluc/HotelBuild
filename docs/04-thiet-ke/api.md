@@ -133,7 +133,7 @@ Property/RoomType dùng version bigint; Room dùng epoch microseconds của
 `updated_at` làm version numeric safe integer. If-Match mạnh dạng `"<version>"`;
 thiếu428/cũ hoặc sai412; create không cần If-Match (§1.3). Migration0005 chỉ đổi
 trigger touch của Room để timestamp tăng đơn điệu kể cả transaction chờ khoá.
-Ghi/replay trả ETag, dùng cùng transaction idempotency/audit; recheck role,
+Ghi/replay trả ETag, dùng cùng transaction idempotency/audit/outbox; recheck role,
 active và scope sau resource lock. Gán/gỡ liên kết khoá property rồi các loại/phòng
 ID ASC trong cơ sở; cả nguồn/đích/đối ứng cũ được cập nhật và audit nguyên tử.
 
@@ -145,6 +145,13 @@ Phòng mới nhận mã `<CS01|CS02|CS03>-<tầng><số>`; chuẩn hoá tiền t
 `CS-01` thành CS01 để kiểm, không sửa ID/mã legacy đã lưu. Mã trùng trong cơ sở
 →409 `E_PROP_CODE_TAKEN`. Ghi chú/lý do/nhãn trong audit che PII/bí mật có nhãn;
 không có tuyến xoá cứng. Không thay dữ liệu snapshot booking đã chốt.
+
+Theo BR-CHAN02/06, cấu hình Property và Room phát InventoryChanged; RoomType phát
+RateChanged cùng InventoryChanged. Payload schemaVersion1 mang entity/property/
+version và scopeALL_DATES, không bịa giới hạn ngày; liên kết mang affectedRoomIds.
+Consumer đọc lại cấu hình mới cho các kênh đang mở bán; replay không phát thêm,
+lỗi outbox rollback cả value/audit. Gate producer không thay bằng chứng giao OTA
+của relay/consumer ở các ticket CHAN.
 
 ### 2.3. INV — Tồn phòng (3 UC)
 

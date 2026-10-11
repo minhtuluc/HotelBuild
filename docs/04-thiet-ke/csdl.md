@@ -1734,6 +1734,12 @@ BEGIN
   RETURN NEW;
 END $$;
 
+CREATE OR REPLACE FUNCTION fn_touch_room_updated_at() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at := GREATEST(OLD.updated_at + interval '1 microsecond', NEW.updated_at, clock_timestamp());
+  RETURN NEW;
+END $$;
+
 DO $$
 DECLARE t record;
 BEGIN
@@ -1743,8 +1749,9 @@ BEGIN
        AND c.table_name <> 'audit_logs'
   LOOP
     EXECUTE format(
-      'CREATE TRIGGER %I BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION fn_touch_updated_at()',
-      'trg_' || t.table_name || '_touch', t.table_name);
+      'CREATE TRIGGER %I BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION %I()',
+      'trg_' || t.table_name || '_touch', t.table_name,
+      CASE WHEN t.table_name = 'rooms' THEN 'fn_touch_room_updated_at' ELSE 'fn_touch_updated_at' END);
   END LOOP;
 END $$;
 ```

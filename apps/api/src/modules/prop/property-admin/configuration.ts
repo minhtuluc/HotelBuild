@@ -1,3 +1,4 @@
+import { inventoryChanged, typeChanged } from './events.js';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import type { Clock, IdGenerator } from '@pinehill/domain';
 import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
@@ -73,6 +74,12 @@ export class ConfigurationCommands {
         view,
         input.reason,
       );
+      await inventoryChanged(tx, this.ids, {
+        entityType: 'Property',
+        entityId: id,
+        propertyId: id,
+        version: view.version,
+      });
       return view;
     } catch (error) {
       safeError(error);
@@ -116,6 +123,13 @@ export class ConfigurationCommands {
         view,
         'Create room type',
       );
+      await typeChanged(tx, this.ids, {
+        entityType: 'RoomType',
+        entityId: view.id,
+        roomTypeId: view.id,
+        propertyId: view.propertyId,
+        version: view.version,
+      });
       return view;
     } catch (error) {
       safeError(error);
@@ -165,6 +179,13 @@ export class ConfigurationCommands {
         view,
         input.reason,
       );
+      await typeChanged(tx, this.ids, {
+        entityType: 'RoomType',
+        entityId: view.id,
+        roomTypeId: view.id,
+        propertyId: view.propertyId,
+        version: view.version,
+      });
       return view;
     } catch (error) {
       safeError(error);

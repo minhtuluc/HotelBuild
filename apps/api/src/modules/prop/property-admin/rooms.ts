@@ -1,3 +1,4 @@
+import { inventoryChanged } from './events.js';
 import { Prisma } from '@prisma/client';
 import type { PrismaClient } from '@prisma/client';
 import type { Clock, IdGenerator } from '@pinehill/domain';
@@ -74,6 +75,13 @@ export class RoomCommands {
         { ...view, note: after.note },
         input.reason,
       );
+      await inventoryChanged(tx, this.ids, {
+        entityType: 'Room',
+        entityId: view.id,
+        propertyId: view.propertyId,
+        roomTypeId: view.roomTypeId,
+        version: view.version,
+      });
       return view;
     } catch (error) {
       safeError(error);
@@ -127,6 +135,13 @@ export class RoomCommands {
         { ...view, note: after.note },
         input.reason,
       );
+      await inventoryChanged(tx, this.ids, {
+        entityType: 'Room',
+        entityId: view.id,
+        propertyId: view.propertyId,
+        roomTypeId: view.roomTypeId,
+        version: view.version,
+      });
       return view;
     } catch (error) {
       safeError(error);

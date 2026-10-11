@@ -37,9 +37,9 @@ import { PropertyReads } from './reads.js';
     },
     {
       provide: ConnectingCommands,
-      inject: [PRISMA, CLOCK, PermissionRegistry],
-      useFactory: (db: PrismaClient, clock: Clock, r: PermissionRegistry) =>
-        new ConnectingCommands(db, clock, r),
+      inject: [PRISMA, CLOCK, PermissionRegistry, ID_GENERATOR],
+      useFactory: (db: PrismaClient, clock: Clock, r: PermissionRegistry, ids: IdGenerator) =>
+        new ConnectingCommands(db, clock, r, ids),
     },
     {
       provide: PropertyReads,

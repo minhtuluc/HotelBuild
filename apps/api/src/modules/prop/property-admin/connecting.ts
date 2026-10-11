@@ -1,5 +1,6 @@
+import { inventoryChanged } from './events.js';
 import type { Prisma, PrismaClient, rooms } from '@prisma/client';
-import type { Clock } from '@pinehill/domain';
+import type { Clock, IdGenerator } from '@pinehill/domain';
 import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
 import { PermissionRegistry } from '../../../common/rbac/permission-registry.js';
 import { lockProperty, currentActor, record, safeError } from './mutation.js';
@@ -46,6 +47,7 @@ export class ConnectingCommands {
     readonly db: PrismaClient,
     readonly clock: Clock,
     readonly registry: PermissionRegistry,
+    readonly ids: IdGenerator,
   ) {}
   async update(
     tx: Prisma.TransactionClient,
@@ -86,7 +88,15 @@ export class ConnectingCommands {
       }
       const after = await tx.rooms.findUnique({ where: { id } });
       if (!after) throw missing();
-      return roomView(after, await roomToken(tx, id));
+      const view = roomView(after, await roomToken(tx, id));
+      await inventoryChanged(tx, this.ids, {
+        entityType: 'Room',
+        entityId: id,
+        propertyId: source.property_id,
+        version: view.version,
+        affectedRoomIds: [...next.keys()].sort(),
+      });
+      return view;
     } catch (error) {
       safeError(error);
     }

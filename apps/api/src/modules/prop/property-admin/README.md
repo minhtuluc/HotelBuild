@@ -24,3 +24,14 @@ roomsACTIVE (bedcount chỉshared). Safe VNDs/bands/5percent validated tạiserv
 Text mask conservatively catches labeled PII/secrets, không suy đoán arbitrary
 unlabeled personal names. Không nhận actor/principal/scope từ body. Snapshot
 booking cũ không được sửa. Gate/thực chạy/bằng chứng ở hồ sơ ngoài repo HB-F6-specs.
+
+## Outbox / BR-CHAN02/06
+
+Property config, room create/update/link emit InventoryChanged; room type config
+emits RateChanged +InventoryChanged in the same TX as value/audit/idempotency.
+Payload schemaVersion1 identifies entity/property/version; scopeALL_DATES signals
+configuration recompute, no invented date range. Type/room status signals include
+roomTypeId; reciprocal link signals property and affectedRoomIds (cross-types).
+Producer queues durably only; delivery and OTA5minute guarantee belong to downstream
+relay/channel consumers. Replay creates no extra event; any outbox failure rolls
+back value/version/audit/claim/all reciprocal partners.
