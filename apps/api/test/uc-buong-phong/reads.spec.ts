@@ -45,7 +45,7 @@ test('assignment filters never widen housekeeping access; explicit outside prope
   expect((await list(token, { propertyId: otherPropertyId })).status).toBe(403);
   expect((await list(token, { cursor: secondTask })).status).toBe(400);
 });
-test.each(['FRONT_DESK', 'MANAGER', 'OWNER'])(
+test.each(['FRONT_DESK', 'MANAGER'])(
   '%s may read scoped task facts; pagination stays filtered',
   async (role) => {
     const token = await login(role);
@@ -68,7 +68,7 @@ test.each(['FRONT_DESK', 'MANAGER', 'OWNER'])(
     expect(decode.parse((await list(token, { propertyId, status: 'DONE' })).body).data).toEqual([]);
   },
 );
-test.each(['ACCOUNTANT', 'RESERVATION_AGENT', 'SYSADMIN'])(
+test.each(['ACCOUNTANT', 'RESERVATION_AGENT', 'SYSADMIN', 'OWNER'])(
   '%s cannot read housekeeping task data',
   async (role) => {
     const result = await list(await login(role));

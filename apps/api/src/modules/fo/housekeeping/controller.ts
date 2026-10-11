@@ -33,6 +33,7 @@ export class HousekeepingController {
   }
   @Patch(':taskId')
   @Header('Cache-Control', 'no-store')
+  @Header('Access-Control-Expose-Headers', 'ETag')
   @Permission('housekeepingTasks.update')
   @Idempotent(HousekeepingAccess)
   @UseInterceptors(HousekeepingETagInterceptor)

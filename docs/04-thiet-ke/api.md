@@ -228,13 +228,13 @@ theo `tiers[i].hoursBeforeCheckIn/refundPercent/chargeFirstNight` chỉ ra dòng
 | POST | `/api/v1/front-office/check-in` | Check-in khách | FRONT_DESK | `bookingId`, `idNumber`, `actualRoomIds[]`, `earlyCheckIn`, `note` | UC-FO-01 | BR-FO-01,02,04 |
 | POST | `/api/v1/front-office/check-out` | Check-out, thu phát sinh, ghi nhận trả phòng sớm với `cancelReason = EARLY_CHECKOUT`; ngưỡng đọc từ `CancellationPolicy.earlyCheckoutFreeHours`/`earlyCheckoutRefundPct` | FRONT_DESK | `bookingId`, `extras[]`, `lateCheckOut`, `earlyCheckOut`, `pinToken` 🔒 | UC-FO-02 | BR-FO-03,05,06, BR-CANCEL-09 |
 | POST | `/api/v1/front-office/no-show` | Ghi nhận khách không đến | FRONT_DESK | `bookingId`, `reason` | UC-FO-04 | BR-CANCEL-10 |
-| GET | `/api/v1/housekeeping/tasks` | Danh sách nhiệm vụ trong phạm vi; HOUSEKEEPING chỉ thấy việc được giao | HOUSEKEEPING, FRONT_DESK, MANAGER, OWNER | `propertyId`, `businessDate`, `status`, `assignedTo`, `limit`, `cursor` | UC-FO-03 | BR-FO-06, BR-RBAC-02,03 |
-| PATCH | `/api/v1/housekeeping/tasks/{taskId}` | Cập nhật nhiệm vụ theo quyền từng trường; không tự tăng tồn tương lai | HOUSEKEEPING, FRONT_DESK, MANAGER, OWNER | `status`, `note`, `reason`; `assignedTo` chỉ MANAGER/OWNER; `If-Match`, `Idempotency-Key` | UC-FO-03 | BR-FO-06,07 |
+| GET | `/api/v1/housekeeping/tasks` | Danh sách nhiệm vụ trong phạm vi; HOUSEKEEPING chỉ thấy việc được giao | HOUSEKEEPING, FRONT_DESK, MANAGER | `propertyId`, `businessDate`, `status`, `assignedTo`, `limit`, `cursor` | UC-FO-03 | BR-FO-06, BR-RBAC-02,03 |
+| PATCH | `/api/v1/housekeeping/tasks/{taskId}` | Cập nhật nhiệm vụ theo quyền từng trường; không tự tăng tồn tương lai | HOUSEKEEPING, FRONT_DESK, MANAGER | `status`, `note`, `reason`; `assignedTo` chỉ FRONT_DESK/MANAGER; `If-Match`, `Idempotency-Key` | UC-FO-03 | BR-FO-06,07 |
 
 HB-148 theo BR-FO-07: HOUSEKEEPING chỉ chuyển việc được giao `PENDING → IN_PROGRESS → DONE`.
 FRONT_DESK/MANAGER kiểm tra `DONE → INSPECTED` hoặc mở lại `DONE/INSPECTED → PENDING`;
-không thay bước dọn của HOUSEKEEPING. MANAGER/OWNER phân công cho HOUSEKEEPING còn hoạt động
-và có phạm vi cơ sở; OWNER không tự kế thừa thao tác kiểm tra/dọn phòng. Đọc và ghi chỉ trả DTO
+không thay bước dọn của HOUSEKEEPING. FRONT_DESK/MANAGER phân công cho HOUSEKEEPING còn hoạt động
+và có phạm vi cơ sở; OWNER không được đọc/phân công/kiểm tra/dọn phòng theo tập quyền BR-RBAC-03. Đọc và ghi chỉ trả DTO
 nhiệm vụ, không có booking/khách/tiền; ghi chú che số điện thoại, email và số định danh.
 PATCH khoá phòng vật lý rồi nhiệm vụ, kiểm lại phạm vi/người được giao và phiên bản; audit và
 kết quả idempotency trong cùng transaction. `completedAt` được đặt lúc DONE, giữ khi INSPECTED,
@@ -834,7 +834,7 @@ Bảng này triển khai BR-RBAC-03, có hiệu lực cho các nhãn tóm tắt 
 | Đọc báo cáo tài chính | ACCOUNTANT, OWNER | MANAGER chỉ báo cáo vận hành cơ sở của mình; không có quyền chi tiền vì được xem báo cáo |
 | Tạo block, cấu hình quota, đồng bộ kênh, xử lý case | MANAGER, OWNER | Đúng scope; đối tượng đích và các booking bị ảnh hưởng cùng được kiểm tra |
 | Giá/mùa/kênh/policy/rateplan/tham số nghiệp vụ | OWNER | MANAGER chỉ khuyến mãi được UC-RATE-04 cho phép trong scope, không sửa giá/policy qua endpoint khuyến mãi |
-| Xem/cập nhật dọn phòng | HOUSEKEEPING, FRONT_DESK, MANAGER, OWNER | HOUSEKEEPING chỉ việc được giao và PENDING/IN_PROGRESS/DONE; FRONT_DESK/MANAGER INSPECTED/mở lại; MANAGER/OWNER phân công; không trả hồ sơ khách/giá |
+| Xem/cập nhật dọn phòng | HOUSEKEEPING, FRONT_DESK, MANAGER | HOUSEKEEPING chỉ việc được giao và PENDING/IN_PROGRESS/DONE; FRONT_DESK/MANAGER phân công, INSPECTED/mở lại; không trả hồ sơ khách/giá |
 | Hồ sơ khách, điểm | FRONT_DESK, RESERVATION_AGENT, MANAGER, OWNER | Projection phù hợp nhiệm vụ, khách phải có booking thuộc scope; không lộ lịch sử toàn chuỗi từ số điện thoại |
 | Blacklist/ẩn danh hoá | MANAGER, OWNER | Có lý do, quyền trên hồ sơ, kiểm tra lịch lưu giữ và nghĩa vụ đang mở |
 | Thông báo đã gửi/gửi lại | FRONT_DESK, RESERVATION_AGENT, MANAGER | Đúng booking/scope, che thông tin người nhận trên danh sách, chống gửi trùng |

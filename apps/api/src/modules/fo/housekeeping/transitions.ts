@@ -3,7 +3,7 @@ import { AppError } from '../../../common/app-error.js';
 import type { Update } from './validation.js';
 import { forbidden } from './validation.js';
 export function fieldPermissions(actor: AuthorizedActor, input: Update) {
-  if (input.assignedTo !== undefined && !['MANAGER', 'OWNER'].includes(actor.role))
+  if (input.assignedTo !== undefined && !['FRONT_DESK', 'MANAGER'].includes(actor.role))
     throw forbidden();
   if (input.status === undefined) return;
   const permitted =

@@ -8,9 +8,10 @@ Không triển khai checkout/check-in hay tạo task: HB-145 tạo sau checkout,
   UUID, limit1–100 và cursor thuộc tập đã lọc được kiểm; count/page cùng RepeatableRead.
 - BR-FO-07 là nguồn chân lý: HOUSEKEEPING dọn PENDING→IN_PROGRESS→DONE; FRONT_DESK/MANAGER
   DONE→INSPECTED hoặc DONE/INSPECTED→PENDING. Đây là quyết định theo AGENTS§4 thay AC3 ticket
-  đang nói FRONT_DESK chỉ đọc. Giữ nguyên ticket/BR, đồng bộ docs04.
-- MANAGER/OWNER phân công; người nhận phải active HOUSEKEEPING scoped cùng cơ sở. OWNER không
-  kế thừa dọn/kiểm tra. Ba role ACCOUNTANT/RESERVATION_AGENT/SYSADMIN bị từ chối.
+  đang nói FRONT_DESK chỉ đọc. Quyền phân công theo BR-RBAC03 và API§6.3 cũ (FRONT_DESK/MANAGER),
+  cao hơn ticket/hợp đồng MANAGER/OWNER. Giữ nguyên ticket/BR, đồng bộ docs04 và comment hợp đồng.
+- FRONT_DESK/MANAGER phân công; người nhận phải active HOUSEKEEPING scoped cùng cơ sở. OWNER không
+  kế thừa quyền đọc/phân công/dọn/kiểm tra. OWNER/ACCOUNTANT/RESERVATION_AGENT/SYSADMIN bị từ chối.
 - PATCH cần If-Match phiên bản nguyên dương và key UUIDv4. Khoá Room→Task rồi kiểm lại scope,
   assignment, role/active của actor và version. User/scope người nhận cũng được khoá khi phân công.
   Trigger hiện có tăng version; không tự tăng lần hai. Audit cùng TX lệnh và idempotency cache.

@@ -13,8 +13,8 @@ import { HousekeepingAccess } from './access.js';
   providers: [
     HousekeepingAccess,
     permissionProvider('housekeeping', {
-      'housekeepingTasks.read': ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER', 'OWNER'],
-      'housekeepingTasks.update': ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER', 'OWNER'],
+      'housekeepingTasks.read': ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER'],
+      'housekeepingTasks.update': ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER'],
     }),
     {
       provide: HousekeepingService,

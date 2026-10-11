@@ -57,6 +57,7 @@ test('assigned staff advances cleaning one step; durable replay changes neither 
   expect(replay.status).toBe(200);
   expect(replay.headers['idempotency-replayed']).toBe('true');
   expect(replay.headers.etag).toBe('"2"');
+  expect(replay.headers['access-control-expose-headers']).toBe('ETag');
   expect(replay.body).toEqual(first.body);
   expect(Object.keys(rawTask.parse(replay.body)).sort()).toEqual(keys);
   const done = await patch(token, { status: 'DONE' }, ownTask, '"2"');
@@ -87,7 +88,7 @@ test('state skips and reversal return409; staff cannot inspect, reopen or reassi
   expect((await patch(token, { status: 'DONE' }, ownTask, '"2"')).status).toBe(200);
   expect((await patch(token, { status: 'IN_PROGRESS' }, ownTask, '"3"')).status).toBe(409);
 });
-test('BR-FO-07 lets FRONT_DESK inspect/reopen but not clean or assign', async () => {
+test('BR-FO-07 lets FRONT_DESK inspect/reopen and BR-RBAC03 allows assignment, not cleaning', async () => {
   await rows(
     "UPDATE housekeeping_tasks SET status='DONE',completed_at=clock_timestamp() WHERE id=$1",
     [ownTask],
@@ -96,18 +97,18 @@ test('BR-FO-07 lets FRONT_DESK inspect/reopen but not clean or assign', async ()
   const inspected = await patch(token, { status: 'INSPECTED' }, ownTask, '"2"');
   expect(inspected.status).toBe(200);
   expect(housekeepingTaskSchema.parse(inspected.body).completedAt).not.toBeNull();
-  expect((await patch(token, { assignedTo: secondUserId }, ownTask, '"3"')).status).toBe(403);
+  expect((await patch(token, { assignedTo: secondUserId }, ownTask, '"3"')).status).toBe(200);
   const reopened = await patch(
     token,
     { status: 'PENDING', reason: 'Inspection requires another clean' },
     ownTask,
-    '"3"',
+    '"4"',
   );
   expect(reopened.status).toBe(200);
-  expect(reopened.body).toMatchObject({ status: 'PENDING', completedAt: null, version: 4 });
-  expect((await patch(token, { status: 'IN_PROGRESS' }, ownTask, '"4"')).status).toBe(403);
+  expect(reopened.body).toMatchObject({ status: 'PENDING', completedAt: null, version: 5 });
+  expect((await patch(token, { status: 'IN_PROGRESS' }, ownTask, '"5"')).status).toBe(403);
 });
-test.each(['MANAGER', 'OWNER'])(
+test.each(['FRONT_DESK', 'MANAGER'])(
   '%s assigns only active housekeeping staff scoped to the task property',
   async (role) => {
     const token = await login(role);
@@ -170,10 +171,12 @@ test('audit failure rolls back task/version and does not cache a success', async
   }
 });
 
-test('OWNER cannot inherit inspection or cleaning; MANAGER inspects but cannot skip cleaning', async () => {
+test('OWNER cannot inherit any housekeeping operation; MANAGER inspects but cannot skip cleaning', async () => {
   const owner = await login('OWNER');
   expect((await patch(owner, { status: 'INSPECTED' })).status).toBe(403);
   expect((await patch(owner, { status: 'IN_PROGRESS' })).status).toBe(403);
+  expect((await patch(owner, { assignedTo: secondUserId })).status).toBe(403);
+  expect((await patch(owner, { note: 'Not permitted' })).status).toBe(403);
   const manager = await login('MANAGER');
   expect((await patch(manager, { status: 'INSPECTED' })).status).toBe(409);
   expect((await patch(manager, { status: 'DONE' })).status).toBe(403);

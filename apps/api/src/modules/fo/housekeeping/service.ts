@@ -11,7 +11,7 @@ import type { Task } from './projection.js';
 import { conflict, forbidden, invalid, missing } from './validation.js';
 import type { Query, Update } from './validation.js';
 import { fieldPermissions, transition } from './transitions.js';
-const readers = ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER', 'OWNER'];
+const readers = ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER'];
 function changes(input: Update, clock: Clock): Prisma.housekeeping_tasksUncheckedUpdateInput {
   return {
     ...(input.status === undefined ? {} : { status: input.status }),
@@ -56,7 +56,7 @@ export class HousekeepingService {
         { business_date: new Date(`${query.businessDate}T00:00:00Z`) },
         {
           rooms: {
-            ...(actor.isOwner() ? {} : { property_id: { in: [...actor.propertyScope] } }),
+            property_id: { in: [...actor.propertyScope] },
             ...(query.propertyId ? { property_id: query.propertyId } : {}),
           },
         },
@@ -131,10 +131,7 @@ export class HousekeepingService {
       },
     });
     if (!user?.is_active || user.role !== actor.role) throw forbidden();
-    if (
-      user.role !== 'OWNER' &&
-      !user.user_property_scopes.some((scope) => scope.property_id === propertyId)
-    )
+    if (!user.user_property_scopes.some((scope) => scope.property_id === propertyId))
       throw new ScopeDeniedError();
   }
   private async assignee(tx: Prisma.TransactionClient, input: Update, propertyId: string) {

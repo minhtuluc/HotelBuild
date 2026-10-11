@@ -122,12 +122,12 @@ function independentOracle(): Record<string, Expected> {
     method: RequestMethod.PUT,
   };
   keyed[`${RequestMethod.GET}:housekeeping/tasks`] = {
-    roles: ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER', 'OWNER'],
+    roles: ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER'],
     status: 400,
     method: RequestMethod.GET,
   };
   keyed[`${RequestMethod.PATCH}:housekeeping/tasks/:taskId`] = {
-    roles: ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER', 'OWNER'],
+    roles: ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER'],
     status: 428,
     method: RequestMethod.PATCH,
   };

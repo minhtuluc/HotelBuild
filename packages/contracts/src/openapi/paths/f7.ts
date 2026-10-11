@@ -106,7 +106,7 @@ export function registerF7Paths(registry: OpenAPIRegistry, errorBodyComponent: z
     method: 'patch',
     path: '/api/v1/housekeeping/tasks/{taskId}',
     operationId: 'housekeepingTasksUpdate',
-    summary: 'Cập nhật việc được giao; `assignedTo` chỉ MANAGER/OWNER (UC-FO-03, BR-FO-06,07)',
+    summary: 'Cập nhật việc được giao; `assignedTo` chỉ FRONT_DESK/MANAGER (UC-FO-03, BR-FO-06,07)',
     ...bearerWrite(['fo']),
     parameters: [...idempotencyHeaders, pathParam('taskId'), ifMatchHeader],
     request: { body: jsonBody(housekeepingTaskUpdateRequestSchema) },

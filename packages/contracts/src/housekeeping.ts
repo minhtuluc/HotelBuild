@@ -33,7 +33,7 @@ export const housekeepingTaskQuerySchema = z.strictObject({
 
 /**
  * `PATCH /housekeeping/tasks/{taskId}` — HOUSEKEEPING cập nhật việc của mình; `assignedTo` chỉ
- * MANAGER/OWNER được đổi (kiểm ở tầng nghiệp vụ, hợp đồng chỉ khai trường). Có `If-Match` theo version.
+ * FRONT_DESK/MANAGER được đổi (kiểm ở tầng nghiệp vụ, hợp đồng chỉ khai trường). Có `If-Match` theo version.
  */
 export const housekeepingTaskUpdateRequestSchema = z.strictObject({
   status: housekeepingStatusSchema.optional(),
