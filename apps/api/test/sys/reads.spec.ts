@@ -277,3 +277,15 @@ test('existing RoomBlock CREATED and REMOVED snapshots retain room and date hist
     end_date: '2030-01-03',
   });
 });
+test('known business amounts and bigint versions retain exact digits while phone notes stay masked', async () => {
+  await audit(
+    null,
+    { fixedNightlyPrice: '123456789', version: '1234567890123', note: 'phone +849012345678' },
+    'RatePlan',
+  );
+  const response = await logs(await login());
+  expect(response.status).toBe(200);
+  const snapshot: unknown = JSON.parse(String(raw.parse(response.body).data[0]!.afterJson));
+  expect(snapshot).toMatchObject({ fixedNightlyPrice: '123456789', version: '1234567890123' });
+  expect(JSON.stringify(response.body)).not.toContain('+849012345678');
+});

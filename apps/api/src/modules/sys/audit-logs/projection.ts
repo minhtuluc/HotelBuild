@@ -121,7 +121,11 @@ function safeField(
     /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(item)
   )
     return item;
-  if (key === 'value' && numeric && typeof item === 'string' && /^-?\d+(?:\.\d+)?$/.test(item))
+  if (
+    numericField(key, numeric) &&
+    typeof item === 'string' &&
+    /^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(item)
+  )
     return item;
   return safeSnapshot(item, depth + 1);
 }
@@ -153,4 +157,11 @@ export function project(row: AuditRow) {
 
 function idField(key: string): boolean {
   return key === 'id' || key.endsWith('Id') || key.endsWith('_id') || key === 'assignedTo';
+}
+
+function numericField(key: string, typedValue: boolean): boolean {
+  return (
+    (key === 'value' && typedValue) ||
+    ['version', 'fixedNightlyPrice', 'amount', 'basePrice', 'minPrice', 'maxPrice'].includes(key)
+  );
 }
