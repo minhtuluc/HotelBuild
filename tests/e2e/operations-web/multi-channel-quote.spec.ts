@@ -116,6 +116,8 @@ test.describe('SCR-30 báo giá đa kênh trên API giả (HB-062)', () => {
     const spy = backend(page);
     await page.goto('/multi-channel-quote');
     await viewQuote(page);
+    // Click completion does not await HTTP; inspect the request after its result is displayed.
+    await expect(page.getByTestId('mcq-table')).toBeVisible();
     expect(spy.posts()).toHaveLength(1);
     const body = spy.posts()[0] ?? '';
     for (const code of ['WEB', 'PHONE', 'WALKIN', 'AGENCY', 'OTA_BOOKING', 'OTA_AGODA', 'OTA_AIRBNB']) {
