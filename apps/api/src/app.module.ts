@@ -1,4 +1,7 @@
 import { serializeSafeRequest } from './common/safe-request.js';
+import { AuditLogsModule } from './modules/sys/audit-logs/module.js';
+import { SettingsCommittedInterceptor } from './modules/sys/settings/committed-interceptor.js';
+import { SettingsModule } from './modules/sys/settings/module.js';
 import { HousekeepingModule } from './modules/fo/housekeeping/module.js';
 import { GridModule } from './modules/inv/grid/module.js';
 import { AllotmentsModule } from './modules/inv/allotments/module.js';
@@ -59,6 +62,8 @@ export class AppModule {
         RatePlansModule,
         CancellationPoliciesModule,
         HousekeepingModule,
+        AuditLogsModule,
+        SettingsModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },
@@ -75,6 +80,7 @@ export class AppModule {
         { provide: APP_GUARD, useClass: RbacGuard },
         { provide: APP_INTERCEPTOR, useClass: ScopeDenialInterceptor },
         { provide: APP_INTERCEPTOR, useClass: CorrelationInterceptor },
+        { provide: APP_INTERCEPTOR, useExisting: SettingsCommittedInterceptor },
         { provide: APP_INTERCEPTOR, useExisting: IdempotencyInterceptor },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
       ],

@@ -131,6 +131,22 @@ function independentOracle(): Record<string, Expected> {
     status: 428,
     method: RequestMethod.PATCH,
   };
+  // HB-036 / UC-SYS-01,02: explicit grants, independent of route permission providers.
+  keyed[`${RequestMethod.GET}:audit-logs`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 200,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.GET}:system-settings`] = {
+    roles: ['OWNER'],
+    status: 200,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.PUT}:system-settings/:key`] = {
+    roles: ['OWNER'],
+    status: 428,
+    method: RequestMethod.PUT,
+  };
   return keyed;
 }
 
@@ -156,7 +172,7 @@ test('every discovered protected HTTP route has an independent oracle and runs a
     for (const role of roles) {
       clock.value += 61000;
       const token = await login(role);
-      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId).replace(':taskId', roomId)}`;
+      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId).replace(':taskId', roomId).replace(':key', 'refund.feeAmount')}`;
       const pending = routeRequest(route.method, path);
       const result = await pending
         .set('Authorization', `Bearer ${token}`)

@@ -276,12 +276,30 @@ xoá khi mở lại. Trạng thái sai → 409; phiên bản cũ → 412; thiế
 
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |
 |--------|-----------|-------|-------------------|---------------|----|----|
-| GET | `/api/v1/audit-logs` | Nhật ký kiểm toán (chỉ đọc) | MANAGER | `actorId`, `entityType`, `entityId`, `action`, `from`, `to` | UC-SYS-01 | BR-SYS-01,05 |
+| GET | `/api/v1/audit-logs` | Nhật ký kiểm toán (chỉ đọc) | MANAGER, OWNER | `actorId`, `entityType`, `entityId`, `action`, `from`, `to` | UC-SYS-01 | BR-SYS-01,05 |
 | GET | `/api/v1/system-settings` | Danh sách tham số kèm kiểu giá trị, người sửa cuối, phiên bản (màn SCR-17) | OWNER | — | UC-SYS-02 | BR-SYS-02 |
 | PUT | `/api/v1/system-settings/{key}` | Sửa tham số (ghi `AuditLog` cùng transaction) | OWNER | `value`, `reason` | UC-SYS-02 | BR-SYS-02, BR-GEN-07 |
 | POST | `/api/v1/system/backups` | Yêu cầu sao lưu (202) | SYSADMIN | `mode` (`PITR`/`FULL`) | UC-SYS-03 | BR-SYS-03 |
 | POST | `/api/v1/system/backups/{backupId}/restore` | Diễn tập phục hồi vào môi trường tạm do server chọn (202); không nhận đường dẫn/DB URL của client | SYSADMIN | `targetTimestamp`, `reason` | UC-SYS-03 | BR-SYS-03 |
 | GET | `/api/v1/system/health` | Công khai chỉ `{status: "ok"}`; không lộ version, hostname, topology hay lỗi phụ thuộc | — | — | UC-SYS-03 | NFR-USE-01, NFR-USE-02 |
+
+**Triển khai HB-036:** audit phân trang `(at DESC,id DESC)` bằng cursor UUID thuộc tập
+đã lọc, giữ độ chính xác microsecond khi so cursor; khoảng thời gian `[from,to)`.
+MANAGER chỉ nhận loại `Property`, `RoomType`, `Room`, `RoomBlock`, `Booking`,
+`RateCalendar`, `Season`, `Promotion` có `propertyId`/`property_id` cấp đầu trong
+snapshot do server ghi, riêng `Property` thêm `entity_id`. Mọi bằng chứng hiện diện
+phải là string cùng một cơ sở trong scope. Thiếu/sai/mâu thuẫn/loại chưa hỗ trợ bị
+loại trước count/limit; không suy diễn phạm vi từ actor hay thực thể đang có.
+Các writer chưa ghi proof (gồm HousekeepingTask/ChannelAllotment) hiện chỉ OWNER
+đọc được. DTO vẫn giữ schema đã phát hành: actor NULL hiển thị `SYSTEM`, entity
+NULL hiển thị `GLOBAL`; snapshot được lọc bí mật/PII, không trả đầy đủ hồ sơ khách.
+
+Settings chỉ OWNER; GET đọc mới từ DB, description NULL/rỗng hiển thị key và
+updatedBy NULL hiển thị `SYSTEM`. PUT trả204 + ETag, ghi giá trị/audit/response
+idempotency cùng transaction; recheck quyền/active/version sau khoá. Cache nội bộ
+`RUNTIME_SETTINGS` tối đa60s tính từ lúc bắt đầu đọc DB; ghi của chính tiến trình
+chỉ evict sau commit, replay không nạp lại giá trị cũ. Đây là service nội bộ dùng
+chung, không cấp quyền đọc settings nghiệp vụ cho frontend/role khác.
 
 ### 2.14. Ràng buộc âm — endpoint KHÔNG được phép tồn tại
 
@@ -803,7 +821,7 @@ sequenceDiagram
 | `POST /room-merges/**` | FRONT_DESK | Cơ sở của cả hai booking | Khác giới tính bắt buộc `MANAGER`+ duyệt (BR-OVER-14) |
 | `PATCH /channels/{channelId}` | OWNER | Toàn chuỗi | Cảnh báo cân bằng giá khi giá thuần OTA thấp hơn `WEB` (BR-RATE-09) |
 | `PUT /room-types/{roomTypeId}/rate-calendar` | OWNER | Toàn chuỗi | Lệch > ±20% cần xác nhận lại (BR-RBAC-04) |
-| `GET /audit-logs` | MANAGER | Giới hạn theo `propertyScope` khi áp dụng được | Chỉ đọc; không có endpoint sửa/xoá (BR-SYS-01) |
+| `GET /audit-logs` | MANAGER, OWNER | MANAGER chỉ đọc bản ghi có bằng chứng cơ sở bất biến trong scope; OWNER toàn chuỗi | Chỉ đọc; không có endpoint sửa/xoá (BR-SYS-01), không join actor/thực thể hiện tại để suy ra scope lịch sử |
 | `POST /users`, `PUT /users/{id}/access` | OWNER | Toàn chuỗi | Không xoá cứng, chỉ vô hiệu hoá (BR-RBAC-01) |
 
 ### 6.2. Quy tắc thực thi
