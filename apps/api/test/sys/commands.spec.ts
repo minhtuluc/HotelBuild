@@ -189,3 +189,26 @@ test('secret-named setting values are never copied into audit snapshots', async 
   expect(text).not.toContain('SyntheticNewCredential');
   expect(records[0]!.after_json).toMatchObject({ value: '[REDACTED]' });
 });
+for (const value of ['1000.00000000000001', '9007199254740991.1', '1.0000000000000000001e3'])
+  test(`exact decimal validation cannot round money into an integer: ${value}`, async () => {
+    expect((await put(await login(), value)).status).toBe(400);
+    expect(await state()).toMatchObject({ value: '0', version: '1' });
+    expect(await audits()).toHaveLength(0);
+  });
+test('quoted JSON secrets in reason are redacted before durable audit storage', async () => {
+  const response = await http()
+    .put('/api/v1/system-settings/refund.feeAmount')
+    .set('Authorization', `Bearer ${await login()}`)
+    .set('If-Match', '"1"')
+    .set('Idempotency-Key', randomUUID())
+    .send({
+      value: '1000',
+      reason: '{"password":"SyntheticQuotedPassword","accessToken":"SyntheticQuotedToken"}',
+    });
+  expect(response.status).toBe(204);
+  const records = await audits();
+  expect(records).toHaveLength(1);
+  const text = JSON.stringify(records);
+  expect(text).not.toContain('SyntheticQuotedPassword');
+  expect(text).not.toContain('SyntheticQuotedToken');
+});

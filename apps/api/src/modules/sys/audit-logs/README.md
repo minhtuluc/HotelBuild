@@ -21,6 +21,8 @@ suy diễn hoặc cập nhật lại lịch sử append-only để tạo bằng 
 DTO giữ 9 trường hợp đồng. `actor_id` NULL → nhãn hiển thị `SYSTEM`, `entity_id`
 NULL → `GLOBAL`; đây không phải principal cấp quyền. before/after là JSON string
 nullable được chiếu qua whitelist nghiệp vụ đệ quy; trường khách/bí mật bị loại,
-JSON nhúng cũng bị lọc. Free text che email, dãy số định danh và nhãn giấy tờ/token/
+JSON nhúng cũng bị lọc. Reason JSON che các nhãn bí mật có quote trước khi ghi/đọc.
+Giữ room/date của lịch sử RoomBlock kể cả sau xoá; UUID trường ID không bị che như
+số điện thoại. Free text che email, dãy số định danh và nhãn giấy tờ/token/
 mật khẩu; không suy đoán được tên hay giấy tờ tuỳ ý không có nhãn. Giá trị NUMBER
 đã có metadata kiểu hoặc khoá tiền chuẩn giữ chữ số phục vụ tra soát.

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { systemSettingUpdateRequestSchema } from '@pinehill/contracts';
 import { AppError } from '../../../common/app-error.js';
 import { safeAuditText } from '../audit-logs/safe-text.js';
+import { exactInteger, integralSetting } from './exact-number.js';
 import { invalid } from './validation.js';
 export const conflict = () =>
   new AppError(412, 'E_GEN_VERSION_CONFLICT', 'Tham số đã thay đổi; hãy tải lại.');
@@ -36,8 +37,10 @@ export function typedValue(value: string, type: string, name: string): void {
     JSON: validJson,
     NUMBER: validNumber,
   };
-  if (!rules[type]?.(value) || (type === 'NUMBER' && !numericBound(name, Number(value))))
-    throw invalid();
+  if (!rules[type]?.(value)) throw invalid();
+  if (type !== 'NUMBER') return;
+  if (integralSetting(name) && exactInteger(value) === null) throw invalid();
+  if (!numericBound(name, Number(value))) throw invalid();
 }
 function validJson(value: string): boolean {
   try {

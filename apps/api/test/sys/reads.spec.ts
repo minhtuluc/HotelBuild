@@ -224,3 +224,56 @@ test('legacy secret-named setting snapshot is redacted when read', async () => {
   expect(result.status).toBe(200);
   expect(JSON.stringify(result.body)).not.toContain('SyntheticLegacyCredential');
 });
+test('legacy quoted JSON secrets in reason are redacted when read', async () => {
+  const id = await audit(null, { propertyId });
+  // Append-only historical input fixture: supply reason on insertion, never update AuditLog.
+  await rows(
+    `INSERT INTO audit_logs(chain_seq,row_hash,actor_id,actor_role,action,entity_type,entity_id,reason)
+    VALUES(0,'pending',$1,'OWNER',(SELECT action FROM audit_logs WHERE id=$2),'SystemSetting',NULL,$3)`,
+    [
+      userId,
+      id,
+      '{"password":"SyntheticLegacyQuotedPassword","accessToken":"SyntheticLegacyQuotedToken"}',
+    ],
+  );
+  const response = await logs(await login());
+  expect(response.status).toBe(200);
+  const text = JSON.stringify(response.body);
+  expect(text).not.toContain('SyntheticLegacyQuotedPassword');
+  expect(text).not.toContain('SyntheticLegacyQuotedToken');
+});
+test('existing RoomBlock CREATED and REMOVED snapshots retain room and date history', async () => {
+  const room = '00000000-0000-4000-8000-123456789012';
+  await audit(null, {
+    propertyId,
+    roomId: room,
+    startDate: '2030-01-01',
+    endDate: '2030-01-03',
+    reason: 'MAINTENANCE',
+  });
+  await audit(
+    {
+      propertyId,
+      room_id: room,
+      start_date: '2030-01-01',
+      end_date: '2030-01-03',
+      reason: 'MAINTENANCE',
+    },
+    null,
+  );
+  const response = await logs(await login());
+  expect(response.status).toBe(200);
+  const records = raw.parse(response.body).data;
+  const created = records.find((row) => row.beforeJson === null)!;
+  const removed = records.find((row) => row.afterJson === null)!;
+  expect(JSON.parse(String(created.afterJson))).toMatchObject({
+    roomId: room,
+    startDate: '2030-01-01',
+    endDate: '2030-01-03',
+  });
+  expect(JSON.parse(String(removed.beforeJson))).toMatchObject({
+    room_id: room,
+    start_date: '2030-01-01',
+    end_date: '2030-01-03',
+  });
+});

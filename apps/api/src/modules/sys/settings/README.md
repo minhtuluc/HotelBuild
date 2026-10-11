@@ -5,7 +5,8 @@ cache quyết định quyền; phân trang key tăng dần, cursor phải tồn 
 NULL → nhãn `SYSTEM`; description NULL/rỗng → key, giữ DTO 7 trường đã phát hành.
 
 PUT trả 204 và ETag version mới. Thiếu If-Match428, tag sai/cũ412, key thiếu404,
-sai value_type400. NUMBER theo cú pháp thập phân hữu hạn/safe; tiền VND và ngưỡng
+sai value_type400. NUMBER theo cú pháp thập phân hữu hạn/safe; kiểm số nguyên chính xác trước IEEE754,
+không làm tròn phần lẻ cực nhỏ để vượt validation. Tiền VND và ngưỡng
 đếm nguyên không âm, interval nguyên dương, phần trăm có trần theo BR hiện có.
 BOOLEAN chỉ true/false; JSON phải parse được; STRING không rỗng. Body strict,
 reason bắt buộc, che nhãn bí mật/PII trước khi ghi audit. Snapshot JSON tham số

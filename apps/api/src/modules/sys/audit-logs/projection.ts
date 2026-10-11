@@ -30,6 +30,45 @@ const fields = new Set([
   'amount',
   'before',
   'after',
+  'room_id',
+  'room_type_id',
+  'startDate',
+  'endDate',
+  'start_date',
+  'end_date',
+  'created_at',
+  'updated_at',
+  'minNights',
+  'maxNights',
+  'cancellationPolicyId',
+  'fixedNightlyPrice',
+  'losDiscountEnabled',
+  'rescheduleAllowed',
+  'rescheduleMinHours',
+  'rescheduleFeePct',
+  'maxReschedules',
+  'policy',
+  'isDefault',
+  'earlyCheckoutFreeHours',
+  'earlyCheckoutRefundPct',
+  'tiers',
+  'offsetHours',
+  'refundPercent',
+  'chargeFirstNight',
+  'label',
+  'sortOrder',
+  'channelId',
+  'items',
+  'date',
+  'allotment',
+  'isClosed',
+  'closedReason',
+  'closedAt',
+  'businessDate',
+  'roomCode',
+  'assignedTo',
+  'completedAt',
+  'clientSurface',
 ]);
 function safeText(value: string, depth: number): string {
   // JSON encoded inside a value field must obey the same recursive whitelist.
@@ -76,6 +115,12 @@ function safeField(
   secret: boolean,
 ): unknown {
   if (key === 'value' && secret) return '[REDACTED]';
+  if (
+    typeof item === 'string' &&
+    idField(key) &&
+    /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(item)
+  )
+    return item;
   if (key === 'value' && numeric && typeof item === 'string' && /^-?\d+(?:\.\d+)?$/.test(item))
     return item;
   return safeSnapshot(item, depth + 1);
@@ -104,4 +149,8 @@ export function project(row: AuditRow) {
     afterJson: row.after_json === null ? null : JSON.stringify(safeSnapshot(row.after_json)),
     createdAt: row.at.toISOString(),
   });
+}
+
+function idField(key: string): boolean {
+  return key === 'id' || key.endsWith('Id') || key.endsWith('_id') || key === 'assignedTo';
 }
