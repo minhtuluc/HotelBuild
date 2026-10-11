@@ -184,6 +184,9 @@ export function BookingScreen({ baseUrl }: { baseUrl: string }): ReactElement {
                 {t('ops.bookings.action.collect')}
               </Link>
             </div>
+            <Link href={`/bookings/${bookingId}/refunds`} data-testid="booking-open-refunds">
+              {t('ops.refunds.title')}
+            </Link>
             <p style={{ margin: 0 }} data-testid="booking-actions-pending">
               {t('ops.bookings.detail.actionsPending')}
             </p>

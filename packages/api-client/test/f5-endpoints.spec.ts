@@ -320,3 +320,21 @@ describe('hợp đồng F5 qua HTTP thật', () => {
     expect(decodeURIComponent(seen.url.replace(/\+/g, ' '))).toContain('reason=Không dùng nữa');
   });
 });
+
+it('refund payout reuses a caller durable key over retries', async () => {
+  let calls = 0;
+  handler = () =>
+    ++calls === 1
+      ? { status: 503, body: {} }
+      : { status: 200, body: { ...REFUND, status: 'PAID' } };
+  await createRefundApi(client()).pay(
+    'r1',
+    { method: 'CASH' },
+    { idempotencyKey: 'durable-payout-key' },
+  );
+  expect(requests).toHaveLength(2);
+  expect(requests.map((value) => value.headers['idempotency-key'])).toEqual([
+    'durable-payout-key',
+    'durable-payout-key',
+  ]);
+});

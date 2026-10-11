@@ -8191,6 +8191,109 @@
                     "version": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "payments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "paymentId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "bookingId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "DEPOSIT",
+                              "BALANCE",
+                              "REFUND",
+                              "PENALTY",
+                              "EXTRA_SERVICE",
+                              "COMPENSATION",
+                              "RESCHEDULE_FEE"
+                            ]
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "VNPAY",
+                              "MOMO",
+                              "CASH",
+                              "BANK_TRANSFER",
+                              "OTA_COLLECT"
+                            ]
+                          },
+                          "amount": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "PENDING",
+                              "SUCCEEDED",
+                              "FAILED",
+                              "REVERSED"
+                            ]
+                          },
+                          "providerTxnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          },
+                          "paymentUrl": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          },
+                          "expiresAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "paidAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "createdBy": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "paymentId",
+                          "bookingId",
+                          "type",
+                          "method",
+                          "amount",
+                          "status",
+                          "providerTxnId",
+                          "paymentUrl",
+                          "expiresAt",
+                          "paidAt",
+                          "createdAt"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -8560,6 +8663,109 @@
                           "version": {
                             "type": "integer",
                             "minimum": 0
+                          },
+                          "payments": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "paymentId": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "bookingId": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "DEPOSIT",
+                                    "BALANCE",
+                                    "REFUND",
+                                    "PENALTY",
+                                    "EXTRA_SERVICE",
+                                    "COMPENSATION",
+                                    "RESCHEDULE_FEE"
+                                  ]
+                                },
+                                "method": {
+                                  "type": "string",
+                                  "enum": [
+                                    "VNPAY",
+                                    "MOMO",
+                                    "CASH",
+                                    "BANK_TRANSFER",
+                                    "OTA_COLLECT"
+                                  ]
+                                },
+                                "amount": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "PENDING",
+                                    "SUCCEEDED",
+                                    "FAILED",
+                                    "REVERSED"
+                                  ]
+                                },
+                                "providerTxnId": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "minLength": 1
+                                },
+                                "paymentUrl": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "minLength": 1
+                                },
+                                "expiresAt": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                                },
+                                "paidAt": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                                },
+                                "createdAt": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                                },
+                                "createdBy": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "minLength": 1
+                                }
+                              },
+                              "required": [
+                                "paymentId",
+                                "bookingId",
+                                "type",
+                                "method",
+                                "amount",
+                                "status",
+                                "providerTxnId",
+                                "paymentUrl",
+                                "expiresAt",
+                                "paidAt",
+                                "createdAt"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -8830,6 +9036,109 @@
                     "version": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "payments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "paymentId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "bookingId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "DEPOSIT",
+                              "BALANCE",
+                              "REFUND",
+                              "PENALTY",
+                              "EXTRA_SERVICE",
+                              "COMPENSATION",
+                              "RESCHEDULE_FEE"
+                            ]
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "VNPAY",
+                              "MOMO",
+                              "CASH",
+                              "BANK_TRANSFER",
+                              "OTA_COLLECT"
+                            ]
+                          },
+                          "amount": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "PENDING",
+                              "SUCCEEDED",
+                              "FAILED",
+                              "REVERSED"
+                            ]
+                          },
+                          "providerTxnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          },
+                          "paymentUrl": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          },
+                          "expiresAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "paidAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "createdBy": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "paymentId",
+                          "bookingId",
+                          "type",
+                          "method",
+                          "amount",
+                          "status",
+                          "providerTxnId",
+                          "paymentUrl",
+                          "expiresAt",
+                          "paidAt",
+                          "createdAt"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -9197,6 +9506,109 @@
                     "version": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "payments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "paymentId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "bookingId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "DEPOSIT",
+                              "BALANCE",
+                              "REFUND",
+                              "PENALTY",
+                              "EXTRA_SERVICE",
+                              "COMPENSATION",
+                              "RESCHEDULE_FEE"
+                            ]
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "VNPAY",
+                              "MOMO",
+                              "CASH",
+                              "BANK_TRANSFER",
+                              "OTA_COLLECT"
+                            ]
+                          },
+                          "amount": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "PENDING",
+                              "SUCCEEDED",
+                              "FAILED",
+                              "REVERSED"
+                            ]
+                          },
+                          "providerTxnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          },
+                          "paymentUrl": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          },
+                          "expiresAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "paidAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "createdBy": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "paymentId",
+                          "bookingId",
+                          "type",
+                          "method",
+                          "amount",
+                          "status",
+                          "providerTxnId",
+                          "paymentUrl",
+                          "expiresAt",
+                          "paidAt",
+                          "createdAt"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -10307,6 +10719,109 @@
                     "version": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "payments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "paymentId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "bookingId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "DEPOSIT",
+                              "BALANCE",
+                              "REFUND",
+                              "PENALTY",
+                              "EXTRA_SERVICE",
+                              "COMPENSATION",
+                              "RESCHEDULE_FEE"
+                            ]
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "VNPAY",
+                              "MOMO",
+                              "CASH",
+                              "BANK_TRANSFER",
+                              "OTA_COLLECT"
+                            ]
+                          },
+                          "amount": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "PENDING",
+                              "SUCCEEDED",
+                              "FAILED",
+                              "REVERSED"
+                            ]
+                          },
+                          "providerTxnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          },
+                          "paymentUrl": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          },
+                          "expiresAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "paidAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "createdBy": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "paymentId",
+                          "bookingId",
+                          "type",
+                          "method",
+                          "amount",
+                          "status",
+                          "providerTxnId",
+                          "paymentUrl",
+                          "expiresAt",
+                          "paidAt",
+                          "createdAt"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -11203,6 +11718,248 @@
                       "type": "integer",
                       "minimum": 0
                     },
+                    "netRefund": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "eventNetRefund": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "requiresThresholdControl": {
+                      "type": "boolean"
+                    },
+                    "refundAllocations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "amount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "payoutMethod": {
+                            "type": "string",
+                            "enum": [
+                              "VNPAY",
+                              "MOMO",
+                              "CASH",
+                              "BANK_TRANSFER",
+                              "OTA_COLLECT"
+                            ]
+                          },
+                          "originalPayment": {
+                            "type": "object",
+                            "properties": {
+                              "paymentId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "bookingId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "DEPOSIT",
+                                  "BALANCE",
+                                  "REFUND",
+                                  "PENALTY",
+                                  "EXTRA_SERVICE",
+                                  "COMPENSATION",
+                                  "RESCHEDULE_FEE"
+                                ]
+                              },
+                              "method": {
+                                "type": "string",
+                                "enum": [
+                                  "VNPAY",
+                                  "MOMO",
+                                  "CASH",
+                                  "BANK_TRANSFER",
+                                  "OTA_COLLECT"
+                                ]
+                              },
+                              "amount": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PENDING",
+                                  "SUCCEEDED",
+                                  "FAILED",
+                                  "REVERSED"
+                                ]
+                              },
+                              "providerTxnId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "paymentUrl": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "expiresAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "paidAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdBy": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "paymentId",
+                              "bookingId",
+                              "type",
+                              "method",
+                              "amount",
+                              "status",
+                              "providerTxnId",
+                              "paymentUrl",
+                              "expiresAt",
+                              "paidAt",
+                              "createdAt"
+                            ]
+                          },
+                          "refundPayment": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "paymentId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "bookingId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "DEPOSIT",
+                                  "BALANCE",
+                                  "REFUND",
+                                  "PENALTY",
+                                  "EXTRA_SERVICE",
+                                  "COMPENSATION",
+                                  "RESCHEDULE_FEE"
+                                ]
+                              },
+                              "method": {
+                                "type": "string",
+                                "enum": [
+                                  "VNPAY",
+                                  "MOMO",
+                                  "CASH",
+                                  "BANK_TRANSFER",
+                                  "OTA_COLLECT"
+                                ]
+                              },
+                              "amount": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PENDING",
+                                  "SUCCEEDED",
+                                  "FAILED",
+                                  "REVERSED"
+                                ]
+                              },
+                              "providerTxnId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "paymentUrl": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "expiresAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "paidAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdBy": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "paymentId",
+                              "bookingId",
+                              "type",
+                              "method",
+                              "amount",
+                              "status",
+                              "providerTxnId",
+                              "paymentUrl",
+                              "expiresAt",
+                              "paidAt",
+                              "createdAt"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "amount",
+                          "payoutMethod",
+                          "originalPayment",
+                          "refundPayment"
+                        ]
+                      }
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -11502,6 +12259,248 @@
                             "type": "integer",
                             "minimum": 0
                           },
+                          "netRefund": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "eventNetRefund": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "requiresThresholdControl": {
+                            "type": "boolean"
+                          },
+                          "refundAllocations": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "amount": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "payoutMethod": {
+                                  "type": "string",
+                                  "enum": [
+                                    "VNPAY",
+                                    "MOMO",
+                                    "CASH",
+                                    "BANK_TRANSFER",
+                                    "OTA_COLLECT"
+                                  ]
+                                },
+                                "originalPayment": {
+                                  "type": "object",
+                                  "properties": {
+                                    "paymentId": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "bookingId": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "DEPOSIT",
+                                        "BALANCE",
+                                        "REFUND",
+                                        "PENALTY",
+                                        "EXTRA_SERVICE",
+                                        "COMPENSATION",
+                                        "RESCHEDULE_FEE"
+                                      ]
+                                    },
+                                    "method": {
+                                      "type": "string",
+                                      "enum": [
+                                        "VNPAY",
+                                        "MOMO",
+                                        "CASH",
+                                        "BANK_TRANSFER",
+                                        "OTA_COLLECT"
+                                      ]
+                                    },
+                                    "amount": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0
+                                    },
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "PENDING",
+                                        "SUCCEEDED",
+                                        "FAILED",
+                                        "REVERSED"
+                                      ]
+                                    },
+                                    "providerTxnId": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "minLength": 1
+                                    },
+                                    "paymentUrl": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "minLength": 1
+                                    },
+                                    "expiresAt": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                                    },
+                                    "paidAt": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                                    },
+                                    "createdAt": {
+                                      "type": "string",
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                                    },
+                                    "createdBy": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": [
+                                    "paymentId",
+                                    "bookingId",
+                                    "type",
+                                    "method",
+                                    "amount",
+                                    "status",
+                                    "providerTxnId",
+                                    "paymentUrl",
+                                    "expiresAt",
+                                    "paidAt",
+                                    "createdAt"
+                                  ]
+                                },
+                                "refundPayment": {
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ],
+                                  "properties": {
+                                    "paymentId": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "bookingId": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "DEPOSIT",
+                                        "BALANCE",
+                                        "REFUND",
+                                        "PENALTY",
+                                        "EXTRA_SERVICE",
+                                        "COMPENSATION",
+                                        "RESCHEDULE_FEE"
+                                      ]
+                                    },
+                                    "method": {
+                                      "type": "string",
+                                      "enum": [
+                                        "VNPAY",
+                                        "MOMO",
+                                        "CASH",
+                                        "BANK_TRANSFER",
+                                        "OTA_COLLECT"
+                                      ]
+                                    },
+                                    "amount": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0
+                                    },
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "PENDING",
+                                        "SUCCEEDED",
+                                        "FAILED",
+                                        "REVERSED"
+                                      ]
+                                    },
+                                    "providerTxnId": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "minLength": 1
+                                    },
+                                    "paymentUrl": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "minLength": 1
+                                    },
+                                    "expiresAt": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                                    },
+                                    "paidAt": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                                    },
+                                    "createdAt": {
+                                      "type": "string",
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                                    },
+                                    "createdBy": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ],
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": [
+                                    "paymentId",
+                                    "bookingId",
+                                    "type",
+                                    "method",
+                                    "amount",
+                                    "status",
+                                    "providerTxnId",
+                                    "paymentUrl",
+                                    "expiresAt",
+                                    "paidAt",
+                                    "createdAt"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "amount",
+                                "payoutMethod",
+                                "originalPayment",
+                                "refundPayment"
+                              ]
+                            }
+                          },
                           "status": {
                             "type": "string",
                             "enum": [
@@ -11690,7 +12689,7 @@
                 "properties": {
                   "approvedAmount": {
                     "type": "integer",
-                    "exclusiveMinimum": 0
+                    "minimum": 0
                   },
                   "note": {
                     "type": "string",
@@ -11940,6 +12939,248 @@
                       "type": "integer",
                       "minimum": 0
                     },
+                    "netRefund": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "eventNetRefund": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "requiresThresholdControl": {
+                      "type": "boolean"
+                    },
+                    "refundAllocations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "amount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "payoutMethod": {
+                            "type": "string",
+                            "enum": [
+                              "VNPAY",
+                              "MOMO",
+                              "CASH",
+                              "BANK_TRANSFER",
+                              "OTA_COLLECT"
+                            ]
+                          },
+                          "originalPayment": {
+                            "type": "object",
+                            "properties": {
+                              "paymentId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "bookingId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "DEPOSIT",
+                                  "BALANCE",
+                                  "REFUND",
+                                  "PENALTY",
+                                  "EXTRA_SERVICE",
+                                  "COMPENSATION",
+                                  "RESCHEDULE_FEE"
+                                ]
+                              },
+                              "method": {
+                                "type": "string",
+                                "enum": [
+                                  "VNPAY",
+                                  "MOMO",
+                                  "CASH",
+                                  "BANK_TRANSFER",
+                                  "OTA_COLLECT"
+                                ]
+                              },
+                              "amount": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PENDING",
+                                  "SUCCEEDED",
+                                  "FAILED",
+                                  "REVERSED"
+                                ]
+                              },
+                              "providerTxnId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "paymentUrl": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "expiresAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "paidAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdBy": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "paymentId",
+                              "bookingId",
+                              "type",
+                              "method",
+                              "amount",
+                              "status",
+                              "providerTxnId",
+                              "paymentUrl",
+                              "expiresAt",
+                              "paidAt",
+                              "createdAt"
+                            ]
+                          },
+                          "refundPayment": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "paymentId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "bookingId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "DEPOSIT",
+                                  "BALANCE",
+                                  "REFUND",
+                                  "PENALTY",
+                                  "EXTRA_SERVICE",
+                                  "COMPENSATION",
+                                  "RESCHEDULE_FEE"
+                                ]
+                              },
+                              "method": {
+                                "type": "string",
+                                "enum": [
+                                  "VNPAY",
+                                  "MOMO",
+                                  "CASH",
+                                  "BANK_TRANSFER",
+                                  "OTA_COLLECT"
+                                ]
+                              },
+                              "amount": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PENDING",
+                                  "SUCCEEDED",
+                                  "FAILED",
+                                  "REVERSED"
+                                ]
+                              },
+                              "providerTxnId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "paymentUrl": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "expiresAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "paidAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdBy": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "paymentId",
+                              "bookingId",
+                              "type",
+                              "method",
+                              "amount",
+                              "status",
+                              "providerTxnId",
+                              "paymentUrl",
+                              "expiresAt",
+                              "paidAt",
+                              "createdAt"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "amount",
+                          "payoutMethod",
+                          "originalPayment",
+                          "refundPayment"
+                        ]
+                      }
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -12173,6 +13414,248 @@
                     "refundFee": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "netRefund": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "eventNetRefund": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "requiresThresholdControl": {
+                      "type": "boolean"
+                    },
+                    "refundAllocations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "amount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "payoutMethod": {
+                            "type": "string",
+                            "enum": [
+                              "VNPAY",
+                              "MOMO",
+                              "CASH",
+                              "BANK_TRANSFER",
+                              "OTA_COLLECT"
+                            ]
+                          },
+                          "originalPayment": {
+                            "type": "object",
+                            "properties": {
+                              "paymentId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "bookingId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "DEPOSIT",
+                                  "BALANCE",
+                                  "REFUND",
+                                  "PENALTY",
+                                  "EXTRA_SERVICE",
+                                  "COMPENSATION",
+                                  "RESCHEDULE_FEE"
+                                ]
+                              },
+                              "method": {
+                                "type": "string",
+                                "enum": [
+                                  "VNPAY",
+                                  "MOMO",
+                                  "CASH",
+                                  "BANK_TRANSFER",
+                                  "OTA_COLLECT"
+                                ]
+                              },
+                              "amount": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PENDING",
+                                  "SUCCEEDED",
+                                  "FAILED",
+                                  "REVERSED"
+                                ]
+                              },
+                              "providerTxnId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "paymentUrl": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "expiresAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "paidAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdBy": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "paymentId",
+                              "bookingId",
+                              "type",
+                              "method",
+                              "amount",
+                              "status",
+                              "providerTxnId",
+                              "paymentUrl",
+                              "expiresAt",
+                              "paidAt",
+                              "createdAt"
+                            ]
+                          },
+                          "refundPayment": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "paymentId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "bookingId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "DEPOSIT",
+                                  "BALANCE",
+                                  "REFUND",
+                                  "PENALTY",
+                                  "EXTRA_SERVICE",
+                                  "COMPENSATION",
+                                  "RESCHEDULE_FEE"
+                                ]
+                              },
+                              "method": {
+                                "type": "string",
+                                "enum": [
+                                  "VNPAY",
+                                  "MOMO",
+                                  "CASH",
+                                  "BANK_TRANSFER",
+                                  "OTA_COLLECT"
+                                ]
+                              },
+                              "amount": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PENDING",
+                                  "SUCCEEDED",
+                                  "FAILED",
+                                  "REVERSED"
+                                ]
+                              },
+                              "providerTxnId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "paymentUrl": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "expiresAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "paidAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdBy": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "paymentId",
+                              "bookingId",
+                              "type",
+                              "method",
+                              "amount",
+                              "status",
+                              "providerTxnId",
+                              "paymentUrl",
+                              "expiresAt",
+                              "paidAt",
+                              "createdAt"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "amount",
+                          "payoutMethod",
+                          "originalPayment",
+                          "refundPayment"
+                        ]
+                      }
                     },
                     "status": {
                       "type": "string",
@@ -12410,6 +13893,248 @@
                     "refundFee": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "netRefund": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "eventNetRefund": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "requiresThresholdControl": {
+                      "type": "boolean"
+                    },
+                    "refundAllocations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "amount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "payoutMethod": {
+                            "type": "string",
+                            "enum": [
+                              "VNPAY",
+                              "MOMO",
+                              "CASH",
+                              "BANK_TRANSFER",
+                              "OTA_COLLECT"
+                            ]
+                          },
+                          "originalPayment": {
+                            "type": "object",
+                            "properties": {
+                              "paymentId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "bookingId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "DEPOSIT",
+                                  "BALANCE",
+                                  "REFUND",
+                                  "PENALTY",
+                                  "EXTRA_SERVICE",
+                                  "COMPENSATION",
+                                  "RESCHEDULE_FEE"
+                                ]
+                              },
+                              "method": {
+                                "type": "string",
+                                "enum": [
+                                  "VNPAY",
+                                  "MOMO",
+                                  "CASH",
+                                  "BANK_TRANSFER",
+                                  "OTA_COLLECT"
+                                ]
+                              },
+                              "amount": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PENDING",
+                                  "SUCCEEDED",
+                                  "FAILED",
+                                  "REVERSED"
+                                ]
+                              },
+                              "providerTxnId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "paymentUrl": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "expiresAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "paidAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdBy": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "paymentId",
+                              "bookingId",
+                              "type",
+                              "method",
+                              "amount",
+                              "status",
+                              "providerTxnId",
+                              "paymentUrl",
+                              "expiresAt",
+                              "paidAt",
+                              "createdAt"
+                            ]
+                          },
+                          "refundPayment": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "paymentId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "bookingId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "DEPOSIT",
+                                  "BALANCE",
+                                  "REFUND",
+                                  "PENALTY",
+                                  "EXTRA_SERVICE",
+                                  "COMPENSATION",
+                                  "RESCHEDULE_FEE"
+                                ]
+                              },
+                              "method": {
+                                "type": "string",
+                                "enum": [
+                                  "VNPAY",
+                                  "MOMO",
+                                  "CASH",
+                                  "BANK_TRANSFER",
+                                  "OTA_COLLECT"
+                                ]
+                              },
+                              "amount": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PENDING",
+                                  "SUCCEEDED",
+                                  "FAILED",
+                                  "REVERSED"
+                                ]
+                              },
+                              "providerTxnId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "paymentUrl": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "expiresAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "paidAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdBy": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "paymentId",
+                              "bookingId",
+                              "type",
+                              "method",
+                              "amount",
+                              "status",
+                              "providerTxnId",
+                              "paymentUrl",
+                              "expiresAt",
+                              "paidAt",
+                              "createdAt"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "amount",
+                          "payoutMethod",
+                          "originalPayment",
+                          "refundPayment"
+                        ]
+                      }
                     },
                     "status": {
                       "type": "string",

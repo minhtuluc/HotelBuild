@@ -4,6 +4,7 @@ import type {
   RefundRequest,
   CancelPreview,
 } from '../../../../packages/contracts/src/index.js';
+import { refundNet } from './refund-facts.js';
 import type {
   FakeActor,
   FakeApiContext,
@@ -42,6 +43,7 @@ function canonical(value: unknown): string {
 export class FixtureState {
   readonly payments = new Map<string, Payment>();
   readonly refunds = new Map<string, RefundRequest>();
+  readonly refundPayments = new Map<string, Payment>();
   readonly scenarios = new Map<string, string>();
   readonly deletedBookings = new Map<string, FakeBooking>();
   readonly pins = new Map<
@@ -78,18 +80,14 @@ export class FixtureState {
       .reduce(
         (sum, value) =>
           sum +
-          (value.status === 'PENDING'
-            ? value.requestedAmount
-            : value.status === 'APPROVED'
-              ? (value.approvedAmount ?? 0)
-              : 0),
+          (['PENDING', 'APPROVED'].includes(value.status) ? refundNet(value) : 0),
         0,
       );
   }
   refunded(paymentId: string): number {
     return [...this.refunds.values()]
       .filter((value) => value.paymentId === paymentId && value.status === 'PAID')
-      .reduce((sum, value) => sum + (value.approvedAmount ?? 0), 0);
+      .reduce((sum, value) => sum + refundNet(value), 0);
   }
   balance(stored: FakeBooking) {
     const value = stored.value;

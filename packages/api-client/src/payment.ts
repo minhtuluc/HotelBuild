@@ -90,7 +90,11 @@ export interface RefundApi {
   reject(refundRequestId: string, input: RefundRejectRequest): Promise<ApiResponse<RefundRequest>>;
   cancel(refundRequestId: string, input: RefundCancelRequest): Promise<ApiResponse<RefundRequest>>;
   /** 🔒 Chi hoàn về phương thức gốc, chỉ khi APPROVED (BR-CANCEL-16). */
-  pay(refundRequestId: string, input: RefundPayRequest): Promise<ApiResponse<RefundRequest>>;
+  pay(
+    refundRequestId: string,
+    input: RefundPayRequest,
+    options?: { idempotencyKey: string },
+  ): Promise<ApiResponse<RefundRequest>>;
 }
 
 export function createRefundApi(client: ApiClient): RefundApi {
@@ -132,11 +136,12 @@ export function createRefundApi(client: ApiClient): RefundApi {
         body: refundCancelRequestSchema.parse(input),
         decoder: refundRequestSchema,
       }),
-    pay: (refundRequestId, input) =>
+    pay: (refundRequestId, input, options) =>
       client.request({
         method: 'POST',
         path: `/refund-requests/${encodeURIComponent(refundRequestId)}/pay`,
         body: refundPayRequestSchema.parse(input),
+        ...(options === undefined ? {} : { idempotencyKey: options.idempotencyKey }),
         pinProtected: true,
         decoder: refundRequestSchema,
       }),

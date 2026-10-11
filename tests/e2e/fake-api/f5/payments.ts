@@ -135,6 +135,7 @@ export function paymentResponse(
       createdBy: actor.key,
     };
     state.payments.set(id, payment);
+    stored.value.payments = [...(stored.value.payments ?? []), payment];
     if (!online) {
       settle(state, stored, payment);
       state.consume(pin!);

@@ -4,6 +4,7 @@
  * tệp này dưới trần `max-lines` 400.
  */
 import { makeTranslate, viCatalog } from '@pinehill/ui-web/messages';
+import { refundsCatalog } from '../app/(ops)/bookings/messages-refunds.js';
 import { bookingsCatalog } from '../app/(ops)/bookings/messages-bookings.js';
 import { allotmentsCatalog } from './messages-allotments.js';
 import { ratePlansCatalog } from './messages-rate-plans.js';
@@ -14,6 +15,7 @@ import { notiCatalog } from '../app/(ops)/noti/messages-noti.js';
 export const operationsCatalog = {
   ...viCatalog,
   ...bookingsCatalog,
+  ...refundsCatalog,
   ...allotmentsCatalog,
   ...ratePlansCatalog,
   ...reportsCatalog,

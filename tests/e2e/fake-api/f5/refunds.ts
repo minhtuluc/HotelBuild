@@ -8,6 +8,7 @@ import {
 } from '../../../../packages/contracts/src/index.js';
 import type { FakeActor, FakeRequest, FakeResponse } from '../core/types.js';
 import { FixtureState, error, now } from './state.js';
+import { refundFacts, refundNet, recordRefundPayment } from './refund-facts.js';
 export function refundResponse(
   state: FixtureState,
   request: FakeRequest,
@@ -34,7 +35,7 @@ export function refundResponse(
     });
     const start = query.cursor ? all.findIndex((value) => value.id === query.cursor) + 1 : 0;
     if (query.cursor && start === 0) return error(request, 400, 'E_GEN_VALIDATION_FAILED');
-    const data = all.slice(start, start + query.limit);
+    const data = all.slice(start, start + query.limit).map((value) => refundFacts(state, value));
     const hasMore = start + data.length < all.length;
     return {
       status: 200,
@@ -64,9 +65,11 @@ export function refundResponse(
       if (input.isForceMajeure || input.reason === 'FORCE_MAJEURE')
         return error(request, 403, 'E_PAY_REFUND_FORCE_MAJEURE_FORBIDDEN');
       if (input.reason !== 'GUEST_REQUEST') return error(request, 400, 'E_GEN_VALIDATION_FAILED');
-      const requested = state.breakdown(stored).requestedAmount;
+      const snapshot = state.breakdown(stored);
+      const requested = Math.max(0, snapshot.requestedAmount - snapshot.refundFee);
       if (
         payment.status !== 'SUCCEEDED' ||
+        payment.type === 'REFUND' ||
         requested <= 0 ||
         requested +
           state.reserved(input.bookingId, payment.paymentId) +
@@ -76,7 +79,7 @@ export function refundResponse(
         return error(request, 422, 'E_PAY_REFUND_EXCEEDS_PAID');
       const value = state.addRefund(stored, payment, actor.key, input.reason);
       value.evidenceRefs = input.evidenceRefs ?? [];
-      return { status: 201, body: value };
+      return { status: 201, body: refundFacts(state, value) };
     });
   }
   const detail = /^\/api\/v1\/refund-requests\/([^/]+)\/(approve|reject|cancel|pay)$/.exec(path);
@@ -153,13 +156,15 @@ export function refundResponse(
       if (input.method !== expected) return error(request, 422, 'E_PAY_AMOUNT_MISMATCH');
       if (payment.method === 'CASH' && !input.bankNote?.trim())
         return error(request, 400, 'E_PAY_REASON_TOO_SHORT');
+      if (refundNet(value) <= 0) return error(request, 422, 'E_PAY_AMOUNT_MISMATCH');
+      recordRefundPayment(state, value, input.method, actor.key);
       value.status = 'PAID';
       value.paidAt = now();
       state.consume(pin!);
       const stored = state.booking(value.bookingId, actor)!;
-      stored.value.refundedAmount += value.approvedAmount ?? 0;
+      stored.value.refundedAmount += refundNet(value);
       state.updateBalance(stored);
     }
-    return { status: 200, body: value };
+    return { status: 200, body: refundFacts(state, value) };
   });
 }

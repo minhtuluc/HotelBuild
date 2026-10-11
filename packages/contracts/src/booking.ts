@@ -4,6 +4,7 @@
  */
 import { z } from 'zod';
 import { businessDateSchema, isoUtcTimestampSchema, listQuerySchema } from './common.js';
+import { paymentSchema } from './payment.js';
 import {
   bookingStatusSchema,
   channelCodeSchema,
@@ -82,6 +83,8 @@ export const bookingSummarySchema = z.object({
   createdBy: z.string().min(1),
   createdAt: isoUtcTimestampSchema,
   version: z.number().int().min(0).optional(),
+  /** Chứng từ do server trả ở chi tiết; optional để client vẫn đọc phản hồi cũ. */
+  payments: z.array(paymentSchema).optional(),
 });
 
 /** Bộ lọc `GET /bookings`: khách chỉ thấy booking của mình, nhân viên lọc theo phạm vi cơ sở (§6.3). */

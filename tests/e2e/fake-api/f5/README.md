@@ -74,3 +74,9 @@ E2E này kiểm plumbing phiên/client/fixture trên shell hiện có. Các màn
 - Fake PIN/counter payment/refund maker-checker đã có để thi công UI_ONLY HB-109/110. Đây không phải bằng chứng cho backend HB-015/096/099/100; binding purpose/amount và payout thật chưa được fake xác nhận.
 
 - `GET /auth/me`: staff-only identity dùng cùng actorId với `RefundRequest.requestedBy`, role/propertyScope theo cấu hình fixture; PIN mặc định synthetic `123456` được phản ánh bằng `hasPin=true`. Dùng để HB-110 ẩn tự duyệt, không giải mã token để lấy ID. Guest bị403, thiếu phiên401.
+
+## HB-110 — dữ liệu hoàn phục vụ SCR-38
+
+Read RefundRequest bổ sung NET, NET sự kiện, allocation với chứng từ thu gốc và Payment REFUND riêng; booking detail trả payments optional. Fixture mỗi request là một operation độc lập với một receipt, không giả định grouping các request thật cùng sự kiện. `refund-fee-sample` chụp phí synthetic 10000 VND cho test NET. Reservation và refunded theo NET (BR-CANCEL-05/17), duyệt giảm trả chênh reservation; chi thành công giả ghi đúng một Payment REFUND SUCCEEDED, replay không thêm receipt và không sửa Payment thu gốc. NET0 không phát Payment/lệnh chi.
+
+Ghi SUCCEEDED ở fixture là mẫu xác nhận có kiểm soát cho UI, không là chứng từ chuyển khoản thật hoặc nghiệm thu backend/payout worker. Test đa phương thức chỉ kiểm hiển thị server facts; command một method không được UI tự chia lệnh. Force-majeure và quyền hoàn từng phòng vẫn cần backend đúng oracle.

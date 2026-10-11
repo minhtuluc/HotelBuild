@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { isoUtcTimestampSchema, listQuerySchema } from './common.js';
 import { cancelReasonSchema, paymentMethodSchema, refundStatusSchema } from './enums.js';
+import { paymentSchema } from './payment.js';
 
 const percent = z.number().int().min(0).max(100);
 
@@ -27,6 +28,22 @@ export const refundRequestSchema = z.object({
   requestedAmount: z.number().int().min(0),
   approvedAmount: z.number().int().min(0).nullable(),
   refundFee: z.number().int().min(0),
+  /** Facts do server tính; optional để phản hồi cũ vẫn đọc được (BR-CANCEL-05/15). */
+  netRefund: z.number().int().safe().min(0).optional(),
+  eventNetRefund: z.number().int().safe().min(0).optional(),
+  /** Cờ theo ngưỡng cấu hình của server, không hardcode SystemSetting ở frontend. */
+  requiresThresholdControl: z.boolean().optional(),
+  /** Nguồn hoàn và Payment REFUND riêng, không sửa Payment thu gốc (BR-PAY-08/09). */
+  refundAllocations: z
+    .array(
+      z.object({
+        amount: z.number().int().safe().min(0),
+        payoutMethod: paymentMethodSchema,
+        originalPayment: paymentSchema,
+        refundPayment: paymentSchema.nullable(),
+      }),
+    )
+    .optional(),
   status: refundStatusSchema,
   isForceMajeure: z.boolean(),
   reason: cancelReasonSchema,
@@ -40,7 +57,7 @@ export const refundRequestSchema = z.object({
 
 /** 🔒 Duyệt hoàn: `approvedAmount ≤ requestedAmount`, cấm tự duyệt (BR-CANCEL-15). */
 export const refundApproveRequestSchema = z.strictObject({
-  approvedAmount: z.number().int().positive(),
+  approvedAmount: z.number().int().min(0),
   note: z.string().max(500).optional(),
   pinToken: z.string().min(16).optional(),
 });

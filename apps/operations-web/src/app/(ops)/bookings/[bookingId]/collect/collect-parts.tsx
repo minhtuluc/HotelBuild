@@ -20,6 +20,23 @@ import {
 
 const CELL = { padding: '4px 12px 4px 0', textAlign: 'left' } as const;
 
+function PinHeader({
+  title,
+  description,
+}: {
+  title: string | undefined;
+  description: string | undefined;
+}): ReactElement {
+  return (
+    <>
+      <h2 id="ops-collect-pin-title" style={{ margin: 0 }}>
+        {title ?? t('ops.collect.pin.title')}
+      </h2>
+      <p style={{ margin: 0 }}>{description ?? t('ops.collect.pin.note')}</p>
+    </>
+  );
+}
+
 export function PinDialog({
   step,
   pin,
@@ -30,6 +47,8 @@ export function PinDialog({
   busy,
   onPin,
   onSubmit,
+  title,
+  description,
 }: {
   step: PinStep;
   pin: string;
@@ -40,6 +59,8 @@ export function PinDialog({
   busy: boolean;
   onPin: (value: string) => void;
   onSubmit: () => void;
+  title?: string;
+  description?: string;
 }): ReactElement {
   const dialog = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(true);
@@ -99,10 +120,7 @@ export function PinDialog({
           }}
         >
           <div style={{ display: 'grid', gap: 8 }}>
-            <h2 id="ops-collect-pin-title" style={{ margin: 0 }}>
-              {t('ops.collect.pin.title')}
-            </h2>
-            <p style={{ margin: 0 }}>{t('ops.collect.pin.note')}</p>
+            <PinHeader title={title} description={description} />
             <>
               <label style={{ display: 'grid', gap: 4 }}>
                 {t('ops.collect.pin.label')}

@@ -30,6 +30,7 @@ const events = [
   'reschedule-conflict',
   'unconfirmed-partial',
   'hold-boundary',
+  'refund-fee-sample',
 ];
 function control(state: FixtureState, request: FakeRequest, actor: FakeActor): FakeResponse {
   if (request.method !== 'POST') return error(request, 405, 'E_GEN_VALIDATION_FAILED');
@@ -109,6 +110,8 @@ function control(state: FixtureState, request: FakeRequest, actor: FakeActor): F
     stored.value.paidAmount = 250499;
     state.updateBalance(stored);
     return { status: 200, body: { paymentId: id } };
+  } else if (event === 'refund-fee-sample') {
+    state.saveCancellation(stored, { ...state.breakdown(stored), refundFee: 10000 });
   } else if (event === 'hold-boundary') stored.value.holdExpiresAt = now();
   else if (event === 'clear-error') state.scenarios.delete(stored.value.id);
   else state.scenarios.set(stored.value.id, event);

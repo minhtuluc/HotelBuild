@@ -467,6 +467,9 @@ Response 201:
 }
 ```
 
+- HB-110 bổ sung **optional read facts** cho `RefundRequest` (payload cũ vẫn hợp lệ): `netRefund`, `eventNetRefund` (NET của toàn sự kiện do server xác định), `requiresThresholdControl` (cờ theo ngưỡng SystemSetting, không hardcode ở frontend), `refundAllocations[] = { amount, payoutMethod, originalPayment, refundPayment }`. `amount` là NET phân bổ, `originalPayment` là chứng từ thu gốc bất biến, `refundPayment` là `Payment` REFUND riêng hoặc `null` khi chưa có lần chi. Frontend không tự tính phí/NET/phân bổ hay gom các hồ sơ thành sự kiện. `evidenceRefs` chỉ là minh chứng lý do hoàn, không chứng minh đã chi. SCR-38 chỉ hiện PAID đã xác minh khi các allocation có chứng từ REFUND SUCCEEDED đúng booking/amount/phương thức và tổng NET; thiếu facts thì khoá xác nhận tiền. Chi tiết booking có `payments?: Payment[]` để chọn chứng từ thu do server cung cấp. Các trường này phục vụ client/API giả; backend HB-099/100 vẫn phải hiện thực nguồn dữ liệu và tính nguyên tử theo ADR-016.
+- SCR-38 giữ dấu chờ kỹ thuật qua rời màn/F5/logout trước khi POST chi và truyền cùng UUID làm `Idempotency-Key`. Dấu không chứa token/PIN/tiền/ghi chú/ID thô; giữ cả sau thành công để tab có biểu mẫu cũ không tạo khóa mới. Chỉ chứng từ server xác minh được mới đưa view ra khỏi trạng thái chờ; thiếu lưu trữ/đồng bộ tab thì không gửi chi. Guard trình duyệt không thay operation/key bền vững và đối soát PSP ở backend giữa thiết bị/profile.
+- Hợp đồng chi hiện có chỉ nhận một `method`. Khi allocation của hồ sơ có nhiều phương thức hoặc đã có lần chi chưa xác minh, SCR-38 chỉ hiển thị nguồn/chứng từ và hướng đối soát; không tự tách lệnh chi hay chọn phương thức khác nguồn.
 - `requestedAmount` tính trên `paidAmount` rồi làm tròn **xuống** 1.000 VND; `refundFee` đọc từ `SystemSetting.refund.feeAmount` (BR-CANCEL-04,05,11). Tổng hoàn luỹ kế **KHÔNG ĐƯỢC** vượt `paidAmount` → `422 E_PAY_REFUND_EXCEEDS_PAID` (BR-CANCEL-17, BR-PAY-07).
 - Bất khả kháng: chỉ `MANAGER`/`OWNER` tạo, `reason = FORCE_MAJEURE`, **`note`** ≥ 20 ký tự, `evidenceRefs[]` lưu minh chứng, hoàn theo BR-CANCEL-13. Đổi ngày **KHÔNG** tạo `RefundRequest` (BR-CANCEL-08).
 - `PENDING` → `CANCELLED` khi rút yêu cầu: chỉ người tạo hoặc `MANAGER`/`OWNER`, có lý do, giải phóng phần hạn mức hoàn đã giữ. Thao tác này không khôi phục booking kết thúc; đã `APPROVED`/`PAID` không huỷ (BR-CANCEL-18).
@@ -495,7 +498,7 @@ Response 200:
 ```
 
 - Hai cấp ở BR-CANCEL-15 là **người lập và người duyệt độc lập**, không tự suy thành chuỗi MANAGER rồi OWNER. Tất cả mức tiền đều cấm tự duyệt; người duyệt là MANAGER/OWNER đúng phạm vi, ngưỡng so trên `netRefund`. Lưu danh tính người tạo kể cả GUEST/SYSTEM, người duyệt, thời điểm, số tiền và note; không dùng việc thiếu `requestedBy` nhân viên để bỏ guard.
-- `approvedAmount ≤ requestedAmount`; lớn hơn trả `422 E_PAY_AMOUNT_MISMATCH`. `MANAGER` có thể duyệt thấp hơn khi có lý do. Thời hạn chi theo BR-CANCEL-12.
+- `0 ≤ approvedAmount ≤ requestedAmount` theo BR-CANCEL-05; NET bằng 0 không phát lệnh chi. Lớn hơn trả `422 E_PAY_AMOUNT_MISMATCH`. `MANAGER` có thể duyệt thấp hơn khi có lý do. Thời hạn chi theo BR-CANCEL-12.
 - Ghi `AuditLog` **trong cùng transaction** kèm lý do (BR-GEN-07, BR-CANCEL-16, BR-SYS-05). Tiền chỉ được chi ở `POST /refund-requests/{id}/pay`; trạng thái cuối là `PAID` (BR-CANCEL-16).
 - Mã lỗi: `403 E_RBAC_FORBIDDEN`, `401 E_AUTH_PIN_REQUIRED`, `409 E_PAY_REFUND_NOT_APPROVED`.
 
