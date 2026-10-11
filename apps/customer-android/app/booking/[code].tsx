@@ -7,7 +7,8 @@
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Share, Text } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { Link, useLocalSearchParams } from 'expo-router';
+import { changeText } from '../../src/booking-changes/strings';
 import {
   color,
   radius,
@@ -129,7 +130,27 @@ function DetailBody({ booking }: { booking: BookingSummary }): ReactElement {
       <Text style={{ color: color.textMuted }} data-testid="order-payments-pending">
         {t('orders.detail.paymentsPending')}
       </Text>
-      <Text style={{ color: color.textMuted }}>{t('orders.detail.actionsPending')}</Text>
+      <Link href={{ pathname: '/booking/[code]/cancel', params: { code: booking.code } }} asChild>
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel={changeText('cancel')}
+          style={{ minHeight: touchTargetDp, justifyContent: 'center' }}
+        >
+          <Text style={{ color: color.primary }}>{changeText('cancel')}</Text>
+        </Pressable>
+      </Link>
+      <Link
+        href={{ pathname: '/booking/[code]/reschedule', params: { code: booking.code } }}
+        asChild
+      >
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel={changeText('reschedule')}
+          style={{ minHeight: touchTargetDp, justifyContent: 'center' }}
+        >
+          <Text style={{ color: color.primary }}>{changeText('reschedule')}</Text>
+        </Pressable>
+      </Link>
     </>
   );
 }

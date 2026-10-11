@@ -59,6 +59,9 @@ export const bookingSummarySchema = z.object({
   roomTypeId: z.string().min(1),
   ratePlanId: z.string().min(1),
   channelId: z.string().min(1),
+  /** Explicit server projection for reschedule quotes; clients must not guess from UUIDs. */
+  channelCode: channelCodeSchema.optional(),
+  ratePlanCode: ratePlanCodeSchema.optional(),
   checkIn: businessDateSchema,
   checkOut: businessDateSchema,
   nights: z.number().int().min(1),

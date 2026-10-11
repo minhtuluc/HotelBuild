@@ -8716,6 +8716,27 @@
                       "type": "string",
                       "minLength": 1
                     },
+                    "channelCode": {
+                      "type": "string",
+                      "enum": [
+                        "WEB",
+                        "PHONE",
+                        "WALKIN",
+                        "OTA_BOOKING",
+                        "OTA_AGODA",
+                        "OTA_AIRBNB",
+                        "AGENCY"
+                      ]
+                    },
+                    "ratePlanCode": {
+                      "type": "string",
+                      "enum": [
+                        "FLEX7",
+                        "SAVER3",
+                        "NONREF",
+                        "LONGSTAY14"
+                      ]
+                    },
                     "checkIn": {
                       "type": "string",
                       "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
@@ -9188,6 +9209,27 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "channelCode": {
+                            "type": "string",
+                            "enum": [
+                              "WEB",
+                              "PHONE",
+                              "WALKIN",
+                              "OTA_BOOKING",
+                              "OTA_AGODA",
+                              "OTA_AIRBNB",
+                              "AGENCY"
+                            ]
+                          },
+                          "ratePlanCode": {
+                            "type": "string",
+                            "enum": [
+                              "FLEX7",
+                              "SAVER3",
+                              "NONREF",
+                              "LONGSTAY14"
+                            ]
+                          },
                           "checkIn": {
                             "type": "string",
                             "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
@@ -9560,6 +9602,27 @@
                     "channelId": {
                       "type": "string",
                       "minLength": 1
+                    },
+                    "channelCode": {
+                      "type": "string",
+                      "enum": [
+                        "WEB",
+                        "PHONE",
+                        "WALKIN",
+                        "OTA_BOOKING",
+                        "OTA_AGODA",
+                        "OTA_AIRBNB",
+                        "AGENCY"
+                      ]
+                    },
+                    "ratePlanCode": {
+                      "type": "string",
+                      "enum": [
+                        "FLEX7",
+                        "SAVER3",
+                        "NONREF",
+                        "LONGSTAY14"
+                      ]
                     },
                     "checkIn": {
                       "type": "string",
@@ -10030,6 +10093,27 @@
                     "channelId": {
                       "type": "string",
                       "minLength": 1
+                    },
+                    "channelCode": {
+                      "type": "string",
+                      "enum": [
+                        "WEB",
+                        "PHONE",
+                        "WALKIN",
+                        "OTA_BOOKING",
+                        "OTA_AGODA",
+                        "OTA_AIRBNB",
+                        "AGENCY"
+                      ]
+                    },
+                    "ratePlanCode": {
+                      "type": "string",
+                      "enum": [
+                        "FLEX7",
+                        "SAVER3",
+                        "NONREF",
+                        "LONGSTAY14"
+                      ]
                     },
                     "checkIn": {
                       "type": "string",
@@ -11243,6 +11327,27 @@
                     "channelId": {
                       "type": "string",
                       "minLength": 1
+                    },
+                    "channelCode": {
+                      "type": "string",
+                      "enum": [
+                        "WEB",
+                        "PHONE",
+                        "WALKIN",
+                        "OTA_BOOKING",
+                        "OTA_AGODA",
+                        "OTA_AIRBNB",
+                        "AGENCY"
+                      ]
+                    },
+                    "ratePlanCode": {
+                      "type": "string",
+                      "enum": [
+                        "FLEX7",
+                        "SAVER3",
+                        "NONREF",
+                        "LONGSTAY14"
+                      ]
                     },
                     "checkIn": {
                       "type": "string",
