@@ -39,6 +39,8 @@ export const paymentSchema = z.object({
   expiresAt: isoUtcTimestampSchema.nullable(),
   paidAt: isoUtcTimestampSchema.nullable(),
   createdAt: isoUtcTimestampSchema,
+  /** Người ghi khoản thu do server xác định (BR-PAY-06); optional để đọc phản hồi cũ. */
+  createdBy: z.string().min(1).nullable().optional(),
 });
 
 /** `GET /payments/{paymentId}/status` — đọc lại sau khi PSP chuyển hướng (BR-PAY-05). */

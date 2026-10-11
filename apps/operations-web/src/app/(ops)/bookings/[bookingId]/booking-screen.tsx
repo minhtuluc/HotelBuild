@@ -180,6 +180,9 @@ export function BookingScreen({ baseUrl }: { baseUrl: string }): ReactElement {
               >
                 {t('ops.bookings.action.reschedule')}
               </Link>
+              <Link href={`/bookings/${bookingId}/collect`} data-testid="booking-open-collect">
+                {t('ops.bookings.action.collect')}
+              </Link>
             </div>
             <p style={{ margin: 0 }} data-testid="booking-actions-pending">
               {t('ops.bookings.detail.actionsPending')}

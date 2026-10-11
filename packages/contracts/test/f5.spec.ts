@@ -122,6 +122,14 @@ const APPROVE_RESPONSE = {
 };
 
 describe('hợp đồng F5 khớp ví dụ api.md', () => {
+  it('Payment giữ createdBy do server trả, phản hồi cũ vẫn đọc được (BR-PAY-06)', () => {
+    expect(
+      paymentSchema.parse({ ...PAYMENT_RESPONSE, createdBy: 'synthetic-collector' }),
+    ).toMatchObject({ createdBy: 'synthetic-collector' });
+    expect(paymentSchema.safeParse(PAYMENT_RESPONSE).success).toBe(true);
+    expect(paymentSchema.safeParse({ ...PAYMENT_RESPONSE, createdBy: '' }).success).toBe(false);
+  });
+
   it('§3.3 huỷ: nhận request và response kèm khối cancellation + refundRequest', () => {
     const request = cancelRequestSchema.parse(CANCEL_REQUEST);
     expect(request.evidenceRefs).toEqual([]);

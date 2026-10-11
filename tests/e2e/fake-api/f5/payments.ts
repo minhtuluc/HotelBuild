@@ -132,6 +132,7 @@ export function paymentResponse(
       expiresAt: online ? new Date(Date.now() + 900000).toISOString() : null,
       paidAt: null,
       createdAt: now(),
+      createdBy: actor.key,
     };
     state.payments.set(id, payment);
     if (!online) {
