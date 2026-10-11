@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 import { housekeepingTaskSchema } from '@pinehill/contracts';
 import {
@@ -27,6 +28,19 @@ test('assigned staff advances cleaning one step; durable replay changes neither 
     key,
   );
   expect(first.status).toBe(200);
+  const rawTask = z.record(z.string(), z.unknown());
+  const keys = [
+    'id',
+    'roomId',
+    'roomCode',
+    'businessDate',
+    'status',
+    'assignedTo',
+    'note',
+    'completedAt',
+    'version',
+  ].sort();
+  expect(Object.keys(rawTask.parse(first.body)).sort()).toEqual(keys);
   expect(first.headers.etag).toBe('"2"');
   expect(housekeepingTaskSchema.parse(first.body)).toMatchObject({
     status: 'IN_PROGRESS',
@@ -44,6 +58,7 @@ test('assigned staff advances cleaning one step; durable replay changes neither 
   expect(replay.headers['idempotency-replayed']).toBe('true');
   expect(replay.headers.etag).toBe('"2"');
   expect(replay.body).toEqual(first.body);
+  expect(Object.keys(rawTask.parse(replay.body)).sort()).toEqual(keys);
   const done = await patch(token, { status: 'DONE' }, ownTask, '"2"');
   expect(done.status).toBe(200);
   expect(housekeepingTaskSchema.parse(done.body)).toMatchObject({
@@ -201,4 +216,18 @@ test('anonymous callers cannot list or patch tasks', async () => {
         .send({ status: 'IN_PROGRESS' })
     ).status,
   ).toBe(401);
+});
+test('passport labels are masked in stored note, command/replay and all audit text', async () => {
+  const token = await login('HOUSEKEEPING'),
+    key = randomUUID();
+  const body = { note: 'Passport B1234567', reason: 'idNumber AB123456' };
+  const response = await patch(token, body, ownTask, '"1"', key);
+  expect(response.status).toBe(200);
+  const replay = await patch(token, body, ownTask, '"1"', key);
+  expect(replay.status).toBe(200);
+  const records = await rows(
+    "SELECT note FROM housekeeping_tasks WHERE id=$1 UNION ALL SELECT concat(before_json::text,after_json::text,reason) AS note FROM audit_logs WHERE entity_id=$1 AND action='HOUSEKEEPING_TASK_UPDATED'",
+    [ownTask],
+  );
+  expect(JSON.stringify([response.body, replay.body, records])).not.toMatch(/B1234567|AB123456/);
 });

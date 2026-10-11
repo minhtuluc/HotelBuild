@@ -19,7 +19,9 @@ Không triển khai checkout/check-in hay tạo task: HB-145 tạo sau checkout,
 - completedAt đặt khi DONE bằng Clock, giữ lúc INSPECTED, xoá khi PENDING. Không sửa Room.status,
   assignment, channel allotment, booking hay outbox; vệ sinh không giảm/tăng tồn ngày BR-FO-06.
 - Free text che email và chuỗi số định danh cả dữ liệu cũ trong projection và lúc lưu/audit mới.
-  Không suy danh tính khách từ task. Ghi chú quá 500 ký tự trên DB cũ chỉ hiển thị 500 ký tự.
+  Nhãn Passport/idNumber/CCCD/CMND/hộ chiếu được che bảo thủ đến dấu phân cách, kể cả giấy tờ
+  có chữ/khoảng trắng. Đây không phải bộ nhận diện mọi PII trong văn bản: không suy được tên hay
+  giấy tờ tuỳ ý không có nhãn. Không nhập hồ sơ khách vào ghi chú dọn phòng. Ghi chú DB cũ chỉ hiển thị 500 ký tự.
 
 HB-144 phải giữ cùng Room lock khi kiểm readiness và ghi giao phòng. HB-148 kiểm chứng khoá
 Room thật nhưng chưa nghiệm thu race end-to-end với endpoint check-in chưa tồn tại.

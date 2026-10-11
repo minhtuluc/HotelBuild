@@ -1,6 +1,6 @@
 import { housekeepingTaskSchema } from '@pinehill/contracts';
 import type { Prisma } from '@prisma/client';
-import { maskOperationalText } from '../../prop/room-blocks/operational-text.js';
+import { maskTaskText } from './task-text.js';
 export const taskSelect = {
   id: true,
   room_id: true,
@@ -24,7 +24,7 @@ export function project(task: Task) {
     businessDate: task.business_date.toISOString().slice(0, 10),
     status: task.status,
     assignedTo: task.assigned_to,
-    note: task.note === null ? null : maskOperationalText(task.note).slice(0, 500),
+    note: task.note === null ? null : maskTaskText(task.note).slice(0, 500),
     completedAt: task.completed_at?.toISOString() ?? null,
     version,
   });

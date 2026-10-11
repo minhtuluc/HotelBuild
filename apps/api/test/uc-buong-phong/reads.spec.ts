@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { z } from 'zod';
 import { housekeepingTaskSchema, listResponseSchema, errorBodySchema } from '@pinehill/contracts';
 import {
   list,
@@ -11,13 +12,14 @@ import {
   secondUserId,
 } from './fixture.js';
 const decode = listResponseSchema(housekeepingTaskSchema);
+const rawList = z.object({ data: z.array(z.record(z.string(), z.unknown())) });
 // Catches missing assignment/scope predicates or spreading DB rows into the public DTO.
 test('HOUSEKEEPING sees only assigned tasks in scope and exactly task fields, with no-store', async () => {
   const response = await list(await login('HOUSEKEEPING'));
   expect(response.status).toBe(200);
   expect(response.headers['cache-control']).toBe('no-store');
   expect(decode.parse(response.body).data.map((task) => task.id)).toEqual([ownTask]);
-  expect(Object.keys(decode.parse(response.body).data[0]!).sort()).toEqual(
+  expect(Object.keys(rawList.parse(response.body).data[0]!).sort()).toEqual(
     [
       'id',
       'roomId',
@@ -99,4 +101,14 @@ test('legacy note identifiers are masked in read projections', async () => {
   expect(note).toContain('****5678');
   expect(note).toContain('****8901');
   expect(JSON.stringify(result.body)).not.toMatch(/84912345678|012345678901|test@example/);
+});
+test('legacy passport/idNumber labels are masked before housekeeping sees a note', async () => {
+  await rows('UPDATE housekeeping_tasks SET note=$1 WHERE id=$2', [
+    'Passport B1234567; idNumber AB123456; Hộ chiếu: C7654321',
+    ownTask,
+  ]);
+  const response = await list(await login('HOUSEKEEPING'));
+  expect(response.status).toBe(200);
+  expect(JSON.stringify(response.body)).not.toMatch(/B1234567|AB123456|C7654321/);
+  expect(decode.parse(response.body).data[0]!.note).toContain('****4567');
 });

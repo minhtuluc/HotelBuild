@@ -6,7 +6,7 @@ import {
 import { AppError } from '../../../common/app-error.js';
 import { isAuthorizedActor } from '../../../common/actor/authorized-actor.js';
 import type { FastifyRequest } from 'fastify';
-import { maskOperationalText } from '../../prop/room-blocks/operational-text.js';
+import { maskTaskText } from './task-text.js';
 export const forbidden = () =>
   new AppError(403, 'E_RBAC_FORBIDDEN', 'Bạn không được thao tác nhiệm vụ này.');
 export const missing = () => new AppError(404, 'E_GEN_NOT_FOUND', 'Không tìm thấy nhiệm vụ.');
@@ -47,8 +47,8 @@ export function updateInput(value: unknown): Update {
     throw invalid();
   return {
     ...input,
-    ...(input.note === undefined ? {} : { note: maskOperationalText(input.note) }),
-    ...(input.reason === undefined ? {} : { reason: maskOperationalText(input.reason) }),
+    ...(input.note === undefined ? {} : { note: maskTaskText(input.note) }),
+    ...(input.reason === undefined ? {} : { reason: maskTaskText(input.reason) }),
   };
 }
 export function expectedVersion(value: unknown): bigint {
