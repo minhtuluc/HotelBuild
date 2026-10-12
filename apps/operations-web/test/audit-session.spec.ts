@@ -119,3 +119,26 @@ test('dispose cancels request and suppresses all late notifications', async () =
   expect(updates).toBe(before);
   expect(c.state.rows).toHaveLength(0);
 });
+
+test('loadMore cannot reuse an old cursor while same-filter refresh is in flight', async () => {
+  const refresh = deferred<ListPage<AuditLogEntry>>();
+  let calls = 0;
+  let cursorReads = 0;
+  const c = controller(async (query) => {
+    calls++;
+    if (query.cursor) {
+      cursorReads++;
+      return page([{ ...row, id: 'appended' }], 'newcursor');
+    }
+    return calls === 1 ? page([row], 'oldcursor') : refresh.promise;
+  });
+  await c.load(EMPTY_AUDIT_FILTERS);
+  const waiting = c.load(EMPTY_AUDIT_FILTERS);
+  expect(c.state.phase).toBe('refreshing');
+  await c.loadMore();
+  expect(cursorReads).toBe(0);
+  refresh.resolve(page([{ ...row, id: 'fresh' }], 'freshcursor'));
+  await waiting;
+  expect(c.state.rows.map((r) => r.id)).toEqual(['fresh']);
+  expect(c.state.nextCursor).toBe('freshcursor');
+});

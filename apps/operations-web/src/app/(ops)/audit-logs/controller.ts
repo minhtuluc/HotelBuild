@@ -124,7 +124,14 @@ export class AuditController {
     }
   }
   async loadMore(): Promise<void> {
-    if (!this.alive || this.denied || this.state.loadingMore || !this.state.nextCursor) return;
+    if (
+      !this.alive ||
+      this.denied ||
+      this.state.loadingMore ||
+      !this.state.nextCursor ||
+      this.state.phase !== 'ready'
+    )
+      return;
     const stamp = this.epoch;
     const query = buildAuditQuery(this.state.filters, AUDIT_PAGE_SIZE, this.state.nextCursor);
     this.update({ loadingMore: true, error: null });

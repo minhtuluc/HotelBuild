@@ -189,7 +189,7 @@ export function AuditLogsScreen({ baseUrl }: { baseUrl: string }): ReactElement 
                 type="button"
                 data-testid="audit-more"
                 onClick={() => void loadMore()}
-                disabled={loadingMore}
+                disabled={loadingMore || workspace.state.phase !== 'ready'}
                 style={{ minHeight: 44, justifySelf: 'start' }}
               >
                 {t('audit.more')}
