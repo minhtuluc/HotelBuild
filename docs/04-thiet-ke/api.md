@@ -317,6 +317,8 @@ xoá khi mở lại. Trạng thái sai → 409; phiên bản cũ → 412; thiế
 | POST | `/api/v1/system/backups/{backupId}/restore` | Diễn tập phục hồi vào môi trường tạm do server chọn (202); không nhận đường dẫn/DB URL của client | SYSADMIN | `targetTimestamp`, `reason` | UC-SYS-03 | BR-SYS-03 |
 | GET | `/api/v1/system/health` | Công khai chỉ `{status: "ok"}`; không lộ version, hostname, topology hay lỗi phụ thuộc | — | — | UC-SYS-03 | NFR-USE-01, NFR-USE-02 |
 
+`GET /audit-logs` với `entityType=SystemSetting`: `entityId` nhận UUID gốc hoặc khóa tham số (SCR-17). Khóa được đối chiếu từ `key` trong snapshot lịch sử bất biến, không join giá trị hiện tại; bộ lọc quyền/count/cursor vẫn áp dụng trước phân trang.
+
 **Triển khai HB-036:** audit phân trang `(at DESC,id DESC)` bằng cursor UUID thuộc tập
 đã lọc, giữ độ chính xác microsecond khi so cursor; khoảng thời gian `[from,to)`.
 MANAGER chỉ nhận loại `Property`, `RoomType`, `Room`, `RoomBlock`, `Booking`,

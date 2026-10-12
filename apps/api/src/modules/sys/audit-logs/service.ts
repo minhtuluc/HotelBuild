@@ -37,7 +37,14 @@ export class AuditLogsService {
       filters = [auditScope(actor)];
     if (q.actorId) filters.push(Prisma.sql`a.actor_id=${q.actorId}::uuid`);
     if (q.entityType) filters.push(Prisma.sql`a.entity_type=${q.entityType}`);
-    if (q.entityId) filters.push(Prisma.sql`a.entity_id::text=${q.entityId}`);
+    if (q.entityId) {
+      // SCR-17 publishes logical keys. Resolve from immutable snapshots, never current settings.
+      filters.push(
+        q.entityType === 'SystemSetting'
+          ? Prisma.sql`(a.entity_id::text=${q.entityId} OR a.before_json->>'key'=${q.entityId} OR a.after_json->>'key'=${q.entityId})`
+          : Prisma.sql`a.entity_id::text=${q.entityId}`,
+      );
+    }
     if (q.action) filters.push(Prisma.sql`a.action=${q.action}`);
     if (q.from) filters.push(Prisma.sql`a.at>=${q.from}::timestamptz`);
     if (q.to) filters.push(Prisma.sql`a.at<${q.to}::timestamptz`);

@@ -289,3 +289,39 @@ test('known business amounts and bigint versions retain exact digits while phone
   expect(snapshot).toMatchObject({ fixedNightlyPrice: '123456789', version: '1234567890123' });
   expect(JSON.stringify(response.body)).not.toContain('+849012345678');
 });
+test('SystemSetting history supports immutable logical key while retaining UUID filters and scope', async () => {
+  const id = await audit(
+    { key: 'refund.feeAmount', value: '0' },
+    { key: 'refund.feeAmount', value: '1000' },
+    'SystemSetting',
+  );
+  await audit(null, { key: 'other.setting', value: '0' }, 'SystemSetting');
+  await audit(null, { key: 'refund.feeAmount', propertyId }, 'RoomBlock');
+  const token = await login();
+  const byKey = await logs(token, {
+    entityType: 'SystemSetting',
+    entityId: 'refund.feeAmount',
+    limit: 1,
+  });
+  expect(byKey.status).toBe(200);
+  expect(raw.parse(byKey.body).meta).toMatchObject({ total: 1, hasMore: false });
+  expect(raw.parse(byKey.body).data[0]!.id).toBe(id);
+  const record = raw
+    .parse((await logs(token, { entityType: 'SystemSetting' })).body)
+    .data.find((r) => r.id === id)!;
+  expect(
+    raw
+      .parse((await logs(token, { entityId: String(record.entityId) })).body)
+      .data.some((r) => r.id === id),
+  ).toBe(true);
+  expect(
+    raw.parse(
+      (
+        await logs(await login('MANAGER'), {
+          entityType: 'SystemSetting',
+          entityId: 'refund.feeAmount',
+        })
+      ).body,
+    ).meta.total,
+  ).toBe(0);
+});
