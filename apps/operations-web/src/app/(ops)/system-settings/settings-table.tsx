@@ -27,7 +27,7 @@ export function SettingsTable({
     t('settings.col.actions'),
   ];
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div style={{ overflowX: 'auto', minWidth: 0, maxWidth: '100%' }}>
       <table data-testid="settings-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
           {t('settings.title')}

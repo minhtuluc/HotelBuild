@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { errorBody, fulfillJson, listBody } from './fake-api';
 import { operationsWebOnly } from './guard';
 import {loginRefundStaff} from './refund-fixture';
+import {logoutCollectionStaff} from './collect-fixture';
 
 const NUMBER_SETTING = {
   key: 'pricing.maxDiscountPct',
@@ -35,7 +36,7 @@ const AUDIT = {
   createdAt: '2026-11-12T07:00:00.000Z',
 };
 
-const SETTINGS = '**/api/v1/system-settings**';
+const SETTINGS = '**/api/session/sys/system-settings**';
 const AUDIT_LOGS = '**/api/session/sys/audit-logs*';
 
 operationsWebOnly();
@@ -160,4 +161,38 @@ test.describe('SCR-17 tham số hệ thống trên API giả (HB-044)', () => {
     await expect(page.getByText(/Chưa xác định kết quả/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Tra cứu kết quả' })).toBeVisible();
   });
+});
+
+test('412 retains inputs until explicit fresh version comparison and adoption',async({page})=>{
+ let version=4;const writes:{key:string|undefined;tag:string|undefined}[]=[];
+ await page.route(SETTINGS,route=>{
+  if(route.request().method()==='PUT'){
+   writes.push({key:route.request().headers()['idempotency-key'],tag:route.request().headers()['if-match']});
+   if(writes.length===1){version=5;return fulfillJson(route,412,errorBody('E_GEN_VERSION_CONFLICT','synthetic412','/system-settings'));}
+   return fulfillJson(route,204,'');
+  }
+  return fulfillJson(route,200,listBody([{...NUMBER_SETTING,version,value:version===5?'22':'20'}]));
+ });
+ await page.goto('/system-settings');await page.getByTestId('setting-pricing.maxDiscountPct').getByRole('button',{name:'Sửa'}).click();await page.getByLabel('Giá trị mới').fill('25');await page.getByLabel('Lý do thay đổi').fill('synthetic reason');await page.getByRole('button',{name:'Lưu',exact:true}).click();
+ await expect(page.getByLabel('Giá trị mới')).toHaveValue('25');await expect(page.getByLabel('Lý do thay đổi')).toHaveValue('synthetic reason');await expect(page.getByRole('button',{name:'Lưu',exact:true})).toBeDisabled();
+ await page.getByRole('button',{name:'Tải lại và so sánh'}).click();await expect(page.getByTestId('setting-conflict')).toContainText('Giá trị hiện tại: 22');await expect(page.getByRole('button',{name:'Lưu',exact:true})).toBeDisabled();
+ await page.getByRole('button',{name:'Dùng phiên bản hiện tại để lưu bản nhập'}).click();await page.getByRole('button',{name:'Lưu',exact:true}).click();await expect(page.getByTestId('settings-saved')).toBeVisible();expect(writes[0]?.tag).toBe('"4"');expect(writes[1]?.tag).toBe('"5"');expect(writes[1]?.key).not.toBe(writes[0]?.key);
+});
+test('unknown response survives reload and exact original request is only manually replayed',async({page})=>{
+ const writes:{key:string|undefined;tag:string|undefined;body:string|null}[]=[];
+ await page.route(SETTINGS,route=>{
+  if(route.request().method()==='PUT'){writes.push({key:route.request().headers()['idempotency-key'],tag:route.request().headers()['if-match'],body:route.request().postData()});return writes.length===1?route.abort('failed'):fulfillJson(route,204,'');}
+  return fulfillJson(route,200,listBody([{...NUMBER_SETTING,value:writes.length?'25':'20',version:writes.length?5:4}]));
+ });
+ await page.goto('/system-settings');await page.getByTestId('setting-pricing.maxDiscountPct').getByRole('button',{name:'Sửa'}).click();await page.getByLabel('Giá trị mới').fill('25');await page.getByLabel('Lý do thay đổi').fill('synthetic reason');await page.getByRole('button',{name:'Lưu',exact:true}).click();await expect(page.getByTestId('setting-unknown')).toBeVisible();await page.reload();await expect(page.getByTestId('setting-unknown')).toContainText(writes[0]?.key??'missing');await expect(page.getByRole('button',{name:'Sửa',exact:true})).toHaveCount(0);expect(writes).toHaveLength(1);await page.getByRole('button',{name:'Tra cứu kết quả'}).click();await expect(page.getByTestId('setting-unknown')).toBeVisible();expect(writes).toHaveLength(1);
+ await page.getByRole('button',{name:'Gửi lại đúng yêu cầu'}).click();await expect(page.getByTestId('settings-saved')).toBeVisible();expect(writes).toHaveLength(2);expect(writes[1]).toEqual(writes[0]);
+});
+test('denied reload clears previously loaded configuration and editor',async({page})=>{
+ let denied=false;await page.route(SETTINGS,route=>denied?fulfillJson(route,403,errorBody('E_RBAC_FORBIDDEN','synthetic403','/system-settings')):fulfillJson(route,200,listBody([NUMBER_SETTING])));
+ await page.goto('/system-settings');await page.getByTestId('setting-pricing.maxDiscountPct').getByRole('button',{name:'Sửa'}).click();denied=true;await page.getByTestId('settings-reload').click();await expect(page.getByText('Bạn không có quyền xem nội dung này')).toBeVisible();await expect(page.getByTestId('settings-table')).toHaveCount(0);await expect(page.getByTestId('setting-editor')).toHaveCount(0);
+});
+test('360px settings editor is accessible and other-tab logout removes private cache',async({page,context})=>{
+ backend(page);await page.setViewportSize({width:360,height:800});await page.goto('/system-settings');await page.getByTestId('setting-pricing.maxDiscountPct').getByRole('button',{name:'Sửa'}).click();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:'/tmp/hb044-mobile.png',fullPage:true});const {default:AxeBuilder}=await import('@axe-core/playwright');const result=await new AxeBuilder({page}).analyze();expect(result.violations.filter(v=>v.impact==='serious'||v.impact==='critical')).toEqual([]);
+ const other=await context.newPage();await logoutCollectionStaff(other);await expect(page.getByTestId('settings-table')).toHaveCount(0);await expect(page.getByTestId('setting-editor')).toHaveCount(0);await expect(page.getByText(/Phiên đã hết hạn/)).toBeVisible();await other.close();
 });

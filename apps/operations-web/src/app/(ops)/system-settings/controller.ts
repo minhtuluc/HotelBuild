@@ -1,11 +1,11 @@
 import { isApiError } from '@pinehill/api-client';
-import type { SystemSetting, SystemSettingUpdateRequest, UserMe } from '@pinehill/contracts';
 import {
-  ifMatchOf,
-  updateRequest,
-  validateEdit,
-  type FieldIssue,
-} from '../../../lib/system-settings';
+  systemSettingUpdateRequestSchema,
+  type SystemSetting,
+  type SystemSettingUpdateRequest,
+  type UserMe,
+} from '@pinehill/contracts';
+import { ifMatchOf, validateEdit, type FieldIssue } from '../../../lib/system-settings';
 import { readIntent, replayAllowed, storageKey, type SettingIntent } from './intent';
 export interface SettingsPorts {
   actor(signal: AbortSignal): Promise<Pick<UserMe, 'userId' | 'role'>>;
@@ -82,6 +82,7 @@ export class SettingsController {
   private intent: SettingIntent | undefined;
   private corrupt = false;
   private retryAt = 0;
+  private comparisonRequired = false;
   private listeners = new Set<() => void>();
   constructor(private readonly options: Options) {}
   subscribe(fn: () => void): () => void {
@@ -111,6 +112,31 @@ export class SettingsController {
       referenceId: null,
       canCompare: false,
     });
+  }
+  async sessionChanged(): Promise<void> {
+    if (!this.alive || this.denied) return;
+    const draft = this.state.draft;
+    this.epoch++;
+    this.abort.abort();
+    this.update({
+      phase: 'loading',
+      rows: [],
+      draft: null,
+      saved: null,
+      busy: false,
+      canCompare: false,
+    });
+    const task = this.load();
+    const stamp = this.epoch;
+    await task;
+    if (this.current(stamp) && this.state.phase !== 'error') this.update({ draft });
+  }
+  canRetry(): boolean {
+    return (
+      !!this.intent &&
+      replayAllowed(this.intent, this.options.now()) &&
+      this.options.now() >= this.retryAt
+    );
   }
   dispose(): void {
     this.alive = false;
@@ -160,7 +186,7 @@ export class SettingsController {
   async load(): Promise<void> {
     if (!this.alive || this.denied || this.state.busy) return;
     const stamp = ++this.epoch;
-    const wasConflict = this.state.phase === 'conflict';
+    const wasConflict = this.comparisonRequired;
     this.abort.abort();
     this.abort = new AbortController();
     this.update({ busy: true, error: null });
@@ -185,7 +211,7 @@ export class SettingsController {
       this.deny(phase);
       return;
     }
-    if (this.current(stamp)) this.update({ phase: 'error', error, busy: false });
+    if (this.current(stamp)) this.update({ phase: 'error', error, busy: false, canCompare: false });
   }
 
   edit(key: string): void {
@@ -211,6 +237,7 @@ export class SettingsController {
     if (this.state.phase !== 'conflict' || !this.state.canCompare || !this.state.draft) return;
     const row = this.state.rows.find((r) => r.key === this.state.draft?.key);
     if (!row || !Number.isSafeInteger(row.version)) return;
+    this.comparisonRequired = false;
     this.update({
       draft: { ...this.state.draft, version: row.version },
       phase: 'ready',
@@ -226,7 +253,7 @@ export class SettingsController {
       this.state.busy ||
       this.intent ||
       this.corrupt ||
-      this.state.phase === 'conflict'
+      this.comparisonRequired
     )
       return null;
     return this.state.draft;
@@ -251,7 +278,10 @@ export class SettingsController {
       const intent = {
         ownerId,
         settingKey: draft.key,
-        body: updateRequest(draft.value, draft.reason),
+        body: systemSettingUpdateRequestSchema.parse({
+          value: draft.value.trim(),
+          reason: draft.reason,
+        }),
         tag: ifMatchOf(draft.version),
         key: this.options.createId(),
         createdAt: this.options.now(),
@@ -294,6 +324,7 @@ export class SettingsController {
       return;
     }
     if (this.definite(error)) {
+      this.comparisonRequired = conflict(error);
       this.forget();
       this.update({
         phase: conflict(error) ? 'conflict' : 'validation',

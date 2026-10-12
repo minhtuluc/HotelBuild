@@ -197,3 +197,32 @@ test('a newly opened tab obtains the existing access token for logout', async ()
   expect(b.calls.at(-1)?.headers.get('authorization')).toBe(`Bearer ${issued.accessToken}`);
   expect(b.refreshes()).toBe(0);
 });
+test('composition is notified of token changes and logout without persisting token', async () => {
+  const env = environment();
+  const coordinator = env.create();
+  const changes: (string | null)[] = [];
+  coordinator.publish({
+    accessToken: 'synthetic-owner1',
+    expiresInSeconds: 600,
+    expiresAt: Date.now() + 600000,
+    mustChangePassword: false,
+  });
+  const client = createSessionClient({
+    kind: 'staff',
+    coordinator,
+    onExpired: () => {},
+    onSessionChanged: (token) => changes.push(token),
+    fetchImpl: async () => new Response(null, { status: 204 }),
+  });
+  clients.push(client);
+  await client.getAccessToken();
+  coordinator.publish({
+    accessToken: 'synthetic-owner2',
+    expiresInSeconds: 600,
+    expiresAt: Date.now() + 600000,
+    mustChangePassword: false,
+  });
+  await client.logout();
+  expect(changes).toEqual(['synthetic-owner2', null]);
+  expect([...env.values.values()].join('')).not.toContain('synthetic-owner2');
+});

@@ -120,8 +120,10 @@ async function execute(request: Request, options: JourneyOptions): Promise<Respo
   const parsedQuery = query(request, route);
   const body = route.body ? parseInput(route.body, await readBody(request)) : undefined;
   validatePaymentReturn(request, route, body, options);
+  const ifMatch = request.headers.get('if-match');
   const spec: RequestBase = {
     method: route.method,
+    ...(ifMatch === null ? {} : { ifMatch }),
     path: route.path,
     signal: request.signal,
     ...(parsedQuery === undefined ? {} : { query: parsedQuery }),
@@ -137,9 +139,17 @@ async function execute(request: Request, options: JourneyOptions): Promise<Respo
   const result = route.decoder
     ? await client.request({ ...spec, decoder: route.decoder })
     : await client.requestVoid(spec);
+  return success(result, Boolean(route.decoder));
+}
+
+function success(
+  result: import('@pinehill/api-client').ApiResponse<unknown>,
+  decoded: boolean,
+): Response {
   const headers: Record<string, string> = { 'cache-control': 'no-store' };
   if (result.replayed) headers['idempotency-replayed'] = 'true';
-  if (!route.decoder) return new Response(null, { status: result.status, headers });
+  if (result.etag !== undefined) headers.etag = result.etag;
+  if (!decoded) return new Response(null, { status: result.status, headers });
   return Response.json(result.data, { status: result.status, headers });
 }
 export function createJourneyHandler(options: JourneyOptions) {

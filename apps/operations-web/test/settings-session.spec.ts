@@ -18,6 +18,7 @@ function setup() {
   let current = { ...original };
   let user: { userId: string; role: 'OWNER' | 'MANAGER' } = { userId: 'owner1', role: 'OWNER' };
   let now = 1000;
+  let sequence = 0;
   let fail: unknown;
   const data = new Map<string, string>();
   const sends: { key: string; body: unknown; tag: string; stored: boolean }[] = [];
@@ -41,7 +42,7 @@ function setup() {
         data.delete(k);
       },
     },
-    createId: () => '7ed2bdb1-c3e0-467f-89e0-058f08173141',
+    createId: () => '7ed2bdb1-c3e0-467f-89e0-' + (++sequence).toString().padStart(12, '0'),
     now: () => now,
   };
   const c = new SettingsController(options);
@@ -190,6 +191,7 @@ test('412 keeps draft; reading newer version does not automatically change inten
   s.c.acceptVersion();
   await s.c.save();
   expect(s.sends[1]?.tag).toBe('"5"');
+  expect(s.sends[1]?.key).not.toBe(s.sends[0]?.key);
 });
 test('owner changes during prepared write cannot reuse previous owner draft or intent', async () => {
   const s = setup();
@@ -236,4 +238,54 @@ test('two concurrent save clicks send one PUT', async () => {
   release();
   await first;
   expect(s.sends).toHaveLength(1);
+});
+test('failed conflict reread cannot bypass explicit version comparison', async () => {
+  const s = setup();
+  await edit(s);
+  s.setFail(new ApiError({ kind: 'http', status: 412, message: 'conflict' }));
+  await s.c.save();
+  s.clearFail();
+  s.ports.list = async () => {
+    throw Error('read unavailable');
+  };
+  await s.c.load();
+  await s.c.save();
+  expect(s.sends).toHaveLength(1);
+  expect(s.c.state.draft?.version).toBe(4);
+});
+test('session token change hides cache immediately; same owner retains draft after revalidation', async () => {
+  const s = setup();
+  await edit(s);
+  const promise = s.c.sessionChanged();
+  expect(s.c.state.rows).toHaveLength(0);
+  expect(s.c.state.draft).toBeNull();
+  await promise;
+  expect(s.c.state.draft?.value).toBe('25');
+  s.changeOwner();
+  await s.c.sessionChanged();
+  expect(s.c.state.phase).toBe('forbidden');
+  expect(s.c.state.rows).toHaveLength(0);
+  expect(s.c.state.draft).toBeNull();
+});
+test('reason is sent verbatim and never silently shortened before persistence', async () => {
+  const s = setup();
+  await edit(s);
+  s.c.draft('25', '  synthetic reason  ');
+  await s.c.save();
+  expect(s.sends[0]?.body).toEqual({ value: '25', reason: '  synthetic reason  ' });
+});
+test('stale session revalidation cannot restore draft while newer identity is still unverified', async () => {
+  const s = setup();
+  await edit(s);
+  const resolvers: ((user: { userId: string; role: 'OWNER' }) => void)[] = [];
+  s.ports.actor = () => new Promise((resolve) => resolvers.push(resolve));
+  const old = s.c.sessionChanged();
+  const fresh = s.c.sessionChanged();
+  resolvers[0]?.({ userId: 'owner1', role: 'OWNER' });
+  await old;
+  expect(s.c.state.draft).toBeNull();
+  expect(s.c.state.rows).toHaveLength(0);
+  resolvers[1]?.({ userId: 'owner2', role: 'OWNER' });
+  await fresh;
+  expect(s.c.state.phase).toBe('forbidden');
 });

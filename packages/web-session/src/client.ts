@@ -9,6 +9,8 @@ export interface SessionClientOptions {
   fetchImpl?: typeof fetch;
   now?: () => number;
   onExpired?: () => void;
+  /** In-memory notification for feature compositions to clear and revalidate private caches. */
+  onSessionChanged?: (accessToken: string | null) => void;
 }
 export function createSessionClient(options: SessionClientOptions) {
   let coordinator = options.coordinator;
@@ -29,6 +31,7 @@ export function createSessionClient(options: SessionClientOptions) {
     !!state && state.expiresAt - now() > margin(state);
   const changed = (state: SessionState | undefined) => {
     clearTimeout(timer);
+    options.onSessionChanged?.(state?.accessToken ?? null);
     if (!state) {
       notifyExpired();
       return;
