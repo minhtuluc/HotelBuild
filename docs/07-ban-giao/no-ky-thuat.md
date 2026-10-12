@@ -36,4 +36,15 @@ Người lập: DeepSeek, khi tự soạn đặc tả 14 ticket màn hình F2/F3
 
 Riêng `GET /room-types` (HB-037/PR #39) và `GET /room-blocks` (HB-039/PR #42) đã có đề xuất tương tự trong đặc tả; nếu đợt rà soát chốt thì cập nhật `docs/04-thiet-ke/api.md` + `packages/contracts` trong cùng PR đó.
 
+## Nhóm rà soát kiến trúc giữa kỳ — mốc 47% (12/10/2026)
+
+Chi tiết báo cáo rà soát kiến trúc độc lập: xem [ra-soat-kien-truc-giua-ky.md](ra-soat-kien-truc-giua-ky.md).
+
+| Mã | Mô tả | Ghi bởi | Ảnh hưởng | Trả trước | Trạng thái |
+|---|---|---|---|---|---|
+| TD-12 | Migration sau baseline thiếu tự động áp dụng khối `REVOKE` cho bảng mới (`0004_allotment_scopes`) | Rà soát kiến trúc giữa kỳ | Bảng append-only/tiền mới có thể bị cấp nhầm quyền `UPDATE/DELETE` | Trước đợt migration bảng tiền kế tiếp (HB-091/F5) | Mở |
+| TD-13 | Tài liệu kiến trúc lệch mã nguồn: `kien-truc.md §1` ghi idempotency ở Redis (thực tế code dùng PostgreSQL), `§7` ghi 1 image (thực tế 2 Dockerfile) | Rà soát kiến trúc giữa kỳ | Lệch giữa tài liệu thiết kế và mã triển khai thực tế | Đợt rà soát bàn giao HB-192 | Mở |
+| TD-14 | Quyết định kết nối CSDL cho tiến trình `apps/worker` (dùng chung Prisma Client hay tách riêng) | Rà soát kiến trúc giữa kỳ | Cần chốt trước khi viết handler CSDL cho worker HB-078 và HB-130 | Khi Codex nhận HB-078 | Mở |
+| TD-15 | Cập nhật đóng các nợ kỹ thuật TD-04, TD-05, TD-09, TD-10 đã được hiện thực hóa qua `HB-035`, `HB-036`, `HB-040` | Rà soát kiến trúc giữa kỳ | Sổ nợ kỹ thuật chưa phản ánh việc đã có endpoint thật trong mã | Nghiệm thu F2 (HB-049) | Mở |
+
 
