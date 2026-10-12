@@ -5,36 +5,22 @@
  * người thao tác/đối tượng/hành động/khoảng thời gian, phân trang con trỏ và xuất CSV đúng các dòng
  * đang xem. Không có bất kỳ thao tác tạo/sửa/xoá nào kể cả trên giao diện.
  */
-import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
+import { useState, type FormEvent, type ReactElement } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { createSystemApi, isApiError } from '@pinehill/api-client';
-import type { AuditLogEntry, ListPage } from '@pinehill/contracts';
+import type { AuditLogEntry } from '@pinehill/contracts';
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { useForcedState } from '../../../components/forced-state';
-import { opsApiClient } from '../../../lib/api';
 import { t } from '../../../lib/i18n';
 import {
-  AUDIT_PAGE_SIZE,
   EMPTY_AUDIT_FILTERS,
   auditCsvFileName,
-  buildAuditQuery,
-  mergeAuditRows,
   toCsv,
   type AuditFilters,
 } from '../../../lib/audit-log';
-import { readFailureState } from '../../../lib/screen-state';
+import { useAudit } from './use-audit';
+import { auditText } from './messages-transport';
 import { AuditLogTable } from './audit-log-table';
-
-async function fetchPage(
-  baseUrl: string,
-  filters: AuditFilters,
-  cursor?: string,
-): Promise<ListPage<AuditLogEntry>> {
-  const api = createSystemApi(opsApiClient(baseUrl));
-  const page = await api.listAuditLogs(buildAuditQuery(filters, AUDIT_PAGE_SIZE, cursor));
-  return page.data;
-}
 
 /** Xuất CSV từ **các dòng đang hiển thị** (không gọi lại máy chủ), RFC 4180 + BOM UTF-8. */
 function downloadCsv(rows: readonly AuditLogEntry[]): void {
@@ -68,6 +54,7 @@ function FilterForm({
   ): ReactElement => (
     <label style={{ display: 'grid', gap: 4 }}>
       {t(key)}
+      {type === 'datetime-local' ? ' (' + auditText('vnTime') + ')' : null}
       <input
         type={type}
         value={value}
@@ -129,60 +116,12 @@ export function AuditLogsScreen({ baseUrl }: { baseUrl: string }): ReactElement 
   });
   const [draft, setDraft] = useState<AuditFilters>(fromUrl);
   const [filters, setFilters] = useState<AuditFilters>(fromUrl);
-  const [rows, setRows] = useState<readonly AuditLogEntry[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [state, setState] = useState<ScreenState>({ kind: 'loading' });
-  const [readError, setReadError] = useState<unknown>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
-
-  const load = useCallback(
-    async (target: AuditFilters): Promise<void> => {
-      setReadError(null);
-      try {
-        const page = await fetchPage(baseUrl, target);
-        setRows(page.data);
-        setNextCursor(page.meta.nextCursor);
-        setState(
-          page.data.length === 0
-            ? {
-                kind: 'empty',
-                reason: Object.values(target).some((value) => value !== '') ? 'filtered' : 'noData',
-                canCreate: false,
-              }
-            : { kind: 'ready' },
-        );
-      } catch (caught) {
-        const mapped = isApiError(caught) ? readFailureState(caught) : undefined;
-        if (mapped !== undefined) {
-          setState(mapped);
-          return;
-        }
-        // Giữ nguyên bảng đã có; băng lỗi nói rõ chưa đọc được thay vì hiện "chưa có dữ liệu".
-        setReadError(caught);
-        setState({ kind: 'ready' });
-      }
-    },
-    [baseUrl],
-  );
-
-  useEffect(() => {
-    if (forced !== undefined) return;
-    void load(filters);
-  }, [forced, load, filters]);
-
-  const loadMore = async (): Promise<void> => {
-    if (nextCursor === null || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const page = await fetchPage(baseUrl, filters, nextCursor);
-      setRows((current) => mergeAuditRows(current, page.data));
-      setNextCursor(page.meta.nextCursor);
-    } catch (caught) {
-      setReadError(caught);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
+  const workspace = useAudit(baseUrl, filters, forced === undefined);
+  const { rows, nextCursor, loadingMore } = workspace.state;
+  const readError = workspace.state.error;
+  const state = surfaceState(workspace.state);
+  const load = () => workspace.controller?.load(filters);
+  const loadMore = () => workspace.controller?.loadMore();
 
   if (forced !== undefined) {
     return (
@@ -214,7 +153,7 @@ export function AuditLogsScreen({ baseUrl }: { baseUrl: string }): ReactElement 
           type="button"
           data-testid="audit-reload"
           onClick={() => {
-            void load(filters);
+            void load();
           }}
           style={{ minHeight: 44 }}
         >
@@ -232,10 +171,13 @@ export function AuditLogsScreen({ baseUrl }: { baseUrl: string }): ReactElement 
           {t('audit.export')}
         </button>
       </div>
+      {workspace.state.phase === 'expired' ? (
+        <p role="alert">
+          {auditText('expired')} <a href="/login">{auditText('login')}</a>
+        </p>
+      ) : null}
       <StateSurface state={state}>
-        {readError === null ? null : (
-          <ScreenAlert error={readError} onRetry={() => void load(filters)} />
-        )}
+        {readError === null ? null : <ScreenAlert error={readError} onRetry={() => void load()} />}
         {rows.length === 0 ? null : (
           <>
             <p role="status" data-testid="audit-count" style={{ margin: 0 }}>
@@ -258,4 +200,33 @@ export function AuditLogsScreen({ baseUrl }: { baseUrl: string }): ReactElement 
       </StateSurface>
     </section>
   );
+}
+
+function surfaceState(state: import('./controller').AuditState): ScreenState {
+  switch (state.phase) {
+    case 'loading':
+      return { kind: 'loading' };
+    case 'refreshing':
+      return {
+        kind: 'refreshing',
+        updatedAt: state.updatedAt ?? new Date().toISOString(),
+        stale: true,
+      };
+    case 'empty':
+      return {
+        kind: 'empty',
+        reason: Object.values(state.filters).some(Boolean) ? 'filtered' : 'noData',
+        canCreate: false,
+      };
+    case 'expired':
+    case 'forbidden':
+      return { kind: 'forbidden' };
+    case 'validation':
+      return {
+        kind: 'validationError',
+        details: [{ field: 'from/to', issue: auditText('invalid') }],
+      };
+    default:
+      return { kind: 'ready' };
+  }
 }

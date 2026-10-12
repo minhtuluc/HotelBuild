@@ -36,8 +36,8 @@ describe('buildAuditQuery', () => {
       'c2',
     );
     expect(query.cursor).toBe('c2');
-    expect(query.from).toBe(new Date('2026-11-12T00:00').toISOString());
-    expect(query.to).toBe(new Date('2026-11-13T00:00').toISOString());
+    expect(query.from).toBe('2026-11-11T17:00:00.000Z');
+    expect(query.to).toBe('2026-11-12T17:00:00.000Z');
   });
 });
 

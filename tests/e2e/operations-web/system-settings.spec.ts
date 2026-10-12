@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { errorBody, fulfillJson, listBody } from './fake-api';
 import { operationsWebOnly } from './guard';
+import {loginRefundStaff} from './refund-fixture';
 
 const NUMBER_SETTING = {
   key: 'pricing.maxDiscountPct',
@@ -38,6 +39,7 @@ const SETTINGS = '**/api/v1/system-settings**';
 const AUDIT_LOGS = '**/api/v1/audit-logs*';
 
 operationsWebOnly();
+test.beforeEach(async({page,request})=>{await loginRefundStaff(page,request,'OWNER');});
 
 function backend(page: Page): { puts: () => string[]; ifMatch: () => (string | undefined)[] } {
   const puts: string[] = [];

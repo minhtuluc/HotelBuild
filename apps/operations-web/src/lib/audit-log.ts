@@ -50,8 +50,8 @@ export function buildAuditQuery(
   if (filters.entityType.trim() !== '') query.entityType = filters.entityType.trim();
   if (filters.entityId.trim() !== '') query.entityId = filters.entityId.trim();
   if (filters.action.trim() !== '') query.action = filters.action.trim();
-  if (filters.from !== '') query.from = new Date(filters.from).toISOString();
-  if (filters.to !== '') query.to = new Date(filters.to).toISOString();
+  if (filters.from !== '') query.from = vnInputUtc(filters.from);
+  if (filters.to !== '') query.to = vnInputUtc(filters.to);
   if (cursor !== undefined && cursor !== '') query.cursor = cursor;
   return query;
 }
@@ -82,6 +82,7 @@ export const AUDIT_CSV_HEADERS = [
 ] as const;
 
 function csvCell(value: string): string {
+  if (/^[\s\uFEFF]*[=+@-]/.test(value)) value = "'" + value;
   // RFC 4180: bọc nháy kép khi chứa dấu phẩy/nháy/xuống dòng và nhân đôi nháy kép bên trong.
   return /[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
 }
@@ -109,4 +110,13 @@ export function toCsv(rows: readonly AuditLogEntry[]): string {
 export function auditCsvFileName(now: Date = new Date()): string {
   const stamp = now.toISOString().slice(0, 19).replaceAll(/[:T-]/g, '');
   return `audit-logs-${stamp}.csv`;
+}
+
+/** Explicit VN wall time; validation rejects Date rollover rather than silently changing the filter. */
+function vnInputUtc(value: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) throw Error('Invalid VN datetime');
+  const civil = new Date(value + 'Z');
+  if (!Number.isFinite(civil.getTime()) || civil.toISOString().slice(0, 16) !== value)
+    throw Error('Invalid VN datetime');
+  return new Date(value + '+07:00').toISOString();
 }

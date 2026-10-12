@@ -1,7 +1,10 @@
 import { readFile } from 'node:fs/promises';
+import AxeBuilder from '@axe-core/playwright';
+import {logoutCollectionStaff} from './collect-fixture';
 import { expect, test } from '@playwright/test';
 import { errorBody, fulfillJson } from './fake-api';
 import { operationsWebOnly } from './guard';
+import {loginRefundStaff} from './refund-fixture';
 
 const AUDIT = '**/api/v1/audit-logs*';
 
@@ -37,6 +40,7 @@ function page(rows: readonly Row[], nextCursor: string | null = null, hasMore = 
 }
 
 operationsWebOnly();
+test.beforeEach(async({page,request})=>{await loginRefundStaff(page,request,'OWNER');});
 
 test.describe('SCR-16 nhật ký kiểm toán trên API giả (HB-043)', () => {
   test('hiện bảng nhật ký', async ({ page: browserPage }) => {
@@ -144,3 +148,19 @@ test.describe('SCR-16 nhật ký kiểm toán trên API giả (HB-043)', () => {
     await expect(browserPage.getByText('Chưa có dữ liệu')).toHaveCount(0);
   });
 });
+
+test('cross-tab BFF logout clears rows and disables export immediately',async({page})=>{
+ await page.route(AUDIT,route=>fulfillJson(route,200,pageBody()));
+ await page.goto('/audit-logs');await expect(page.getByTestId('audit-table')).toBeVisible();
+ const other=await page.context().newPage();await logoutCollectionStaff(other);
+ await expect(page.getByText('Phiên đã hết hạn. Đăng nhập lại để xem nhật ký.')).toBeVisible();await expect(page.getByTestId('audit-table')).toHaveCount(0);await expect(page.getByTestId('audit-export')).toBeDisabled();await other.close();
+});
+test('403 after rows were rendered clears rows and prevents CSV export',async({page})=>{
+ let deny=false;await page.route(AUDIT,route=>fulfillJson(route,deny?403:200,deny?errorBody('E_AUTH_OUT_OF_SCOPE','synthetic-trace','/api/v1/audit-logs'):pageBody()));
+ await page.goto('/audit-logs');await expect(page.getByTestId('audit-table')).toBeVisible();deny=true;await page.getByTestId('audit-reload').click();await expect(page.getByTestId('audit-table')).toHaveCount(0);await expect(page.getByTestId('audit-export')).toBeDisabled();
+});
+test('authenticated 360px audit route has no serious/critical axe or page overflow',async({page})=>{
+ await page.route(AUDIT,route=>fulfillJson(route,200,pageBody()));await page.setViewportSize({width:360,height:800});await page.goto('/audit-logs');await expect(page.getByTestId('audit-table')).toBeVisible();
+ const results=await new AxeBuilder({page}).analyze();expect(results.violations.filter(v=>v.impact==='serious'||v.impact==='critical')).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);await page.screenshot({path:'/tmp/hb043-mobile.png',fullPage:true});
+});
+function pageBody():string{return JSON.stringify({data:[row({id:'privacy-audit'})],meta:{limit:50,nextCursor:null,hasMore:false,total:1}});}
