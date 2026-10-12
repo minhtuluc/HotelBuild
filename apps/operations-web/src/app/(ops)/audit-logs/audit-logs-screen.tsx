@@ -103,7 +103,7 @@ function FilterForm({
   );
 }
 
-export function AuditLogsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function AuditLogsScreen(): ReactElement {
   const forced = useForcedState();
   // Lọc sẵn từ URL (`?entityType=SystemSetting&entityId=…`) để SCR-17 mở lịch sử của một tham số.
   const searchParams = useSearchParams();
@@ -116,7 +116,7 @@ export function AuditLogsScreen({ baseUrl }: { baseUrl: string }): ReactElement 
   });
   const [draft, setDraft] = useState<AuditFilters>(fromUrl);
   const [filters, setFilters] = useState<AuditFilters>(fromUrl);
-  const workspace = useAudit(baseUrl, filters, forced === undefined);
+  const workspace = useAudit(filters, forced === undefined);
   const { rows, nextCursor, loadingMore } = workspace.state;
   const readError = workspace.state.error;
   const state = surfaceState(workspace.state);

@@ -16,7 +16,7 @@ export function auditPort(client: ApiClient): AuditPort {
     ).data;
 }
 /** Staff refresh cookie stays in the existing BFF; only the current memory token reaches API. */
-export function createAuditWorkspace(baseUrl: string) {
+export function createAuditWorkspace() {
   let session: ReturnType<typeof createSessionClient> | undefined;
   let active = true;
   const getSession = () =>
@@ -32,7 +32,7 @@ export function createAuditWorkspace(baseUrl: string) {
     return value;
   };
   const client = new ApiClient({
-    baseUrl,
+    baseUrl: window.location.origin + '/api/session/sys',
     getAccessToken: token,
     onUnauthorized: async (rejected) => Boolean(await getSession().refresh(rejected)),
     maxAttempts: 1,

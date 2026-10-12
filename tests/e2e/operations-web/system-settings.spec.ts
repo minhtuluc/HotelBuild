@@ -36,7 +36,7 @@ const AUDIT = {
 };
 
 const SETTINGS = '**/api/v1/system-settings**';
-const AUDIT_LOGS = '**/api/v1/audit-logs*';
+const AUDIT_LOGS = '**/api/session/sys/audit-logs*';
 
 operationsWebOnly();
 test.beforeEach(async({page,request})=>{await loginRefundStaff(page,request,'OWNER');});

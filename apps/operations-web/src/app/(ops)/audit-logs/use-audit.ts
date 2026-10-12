@@ -11,12 +11,12 @@ const initial: AuditState = {
   loadingMore: false,
   updatedAt: null,
 };
-export function useAudit(baseUrl: string, filters: AuditFilters, enabled: boolean) {
+export function useAudit(filters: AuditFilters, enabled: boolean) {
   const [controller, setController] = useState<AuditController | null>(null);
   const [state, setState] = useState<AuditState>(initial);
   useEffect(() => {
     if (!enabled) return;
-    const workspace = createAuditWorkspace(baseUrl);
+    const workspace = createAuditWorkspace();
     setController(workspace.controller);
     setState(workspace.controller.state);
     const unsubscribe = workspace.controller.subscribe(() => setState(workspace.controller.state));
@@ -24,7 +24,7 @@ export function useAudit(baseUrl: string, filters: AuditFilters, enabled: boolea
       unsubscribe();
       workspace.dispose();
     };
-  }, [baseUrl, enabled]);
+  }, [enabled]);
   useEffect(() => {
     if (enabled && controller) void controller.load(filters);
   }, [controller, enabled, filters]);

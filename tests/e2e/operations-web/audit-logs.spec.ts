@@ -6,7 +6,7 @@ import { errorBody, fulfillJson } from './fake-api';
 import { operationsWebOnly } from './guard';
 import {loginRefundStaff} from './refund-fixture';
 
-const AUDIT = '**/api/v1/audit-logs*';
+const AUDIT = '**/api/session/sys/audit-logs*';
 
 interface Row {
   id: string;

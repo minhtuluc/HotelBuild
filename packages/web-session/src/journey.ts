@@ -10,6 +10,8 @@ import {
 export interface JourneyOptions {
   baseUrl: string;
   origin?: string;
+  /** Trusted server composition only; a supplied resolver replaces the guest catalogue entirely. */
+  routeResolver?: (request: Request) => JourneyRoute | undefined;
 }
 function fail(status: number, code: string): never {
   throw new ApiError({ kind: 'http', status, code, message: 'Journey request rejected' });
@@ -52,7 +54,7 @@ function query(request: Request, route: JourneyRoute) {
   const entries = [...new URL(request.url).searchParams.entries()];
   if (new Set(entries.map(([key]) => key)).size !== entries.length) throw new JourneyInputError();
   const input = Object.fromEntries(entries);
-  if (route.query) return route.query(input);
+  if (route.query) return parseInput({ parse: route.query }, input);
   if (entries.length) throw new JourneyInputError();
   return undefined;
 }
@@ -110,7 +112,7 @@ function validatePaymentReturn(
   }
 }
 async function execute(request: Request, options: JourneyOptions): Promise<Response> {
-  const route = journeyRoute(request);
+  const route = options.routeResolver ? options.routeResolver(request) : journeyRoute(request);
   if (!route) fail(404, 'E_GEN_NOT_FOUND');
   csrf(request, options);
   const token = access(request, route.protected);
