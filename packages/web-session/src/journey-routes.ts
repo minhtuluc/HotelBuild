@@ -1,4 +1,8 @@
 import {
+  bookingBalanceSchema,
+  onlinePaymentCreateRequestSchema,
+  paymentSchema,
+  paymentStatusViewSchema,
   availabilityQuerySchema,
   availabilitySchema,
   businessDateSchema,
@@ -69,7 +73,25 @@ function planQuery(input: Record<string, string>): Record<string, QueryValue> {
   }
   return result;
 }
+const depositBody: Decoder<unknown> = {
+  parse(input: unknown) {
+    const value = onlinePaymentCreateRequestSchema.parse(input);
+    if (value.type !== 'DEPOSIT' || !['VNPAY', 'MOMO'].includes(value.method))
+      throw new JourneyInputError();
+    return value;
+  },
+};
 const staticRoutes = new Map<string, JourneyRoute>([
+  [
+    'POST payments/online',
+    {
+      method: 'POST',
+      path: '/payments/online',
+      protected: true,
+      decoder: paymentSchema,
+      body: depositBody,
+    },
+  ],
   [
     'GET inventory/availability',
     {
@@ -195,7 +217,38 @@ function objectRoute(method: string, resource: string, base: string): JourneyRou
   return undefined;
 }
 
+function paymentStatusRoute(method: string, path: string): JourneyRoute | undefined {
+  const payment = /^payments\/([^/]+)\/status$/.exec(path);
+  if (method === 'GET' && payment) {
+    const id = decodedId(payment[1]!);
+    if (id === undefined) return undefined;
+    return {
+      method: 'GET',
+      path: `/payments/${encodeURIComponent(id)}/status`,
+      protected: true,
+      decoder: paymentStatusViewSchema,
+    };
+  }
+  return undefined;
+}
+function balanceRoute(
+  method: string,
+  resource: string,
+  action: string,
+  base: string,
+): JourneyRoute | undefined {
+  if (method === 'GET' && resource === 'bookings' && action === 'balance')
+    return {
+      method: 'GET',
+      path: `${base}/balance`,
+      protected: true,
+      decoder: bookingBalanceSchema,
+    };
+  return undefined;
+}
 function dynamicRoute(method: string, path: string): JourneyRoute | undefined {
+  const payment = paymentStatusRoute(method, path);
+  if (payment) return payment;
   const dynamic = /^(holds|bookings)\/([^/]+)(?:\/([^/]+))?$/.exec(path);
   if (!dynamic) return undefined;
   const resource = dynamic[1]!;
@@ -204,6 +257,8 @@ function dynamicRoute(method: string, path: string): JourneyRoute | undefined {
   const action = dynamic[3];
   const base = `/${resource}/${encodeURIComponent(id)}`;
   if (action === undefined) return objectRoute(method, resource, base);
+  const balance = balanceRoute(method, resource, action, base);
+  if (balance) return balance;
   const spec = BOOKING_ACTIONS[action];
   if (method !== 'POST' || resource !== 'bookings' || spec === undefined) return undefined;
   return {

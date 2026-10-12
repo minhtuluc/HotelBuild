@@ -245,3 +245,20 @@ test('missing, invented, rotated and foreign guest access cannot read or control
     (await f.raw(`/payments/${payment.paymentId}/status`, undefined, rotated.accessToken)).status,
   ).toBe(200);
 });
+
+test('SCR06 reads remaining deposit from server, preserving fractional VND already collected', async () => {
+  const owner = await f.actor();
+  const booking = await f.booking(owner);
+  expect((await owner.bookings.get(booking.id)).data.payments).toEqual([]);
+  await f.control(owner, booking.id, 'unconfirmed-partial');
+  const view = (await owner.payments.balance(booking.id)).data;
+  expect(view.onlineDepositAmount).toBe(49501);
+  expect((await owner.bookings.get(booking.id)).data.payments?.[0]).toMatchObject({
+    method: 'CASH',
+    amount: 250499,
+  });
+  const payment = (await owner.payments.createOnline(online(booking.id, 49501))).data;
+  expect(payment.amount).toBe(49501);
+  await f.control(owner, booking.id, 'payment-success', payment.paymentId);
+  expect((await owner.payments.balance(booking.id)).data.onlineDepositAmount).toBeNull();
+});

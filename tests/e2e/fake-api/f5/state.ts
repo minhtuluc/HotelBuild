@@ -89,6 +89,14 @@ export class FixtureState {
       .filter((value) => value.paymentId === paymentId && value.status === 'PAID')
       .reduce((sum, value) => sum + refundNet(value), 0);
   }
+  /** Finite SCR06 sample projection; production must use HB-094/ledger, not this fixture. */
+  onlineDepositAmount(stored: FakeBooking): number | null {
+    const value = stored.value;
+    if (!['HELD', 'PENDING_PAYMENT'].includes(value.status) || !value.holdExpiresAt ||
+      Date.parse(value.holdExpiresAt) <= Date.now()) return null;
+    const remaining = value.depositAmount - value.paidAmount;
+    return remaining > 0 ? remaining : null;
+  }
   balance(stored: FakeBooking) {
     const value = stored.value;
     return {
@@ -99,6 +107,7 @@ export class FixtureState {
       refundedAmount: value.refundedAmount,
       reservedRefundAmount: this.reserved(value.id),
       balanceDue: value.balanceDue,
+      onlineDepositAmount: this.onlineDepositAmount(stored),
     };
   }
   updateBalance(stored: FakeBooking) {

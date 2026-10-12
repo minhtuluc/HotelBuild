@@ -12175,6 +12175,13 @@
                     "balanceDue": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "onlineDepositAmount": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "exclusiveMinimum": 0
                     }
                   },
                   "required": [

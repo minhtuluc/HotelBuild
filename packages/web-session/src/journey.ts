@@ -1,4 +1,5 @@
 import 'server-only';
+import { onlinePaymentCreateRequestSchema } from '@pinehill/contracts';
 import { ApiClient, ApiError, type RequestBase } from '@pinehill/api-client';
 import {
   JourneyInputError,
@@ -95,6 +96,19 @@ function failure(request: Request, error: unknown): Response {
     { status, headers },
   );
 }
+function validatePaymentReturn(
+  request: Request,
+  route: JourneyRoute,
+  body: unknown,
+  options: JourneyOptions,
+) {
+  if (route.path === '/payments/online') {
+    const input = parseInput(onlinePaymentCreateRequestSchema, body);
+    const origin = options.origin ?? new URL(request.url).origin;
+    if (input.returnUrl !== `${origin}/booking/${encodeURIComponent(input.bookingId)}/pay`)
+      throw new JourneyInputError();
+  }
+}
 async function execute(request: Request, options: JourneyOptions): Promise<Response> {
   const route = journeyRoute(request);
   if (!route) fail(404, 'E_GEN_NOT_FOUND');
@@ -103,6 +117,7 @@ async function execute(request: Request, options: JourneyOptions): Promise<Respo
   const idempotencyKey = writeKey(request);
   const parsedQuery = query(request, route);
   const body = route.body ? parseInput(route.body, await readBody(request)) : undefined;
+  validatePaymentReturn(request, route, body, options);
   const spec: RequestBase = {
     method: route.method,
     path: route.path,

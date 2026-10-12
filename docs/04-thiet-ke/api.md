@@ -480,6 +480,15 @@ Response 201:
 
 ### 3.5. `POST /api/v1/payments/online` — Khởi tạo thanh toán trực tuyến
 
+SCR-06 đọc thêm `onlineDepositAmount?: number | null` trên `GET /bookings/{bookingId}/balance`:
+số cọc máy chủ cho phép khởi tạo tại thời điểm đọc; VND nguyên dương, `null` khi không được khởi tạo.
+Optional giữ tương thích backend cũ; UI khóa thao tác khi thiếu, không lấy `depositAmount` hoặc
+`balanceDue` thay thế. Máy chủ vẫn kiểm lại quyền, hạn và số tiền khi POST (UC-PAY-02); projection
+không là giấy phép thu tiền và không đổi quy tắc cọc. HB-101 nghiệm thu UI với fixture HTTP HB-116;
+HB-094 phải cung cấp projection từ dữ liệu/ledger thật và danh sách `BookingSummary.payments`
+(bao gồm `[]` khi chưa có giao dịch) trước khi bật thanh toán sản phẩm.
+
+
 Lớp xử lý: `PaymentService` → `PaymentGatewayAdapter` (`VnpayAdapter`/`MomoAdapter`) → `Payment` trạng thái `PENDING`.
 
 ```json

@@ -80,3 +80,12 @@ E2E này kiểm plumbing phiên/client/fixture trên shell hiện có. Các màn
 Read RefundRequest bổ sung NET, NET sự kiện, allocation với chứng từ thu gốc và Payment REFUND riêng; booking detail trả payments optional. Fixture mỗi request là một operation độc lập với một receipt, không giả định grouping các request thật cùng sự kiện. `refund-fee-sample` chụp phí synthetic 10000 VND cho test NET. Reservation và refunded theo NET (BR-CANCEL-05/17), duyệt giảm trả chênh reservation; chi thành công giả ghi đúng một Payment REFUND SUCCEEDED, replay không thêm receipt và không sửa Payment thu gốc. NET0 không phát Payment/lệnh chi.
 
 Ghi SUCCEEDED ở fixture là mẫu xác nhận có kiểm soát cho UI, không là chứng từ chuyển khoản thật hoặc nghiệm thu backend/payout worker. Test đa phương thức chỉ kiểm hiển thị server facts; command một method không được UI tự chia lệnh. Force-majeure và quyền hoàn từng phòng vẫn cần backend đúng oracle.
+
+## SCR-06 (HB-101)
+
+Balance publishes optional server `onlineDepositAmount`; the finite HELD sample yields 300000,
+`unconfirmed-partial` yields 49501 after the literal 250499 receipt, and terminal/expired samples
+return null. Online POST checks the same fixture projection. Frontend does not calculate deposits.
+This projection is UI_ONLY: HB-094 must bind the real backend ledger/policy/DB clock before product
+acceptance. No card/credential fields; provider URL visit/query never settles money. Journey BFF
+only allows DEPOSIT via VNPAY/MOMO and return to its exact same-origin booking route.

@@ -107,6 +107,7 @@ function control(state: FixtureState, request: FakeRequest, actor: FakeActor): F
       paidAt: now(),
       createdAt: now(),
     });
+    stored.value.payments = [...state.payments.values()].filter(p => p.bookingId === stored.value.id);
     stored.value.paidAmount = 250499;
     state.updateBalance(stored);
     return { status: 200, body: { paymentId: id } };

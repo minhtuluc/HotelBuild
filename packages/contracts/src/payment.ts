@@ -63,6 +63,9 @@ export const bookingBalanceSchema = z.object({
   /** Hoàn đang giữ hạn mức ở các yêu cầu chưa kết thúc — không tính là đã chi. */
   reservedRefundAmount: z.number().int().min(0),
   balanceDue: z.number().int().min(0),
+  /** SCR-06: số cọc server cho phép khởi tạo lúc đọc; null = không được khởi tạo.
+   * Optional để đọc backend cũ; UI phải khoá khi thiếu, không tự trừ paidAmount. */
+  onlineDepositAmount: z.number().int().positive().nullable().optional(),
 });
 
 /**

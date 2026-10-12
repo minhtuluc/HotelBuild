@@ -117,6 +117,7 @@ export function booked(input: BookingCreateRequest, quote: Quote): BookingSummar
     depositPercent: quote.depositPercent,
     depositAmount: quote.depositAmount,
     paidAmount: 0,
+    payments: [],
     refundedAmount: 0,
     balanceDue: quote.total,
     penaltyAmount: 0,

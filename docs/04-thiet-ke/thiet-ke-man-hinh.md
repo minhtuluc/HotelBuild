@@ -343,6 +343,15 @@ snapshot cũ hơn 5 phút ⇒ dùng 1,00 (BR-RATE-01 bước 4).
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 ### 4.3. Thanh toán trực tuyến — `SCR-06`
+
+`/booking/{bookingId}/pay` đọc `onlineDepositAmount` từ số dư máy chủ trước khi mở xác nhận và đọc lại
+trước POST. Thiếu/null thì không khởi tạo; frontend không trừ tiền đã thu để tính cọc. Trường hợp đã
+thu một phần phải dùng chính số còn phải trả do server cung cấp. Return URL chỉ cùng origin và đúng
+booking; tham số return không xác nhận đã trả. Sau redirect đọc status và booking; polling dừng sau
+12 lần, khi tab ẩn, có kết quả hoặc hết hạn Payment, vẫn cho kiểm tra thủ công. Khi chưa rõ kết quả,
+không tạo khoản thanh toán khác. Timeout Payment không tự nhả hold; callback muộn không hồi sinh
+booking (BR-BOOK-18, BR-PAY-11).
+
 Chỉ thu tiền cọc tại bước này, số dư thu tại quầy khi check-in (BR-PAY-02). Không hiển thị và không lưu dữ liệu thẻ
 (BR-PAY-04); callback lặp khoá trả kết quả cũ với `E_PAY_CALLBACK_DUPLICATE`, không tạo `Payment` mới (BR-PAY-03).
 ```text
@@ -361,7 +370,7 @@ Chỉ thu tiền cọc tại bước này, số dư thu tại quầy khi check-i
 ├─ PHƯƠNG THỨC ──────────────────────────────────────────────────────────────┤
 │ ( • ) VNPay        (   ) MoMo        (   ) Chuyển khoản ngân hàng          │
 │ Hệ thống KHÔNG lưu số thẻ, ngày hết hạn hay CVV (BR-PAY-04).               │
-│ Quá 15 phút không có callback → FAILED, giải phóng giữ chỗ (BR-PAY-05).    │
+│ Quá 15 phút không có callback → FAILED; giữ chỗ theo hạn riêng (BR-PAY-05).    │
 ├─ CHÍNH SÁCH HUỶ ĐANG ÁP DỤNG (FLEX7, BR-CANCEL-02) ────────────────────────┤
 │ ≥ 168h: hoàn 100%   ·   72–168h: hoàn 50%   ·   24–72h: 0%                 │
 │ dưới 24h: 0% + phụ thu 1 đêm đầu (BR-CANCEL-06)                            │

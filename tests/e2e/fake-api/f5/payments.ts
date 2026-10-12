@@ -113,7 +113,9 @@ export function paymentResponse(
     const pin = online ? undefined : state.pin(request, actor, input.bookingId);
     if (!online && !pin) return error(request, 401, 'E_AUTH_PIN_REQUIRED');
     if (ended.includes(stored.value.status)) return error(request, 409, 'E_BOOK_INVALID_STATE');
-    const amount = input.type === 'DEPOSIT' ? stored.value.depositAmount : stored.value.balanceDue;
+    const amount = input.type === 'DEPOSIT'
+      ? (online ? state.onlineDepositAmount(stored) : stored.value.depositAmount)
+      : stored.value.balanceDue;
     if (
       input.amount !== amount ||
       (input.type === 'DEPOSIT' && stored.value.paidAmount >= stored.value.depositAmount)
