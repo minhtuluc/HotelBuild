@@ -35,7 +35,8 @@ export class GridService {
         const grids: InventoryRoomTypeGrid[] = [];
         for (const type of types)
           grids.push(await this.roomType(tx, input, type.id, now, channel?.status === 'ACTIVE'));
-        return input.roomTypeId ? grids[0]! : { ...grids[0]!, grids };
+        const projection = input.roomTypeId ? grids[0]! : { ...grids[0]!, grids };
+        return { ...projection, capturedAt: now.toISOString() };
       },
       { isolationLevel: 'RepeatableRead' },
     );

@@ -35,6 +35,7 @@ const EXPECTED: Readonly<Record<StateSlug, string>> = {
 };
 
 const SCREENS = [
+  '/day-board',
   '/properties',
   '/room-types',
   '/rooms',

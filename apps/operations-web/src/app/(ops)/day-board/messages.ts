@@ -1,0 +1,27 @@
+import { makeTranslate } from '@pinehill/ui-web/messages';
+const messages = {
+  title: 'Bảng điều khiển ngày',
+  date: 'Ngày đang xem',
+  property: 'Cơ sở',
+  apply: 'Xem ngày',
+  reload: 'Tải lại',
+  displayed: 'Số liệu ngày {date} · {property}',
+  captured: 'Cập nhật lúc {time}',
+  missingTime: 'Máy chủ chưa cung cấp mốc cập nhật.',
+  table: 'Tồn khả dụng trong ngày',
+  type: 'Loại phòng',
+  available: 'Còn khả dụng',
+  unit: 'Đơn vị bán',
+  beds: 'Giường',
+  rooms: 'Phòng',
+  invalidDate: 'Chọn một ngày hợp lệ.',
+  quick: 'Điều hướng nhanh',
+  grid: 'Lưới tồn',
+  allotment: 'Allotment theo kênh',
+  blocks: 'Khoá phòng',
+  unsupported: 'Các dữ liệu chưa hỗ trợ',
+  arrivals: 'Đến / đi / ở: chưa hỗ trợ vì chưa có dữ liệu bảng điều khiển từ máy chủ.',
+  cases: 'Ca quá tải: chưa hỗ trợ trên bảng ngày; chờ dữ liệu quản lý ca từ máy chủ.',
+  channels: 'Kênh suy giảm đồng bộ: chưa hỗ trợ trên bảng ngày; chờ trạng thái đồng bộ từ máy chủ.',
+} as const;
+export const dayText = makeTranslate(messages);

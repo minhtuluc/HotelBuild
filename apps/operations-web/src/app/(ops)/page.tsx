@@ -19,6 +19,9 @@ export default function OperationsHomePage(): ReactElement {
       <h2>t('ops.home.screens')</h2>
       <ul>
         <li>
+          <a href="/day-board">{t('ops.nav.dayBoard')}</a>
+        </li>
+        <li>
           <a href="/properties">{t('ops.nav.properties')}</a>
         </li>
         <li>

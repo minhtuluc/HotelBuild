@@ -26,6 +26,25 @@ function grid(token: string, extra: Record<string, string> = {}) {
     .query({ propertyId, roomTypeId: typeId, from: '2026-11-01', to: '2026-11-03', ...extra });
 }
 
+test('grid publishes the database decision timestamp for the daily board, not browser time', async () => {
+  const token = await login();
+  const before = Number(
+    (
+      await rows('SELECT floor(extract(epoch FROM clock_timestamp()) * 1000)::bigint AS instant')
+    )[0]!.instant,
+  );
+  const response = await grid(token);
+  expect(response.status).toBe(200);
+  const after = Number(
+    (
+      await rows('SELECT floor(extract(epoch FROM clock_timestamp()) * 1000)::bigint AS instant')
+    )[0]!.instant,
+  );
+  const timestamp = z.object({ capturedAt: z.string().datetime() }).parse(response.body).capturedAt;
+  expect(Date.parse(timestamp)).toBeGreaterThanOrEqual(before);
+  expect(Date.parse(timestamp)).toBeLessThanOrEqual(after);
+});
+
 test('grid matches three hand-computed nights, including block, live/expired holds and negative pool', async () => {
   const token = await login('RESERVATION_AGENT');
   await block(roomId, '2026-11-01', '2026-11-02');

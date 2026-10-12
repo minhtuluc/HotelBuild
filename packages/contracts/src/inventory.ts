@@ -1,6 +1,6 @@
 /** Hợp đồng INV — api.md §2.3; csdl §3 (channel_allotments). `inventory/availability` thuộc HB-070. */
 import { z } from 'zod';
-import { businessDateSchema } from './common.js';
+import { businessDateSchema, isoUtcTimestampSchema } from './common.js';
 import { channelCodeSchema } from './enums.js';
 
 /** Số ngày giữa hai ngày `YYYY-MM-DD` (UTC) — dùng cho giới hạn khoảng lưới tồn. */
@@ -49,6 +49,8 @@ export const inventoryRoomTypeGridSchema = z.object({
 /** Root remains the first room type projection; grids includes every type when no filter is supplied. */
 export const inventoryGridSchema = inventoryRoomTypeGridSchema.extend({
   grids: z.array(inventoryRoomTypeGridSchema).optional(),
+  /** Server database instant used to decide hold expiry across this projection. */
+  capturedAt: isoUtcTimestampSchema.optional(),
 });
 
 export const allotmentQuerySchema = z.strictObject({

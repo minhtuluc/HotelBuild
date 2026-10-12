@@ -27,6 +27,7 @@ export const operationsCatalog = {
   'ops.home.states': 'Bộ trạng thái UI dùng chung',
   'ops.home.openState': 'Mở trạng thái',
   'ops.demo.only': 'Khung F0 — chưa nối API nghiệp vụ; phân quyền theo vai trò thuộc F1.',
+  'ops.nav.dayBoard': 'Bảng điều khiển ngày',
   'ops.nav.properties': 'Cơ sở',
   'ops.nav.roomTypes': 'Loại phòng',
   'ops.home.screens': 'Màn hình F2',

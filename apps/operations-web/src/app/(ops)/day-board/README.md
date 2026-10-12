@@ -1,0 +1,13 @@
+# HB-040 — daily board
+
+Approved F2 scope only: one property/day, server availability and capture timestamp, static links. Arrivals/departures/in-house, overbooking cases and degraded-channel indicators explicitly remain unsupported; no fake zero or local reconstruction from bookings.
+
+The authenticated client creates its staff session lazily during the first request, disposes it on unmount, and denies when authentication is unavailable or expires. Property/type lists are scoped by the server. Switching property removes old numbers immediately; generation checks ignore late responses. Same-scope read errors retain the old applied date and server timestamp. 401/403 remove all data and property options. No business role inheritance or local inventory/price engine is introduced.
+
+The aggregate inventory response must match selected property/date and every loaded room type; missing, duplicate, unsafe or mismatched projections fail rather than show zero. `published` is displayed verbatim. Legacy responses use the existing `publishedAvailability` helper required by this ticket. Shared-room projections show bed units. `capturedAt` is optional for compatibility; absence is stated, never replaced with browser time.
+
+Necessary helper outside allow: InventoryGrid capturedAt projection + OpenAPI generation, a small return addition in existing GridService, independent real HTTP/PG regression, and matching design documentation. This reuses the existing PostgreSQL instant that already decides hold expiry, across all types in a repeatable snapshot. It does not rewrite HB-035, add endpoints, alter its permission matrix, mutate stock, or change the domain engine. AGENTS §4 permits these required additive helpers. The old HOUSEKEEPING role label in the ticket is superseded by current BR/API and implemented RBAC: denied responses are handled without inventing a frontend grant.
+
+UI uses numeric spacing tokens in React styles; generated CSS spacing variables currently have unitless values. This screen does not change the shared token generator or other screens. Controls and links have 44px minimum targets; headings use existing typography, and the table reflows at 360px. Native date inputs may have several keyboard segments: the browser test verifies all intermediate focus stays within the date control and ultimately reaches the property select and action button.
+
+Forced demo states follow the existing F2 mechanism and perform no API reads. Real browser tests use synthetic HTTP responses and real BFF session transport; they prove UI behavior, not production backend integration. The capturedAt helper is also tested on real PostgreSQL16 and the compiled API is smoked independently.
