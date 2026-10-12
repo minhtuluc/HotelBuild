@@ -210,19 +210,22 @@ export class PaymentFlow {
       this.failure(error);
     }
   }
+  private creationFence(offer: Offer): PaymentView | null {
+    const payments = offer.booking.payments;
+    if (payments === undefined) return { phase: 'blocked', busy: false, offer };
+    if (this.intent || payments.some(isOnlineDeposit))
+      return { phase: 'unknown', busy: false, offer };
+    return null;
+  }
   async prepare(method: 'MOMO' | 'VNPAY'): Promise<void> {
     if (!this.alive || this.state.busy || this.state.phase !== 'ready') return;
     this.show({ ...this.state, busy: true });
     try {
       const offer = await this.read();
       this.restore(offer);
-      if (
-        this.intent ||
-        offer.booking.payments?.some(
-          (p) => p.type === 'DEPOSIT' && ['VNPAY', 'MOMO'].includes(p.method),
-        )
-      ) {
-        this.show({ phase: 'unknown', busy: false, offer });
+      const fence = this.creationFence(offer);
+      if (fence) {
+        this.show(fence);
         return;
       }
       this.method = method;
@@ -237,6 +240,12 @@ export class PaymentFlow {
   }
   private async reconfirm(previous: Offer): Promise<{ offer: Offer; amount: number } | null> {
     const offer = await this.read();
+    this.restore(offer);
+    const fence = this.creationFence(offer);
+    if (fence) {
+      this.show(fence);
+      return null;
+    }
     const amount = approvedAmount(offer.booking, offer.balance);
     if (amount === null) {
       this.show({ phase: 'blocked', busy: false, offer });
@@ -244,11 +253,6 @@ export class PaymentFlow {
     }
     if (!sameOffer(previous, offer)) {
       this.show({ phase: 'confirm', busy: false, offer, changed: true });
-      return null;
-    }
-    this.restore(offer);
-    if (this.intent) {
-      this.show({ phase: 'unknown', busy: false, offer });
       return null;
     }
     return { offer, amount };

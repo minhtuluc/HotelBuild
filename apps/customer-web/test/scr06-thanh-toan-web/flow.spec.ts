@@ -192,3 +192,32 @@ test('a final POST reply must still be checked through GET status and a fresh bo
   expect(await s.flow.confirm()).toBeNull();
   expect(s.flow.state.phase).toBe('received');
 });
+
+test('fresh external online payment after prepare fences a second POST even when version and money stay unchanged', async () => {
+  const s = setup();
+  await s.flow.load();
+  await s.flow.prepare('MOMO');
+  s.offer.booking.payments = [p];
+  expect(await s.flow.confirm()).toBeNull();
+  expect(s.creates()).toBe(0);
+  expect(s.flow.state.phase).toBe('unknown');
+  expect(s.saved.size).toBe(0);
+});
+test('a refreshed booking without a complete payment list cannot enter confirmation', async () => {
+  const s = setup();
+  await s.flow.load();
+  delete s.offer.booking.payments;
+  await s.flow.prepare('MOMO');
+  expect(s.flow.state.phase).toBe('blocked');
+  expect(s.creates()).toBe(0);
+});
+test('a payment list lost between two steps cannot reach POST', async () => {
+  const s = setup();
+  await s.flow.load();
+  await s.flow.prepare('MOMO');
+  delete s.offer.booking.payments;
+  expect(await s.flow.confirm()).toBeNull();
+  expect(s.creates()).toBe(0);
+  expect(s.flow.state.phase).toBe('blocked');
+  expect(s.saved.size).toBe(0);
+});

@@ -56,11 +56,12 @@ function usePaymentFlow(
     };
   }, [bookingId, requestedId, fixtureOrigin]);
   useEffect(() => {
-    if (!view.payment || view.busy || !canPoll(view.payment, reads.current, Date.now(), visible))
-      return;
-    const id = view.payment.paymentId;
+    const payment = view.payment;
+    if (!payment || view.busy || !canPoll(payment, reads.current, Date.now(), visible)) return;
+    const id = payment.paymentId;
     const timer = setTimeout(() => {
-      if (document.visibilityState !== 'visible') return;
+      if (!canPoll(payment, reads.current, Date.now(), document.visibilityState === 'visible'))
+        return;
       reads.current++;
       void active.current?.load(id);
     }, 2000);

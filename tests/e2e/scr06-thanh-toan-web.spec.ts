@@ -134,3 +134,29 @@ test('loading and refreshing show real HTTP wait; pending polling has a finite s
  const stopped=reads;await page.clock.runFor(30000);await page.waitForTimeout(150);expect(reads).toBe(stopped);expect(reads).toBe(12);
  await page.getByRole('button',{name:'Kiểm tra giao dịch',exact:true}).click();await expect.poll(()=>reads).toBe(stopped+1);
 });
+
+test('another tab creates a real pending payment after prepare: final reread prevents a second intent',async({page})=>{
+ const f=await fixture(page);await page.goto(`/booking/${f.booking.id}/pay`);
+ await page.getByRole('radio',{name:'MoMo',exact:true}).check();
+ await page.getByRole('button',{name:'Xem lại trước khi thanh toán',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Xác nhận và mở cổng thanh toán',exact:true})).toBeVisible();
+ const other=(await createPaymentApi(f.client).createOnline({bookingId:f.booking.id,type:'DEPOSIT',method:'MOMO',amount:300000,returnUrl:'https://guest.test/return'})).data;
+ let posts=0;page.on('request',r=>{if(r.method()==='POST'&&r.url().endsWith('/journey/payments/online'))posts++;});
+ await page.getByRole('button',{name:'Xác nhận và mở cổng thanh toán',exact:true}).click();
+ await expect(page.getByTestId('payment-screen')).toHaveAttribute('data-phase','unknown');
+ expect(posts).toBe(0);expect((await createBookingApi(f.client).get(f.booking.id)).data.payments).toHaveLength(1);
+ await page.getByRole('button',{name:/Tra cứu kết quả/}).click();
+ await expect(page.getByTestId('payment-result')).toBeVisible();
+ await expect(page.getByText('Mã giao dịch: '+other.paymentId)).toBeVisible();
+ await axe(page);
+});
+test('a timer scheduled before expiry cannot read status after the payment deadline',async({page})=>{
+ const f=await fixture(page);
+ const payment=(await createPaymentApi(f.client).createOnline({bookingId:f.booking.id,type:'DEPOSIT',method:'MOMO',amount:300000,returnUrl:'https://guest.test/return'})).data;
+ await page.clock.install({time:new Date(Date.parse(payment.expiresAt!)-1000)});
+ await page.goto(`/booking/${f.booking.id}/pay?paymentId=${payment.paymentId}`);
+ await expect(page.getByTestId('payment-result')).toBeVisible();
+ let reads=0;page.on('request',r=>{if(r.url().endsWith(`/payments/${payment.paymentId}/status`))reads++;});
+ await page.clock.runFor(2100);await page.waitForTimeout(100);
+ expect(reads).toBe(0);await expect(page.getByTestId('server-booking-status')).toHaveText('HELD');
+});
