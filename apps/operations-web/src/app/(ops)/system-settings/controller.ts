@@ -5,8 +5,8 @@ import {
   type SystemSettingUpdateRequest,
   type UserMe,
 } from '@pinehill/contracts';
-import { ifMatchOf, validateEdit, type FieldIssue } from '../../../lib/system-settings';
-import { readIntent, replayAllowed, storageKey, type SettingIntent } from './intent';
+import { ifMatchOf, validateEdit, type FieldIssue } from '../../../lib/system-settings.js';
+import { readIntent, replayAllowed, storageKey, type SettingIntent } from './intent.js';
 export interface SettingsPorts {
   actor(signal: AbortSignal): Promise<Pick<UserMe, 'userId' | 'role'>>;
   list(signal: AbortSignal): Promise<SystemSetting[]>;
@@ -231,7 +231,10 @@ export class SettingsController {
     this.update({ draft: { ...this.state.draft, value, reason } });
   }
   cancel(): void {
-    if (!this.intent && !this.corrupt && !this.state.busy) this.update({ draft: null, issues: [] });
+    if (!this.intent && !this.corrupt && !this.state.busy) {
+      const phase = this.state.phase === 'validation' ? 'ready' : this.state.phase;
+      this.update({ draft: null, issues: [], error: null, phase });
+    }
   }
   acceptVersion(): void {
     if (this.state.phase !== 'conflict' || !this.state.canCompare || !this.state.draft) return;

@@ -8,7 +8,7 @@ import {
   type SystemSetting,
 } from '@pinehill/contracts';
 import { createSessionClient } from '@pinehill/web-session/client';
-import { SettingsController, type SettingsPorts } from './controller';
+import { SettingsController, type SettingsPorts } from './controller.js';
 export function settingsPorts(client: ApiClient): SettingsPorts {
   return {
     actor: async (signal) =>
@@ -48,6 +48,7 @@ export function settingsPorts(client: ApiClient): SettingsPorts {
     write: async (key, body, ifMatch, idempotencyKey, signal) => {
       await client.requestVoid({
         method: 'PUT',
+        headers: { 'x-session-request': '1' },
         path: '/system-settings/' + encodeURIComponent(key),
         body: systemSettingUpdateRequestSchema.parse(body),
         ifMatch,

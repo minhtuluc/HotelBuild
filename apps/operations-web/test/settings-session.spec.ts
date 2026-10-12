@@ -289,3 +289,15 @@ test('stale session revalidation cannot restore draft while newer identity is st
   await fresh;
   expect(s.c.state.phase).toBe('forbidden');
 });
+test('cancel invalid edit restores editable ready state with no PUT', async () => {
+  const s = setup();
+  await edit(s);
+  s.c.draft('25', '');
+  await s.c.save();
+  expect(s.c.state.phase).toBe('validation');
+  s.c.cancel();
+  s.c.edit(original.key);
+  expect(s.c.state.draft?.key).toBe(original.key);
+  expect(s.c.state.issues).toEqual([]);
+  expect(s.sends).toHaveLength(0);
+});
