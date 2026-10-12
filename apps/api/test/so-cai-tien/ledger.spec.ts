@@ -355,3 +355,58 @@ test('closed legacy booking cannot lose a declared unpaid penalty when ledger ro
     balance_due: '100',
   });
 });
+
+test.each(['ROOM', 'PENALTY'])(
+  'charge %s cannot reference a BookingRoom owned by another booking even when FKs and totals match',
+  async (kind) => {
+    const b = await booking(),
+      other = await booking();
+    const c = await charge(b.id, other.room, 500n, kind),
+      p = await receipt(b.id, 100n);
+    await rows('INSERT INTO payment_allocations(payment_id,charge_id,amount) VALUES($1,$2,100)', [
+      p,
+      c,
+    ]);
+    const before = await rows(
+      'SELECT version,paid_amount,refunded_amount,balance_due FROM bookings WHERE id=$1',
+      [b.id],
+    );
+    await expect(db.$transaction((tx) => ledger.read(tx, b.id))).rejects.toBeInstanceOf(
+      LedgerError,
+    );
+    await expect(db.$transaction((tx) => ledger.sync(tx, b.id, actor()))).rejects.toBeInstanceOf(
+      LedgerError,
+    );
+    expect(
+      await rows(
+        'SELECT version,paid_amount,refunded_amount,balance_due FROM bookings WHERE id=$1',
+        [b.id],
+      ),
+    ).toEqual(before);
+    expect(await rows('SELECT count(*) AS n FROM audit_logs WHERE entity_id=$1', [b.id])).toEqual([
+      { n: '0' },
+    ]);
+  },
+);
+
+test('committed non-room fee may have no BookingRoom and keeps its own allocated debt', async () => {
+  const b = await booking(),
+    p = await receipt(b.id, 30n, 'PENALTY');
+  const c = String(
+    (
+      await rows(
+        "INSERT INTO booking_charges(booking_id,kind,source_key,amount) VALUES($1,'PENALTY','standalone',100) RETURNING id",
+        [b.id],
+      )
+    )[0]!.id,
+  );
+  await rows('UPDATE bookings SET penalty_amount=100 WHERE id=$1', [b.id]);
+  await rows('INSERT INTO payment_allocations(payment_id,charge_id,amount) VALUES($1,$2,30)', [
+    p,
+    c,
+  ]);
+  expect(await db.$transaction((tx) => ledger.sync(tx, b.id, actor()))).toMatchObject({
+    paidAmount: 30n,
+    balanceDue: 70n,
+  });
+});

@@ -35,8 +35,21 @@ export async function loadLocked(
   const charges = await tx.booking_charges.findMany({
     where: { booking_id: bookingId },
     orderBy: { id: 'asc' },
-    select: { id: true, booking_id: true, kind: true, amount: true, voided_amount: true },
+    select: {
+      id: true,
+      booking_id: true,
+      kind: true,
+      amount: true,
+      voided_amount: true,
+      booking_room_id: true,
+      booking_rooms: { select: { booking_id: true } },
+    },
   });
+  for (const charge of charges)
+    requireLedger(
+      charge.booking_room_id === null || charge.booking_rooms?.booking_id === bookingId,
+      'LEDGER_ROOM_OWNER',
+    );
   const refunds = await tx.refund_requests.findMany({
     where: { booking_id: bookingId },
     orderBy: { id: 'asc' },
