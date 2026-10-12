@@ -188,3 +188,6 @@ test('403 after cached grid removes cells and scope catalogue',async({page})=>{
 test('actual staff BFF logout from another tab immediately clears grid',async({page})=>{
  mockGrid(page);await page.goto('/inventory-grid');await expect(page.getByTestId('inventory-grid')).toBeVisible();const other=await page.context().newPage();await logoutCollectionStaff(other);await expect(page.getByTestId('inventory-grid')).toHaveCount(0);await expect(page.getByText('Phiên đã hết hạn. Đăng nhập lại để xem lưới tồn.')).toBeVisible();await expect(page.getByLabel('Cơ sở').locator('option')).toHaveCount(0);await other.close();
 });
+test('actual visible cell and accessible label preserve server published instead of raw pool',async({page})=>{
+ mockGrid(page);await page.route(GRID,route=>{const url=new URL(route.request().url()),from=url.searchParams.get('from')??'',to=url.searchParams.get('to')??'';const grids=TYPES.map(type=>{const item=gridBody(type.id,from,to,99);return {...item,cells:item.cells.map(cell=>({...cell,published:7}))};});return fulfillJson(route,200,JSON.stringify({...grids[0],grids}));});await page.goto('/inventory-grid');const cell=page.locator('[data-cell="0-0"]');await expect(cell).toHaveText('· 7');await expect(cell).toHaveAttribute('aria-label',/còn 7,/);await expect(cell).not.toHaveAttribute('aria-label',/còn 99,/);
+});

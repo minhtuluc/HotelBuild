@@ -148,7 +148,7 @@ export function GridTable({
               {row.cells.map((cell, colIndex) => {
                 const status = cellStatus(cell);
                 const token = gridStatus[STATUS_TOKENS[status]];
-                const available = publishedAvailability(cell);
+                const available = cell.published ?? publishedAvailability(cell);
                 const focused = focus.row === rowIndex && focus.col === colIndex;
                 return (
                   <td
