@@ -99,3 +99,16 @@ test('forged return on foreign booking does nothing; own success query performs 
   expect(s.flow.state.phase).toBe('pending');
   expect(s.reads()).toBe(2);
 });
+
+test('foreground return still rereads server after scheduled polling budget is exhausted', async () => {
+  const s = setup();
+  await s.flow.load();
+  s.lifecycle.sync();
+  for (let i = 0; i < 12; i++) await s.advance();
+  expect(s.reads()).toBe(13);
+  expect(s.queued()).toBe(false);
+  await s.lifecycle.setActive(false);
+  await s.lifecycle.setActive(true);
+  expect(s.reads()).toBe(14);
+  expect(s.queued()).toBe(false);
+});

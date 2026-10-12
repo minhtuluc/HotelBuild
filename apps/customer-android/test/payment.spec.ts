@@ -260,3 +260,33 @@ test('poll stops in background, at12 reads, final status or expiry boundary', ()
   expect(canPoll(payment, 0, at, true)).toBe(false);
   expect(canPoll({ ...payment, status: 'SUCCEEDED' }, 0, at - 1, true)).toBe(false);
 });
+
+test('dispose during second SecureStore save never returns a PSP URL to an unmounted screen', async () => {
+  const s = setup();
+  let release = () => {};
+  let entered = () => {};
+  const waiting = new Promise<void>((r) => {
+    release = r;
+  });
+  const saving = new Promise<void>((r) => {
+    entered = r;
+  });
+  const original = s.storage.set;
+  let calls = 0;
+  s.storage.set = async (k, v) => {
+    calls++;
+    if (calls === 2) {
+      entered();
+      await waiting;
+    }
+    await original(k, v);
+  };
+  await s.flow.load();
+  await s.flow.prepare('MOMO');
+  const pending = s.flow.confirm();
+  await saving;
+  s.flow.dispose();
+  release();
+  expect(await pending).toBeNull();
+  expect(s.writes).toHaveLength(1);
+});

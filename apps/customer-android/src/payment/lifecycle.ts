@@ -1,5 +1,5 @@
 import type { PaymentFlow } from './flow';
-import { canPoll, isPaymentReturn, POLL_LIMIT } from './model';
+import { canPoll, isPaymentReturn } from './model';
 interface Options {
   flow: PaymentFlow;
   bookingId: string;
@@ -59,10 +59,8 @@ export class PaymentLifecycle {
     this.active = value;
     this.clear();
     if (!resumed || !this.alive) return;
-    if (this.reads < POLL_LIMIT) {
-      this.reads++;
-      await this.check();
-    }
+    // Foreground return is a reconciliation read, separate from the scheduled polling budget.
+    await this.check();
   }
   async returnFrom(url: string): Promise<boolean> {
     if (!this.alive || !isPaymentReturn(url, this.options.bookingId)) return false;

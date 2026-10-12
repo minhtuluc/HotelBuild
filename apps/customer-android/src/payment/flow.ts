@@ -286,10 +286,13 @@ export class PaymentFlow {
     }
     return { offer, amount };
   }
+  private preparedOffer(): Offer | null {
+    if (!this.alive || this.state.busy || this.state.phase !== 'confirm') return null;
+    return this.state.offer ?? null;
+  }
   async confirm(): Promise<string | null> {
-    if (!this.alive || this.state.busy || this.state.phase !== 'confirm' || !this.state.offer)
-      return null;
-    const previous = this.state.offer;
+    const previous = this.preparedOffer();
+    if (!previous) return null;
     this.show({ ...this.state, busy: true });
     let sent = false;
     try {
@@ -314,6 +317,7 @@ export class PaymentFlow {
       if (!this.alive) return null;
       assertCreatedPayment(payment, intent.body);
       await this.persist({ ...intent, paymentId: payment.paymentId });
+      if (!this.alive) return null;
       this.show({
         phase: 'pending',
         busy: false,

@@ -17,8 +17,9 @@ export function PaymentScreen({ bookingId }: { bookingId: string }): ReactElemen
     }
   };
   const confirm = async () => {
-    const url = await flow.current?.confirm();
-    if (url) await open(url);
+    const current = flow.current;
+    const url = await current?.confirm();
+    if (url && current === flow.current) await open(url);
   };
   return (
     <ScrollView
