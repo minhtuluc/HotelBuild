@@ -64,10 +64,17 @@ export function dayCount(from: string, to: string): number {
   );
 }
 
+export function validCalendarDate(date: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  const at = Date.parse(`${date}T00:00:00Z`);
+  return Number.isFinite(at) && new Date(at).toISOString().slice(0, 10) === date;
+}
+
 /** Danh sách ngày của lưới; rỗng khi khoảng sai để màn hình báo theo trường. */
 export function gridDates(from: string, to: string): readonly string[] {
   const total = dayCount(from, to);
-  if (Number.isNaN(total) || total < 1) return [];
+  if (!validCalendarDate(from) || !validCalendarDate(to)) return [];
+  if (!Number.isSafeInteger(total) || total < 1 || total > MAX_GRID_DAYS) return [];
   return Array.from({ length: total }, (_, index) => addDays(from, index));
 }
 

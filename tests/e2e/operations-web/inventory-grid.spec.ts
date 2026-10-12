@@ -2,6 +2,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { errorBody, fulfillJson, listBody } from './fake-api';
 import { operationsWebOnly } from './guard';
+import {loginRefundStaff} from './refund-fixture';
+import {logoutCollectionStaff} from './collect-fixture';
 
 const PROPERTY = {
   id: 'p1',
@@ -32,11 +34,12 @@ function roomType(id: string, code: string) {
 
 const TYPES = [roomType('rt1', 'DLX'), roomType('rt2', 'SUP'), roomType('rt3', 'DOR')];
 
-const PROPERTIES = '**/api/v1/properties';
-const ROOM_TYPES = '**/api/v1/room-types*';
-const GRID = '**/api/v1/inventory/grid*';
+const PROPERTIES = '**/api/session/sys/properties*';
+const ROOM_TYPES = '**/api/session/sys/room-types*';
+const GRID = '**/api/session/sys/inventory/grid*';
 
 operationsWebOnly();
+test.beforeEach(async({page,request})=>{await loginRefundStaff(page,request,'OWNER');});
 
 function gridBody(roomTypeId: string, from: string, to: string, pool: number, blocked = 0) {
   const start = Date.parse(`${from}T00:00:00Z`);
@@ -49,7 +52,7 @@ function gridBody(roomTypeId: string, from: string, to: string, pool: number, bl
     pool,
     blocked,
   }));
-  return JSON.stringify({ propertyId: 'p1', roomTypeId, from, to, cells });
+  return { propertyId: 'p1', roomTypeId, from, to, cells };
 }
 
 /** Dựng API giả: trả lưới theo từng loại phòng và đếm số byte đã trả (NFR-PERF-05). */
@@ -59,12 +62,11 @@ function mockGrid(page: Page) {
   page.route(ROOM_TYPES, (route) => fulfillJson(route, 200, listBody(TYPES)));
   page.route(GRID, async (route) => {
     const url = new URL(route.request().url());
-    const roomTypeId = url.searchParams.get('roomTypeId') ?? '';
     const from = url.searchParams.get('from') ?? '';
     const to = url.searchParams.get('to') ?? '';
-    state.requests.push(`${roomTypeId} ${from} ${to}`);
-    const pool = roomTypeId === 'rt1' ? 6 : roomTypeId === 'rt2' ? -2 : 0;
-    const body = gridBody(roomTypeId, from, to, pool, roomTypeId === 'rt3' ? 2 : 0);
+    state.requests.push(`${from} ${to}`);
+    const grids=TYPES.map(type=>gridBody(type.id,from,to,type.id==='rt1'?6:type.id==='rt2'?-2:0,type.id==='rt3'?2:0));
+    const body=JSON.stringify({...grids[0],grids,capturedAt:'2026-10-13T00:00:00.000Z'});
     state.bytes += Buffer.byteLength(body, 'utf8');
     await fulfillJson(route, 200, body);
   });
@@ -128,8 +130,8 @@ test.describe('SCR-24 lưới tồn phòng theo ngày (HB-041)', () => {
     await page.getByRole('button', { name: 'Tải lưới' }).click();
     await expect(page.getByTestId('grid-updated')).toContainText('2026-12-01');
     await expect(page.locator('[data-cell="0-0"]')).toHaveAttribute('aria-label', /2026-11-01/);
-    // Một lời gọi cho mỗi loại phòng trong khoảng 31 ngày.
-    expect(state.requests).toHaveLength(3);
+    // One server snapshot contains every type; no per-type capture drift.
+    expect(state.requests).toHaveLength(1);
     expect(state.bytes).toBeLessThanOrEqual(200 * 1024);
   });
 
@@ -174,4 +176,15 @@ test.describe('SCR-24 lưới tồn phòng theo ngày (HB-041)', () => {
     );
     expect(blocking.map((violation) => violation.id)).toEqual([]);
   });
+});
+test('stale date request cannot replace newest selected range',async({page})=>{
+ mockGrid(page);await page.goto('/inventory-grid');await expect(page.getByTestId('inventory-grid')).toBeVisible();let release=()=>{};const wait=new Promise<void>(resolve=>{release=resolve;});
+ await page.route(GRID,async route=>{const url=new URL(route.request().url());const from=url.searchParams.get('from')??'',to=url.searchParams.get('to')??'';if(from==='2026-11-01')await wait;const grids=TYPES.map(type=>gridBody(type.id,from,to,from==='2026-12-01'?9:1));await fulfillJson(route,200,JSON.stringify({...grids[0],grids}));});
+ await page.getByLabel('Từ ngày').fill('2026-11-01');await page.getByLabel('Đến ngày').fill('2026-11-03');await page.getByRole('button',{name:'Tải lưới'}).click();await page.getByLabel('Từ ngày').fill('2026-12-01');await page.getByLabel('Đến ngày').fill('2026-12-03');await page.getByRole('button',{name:'Tải lưới'}).click();await expect(page.getByTestId('grid-updated')).toContainText('2026-12-01');await expect(page.locator('[data-cell="0-0"]')).toHaveText('· 9');release();await expect(page.getByTestId('grid-updated')).toContainText('2026-12-01');
+});
+test('403 after cached grid removes cells and scope catalogue',async({page})=>{
+ mockGrid(page);await page.goto('/inventory-grid');await expect(page.getByTestId('inventory-grid')).toBeVisible();await page.route(GRID,route=>fulfillJson(route,403,errorBody('E_AUTH_OUT_OF_SCOPE','synthetic403','/inventory/grid')));await page.getByRole('button',{name:'Tải lưới'}).click();await expect(page.getByText('Bạn không có quyền xem nội dung này')).toBeVisible();await expect(page.getByTestId('inventory-grid')).toHaveCount(0);await expect(page.getByLabel('Cơ sở').locator('option')).toHaveCount(0);
+});
+test('actual staff BFF logout from another tab immediately clears grid',async({page})=>{
+ mockGrid(page);await page.goto('/inventory-grid');await expect(page.getByTestId('inventory-grid')).toBeVisible();const other=await page.context().newPage();await logoutCollectionStaff(other);await expect(page.getByTestId('inventory-grid')).toHaveCount(0);await expect(page.getByText('Phiên đã hết hạn. Đăng nhập lại để xem lưới tồn.')).toBeVisible();await expect(page.getByLabel('Cơ sở').locator('option')).toHaveCount(0);await other.close();
 });

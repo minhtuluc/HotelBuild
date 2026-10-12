@@ -55,7 +55,7 @@ function isGridKey(value: string): value is GridKey {
 }
 
 export function cellText(cell: Cell): string {
-  return `${gridStatus[STATUS_TOKENS[cellStatus(cell)]].symbol} ${publishedAvailability(cell)}`;
+  return `${gridStatus[STATUS_TOKENS[cellStatus(cell)]].symbol} ${cell.published ?? publishedAvailability(cell)}`;
 }
 
 export function GridLegend(): ReactElement {

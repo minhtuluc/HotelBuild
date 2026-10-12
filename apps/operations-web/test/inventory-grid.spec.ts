@@ -79,3 +79,8 @@ describe('điều hướng bàn phím trên lưới', () => {
     expect(nextCellIndex({ row: 5, col: 5 }, 'ArrowRight', 0, 0)).toEqual({ row: 0, col: 0 });
   });
 });
+it('rejects rolled calendar dates and bounds allocation to31days', () => {
+  expect(gridDates('2026-02-30', '2026-03-02')).toEqual([]);
+  expect(gridDates('0001-01-01', '9999-12-31')).toEqual([]);
+  expect(gridDates('2026-11-01', '2026-12-02')).toEqual([]);
+});
