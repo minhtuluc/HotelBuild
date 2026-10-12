@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Share, Text } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { Link, useLocalSearchParams } from 'expo-router';
 import {
   color,
   radius,
@@ -194,6 +194,15 @@ export default function BookingDetailScreen(): ReactElement {
         </Text>
       ) : null}
       <DetailNotice outcome={outcome} />
+      {booking ? (
+        <Link
+          href={{ pathname: '/payment/[bookingId]', params: { bookingId: booking.id } }}
+          accessibilityLabel="Thanh toán tiền cọc"
+          style={{ minHeight: touchTargetDp, color: color.primary, padding: space.s3 }}
+        >
+          Thanh toán tiền cọc
+        </Link>
+      ) : null}
       {booking === null ? null : <DetailBody booking={booking} />}
       {booking === null ? null : (
         <Pressable
