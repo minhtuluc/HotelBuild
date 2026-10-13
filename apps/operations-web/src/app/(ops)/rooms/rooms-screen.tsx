@@ -84,7 +84,9 @@ function Comparison({ model }: { model: Model }): ReactElement | null {
   );
 }
 function visibleDraft(model: Model): Draft | null {
-  return model.state.canWrite && model.draft?.actorRevision === model.state.actorRevision
+  return model.state.canWrite &&
+    model.draft?.actorRevision === model.state.actorRevision &&
+    model.current !== undefined
     ? model.draft
     : null;
 }

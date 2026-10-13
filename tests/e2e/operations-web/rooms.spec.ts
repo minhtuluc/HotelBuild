@@ -212,3 +212,8 @@ test('412 retains selected target; explicit current version adoption preserves c
 test('FRONT_DESK catalogue is readonly',async({page,request})=>{
  await loginRefundStaff(page,request,'FRONT_DESK');await mockReads(page,[ROOM_A,ROOM_B]);await page.goto('/rooms');await expect(page.getByTestId('rooms-table')).toBeVisible();await expect(page.getByRole('button',{name:'Gán phòng thông nhau',exact:true})).toHaveCount(0);
 });
+
+test('fresh empty catalogue hides captured source editor even before WHO scope changes',async({page})=>{
+ let missing=false;await page.route(ROOM_TYPES,r=>fulfillJson(r,200,listBody([ROOM_TYPE])));await page.route(ROOMS,r=>fulfillJson(r,200,listBody(missing?[]:[ROOM_A,ROOM_B])));
+ await page.goto('/rooms');await page.getByTestId('room-101').getByRole('button',{name:'Gán phòng thông nhau',exact:true}).click();await expect(page.getByTestId('assign-form')).toBeVisible();missing=true;await page.getByRole('button',{name:'Tải lại',exact:true}).click();await expect(page.getByTestId('rooms-table')).toHaveCount(0);await expect(page.getByTestId('assign-form')).toHaveCount(0);await expect(page.getByText('Gán phòng thông nhau cho 101',{exact:false})).toHaveCount(0);
+});
