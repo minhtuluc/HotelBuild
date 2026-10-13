@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { expect, test } from 'vitest';
+import { beforeEach, expect, test } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { authorizeActor } from '../../src/common/actor/authorized-actor.js';
 import { AuditWriter } from '../../src/infrastructure/audit/audit-writer.js';
@@ -42,7 +42,12 @@ export const input = () => ({
   reason: 'MAINTENANCE' as const,
   note: 'Synthetic repair',
 });
+beforeEach(async () => {
+  // Persisted identity agrees with the default actor used by these direct use-case tests.
+  await rows("UPDATE users SET role='MANAGER' WHERE id=$1", [userId]);
+});
 export async function create(role = 'MANAGER', command = input()) {
+  await rows('UPDATE users SET role=$1 WHERE id=$2', [role, userId]);
   return db.$transaction((tx) => service().create(tx, actor(role), command));
 }
 test('TC-PROP-04: FRONT_DESK rejects overlap, MANAGER commits block, audit and one case per affected night', async () => {

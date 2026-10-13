@@ -41,3 +41,12 @@ khi lưu/trả DTO/audit. Văn bản vận hành thông thường giữ nguyên.
 theo định dạng, không thể nhận diện mọi cách cố ý làm rối/viết số bằng chữ; không
 nhập thông tin khách vào ghi chú bảo trì. Request query không được ghi vào log hay
 path của response lỗi; raw URL/body vẫn giữ riêng cho SHA-256 idempotency.
+
+## Quyền hiện tại sau khi lấy khoá
+
+Sau khi khoá booking → property → room type → room và đọc lại tập ảnh hưởng,
+transaction khoá chia sẻ user cùng dòng scope của cơ sở đích, rồi kiểm lại tài
+khoản đang hoạt động, vai trò còn đúng và scope còn tồn tại. OWNER vẫn có phạm
+vi toàn cục theo RBAC hiện có. Quyền bị thu hồi trong lúc chờ khoá không được
+đưa vào GUC, ghi block/audit/outbox hay tạo kết quả idempotency thành công. Các
+khoá chia sẻ giữ đến commit để thu hồi quyền sau bước kiểm không chen vào lệnh.

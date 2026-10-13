@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import pg from 'pg';
-import { expect, test } from 'vitest';
+import { beforeEach, expect, test } from 'vitest';
 import { authorizeActor } from '../../src/common/actor/authorized-actor.js';
 import { AuditWriter } from '../../src/infrastructure/audit/audit-writer.js';
 import { RoomBlocksService } from '../../src/modules/prop/room-blocks/service.js';
@@ -34,6 +34,9 @@ const actor = () =>
     [propertyId],
     { allows: () => true },
   );
+beforeEach(async () => {
+  await rows("UPDATE users SET role='MANAGER' WHERE id=$1", [userId]);
+});
 const input = () => ({
   roomId,
   startDate: stay.checkIn,

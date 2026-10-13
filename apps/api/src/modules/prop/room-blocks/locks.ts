@@ -4,6 +4,7 @@ import { requireProperty } from '../../../common/rbac/scope.js';
 import { AppError } from '../../../common/app-error.js';
 import { RetryTransaction } from '../../../common/idempotency/transaction-retry.js';
 import { missing } from './validation.js';
+import { assertLockedActor } from './locked-actor.js';
 const retry = () =>
   new RetryTransaction(
     new AppError(409, 'E_INV_LOCK_TIMEOUT', 'Không thể khoá tồn phòng; vui lòng thử lại.'),
@@ -66,6 +67,7 @@ export async function lockInventory(
   )
     throw retry();
   requireProperty(actor, after.property_id);
+  await assertLockedActor(tx, actor, after.property_id);
   await tx.$queryRaw`SELECT set_config('app.actor_id',${actor.id},true),set_config('app.actor_role',${actor.role},true)`;
   return { room: after, affectedBookings: bookings };
 }
