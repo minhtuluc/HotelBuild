@@ -1,3 +1,4 @@
+import { ChannelsModule } from './modules/rate/channels/module.js';
 import { PropertyAdminModule } from './modules/prop/property-admin/module.js';
 import { serializeSafeRequest } from './common/safe-request.js';
 import { AuditLogsModule } from './modules/sys/audit-logs/module.js';
@@ -62,6 +63,7 @@ export class AppModule {
         AllotmentsModule,
         GridModule,
         RatePlansModule,
+        ChannelsModule,
         CancellationPoliciesModule,
         HousekeepingModule,
         AuditLogsModule,

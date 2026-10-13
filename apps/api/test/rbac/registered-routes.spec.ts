@@ -179,6 +179,12 @@ function independentOracle(): Record<string, Expected> {
     status: 428,
     method: RequestMethod.PUT,
   };
+  // Published GETchannels defaults: api.md §2.4, independent of module contribution.
+  keyed[`${RequestMethod.GET}:channels`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 200,
+    method: RequestMethod.GET,
+  };
   return keyed;
 }
 
