@@ -30,14 +30,27 @@ const type = {
   bedCount: 2,
   version: 1,
 };
-const { id: _id, version: _version, ...typeInput } = type;
+const typeInput = {
+  propertyId: type.propertyId,
+  code: type.code,
+  capacityAdults: type.capacityAdults,
+  capacityChildren: type.capacityChildren,
+  basePrice: type.basePrice,
+  minPrice: type.minPrice,
+  maxPrice: type.maxPrice,
+  allowShared: type.allowShared,
+  bedCount: type.bedCount,
+};
 let status = 200;
 const writes: { path: string; key: unknown; tag: unknown; body: unknown }[] = [];
 const server = createServer((req, res) => {
   void (async () => {
     assert.equal(req.headers.authorization, 'Bearer synthetic-access');
     const chunks: Buffer[] = [];
-    for await (const chunk of req) chunks.push(Buffer.from(chunk));
+    for await (const chunk of req) {
+      if (!(chunk instanceof Uint8Array)) throw Error('Bad chunk');
+      chunks.push(Buffer.from(chunk));
+    }
     if (req.method !== 'GET')
       writes.push({
         path: req.url ?? '',
@@ -126,7 +139,7 @@ try {
       () => {
         throw Error('expected rejection');
       },
-      (e) => e,
+      (e: unknown) => e,
     );
   assert.ok(error instanceof ApiError);
   assert.equal(error.status, 422);
