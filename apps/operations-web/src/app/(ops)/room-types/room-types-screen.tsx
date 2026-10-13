@@ -34,7 +34,7 @@ function RoomTypeTable({ rows }: { rows: readonly RoomTypeSummary[] }): ReactEle
     t('roomTypes.col.version'),
   ];
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div role="region" aria-label={t('roomTypes.title')} tabIndex={0} style={{ overflowX: 'auto' }}>
       <table data-testid="room-types-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
           {t('roomTypes.title')}

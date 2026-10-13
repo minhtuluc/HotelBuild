@@ -64,7 +64,12 @@ function PropertyTable({
   onEdit: (row: PropertySummary) => void;
 }): ReactElement {
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div
+      role="region"
+      aria-label={t('properties.title')}
+      tabIndex={0}
+      style={{ overflowX: 'auto' }}
+    >
       <table data-testid="properties-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
           {t('properties.title')}

@@ -166,3 +166,8 @@ test('logout from another tab removes room-type catalogue and draft',async({page
  await mockReads(page,[ROOM_TYPE]);await page.goto('/room-types');await expect(page.getByTestId('room-types-table')).toBeVisible();await page.getByRole('button',{name:'Thêm loại phòng',exact:true}).click();
  const other=await page.context().newPage();await logoutCollectionStaff(other);await expect(page.getByText('Phiên đã hết hạn.')).toBeVisible();await expect(page.getByTestId('room-types-table')).toHaveCount(0);await expect(page.getByTestId('room-type-form')).toHaveCount(0);await other.close();
 });
+
+test('readonly long catalogue at360 is keyboard accessible with axe zero serious/critical',async({page,request})=>{
+ await loginRefundStaff(page,request,'MANAGER');await mockReads(page,Array.from({length:16},(_,i)=>({...ROOM_TYPE,id:'synthetic-type-'+i,code:'LONG-'+i})));await page.setViewportSize({width:360,height:800});await page.goto('/room-types');await expect(page.getByTestId('room-types-table')).toBeVisible();
+ const violations=(await new AxeBuilder({page}).analyze()).violations.filter(v=>v.impact==='serious'||v.impact==='critical');expect(violations.map(v=>v.id)).toEqual([]);await page.getByRole('region',{name:'Loại phòng',exact:true}).focus();await expect(page.getByRole('region',{name:'Loại phòng',exact:true})).toBeFocused();
+});
