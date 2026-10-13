@@ -46,7 +46,10 @@ export function HousekeepingReadScreen({
         maxLength={10}
         autoCapitalize="none"
         editable={!loading}
-        onChangeText={setDate}
+        onChangeText={(value) => {
+          reader?.invalidate();
+          setDate(value);
+        }}
         style={{
           minHeight: touchTargetDp,
           paddingHorizontal: space.s3,
