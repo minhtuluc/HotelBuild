@@ -15,7 +15,16 @@
       "@prisma/client",
       "@prisma/engines",
       "prisma"
-    ]
+    ],
+    "overrides": {
+      "@nestjs/platform-fastify@11.2.7>fastify": "5.12.5",
+      "next@15.5.26>postcss": "8.5.28",
+      "@prisma/config@6.19.3>deepmerge-ts": "8.0.2",
+      "source-map-js@<1.2.2": "1.2.2",
+      "sharp@<0.35.5": "0.35.5",
+      "shell-quote@>=1.8.4 <1.11.0": "1.11.0",
+      "vitest@3.2.7>tinypool": "2.1.2"
+    }
   },
   "scripts": {
     "check": "npm run check:docs && npm test",
@@ -42,7 +51,7 @@
     "openapi:generate": "pnpm --filter @pinehill/contracts openapi:generate",
     "check:openapi": "node scripts/check-openapi-drift.mjs",
     "check:imports": "node scripts/check-frontend-imports.mjs",
-    "ci": "pnpm check:scope && pnpm check:openapi && pnpm check:contract && pnpm check:imports && pnpm typecheck && pnpm typecheck:e2e && pnpm lint && pnpm format:check && pnpm products:test:coverage && pnpm products:build",
+    "ci": "pnpm check:scope && pnpm check:openapi && pnpm check:contract && pnpm check:imports && pnpm check:dependency-security && pnpm typecheck && pnpm typecheck:e2e && pnpm lint && pnpm format:check && pnpm products:test:coverage && pnpm products:build",
     "typecheck:e2e": "tsc --noEmit -p tests/e2e/tsconfig.json",
     "test:e2e": "playwright test -c tests/e2e/playwright.config.ts",
     "openapi:baseline": "node scripts/set-openapi-baseline.mjs",
@@ -51,7 +60,8 @@
     "migrate": "node scripts/migrate.mjs",
     "db:seed": "pnpm --filter @pinehill/api db:seed",
     "owner:bootstrap": "pnpm --filter @pinehill/api owner:bootstrap",
-    "db:drift": "node apps/api/prisma/drift.mjs"
+    "db:drift": "node apps/api/prisma/drift.mjs",
+    "check:dependency-security": "node --test infra/security/dependency-regression.test.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
