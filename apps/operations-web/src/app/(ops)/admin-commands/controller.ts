@@ -1,6 +1,6 @@
 import { isApiError } from '@pinehill/api-client';
 import { applyReceipt, assertAcknowledgedProjection } from './projection';
-import type { PropertySummary, RoomTypeSummary, UserMe } from '@pinehill/contracts';
+import type { PropertySummary, RoomTypeSummary, RoomSummary, UserMe } from '@pinehill/contracts';
 import {
   parseCommand,
   readAdminIntent,
@@ -13,10 +13,12 @@ import {
 export interface AdminData {
   properties: readonly PropertySummary[];
   roomTypes: readonly RoomTypeSummary[];
+  rooms?: readonly RoomSummary[];
 }
 export type AdminReceipt =
   | { kind: 'property-update'; data: PropertySummary }
-  | { kind: 'room-type-create'; data: RoomTypeSummary };
+  | { kind: 'room-type-create'; data: RoomTypeSummary }
+  | { kind: 'connecting-update'; data: RoomSummary };
 export interface AdminPorts {
   actor(
     signal: AbortSignal,
@@ -54,6 +56,9 @@ function conflict(error: unknown): boolean {
 }
 function validation(error: unknown): boolean {
   return isApiError(error) && (error.status === 400 || error.status === 422);
+}
+function writeAffordance(role: UserMe['role'], scope: AdminScope): boolean {
+  return role === 'OWNER' || (scope === 'connecting' && role === 'MANAGER');
 }
 export class AdminController {
   state: AdminState = {
@@ -143,8 +148,9 @@ export class AdminController {
       this.update({ data: null, receipt: null });
     this.context = context;
     this.ownerId = actor.userId;
-    this.update({ canWrite: actor.role === 'OWNER', actorVerified: true });
-    if (writing && actor.role !== 'OWNER') {
+    const canWrite = writeAffordance(actor.role, this.options.scope);
+    this.update({ canWrite, actorVerified: true });
+    if (writing && !canWrite) {
       this.deny();
       return false;
     }

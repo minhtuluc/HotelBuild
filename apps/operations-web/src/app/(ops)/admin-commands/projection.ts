@@ -2,6 +2,7 @@ import { ApiError } from '@pinehill/api-client';
 import type { AdminData, AdminReceipt } from './controller';
 export function applyReceipt(data: AdminData | null, receipt: AdminReceipt): AdminData | null {
   if (!data) return null;
+  if (receipt.kind === 'connecting-update') return null;
   if (receipt.kind === 'property-update')
     return {
       ...data,
@@ -14,6 +15,15 @@ export function applyReceipt(data: AdminData | null, receipt: AdminReceipt): Adm
 }
 export function assertAcknowledgedProjection(data: AdminData, receipt: AdminReceipt | null): void {
   if (!receipt) return;
+  if (receipt.kind === 'connecting-update') {
+    const row = data.rooms?.find((room) => room.id === receipt.data.id);
+    if (!row || row.version < receipt.data.version)
+      throw new ApiError({
+        kind: 'protocol',
+        message: 'Connection readback is older than receipt',
+      });
+    return;
+  }
   if (receipt.kind === 'property-update') {
     const row = data.properties.find((item) => item.id === receipt.data.id);
     if (!row || row.version < receipt.data.version)

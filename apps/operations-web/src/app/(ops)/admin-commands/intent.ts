@@ -1,14 +1,18 @@
 import {
   propertyUpdateRequestSchema,
   propertySummarySchema,
+  roomSummarySchema,
+  connectingRoomRequestSchema,
   roomTypeCreateRequestSchema,
   type PropertyUpdateRequest,
   type RoomTypeCreateRequest,
+  type ConnectingRoomRequest,
 } from '@pinehill/contracts';
-export type AdminScope = 'property' | 'room-type';
+export type AdminScope = 'property' | 'room-type' | 'connecting';
 export type AdminCommand =
   | { kind: 'property-update'; targetId: string; tag: string; body: PropertyUpdateRequest }
-  | { kind: 'room-type-create'; body: RoomTypeCreateRequest };
+  | { kind: 'room-type-create'; body: RoomTypeCreateRequest }
+  | { kind: 'connecting-update'; targetId: string; tag: string; body: ConnectingRoomRequest };
 export interface AdminIntent {
   ownerId: string;
   key: string;
@@ -37,7 +41,21 @@ export function parseCommand(value: unknown, scope: AdminScope): AdminCommand {
   }
   if (scope === 'room-type' && value.kind === 'room-type-create')
     return { kind: 'room-type-create', body: roomTypeCreateRequestSchema.parse(value.body) };
+  if (scope === 'connecting' && value.kind === 'connecting-update') return parseConnecting(value);
   throw Error('Wrong command scope');
+}
+function parseConnecting(
+  value: Record<string, unknown>,
+): Extract<AdminCommand, { kind: 'connecting-update' }> {
+  const tag = text(value, 'tag');
+  if (!/^"\d+"$/.test(tag) || BigInt(tag.slice(1, -1)) > BigInt(Number.MAX_SAFE_INTEGER))
+    throw Error('Invalid room version');
+  return {
+    kind: 'connecting-update',
+    targetId: roomSummarySchema.shape.id.parse(value.targetId),
+    tag,
+    body: connectingRoomRequestSchema.parse(value.body),
+  };
 }
 export function intentStorageKey(ownerId: string, scope: AdminScope): string {
   return 'pinehill-admin:' + scope + ':' + encodeURIComponent(ownerId);

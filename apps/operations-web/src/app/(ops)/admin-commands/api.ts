@@ -6,6 +6,8 @@ import {
   roomTypeSummarySchema,
   roomTypeCreateRequestSchema,
   userMeSchema,
+  roomSummarySchema,
+  connectingRoomRequestSchema,
 } from '@pinehill/contracts';
 import { createSessionClient } from '@pinehill/web-session/client';
 import { AdminController, type AdminPorts } from './controller';
@@ -24,14 +26,17 @@ export function adminPorts(client: ApiClient, scope: AdminScope): AdminPorts {
         })
       ).data,
     read: async (signal) => {
-      const properties = await completeCatalogue(
-        client,
-        '/properties',
-        listResponseSchema(propertySummarySchema),
-        signal,
-      );
+      const properties =
+        scope === 'connecting'
+          ? []
+          : await completeCatalogue(
+              client,
+              '/properties',
+              listResponseSchema(propertySummarySchema),
+              signal,
+            );
       const roomTypes =
-        scope === 'room-type'
+        scope !== 'property'
           ? await completeCatalogue(
               client,
               '/room-types',
@@ -39,10 +44,38 @@ export function adminPorts(client: ApiClient, scope: AdminScope): AdminPorts {
               signal,
             )
           : [];
-      return { properties, roomTypes };
+      const rooms =
+        scope === 'connecting'
+          ? await completeCatalogue(client, '/rooms', listResponseSchema(roomSummarySchema), signal)
+          : undefined;
+      if (rooms?.some((room) => !Number.isSafeInteger(room.version)))
+        throw new ApiError({ kind: 'protocol', message: 'Unsafe room version' });
+      return { properties, roomTypes, ...(rooms ? { rooms } : {}) };
     },
     write: async (command, idempotencyKey, signal) => {
       const headers = { 'x-session-request': '1' };
+      if (command.kind === 'connecting-update') {
+        const data = (
+          await client.request({
+            method: 'PUT',
+            path: '/rooms/' + encodeURIComponent(command.targetId) + '/connecting-room',
+            body: connectingRoomRequestSchema.parse(command.body),
+            ifMatch: command.tag,
+            idempotencyKey,
+            headers,
+            signal,
+            maxAttempts: 1,
+            decoder: roomSummarySchema,
+          })
+        ).data;
+        if (
+          data.id !== command.targetId ||
+          data.connectingRoomId !== command.body.connectingRoomId ||
+          !Number.isSafeInteger(data.version)
+        )
+          throw new ApiError({ kind: 'protocol', message: 'Mismatched connection receipt' });
+        return { kind: 'connecting-update', data };
+      }
       if (command.kind === 'property-update') {
         const data = (
           await client.request({
