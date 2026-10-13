@@ -1,0 +1,13 @@
+# Historic synthetic fixtures/examples only, reviewed for HB-176.
+# Exact commit:path:rule:line fingerprints; future commits remain scanned.
+206bac89be25bf6d01a5b953bc2fd3d2ef31136c:packages/web-session/test/payment-journey.spec.ts:generic-api-key:28
+321850abf8f2fa51efc2118a89b6584305e53dd2:apps/customer-android/test/payment-fixtures.ts:generic-api-key:61
+463b342814e8ebd88f7530cc5d738f0a501018f8:packages/web-session/test/journey-fixtures.ts:generic-api-key:2
+72f48d5f7658fa9b5771f451ca5fa2f87d8916ce:apps/api/test/audit/audit-writer.locked.spec.ts:generic-api-key:133
+75b8ec797c2eb1c1518c9a51f31c909b93670d56:apps/operations-web/test/settings-api.spec.ts:generic-api-key:70
+75b8ec797c2eb1c1518c9a51f31c909b93670d56:packages/web-session/test/client.spec.ts:generic-api-key:205
+75b8ec797c2eb1c1518c9a51f31c909b93670d56:packages/web-session/test/client.spec.ts:generic-api-key:220
+8fb3daced1fc4b974ff00fc7ae33250dd9270109:docs/04-thiet-ke/api.md:generic-api-key:425
+cac449bed188d6b6209862cc1489591398f6a3cc:.github/workflows/ci.yml:generic-api-key:26
+cac449bed188d6b6209862cc1489591398f6a3cc:.github/workflows/ci.yml:generic-api-key:77
+dd07da2ab7018183a71b2c4943373cf4b71e4104:packages/api-client/test/reauth-deadlock.spec.ts:generic-api-key:40
