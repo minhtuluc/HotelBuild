@@ -80,6 +80,32 @@ test('new synthetic secret cannot hide behind local config/ignore/inline allow, 
     assert(!result.stdout.includes(secret));
     assert(!result.stderr.includes(secret));
   }));
+for (const removeAfterMerge of [false, true])
+  test(`merge-only secret is rejected even with later deletion: ${removeAfterMerge}`, () =>
+    fixture(({ root, git, commit }) => {
+      const branch = git('branch', '--show-current');
+      git('checkout', '--quiet', '-b', 'synthetic-feature');
+      writeFileSync(path.join(root, 'feature.txt'), 'Synthetic feature');
+      commit();
+      git('checkout', '--quiet', branch);
+      writeFileSync(path.join(root, 'main.txt'), 'Synthetic main');
+      commit();
+      git('merge', '--no-commit', '--no-ff', 'synthetic-feature');
+      const secret = 'gh' + 'p_' + randomBytes(18).toString('hex');
+      writeFileSync(path.join(root, 'merge-only.ts'), `const token = '${secret}';\n`);
+      commit();
+      assert.equal(git('rev-list', '--parents', '-n', '1', 'HEAD').split(' ').length, 3);
+      assert.equal(git('ls-tree', '--name-only', 'HEAD^1', 'merge-only.ts'), '');
+      assert.equal(git('ls-tree', '--name-only', 'HEAD^2', 'merge-only.ts'), '');
+      if (removeAfterMerge) {
+        git('rm', '--quiet', 'merge-only.ts');
+        commit();
+      }
+      const result = scan(root);
+      assert.equal(result.status, 1, 'Actual scanner must reject a merge-only secret');
+      assert(!result.stdout.includes(secret));
+      assert(!result.stderr.includes(secret));
+    }));
 test('bad archive checksum is rejected before extracting an executable', () => {
   const root = mkdtempSync(path.join(tmpdir(), 'hb176-install-'));
   try {

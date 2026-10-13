@@ -16,5 +16,6 @@ fi
 exec "${GITLEAKS_BIN:-gitleaks}" git "$scan_root" \
   --config "$source_root/.github/workflows/gitleaks-defaults.toml" \
   --gitleaks-ignore-path "$source_root/.github/workflows/gitleaks-history.ignore" \
-  --ignore-gitleaks-allow --log-opts=HEAD --exit-code=1 \
+  --ignore-gitleaks-allow \
+  --log-opts='--no-ext-diff --no-textconv --full-history --diff-merges=first-parent HEAD' --exit-code=1 \
   --redact=100 --no-banner --log-level=error

@@ -17,7 +17,7 @@ Installer ghim Gitleaks **8.30.1**, xác minh SHA-256 trước giải nén/chạ
 
 Scanner đọc **toàn lịch sử HEAD**, gồm commit merge của PR, với bộ luật mặc định của bản đã ghim. Không chỉ quét diff mới. Không bỏ qua cả test/thư mục/luật; không đổi mã thoát phát hiện thành thành công. CLI luôn bật che 100%, không bật verbose và không xuất/upload báo cáo. Lỗi công cụ và phát hiện bí mật đều làm bước thất bại. Đây là kiểm tra mẫu/entropy, không phải chứng minh tuyệt đối repo không thể có bí mật.
 
-Cấu hình và danh sách ngoại lệ nằm trong `.github/workflows/gitleaks-defaults.toml` và `.github/workflows/gitleaks-history.ignore`, thuộc hàng rào file bảo vệ; HB-176 được `unlock` đúng phạm vi này. CLI nhận hai đường dẫn tường minh, không nhận cấu hình tự do từ repo đích. Gitleaks 8.30.1 vẫn cộng thêm `source/.gitleaksignore` dù truyền đường dẫn riêng: helper **từ chối** file/symlink đó, không xoá hay sửa nó. Cấu hình `.gitleaks.toml` tại nguồn và chú thích `gitleaks:allow` không tắt được kiểm tra.
+Cấu hình và danh sách ngoại lệ nằm trong `.github/workflows/gitleaks-defaults.toml` và `.github/workflows/gitleaks-history.ignore`, thuộc hàng rào file bảo vệ; HB-176 được `unlock` đúng phạm vi này. CLI nhận hai đường dẫn tường minh, không nhận cấu hình tự do từ repo đích. Lịch sử dùng `--full-history --diff-merges=first-parent HEAD`: diff commit merge so với parent đầu nhưng vẫn duyệt các parent còn lại; bắt cả credential chỉ thêm khi giải quyết merge rồi xoá ở commit sau. Tắt external diff/textconv. Gitleaks 8.30.1 vẫn cộng thêm `source/.gitleaksignore` dù truyền đường dẫn riêng: helper **từ chối** file/symlink đó, không xoá hay sửa nó. Cấu hình `.gitleaks.toml` tại nguồn và chú thích `gitleaks:allow` không tắt được kiểm tra.
 
 ## 11 báo giả đã phân loại
 
@@ -27,7 +27,7 @@ Ngoại lệ chỉ ghim `commit:path:rule:line` do scanner sinh. Nội dung khô
 | --- | ---: | --- |
 | settings-api, payment-fixtures, payment-journey, journey-fixtures | 4 | UUID khoá chống trùng trong fixture tổng hợp; không phải credential |
 | web-session/client | 2 | Token mô phỏng từ fetch test, không phải JWT phiên thật |
-| audit-writer.locked | 1 | Khoá tổng hợp của oracle kiểm che dữ liệu; giữ nguyên bytes test khoá |
+| audit-writer.locked | 1 | Khoá setting tổng hợp của oracle kiểm rollback khi ghi audit thất bại; giữ nguyên bytes test khoá |
 | ci.yml | 2 | Mật khẩu PostgreSQL tạm của container CI loopback, không phải tài khoản staging/production |
 | api-client/reauth-deadlock | 1 | Chuỗi mật khẩu của fetch fixture, không gọi dịch vụ xác thực thật |
 | api.md | 1 | Ví dụ PIN token trong tài liệu giao thức, không có backend phát hành tương ứng |
