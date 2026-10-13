@@ -128,7 +128,7 @@ test('stale read cannot display a removed row as though the delete failed', asyn
   await s.c.save(remove);
   expect(s.c.state.receipt).toEqual({ kind: 'room-block-delete', id: block.id });
   expect(s.c.state.phase).toBe('error');
-  expect(s.c.state.data?.blocks).toEqual([]);
+  expect(s.c.state.data).toBeNull();
 });
 test('400 keeps validation details and permits corrected input with a fresh key', async () => {
   const s = setup();
@@ -174,4 +174,21 @@ test('scope changes during catalogue reads discard captured private rows before 
   expect(s.c.state.data).toBeNull();
   expect(s.c.state.actorRevision).toBe(1);
   expect(s.c.state.error).toMatchObject({ kind: 'aborted' });
+});
+
+test('a confirmed create can be removed concurrently; current empty GET preserves acknowledgement without resurrecting it', async () => {
+  const s = setup();
+  await s.c.load();
+  s.ports.read = async () => ({ properties: [], roomTypes: [], rooms: [], blocks: [] });
+  await s.c.save(create);
+  expect(s.c.state.receipt?.kind).toBe('room-block-create');
+  expect(s.c.state.phase).toBe('ready');
+  expect(s.c.state.data?.blocks).toEqual([]);
+});
+test('a known DELETE with stale readback hides the whole old catalogue, rather than retaining a partial graph', async () => {
+  const s = setup();
+  await s.c.load();
+  await s.c.save(remove);
+  expect(s.c.state.receipt?.kind).toBe('room-block-delete');
+  expect(s.c.state.data).toBeNull();
 });

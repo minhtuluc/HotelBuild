@@ -2,14 +2,12 @@ import { ApiError } from '@pinehill/api-client';
 import type { AdminData, AdminReceipt } from './controller';
 export function applyReceipt(data: AdminData | null, receipt: AdminReceipt): AdminData | null {
   if (!data) return null;
-  if (receipt.kind === 'connecting-update') return null;
-  if (receipt.kind === 'room-block-create')
-    return {
-      ...data,
-      blocks: [...(data.blocks ?? []).filter((row) => row.id !== receipt.data.id), receipt.data],
-    };
-  if (receipt.kind === 'room-block-delete')
-    return { ...data, blocks: (data.blocks ?? []).filter((row) => row.id !== receipt.id) };
+  if (
+    receipt.kind === 'connecting-update' ||
+    receipt.kind === 'room-block-create' ||
+    receipt.kind === 'room-block-delete'
+  )
+    return null;
   if (receipt.kind === 'property-update')
     return {
       ...data,
@@ -60,9 +58,7 @@ function assertBlockReadback(
   data: AdminData,
   receipt: Extract<AdminReceipt, { kind: 'room-block-create' | 'room-block-delete' }>,
 ): void {
-  const id = receipt.kind === 'room-block-create' ? receipt.data.id : receipt.id;
-  const present = data.blocks?.some((row) => row.id === id) ?? false;
-  if (present !== (receipt.kind === 'room-block-create'))
-    throw new ApiError({ kind: 'protocol', message: 'Stale room block readback' });
-  return;
+  if (receipt.kind === 'room-block-create') return;
+  if (data.blocks?.some((row) => row.id === receipt.id))
+    throw new ApiError({ kind: 'protocol', message: 'Stale room block deletion readback' });
 }
