@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { AdminController, type AdminState } from './controller';
 import { createAdminWorkspace } from './api';
+import type { AllotmentSelection } from './allotment-api';
 import type { AdminScope } from './intent';
-export function useAdmin(scope: AdminScope, enabled: boolean) {
+export function useAdmin(scope: AdminScope, enabled: boolean, selection?: AllotmentSelection) {
+  const [select, setSelect] = useState<((next: AllotmentSelection) => boolean) | null>(null);
   const [controller, setController] = useState<AdminController | null>(null);
   const [state, setState] = useState<AdminState>({
     phase: 'loading',
@@ -20,8 +22,9 @@ export function useAdmin(scope: AdminScope, enabled: boolean) {
   });
   useEffect(() => {
     if (!enabled) return;
-    const workspace = createAdminWorkspace(scope);
+    const workspace = createAdminWorkspace(scope, selection);
     setController(workspace.controller);
+    setSelect(() => workspace.select);
     setState(workspace.controller.state);
     const unsubscribe = workspace.controller.subscribe(() => setState(workspace.controller.state));
     void workspace.controller.load();
@@ -29,6 +32,6 @@ export function useAdmin(scope: AdminScope, enabled: boolean) {
       unsubscribe();
       workspace.dispose();
     };
-  }, [scope, enabled]);
-  return { controller, state };
+  }, [scope, enabled, selection]);
+  return { controller, state, select };
 }

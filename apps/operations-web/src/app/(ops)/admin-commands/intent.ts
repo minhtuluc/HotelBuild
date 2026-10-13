@@ -5,19 +5,27 @@ import {
   propertySummarySchema,
   roomSummarySchema,
   connectingRoomRequestSchema,
+  type AllotmentPutRequest,
   roomTypeCreateRequestSchema,
   type RoomBlockCreateRequest,
   type PropertyUpdateRequest,
   type RoomTypeCreateRequest,
   type ConnectingRoomRequest,
 } from '@pinehill/contracts';
-export type AdminScope = 'property' | 'room-type' | 'connecting' | 'room-block';
+import { parseAllotmentCommand } from './allotment-intent';
+export type AdminScope = 'property' | 'room-type' | 'connecting' | 'room-block' | 'allotment';
 export type AdminCommand =
   | { kind: 'property-update'; targetId: string; tag: string; body: PropertyUpdateRequest }
   | { kind: 'room-type-create'; body: RoomTypeCreateRequest }
   | { kind: 'connecting-update'; targetId: string; tag: string; body: ConnectingRoomRequest }
   | { kind: 'room-block-create'; body: RoomBlockCreateRequest }
-  | { kind: 'room-block-delete'; targetId: string; reason: string };
+  | { kind: 'room-block-delete'; targetId: string; reason: string }
+  | {
+      kind: 'allotment-put';
+      tag: string;
+      range: { from: string; to: string };
+      body: AllotmentPutRequest;
+    };
 export interface AdminIntent {
   ownerId: string;
   key: string;
@@ -34,21 +42,24 @@ function text(value: Record<string, unknown>, key: string): string {
 }
 export function parseCommand(value: unknown, scope: AdminScope): AdminCommand {
   if (!record(value)) throw Error('Invalid command');
+  if (scope === 'allotment') return parseAllotmentCommand(value);
   if (scope === 'room-block') return parseBlock(value);
-  if (scope === 'property' && value.kind === 'property-update') {
-    const tag = text(value, 'tag');
-    if (!/^"\d+"$/.test(tag)) throw Error('Invalid version');
-    return {
-      kind: 'property-update',
-      targetId: propertySummarySchema.shape.id.parse(value.targetId),
-      tag,
-      body: propertyUpdateRequestSchema.parse(value.body),
-    };
-  }
+  if (scope === 'property') return parseProperty(value);
   if (scope === 'room-type' && value.kind === 'room-type-create')
     return { kind: 'room-type-create', body: roomTypeCreateRequestSchema.parse(value.body) };
   if (scope === 'connecting' && value.kind === 'connecting-update') return parseConnecting(value);
   throw Error('Wrong command scope');
+}
+function parseProperty(value: Record<string, unknown>): AdminCommand {
+  if (value.kind !== 'property-update') throw Error('Wrong property command');
+  const tag = text(value, 'tag');
+  if (!/^"\d+"$/.test(tag)) throw Error('Invalid version');
+  return {
+    kind: 'property-update',
+    targetId: propertySummarySchema.shape.id.parse(value.targetId),
+    tag,
+    body: propertyUpdateRequestSchema.parse(value.body),
+  };
 }
 function parseConnecting(
   value: Record<string, unknown>,

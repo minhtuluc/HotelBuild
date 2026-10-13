@@ -11,6 +11,7 @@ import {
 export type { AdminData, AdminReceipt, AdminPorts, AdminState } from './model';
 import type { AdminPorts, AdminState, AdminReceipt, Options } from './model';
 import { denial, conflict, validation, writeAffordance, commandAllowed } from './support';
+import { assertAllotmentSelection } from './allotment-intent';
 export class AdminController {
   state: AdminState = {
     phase: 'loading',
@@ -165,11 +166,12 @@ export class AdminController {
     const stamp = ++this.epoch;
     this.abort.abort();
     this.abort = new AbortController();
-    this.update({ busy: true, error: null, canCompare: false });
+    this.beginRead();
     try {
       if (!(await this.actor(stamp))) return;
       const revision = this.state.actorRevision;
-      const data = await this.options.ports.read(this.abort.signal);
+      this.restore();
+      const data = await this.options.ports.read(this.abort.signal, this.readCommand());
       if (!this.current(stamp)) return;
       if (!(await this.verifyRead(stamp, revision))) return;
       assertAcknowledgedProjection(data, this.state.receipt);
@@ -185,6 +187,17 @@ export class AdminController {
       this.failure(error, stamp, false);
     }
   }
+  private beginRead(): void {
+    this.update({
+      busy: true,
+      error: null,
+      canCompare: false,
+      ...(this.options.scope === 'allotment' ? { data: null } : {}),
+    });
+  }
+  private readCommand(): AdminCommand | undefined {
+    return this.intent?.command;
+  }
   private async verifyRead(stamp: number, revision: number): Promise<boolean> {
     if (!(await this.actor(stamp))) return false;
     if (revision !== this.state.actorRevision)
@@ -199,8 +212,23 @@ export class AdminController {
       !this.state.busy &&
       !this.intent &&
       !this.corrupt &&
-      !this.comparison
+      !this.comparison &&
+      (this.options.scope !== 'allotment' || !!this.state.data?.allotment)
     );
+  }
+  resetRead(): boolean {
+    if (!this.canStart()) return false;
+    this.epoch++;
+    this.abort.abort();
+    this.update({
+      phase: 'loading',
+      data: null,
+      receipt: null,
+      actorVerified: false,
+      issues: [],
+      error: null,
+    });
+    return true;
   }
   canRetry(): boolean {
     return (
@@ -230,6 +258,7 @@ export class AdminController {
     this.update({ busy: true, error: null, issues: [], receipt: null });
     try {
       if (!(await this.actor(stamp, true, command))) return;
+      assertAllotmentSelection(this.state.data, command);
       this.restore();
       if (this.intent || this.corrupt) {
         this.update({ phase: 'unknown', busy: false, referenceId: this.intent?.key ?? null });
@@ -270,7 +299,7 @@ export class AdminController {
   }
   private writeFailure(error: unknown, stamp: number): void {
     if (!this.current(stamp)) return;
-    if (conflict(error) || validation(error)) {
+    if (conflict(error) || validation(error, this.options.scope)) {
       try {
         this.forget();
       } catch (storageError) {

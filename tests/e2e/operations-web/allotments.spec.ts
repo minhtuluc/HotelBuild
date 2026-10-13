@@ -1,6 +1,8 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 import { errorBody, fulfillJson, listBody } from './fake-api';
 import { operationsWebOnly } from './guard';
+import { allotmentPutRequestSchema } from '../../../packages/contracts/src/index';
+import { loginRefundStaff } from './refund-fixture';
 
 const PROPERTY = {
   id: 'p1',
@@ -47,19 +49,22 @@ const ALLOTMENT_ROWS = [
 
 const ETAG = '"7"';
 
-const PROPERTIES = '**/api/v1/properties**';
-const ROOM_TYPES = '**/api/v1/room-types**';
-const CHANNELS = '**/api/v1/channels**';
-const ALLOTMENTS = '**/api/v1/channel-allotments**';
+const PROPERTIES = '**/api/session/sys/properties**';
+const ROOM_TYPES = '**/api/session/sys/room-types**';
+const CHANNELS = '**/api/session/sys/channels**';
+const ALLOTMENTS = '**/api/session/sys/channel-allotments**';
 
 operationsWebOnly();
+test.beforeEach(async ({ page, request }) => {
+  await loginRefundStaff(page, request, 'MANAGER');
+});
 
-function withEtag(route: Route, body: string): Promise<void> {
+function withEtag(route: Route, body: string, tag = ETAG): Promise<void> {
   return route.fulfill({
     status: 200,
     contentType: 'application/json',
     // `ETag` không thuộc danh sách header an toàn của CORS nên phải khai báo lộ ra cho JS đọc.
-    headers: { ETag: ETAG, 'Access-Control-Expose-Headers': 'ETag' },
+    headers: { ETag: tag, 'Access-Control-Expose-Headers': 'ETag' },
     body,
   });
 }
@@ -67,10 +72,17 @@ function withEtag(route: Route, body: string): Promise<void> {
 /** API giả tối thiểu cho SCR-25; `rows` và cờ lỗi điều khiển được từng ca. */
 function backend(
   page: Page,
-  options: { etag?: string | undefined } = { etag: ETAG },
-): { puts: () => string[]; ifMatch: () => (string | undefined)[] } {
+  options: {
+    etag?: string | undefined;
+    failure?: 'quota' | 'lost' | 'conflict';
+    empty?: boolean;
+  } = { etag: ETAG },
+): { puts: () => string[]; ifMatch: () => (string | undefined)[]; keys: () => string[] } {
   const puts: string[] = [];
+  const keys: string[] = [];
   const ifMatch: (string | undefined)[] = [];
+  let rows = options.empty ? [] : ALLOTMENT_ROWS.map((row) => ({ ...row })),
+    tag = ETAG;
   void page.route(PROPERTIES, (route) => fulfillJson(route, 200, listBody([PROPERTY])));
   void page.route(ROOM_TYPES, (route) => fulfillJson(route, 200, listBody([ROOM_TYPE])));
   void page.route(CHANNELS, (route) => fulfillJson(route, 200, listBody([CHANNEL])));
@@ -78,18 +90,49 @@ function backend(
     if (route.request().method() === 'PUT') {
       ifMatch.push(route.request().headers()['if-match']);
       puts.push(route.request().postData() ?? '');
-      return fulfillJson(route, 204, '');
+      keys.push(route.request().headers()['idempotency-key'] ?? '');
+      if (options.failure === 'quota')
+        return fulfillJson(
+          route,
+          409,
+          JSON.stringify({
+            ...JSON.parse(
+              errorBody('E_INV_ALLOTMENT_EXCEEDS_ROOMS', 'synthetic', '/channel-allotments'),
+            ),
+            details: [{ field: 'items[2026-12-24].allotment', issue: 'EXCEEDS_ACTIVE_SUPPLY' }],
+          }),
+        );
+      if (options.failure === 'conflict') {
+        tag = '"8"';
+        return fulfillJson(
+          route,
+          412,
+          errorBody('E_GEN_VERSION_CONFLICT', 'synthetic', '/channel-allotments'),
+        );
+      }
+      const body = allotmentPutRequestSchema.parse(JSON.parse(route.request().postData() ?? '{}'));
+      rows = rows.map((row) => ({
+        ...row,
+        allotment: body.items.find((item) => item.date === row.date)?.allotment ?? row.allotment,
+      }));
+      tag = '"' + (BigInt(tag.slice(1, -1)) + 1n) + '"';
+      if (options.failure === 'lost') return route.abort('failed');
+      return route.fulfill({ status: 204, headers: { ETag: tag }, body: '' });
     }
-    const body = listBody(ALLOTMENT_ROWS);
+    const url = new URL(route.request().url()),
+      from = url.searchParams.get('from') ?? '',
+      to = url.searchParams.get('to') ?? '';
+    const body = listBody(rows.filter((row) => row.date >= from && row.date <= to));
     if (options.etag === undefined) return fulfillJson(route, 200, body);
-    return withEtag(route, body);
+    return withEtag(route, body, tag);
   });
-  return { puts: () => puts, ifMatch: () => ifMatch };
+  return { puts: () => puts, ifMatch: () => ifMatch, keys: () => keys };
 }
 
 async function openScreen(page: Page): Promise<void> {
   await page.goto('/channel-allotments');
   // Lô giả lập nằm ở 24–25/12; đặt khoảng tường minh để ca kiểm không phụ thuộc ngày chạy.
+  await expect(page.getByLabel('Từ ngày')).toBeEnabled();
   await page.getByLabel('Từ ngày').fill('2026-12-24');
   await page.getByLabel('Đến ngày').fill('2026-12-25');
   await page.getByRole('button', { name: 'Xem hạn mức' }).click();
@@ -115,7 +158,10 @@ test.describe('SCR-25 allotment theo kênh trên API giả (HB-042)', () => {
       'Vượt số đơn vị bán đang hoạt động',
     );
     // Cảnh báo chỉ để nhắc: người dùng vẫn gửi được (máy chủ chặn là cuối).
-    await page.getByTestId('allotment-row-2026-12-24').getByLabel('Hạn mức ngày 2026-12-24').fill('8');
+    await page
+      .getByTestId('allotment-row-2026-12-24')
+      .getByLabel('Hạn mức ngày 2026-12-24')
+      .fill('8');
     await expect(page.getByTestId('allotment-issue-2026-12-24')).toHaveText('');
     expect(spy.puts()).toHaveLength(0);
   });
@@ -125,7 +171,7 @@ test.describe('SCR-25 allotment theo kênh trên API giả (HB-042)', () => {
     await openScreen(page);
     await page.getByLabel('Hạn mức ngày 2026-12-25').fill('7');
     await page.getByTestId('allotment-editor').getByRole('button', { name: 'Lưu lô' }).click();
-    await expect(page.getByTestId('allotments-saved')).toContainText('1');
+    await expect(page.getByTestId('allotments-saved')).toContainText('Đã cập nhật lô');
     expect(spy.puts()).toHaveLength(1);
     expect(spy.ifMatch()[0]).toBe(ETAG);
     const body = spy.puts()[0] ?? '';
@@ -150,10 +196,9 @@ test.describe('SCR-25 allotment theo kênh trên API giả (HB-042)', () => {
 
   test('thiếu ETag thì không gửi lệnh thiếu điều kiện', async ({ page }) => {
     const spy = backend(page, { etag: undefined });
-    await openScreen(page);
-    await page.getByLabel('Hạn mức ngày 2026-12-24').fill('7');
-    await page.getByTestId('allotment-editor').getByRole('button', { name: 'Lưu lô' }).click();
-    await expect(page.getByText('(biểu mẫu): MISSING_ETAG')).toBeVisible();
+    await page.goto('/channel-allotments');
+    await expect(page.getByTestId('allotments-table')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Thử lại' })).toBeVisible();
     expect(spy.puts()).toHaveLength(0);
   });
 
@@ -171,7 +216,13 @@ test.describe('SCR-25 allotment theo kênh trên API giả (HB-042)', () => {
           errorBody('E_GEN_VERSION_CONFLICT', 'trace-412', '/api/v1/channel-allotments'),
         );
       }
-      return withEtag(route, listBody(ALLOTMENT_ROWS));
+      const url = new URL(route.request().url()),
+        from = url.searchParams.get('from') ?? '',
+        to = url.searchParams.get('to') ?? '';
+      return withEtag(
+        route,
+        listBody(ALLOTMENT_ROWS.filter((row) => row.date >= from && row.date <= to)),
+      );
     });
     await openScreen(page);
     await page.getByLabel('Hạn mức ngày 2026-12-24').fill('6');
@@ -188,7 +239,13 @@ test.describe('SCR-25 allotment theo kênh trên API giả (HB-042)', () => {
     void page.route(CHANNELS, (route) => fulfillJson(route, 200, listBody([CHANNEL])));
     void page.route(ALLOTMENTS, async (route) => {
       if (route.request().method() === 'PUT') return route.abort('failed');
-      return withEtag(route, listBody(ALLOTMENT_ROWS));
+      const url = new URL(route.request().url()),
+        from = url.searchParams.get('from') ?? '',
+        to = url.searchParams.get('to') ?? '';
+      return withEtag(
+        route,
+        listBody(ALLOTMENT_ROWS.filter((row) => row.date >= from && row.date <= to)),
+      );
     });
     await openScreen(page);
     // 7 ≤ 8 đơn vị bán nên qua được kiểm tại chỗ; lỗi mạng mới là thứ cần kiểm.
@@ -202,10 +259,91 @@ test.describe('SCR-25 allotment theo kênh trên API giả (HB-042)', () => {
     void page.route(ROOM_TYPES, (route) => fulfillJson(route, 200, listBody([ROOM_TYPE])));
     void page.route(CHANNELS, (route) => fulfillJson(route, 200, listBody([CHANNEL])));
     void page.route(ALLOTMENTS, (route) =>
-      fulfillJson(route, 403, errorBody('E_RBAC_FORBIDDEN', 'trace-403', '/api/v1/channel-allotments')),
+      fulfillJson(
+        route,
+        403,
+        errorBody('E_RBAC_FORBIDDEN', 'trace-403', '/api/v1/channel-allotments'),
+      ),
     );
     await page.goto('/channel-allotments');
     await expect(page.getByText('Bạn không có quyền xem nội dung này')).toBeVisible();
     await expect(page.getByTestId('allotments-table')).toHaveCount(0);
   });
+});
+
+test('quota409 keeps all invalid dates and entered quota; warning does not prevent onePUT', async ({
+  page,
+}) => {
+  const options = { etag: ETAG, failure: 'quota' as const };
+  const spy = backend(page, options);
+  await openScreen(page);
+  await page.getByLabel('Hạn mức ngày 2026-12-24').fill('9');
+  await page.getByRole('button', { name: 'Lưu lô', exact: true }).click();
+  await expect(page.getByText('items[2026-12-24].allotment: EXCEEDS_ACTIVE_SUPPLY')).toBeVisible();
+  await expect(page.getByLabel('Hạn mức ngày 2026-12-24')).toHaveValue('9');
+  await expect(page.getByLabel('Hạn mức ngày 2026-12-24')).toBeEnabled();
+  expect(spy.puts()).toHaveLength(1);
+});
+test('empty configuration stays blank/unknownused; explicitzero sends one changed date', async ({
+  page,
+}) => {
+  const spy = backend(page, { etag: ETAG, empty: true });
+  await openScreen(page);
+  await expect(page.getByLabel('Hạn mức ngày 2026-12-24')).toHaveValue('');
+  await expect(page.getByTestId('allotment-used-2026-12-24')).toHaveText('—');
+  await page.getByLabel('Hạn mức ngày 2026-12-24').fill('0');
+  await page.getByRole('button', { name: 'Lưu lô', exact: true }).click();
+  await expect(page.getByTestId('allotments-saved')).toBeVisible();
+  expect(spy.puts()).toHaveLength(1);
+  expect(allotmentPutRequestSchema.parse(JSON.parse(spy.puts()[0]!)).items).toEqual([
+    { date: '2026-12-24', allotment: 0 },
+  ]);
+});
+test('lost batch remains unknown after reload/read; manual replay keeps exactUUID/body/tag', async ({
+  page,
+}) => {
+  const options: { etag: string; failure?: 'lost' } = { etag: ETAG, failure: 'lost' };
+  const spy = backend(page, options);
+  await openScreen(page);
+  await page.getByLabel('Hạn mức ngày 2026-12-24').fill('6');
+  await page.getByRole('button', { name: 'Lưu lô', exact: true }).click();
+  await expect(page.getByTestId('admin-unknown')).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId('admin-unknown')).toContainText(spy.keys()[0]!);
+  await page.getByRole('button', { name: 'Tra cứu kết quả', exact: true }).click();
+  await expect(page.getByTestId('admin-unknown')).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Kênh', exact: true })).toBeDisabled();
+  expect(spy.puts()).toHaveLength(1);
+  delete options.failure;
+  await page.getByRole('button', { name: 'Gửi lại đúng yêu cầu', exact: true }).click();
+  await expect(page.getByTestId('allotments-saved')).toBeVisible();
+  expect(spy.puts()).toHaveLength(2);
+  expect(spy.puts()[1]).toBe(spy.puts()[0]);
+  expect(spy.keys()[1]).toBe(spy.keys()[0]);
+  expect(spy.ifMatch()[1]).toBe(spy.ifMatch()[0]);
+});
+test('412 fresh compare retains draft then explicit adoption uses newtag/newUUID', async ({
+  page,
+}) => {
+  const options: { etag: string; failure?: 'conflict' } = { etag: ETAG, failure: 'conflict' };
+  const spy = backend(page, options);
+  await openScreen(page);
+  await page.getByLabel('Hạn mức ngày 2026-12-24').fill('6');
+  await page.getByRole('button', { name: 'Lưu lô', exact: true }).click();
+  await expect(page.getByTestId('admin-conflict')).toBeVisible();
+  await page.getByRole('button', { name: 'Tải lại và so sánh', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Dùng phiên bản hiện tại để lưu bản nhập', exact: true }),
+  ).toBeEnabled();
+  await expect(page.getByLabel('Hạn mức ngày 2026-12-24')).toHaveValue('6');
+  expect(spy.puts()).toHaveLength(1);
+  delete options.failure;
+  await page
+    .getByRole('button', { name: 'Dùng phiên bản hiện tại để lưu bản nhập', exact: true })
+    .click();
+  await page.getByRole('button', { name: 'Lưu lô', exact: true }).click();
+  await expect(page.getByTestId('allotments-saved')).toBeVisible();
+  expect(spy.puts()).toHaveLength(2);
+  expect(spy.keys()[1]).not.toBe(spy.keys()[0]);
+  expect(spy.ifMatch()).toEqual([ETAG, '"8"']);
 });

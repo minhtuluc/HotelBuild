@@ -3,6 +3,7 @@
 /** Bảng allotment của SCR-25: mỗi dòng là một ngày kèm ô nhập hạn mức, mức đã dùng và cảnh báo. */
 import type { ReactElement } from 'react';
 import { t, type OperationsMessageKey } from '../../../lib/i18n';
+import { allotmentText } from './messages';
 import { rowIssue, type AllotmentDraftRow, type FieldIssue } from '../../../lib/allotments';
 
 export interface AllotmentRowView {
@@ -30,66 +31,76 @@ export function AllotmentTable({
   rows,
   sellingUnits,
   editable,
+  disabled = false,
   onChange,
 }: {
   rows: readonly AllotmentDraftRow[];
   sellingUnits: number | undefined;
   editable: boolean;
+  disabled?: boolean;
   onChange: (index: number, value: string) => void;
 }): ReactElement {
   return (
-    <table data-testid="allotments-table" style={{ borderCollapse: 'collapse' }}>
-      <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
-        {sellingUnits === undefined
-          ? t('allotments.captionNoUnits')
-          : t('allotments.caption', { units: sellingUnits })}
-      </caption>
-      <thead>
-        <tr>
-          <th scope="col" style={{ textAlign: 'start' }}>
-            {t('allotments.col.date')}
-          </th>
-          <th scope="col" style={{ textAlign: 'start' }}>
-            {t('allotments.col.allotment')}
-          </th>
-          <th scope="col" style={{ textAlign: 'start' }}>
-            {t('allotments.col.used')}
-          </th>
-          <th scope="col" style={{ textAlign: 'start' }}>
-            {t('allotments.col.warnings')}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, index) => {
-          const issue = rowIssue(row, sellingUnits);
-          return (
-            <tr
-              key={row.date}
-              data-testid={`allotment-row-${row.date}`}
-              data-issue={issue?.issue ?? ''}
-            >
-              <td>{row.date}</td>
-              <td>
-                {editable ? (
-                  <input
-                    name={`allotment-${row.date}`}
-                    aria-label={t('allotments.inputLabel', { date: row.date })}
-                    value={row.value}
-                    onChange={(event) => onChange(index, event.target.value)}
-                  />
-                ) : (
-                  row.value
-                )}
-              </td>
-              <td data-testid={`allotment-used-${row.date}`}>{row.used}</td>
-              <td data-testid={`allotment-issue-${row.date}`}>
-                {issue === null ? '' : issueLabel(issue)}
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+    <div
+      role="region"
+      aria-label={allotmentText('scroll')}
+      tabIndex={0}
+      style={{ maxWidth: '100%', overflowX: 'auto' }}
+    >
+      <table data-testid="allotments-table" style={{ borderCollapse: 'collapse' }}>
+        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
+          {sellingUnits === undefined
+            ? t('allotments.captionNoUnits')
+            : t('allotments.caption', { units: sellingUnits })}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" style={{ textAlign: 'start' }}>
+              {t('allotments.col.date')}
+            </th>
+            <th scope="col" style={{ textAlign: 'start' }}>
+              {t('allotments.col.allotment')}
+            </th>
+            <th scope="col" style={{ textAlign: 'start' }}>
+              {t('allotments.col.used')}
+            </th>
+            <th scope="col" style={{ textAlign: 'start' }}>
+              {t('allotments.col.warnings')}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => {
+            const issue = rowIssue(row, sellingUnits);
+            return (
+              <tr
+                key={row.date}
+                data-testid={`allotment-row-${row.date}`}
+                data-issue={issue?.issue ?? ''}
+              >
+                <td>{row.date}</td>
+                <td>
+                  {editable ? (
+                    <input
+                      disabled={disabled}
+                      name={`allotment-${row.date}`}
+                      aria-label={t('allotments.inputLabel', { date: row.date })}
+                      value={row.value}
+                      onChange={(event) => onChange(index, event.target.value)}
+                    />
+                  ) : (
+                    row.value || allotmentText('unconfigured')
+                  )}
+                </td>
+                <td data-testid={`allotment-used-${row.date}`}>{row.used ?? '—'}</td>
+                <td data-testid={`allotment-issue-${row.date}`}>
+                  {issue === null ? '' : issueLabel(issue)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

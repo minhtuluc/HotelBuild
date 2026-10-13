@@ -15,6 +15,7 @@ import { AdminController, type AdminPorts } from './controller';
 import type { AdminScope, AdminCommand } from './intent';
 import { completeCatalogue } from './catalogue';
 import { readBlocks, writeBlock, isBlockCommand } from './blocks';
+import { readAllotments, writeAllotments, type AllotmentSelection } from './allotment-api';
 function assertConnectionReceipt(
   data: RoomSummary,
   command: Extract<AdminCommand, { kind: 'connecting-update' }>,
@@ -27,7 +28,11 @@ function assertConnectionReceipt(
   )
     throw new ApiError({ kind: 'protocol', message: 'Mismatched or stale connection receipt' });
 }
-export function adminPorts(client: ApiClient, scope: AdminScope): AdminPorts {
+export function adminPorts(
+  client: ApiClient,
+  scope: AdminScope,
+  selection?: AllotmentSelection,
+): AdminPorts {
   return {
     actor: async (signal) =>
       (
@@ -39,7 +44,8 @@ export function adminPorts(client: ApiClient, scope: AdminScope): AdminPorts {
           maxAttempts: 1,
         })
       ).data,
-    read: async (signal) => {
+    read: async (signal, intent) => {
+      if (scope === 'allotment') return readAllotments(client, signal, selection, intent);
       if (scope === 'room-block') return readBlocks(client, signal);
       const properties =
         scope === 'connecting'
@@ -69,6 +75,8 @@ export function adminPorts(client: ApiClient, scope: AdminScope): AdminPorts {
     },
     write: async (command, idempotencyKey, signal) => {
       const headers = { 'x-session-request': '1' };
+      if (command.kind === 'allotment-put')
+        return writeAllotments(client, command, idempotencyKey, signal);
       if (isBlockCommand(command)) return writeBlock(client, command, idempotencyKey, signal);
       if (command.kind === 'connecting-update') {
         const data = (
@@ -123,7 +131,7 @@ export function adminPorts(client: ApiClient, scope: AdminScope): AdminPorts {
     },
   };
 }
-export function createAdminWorkspace(scope: AdminScope) {
+export function createAdminWorkspace(scope: AdminScope, selection?: AllotmentSelection) {
   let active = true,
     pinned: ApiClient | undefined,
     verified: string | undefined;
@@ -158,13 +166,13 @@ export function createAdminWorkspace(scope: AdminScope) {
   };
   const current = () => {
     if (!pinned) throw new ApiError({ kind: 'aborted', message: 'Session changed' });
-    return adminPorts(pinned, scope);
+    return adminPorts(pinned, scope, selection);
   };
   const controller = new AdminController({
     scope,
     ports: {
       actor,
-      read: (signal) => current().read(signal),
+      read: (signal, intent) => current().read(signal, intent),
       write: (...args) => current().write(...args),
     },
     storage: {
@@ -177,6 +185,12 @@ export function createAdminWorkspace(scope: AdminScope) {
   });
   return {
     controller,
+    select: (next: AllotmentSelection) => {
+      if (scope !== 'allotment' || !controller.resetRead()) return false;
+      selection = next;
+      void controller.load();
+      return true;
+    },
     dispose: () => {
       active = false;
       controller.dispose();

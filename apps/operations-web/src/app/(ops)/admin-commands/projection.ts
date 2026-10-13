@@ -3,6 +3,7 @@ import type { AdminData, AdminReceipt } from './controller';
 export function applyReceipt(data: AdminData | null, receipt: AdminReceipt): AdminData | null {
   if (!data) return null;
   if (
+    receipt.kind === 'allotment-put' ||
     receipt.kind === 'connecting-update' ||
     receipt.kind === 'room-block-create' ||
     receipt.kind === 'room-block-delete'
@@ -20,6 +21,10 @@ export function applyReceipt(data: AdminData | null, receipt: AdminReceipt): Adm
 }
 export function assertAcknowledgedProjection(data: AdminData, receipt: AdminReceipt | null): void {
   if (!receipt) return;
+  if (receipt.kind === 'allotment-put') {
+    assertAllotmentReadback(data, receipt);
+    return;
+  }
   if (receipt.kind === 'room-block-create' || receipt.kind === 'room-block-delete') {
     assertBlockReadback(data, receipt);
     return;
@@ -61,4 +66,18 @@ function assertBlockReadback(
   if (receipt.kind === 'room-block-create') return;
   if (data.blocks?.some((row) => row.id === receipt.id))
     throw new ApiError({ kind: 'protocol', message: 'Stale room block deletion readback' });
+}
+
+function assertAllotmentReadback(
+  data: AdminData,
+  receipt: Extract<AdminReceipt, { kind: 'allotment-put' }>,
+): void {
+  const read = data.allotment;
+  if (
+    !read ||
+    read.channelId !== receipt.channelId ||
+    read.roomTypeId !== receipt.roomTypeId ||
+    BigInt(read.tag.slice(1, -1)) < BigInt(receipt.tag.slice(1, -1))
+  )
+    throw new ApiError({ kind: 'protocol', message: 'Stale allotment readback' });
 }

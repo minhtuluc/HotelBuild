@@ -12,6 +12,8 @@ export interface JourneyOptions {
   origin?: string;
   /** Opt-in public field identifiers; never forward upstream prose or arbitrary details. */
   validationFields?: readonly string[];
+  /** Trusted opt-in for documented noncommitting409 validation codes; field whitelist still required. */
+  validationErrorCodes?: readonly string[];
   /** Trusted server composition only; a supplied resolver replaces the guest catalogue entirely. */
   routeResolver?: (request: Request) => JourneyRoute | undefined;
 }
@@ -82,14 +84,19 @@ function upstreamStatus(api: ApiError | undefined): number {
   const status = api?.status;
   return status !== undefined && status >= 400 && status <= 599 ? status : 502;
 }
+function additionalValidation(api: ApiError | undefined, options: JourneyOptions): boolean {
+  if (api?.status !== 409) return false;
+  return options.validationErrorCodes?.includes(api.knownCode ?? '') ?? false;
+}
 function publicDetails(api: ApiError | undefined, options: JourneyOptions) {
-  if (api?.status !== 400 && api?.status !== 422) return {};
-  const details = api.details
+  const extra = additionalValidation(api, options);
+  if (!extra && ![400, 422].includes(api?.status ?? 0)) return {};
+  const details = api?.details
     ?.filter(
       (item) =>
         options.validationFields?.includes(item.field) && /^[A-Z][A-Z0-9_]{0,63}$/.test(item.issue),
     )
-    .slice(0, 30);
+    .slice(0, extra ? 31 : 30);
   return details?.length ? { details } : {};
 }
 function failure(request: Request, error: unknown, options: JourneyOptions): Response {

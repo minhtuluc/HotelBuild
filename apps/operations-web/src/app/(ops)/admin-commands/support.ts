@@ -9,13 +9,21 @@ export function denial(error: unknown): 'expired' | 'forbidden' | null {
 export function conflict(error: unknown): boolean {
   return isApiError(error) && (error.status === 412 || error.status === 428);
 }
-export function validation(error: unknown): boolean {
-  return isApiError(error) && (error.status === 400 || error.status === 422);
+export function validation(error: unknown, scope?: AdminScope): boolean {
+  return (
+    isApiError(error) &&
+    (error.status === 400 ||
+      error.status === 422 ||
+      (scope === 'allotment' &&
+        error.status === 409 &&
+        error.code === 'E_INV_ALLOTMENT_EXCEEDS_ROOMS'))
+  );
 }
 export function writeAffordance(role: UserMe['role'], scope: AdminScope): boolean {
   return (
     role === 'OWNER' ||
-    ((scope === 'connecting' || scope === 'room-block') && role === 'MANAGER') ||
+    ((scope === 'connecting' || scope === 'room-block' || scope === 'allotment') &&
+      role === 'MANAGER') ||
     (scope === 'room-block' && role === 'FRONT_DESK')
   );
 }
