@@ -1,71 +1,22 @@
 import { ApiError, isApiError } from '@pinehill/api-client';
 import { applyReceipt, assertAcknowledgedProjection } from './projection';
-import type { PropertySummary, RoomTypeSummary, RoomSummary, UserMe } from '@pinehill/contracts';
 import {
   parseCommand,
   readAdminIntent,
   intentStorageKey,
   replayBeforeExpiry,
-  type AdminScope,
   type AdminCommand,
   type AdminIntent,
 } from './intent';
-export interface AdminData {
-  properties: readonly PropertySummary[];
-  roomTypes: readonly RoomTypeSummary[];
-  rooms?: readonly RoomSummary[];
-}
-export type AdminReceipt =
-  | { kind: 'property-update'; data: PropertySummary }
-  | { kind: 'room-type-create'; data: RoomTypeSummary }
-  | { kind: 'connecting-update'; data: RoomSummary };
-export interface AdminPorts {
-  actor(
-    signal: AbortSignal,
-  ): Promise<Pick<UserMe, 'userId' | 'role'> & { propertyScope?: readonly string[] }>;
-  read(signal: AbortSignal): Promise<AdminData>;
-  write(command: AdminCommand, id: string, signal: AbortSignal): Promise<AdminReceipt>;
-}
-interface Options {
-  ports: AdminPorts;
-  scope: AdminScope;
-  storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-  createId: () => string;
-  now: () => number;
-}
-export interface AdminState {
-  phase:
-    'loading' | 'ready' | 'error' | 'validation' | 'conflict' | 'unknown' | 'forbidden' | 'expired';
-  data: AdminData | null;
-  canWrite: boolean;
-  actorVerified: boolean;
-  actorRevision: number;
-  busy: boolean;
-  error: unknown;
-  receipt: AdminReceipt | null;
-  referenceId: string | null;
-  canCompare: boolean;
-  issues: readonly { field: string; issue: string }[];
-}
-function denial(error: unknown): 'expired' | 'forbidden' | null {
-  if (!isApiError(error)) return null;
-  if (error.status === 401) return 'expired';
-  return error.status === 403 ? 'forbidden' : null;
-}
-function conflict(error: unknown): boolean {
-  return isApiError(error) && (error.status === 412 || error.status === 428);
-}
-function validation(error: unknown): boolean {
-  return isApiError(error) && (error.status === 400 || error.status === 422);
-}
-function writeAffordance(role: UserMe['role'], scope: AdminScope): boolean {
-  return role === 'OWNER' || (scope === 'connecting' && role === 'MANAGER');
-}
+export type { AdminData, AdminReceipt, AdminPorts, AdminState } from './model';
+import type { AdminPorts, AdminState, AdminReceipt, Options } from './model';
+import { denial, conflict, validation, writeAffordance, commandAllowed } from './support';
 export class AdminController {
   state: AdminState = {
     phase: 'loading',
     data: null,
     canWrite: false,
+    canRemove: false,
     actorVerified: false,
     actorRevision: 0,
     busy: false,
@@ -108,6 +59,7 @@ export class AdminController {
       phase,
       data: null,
       canWrite: false,
+      canRemove: false,
       actorVerified: false,
       busy: false,
       error: null,
@@ -125,6 +77,7 @@ export class AdminController {
       phase: 'loading',
       data: null,
       canWrite: false,
+      canRemove: false,
       actorVerified: false,
       busy: false,
       error: null,
@@ -138,7 +91,7 @@ export class AdminController {
     this.abort.abort();
     this.listeners.clear();
   }
-  private async actor(stamp: number, writing = false): Promise<boolean> {
+  private async actor(stamp: number, writing = false, command?: AdminCommand): Promise<boolean> {
     const actor = await this.options.ports.actor(this.abort.signal);
     if (!this.current(stamp)) return false;
     if (this.ownerId !== undefined && actor.userId !== this.ownerId) {
@@ -148,8 +101,9 @@ export class AdminController {
     const changed = this.acceptContext(actor);
     this.ownerId = actor.userId;
     const canWrite = writeAffordance(actor.role, this.options.scope);
-    this.update({ canWrite, actorVerified: true });
-    if (writing && !canWrite) {
+    const canRemove = actor.role === 'MANAGER' || actor.role === 'OWNER';
+    this.update({ canWrite, canRemove, actorVerified: true });
+    if (writing && !commandAllowed(canWrite, canRemove, command)) {
       this.deny();
       return false;
     }
@@ -214,8 +168,10 @@ export class AdminController {
     this.update({ busy: true, error: null, canCompare: false });
     try {
       if (!(await this.actor(stamp))) return;
+      const revision = this.state.actorRevision;
       const data = await this.options.ports.read(this.abort.signal);
       if (!this.current(stamp)) return;
+      if (!(await this.verifyRead(stamp, revision))) return;
       assertAcknowledgedProjection(data, this.state.receipt);
       this.restore();
       this.update({
@@ -228,6 +184,12 @@ export class AdminController {
     } catch (error) {
       this.failure(error, stamp, false);
     }
+  }
+  private async verifyRead(stamp: number, revision: number): Promise<boolean> {
+    if (!(await this.actor(stamp))) return false;
+    if (revision !== this.state.actorRevision)
+      throw new ApiError({ kind: 'aborted', message: 'Catalogue scope changed during read' });
+    return true;
   }
   canStart(): boolean {
     return (
@@ -267,7 +229,7 @@ export class AdminController {
     const stamp = ++this.epoch;
     this.update({ busy: true, error: null, issues: [], receipt: null });
     try {
-      if (!(await this.actor(stamp, true))) return;
+      if (!(await this.actor(stamp, true, command))) return;
       this.restore();
       if (this.intent || this.corrupt) {
         this.update({ phase: 'unknown', busy: false, referenceId: this.intent?.key ?? null });
@@ -367,7 +329,7 @@ export class AdminController {
     const stamp = ++this.epoch;
     this.update({ busy: true, error: null });
     try {
-      if (await this.actor(stamp, true)) await this.send(intent, stamp);
+      if (await this.actor(stamp, true, intent.command)) await this.send(intent, stamp);
     } catch (error) {
       this.failure(error, stamp, false);
     }

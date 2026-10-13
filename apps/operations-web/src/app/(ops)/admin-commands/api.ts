@@ -14,6 +14,7 @@ import { createSessionClient } from '@pinehill/web-session/client';
 import { AdminController, type AdminPorts } from './controller';
 import type { AdminScope, AdminCommand } from './intent';
 import { completeCatalogue } from './catalogue';
+import { readBlocks, writeBlock, isBlockCommand } from './blocks';
 function assertConnectionReceipt(
   data: RoomSummary,
   command: Extract<AdminCommand, { kind: 'connecting-update' }>,
@@ -39,6 +40,7 @@ export function adminPorts(client: ApiClient, scope: AdminScope): AdminPorts {
         })
       ).data,
     read: async (signal) => {
+      if (scope === 'room-block') return readBlocks(client, signal);
       const properties =
         scope === 'connecting'
           ? []
@@ -67,6 +69,7 @@ export function adminPorts(client: ApiClient, scope: AdminScope): AdminPorts {
     },
     write: async (command, idempotencyKey, signal) => {
       const headers = { 'x-session-request': '1' };
+      if (isBlockCommand(command)) return writeBlock(client, command, idempotencyKey, signal);
       if (command.kind === 'connecting-update') {
         const data = (
           await client.request({

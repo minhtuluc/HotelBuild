@@ -29,10 +29,13 @@ const draft = (over: Partial<RoomBlockDraft> = {}): RoomBlockDraft => ({
 });
 
 describe('overlaps', () => {
-  it('tính cả hai biên (khoá là ngừng bán trong ngày)', () => {
-    expect(overlaps({ startDate: '2026-12-22', endDate: '2026-12-25' }, block())).toBe(true);
-    expect(overlaps({ startDate: '2026-12-20', endDate: '2026-12-20' }, block())).toBe(true);
-    expect(overlaps({ startDate: '2026-12-22', endDate: '2026-12-22' }, block())).toBe(true);
+  it('half-open API ranges: adjacent and empty intervals never overlap', () => {
+    expect(overlaps({ startDate: '2026-12-22', endDate: '2026-12-25' }, block())).toBe(false);
+    expect(overlaps({ startDate: '2026-12-18', endDate: '2026-12-20' }, block())).toBe(false);
+    expect(overlaps({ startDate: '2026-12-20', endDate: '2026-12-20' }, block())).toBe(false);
+    expect(overlaps({ startDate: '2026-12-21', endDate: '2026-12-21' }, block())).toBe(false);
+    expect(overlaps({ startDate: '2026-12-21', endDate: '2026-12-23' }, block())).toBe(true);
+    expect(overlaps({ startDate: '2026-12-19', endDate: '2026-12-21' }, block())).toBe(true);
   });
 
   it('không chồng khi rời hẳn về hai phía', () => {
@@ -69,8 +72,22 @@ describe('validateDraft', () => {
     ]);
   });
 
-  it('cùng ngày là hợp lệ (khoá một ngày)', () => {
-    expect(validateDraft(draft({ startDate: '2026-12-25', endDate: '2026-12-25' }))).toEqual([]);
+  it('equal-day request is rejected by the established API; one night ends the next day', () => {
+    expect(validateDraft(draft({ startDate: '2026-12-25', endDate: '2026-12-25' }))).toEqual([
+      { field: 'endDate', issue: 'BEFORE_START' },
+    ]);
+    expect(validateDraft(draft({ startDate: '2026-12-25', endDate: '2026-12-26' }))).toEqual([]);
+  });
+
+  it('impossible Gregorian dates do not create a request or overlap warning', () => {
+    for (const value of ['2026-02-30', '2025-02-29', '2026-13-01', '2026-12-32', '2026-1-01']) {
+      expect(validateDraft(draft({ startDate: value, endDate: '2027-01-01' }))).toContainEqual({
+        field: 'startDate',
+        issue: 'INVALID',
+      });
+      expect(conflictingBlocks(draft({ startDate: value }), [block()])).toEqual([]);
+    }
+    expect(validateDraft(draft({ startDate: '2028-02-29', endDate: '2028-03-01' }))).toEqual([]);
   });
 });
 

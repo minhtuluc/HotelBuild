@@ -1,18 +1,23 @@
 import {
+  roomBlockCreateRequestSchema,
+  roomBlockSchema,
   propertyUpdateRequestSchema,
   propertySummarySchema,
   roomSummarySchema,
   connectingRoomRequestSchema,
   roomTypeCreateRequestSchema,
+  type RoomBlockCreateRequest,
   type PropertyUpdateRequest,
   type RoomTypeCreateRequest,
   type ConnectingRoomRequest,
 } from '@pinehill/contracts';
-export type AdminScope = 'property' | 'room-type' | 'connecting';
+export type AdminScope = 'property' | 'room-type' | 'connecting' | 'room-block';
 export type AdminCommand =
   | { kind: 'property-update'; targetId: string; tag: string; body: PropertyUpdateRequest }
   | { kind: 'room-type-create'; body: RoomTypeCreateRequest }
-  | { kind: 'connecting-update'; targetId: string; tag: string; body: ConnectingRoomRequest };
+  | { kind: 'connecting-update'; targetId: string; tag: string; body: ConnectingRoomRequest }
+  | { kind: 'room-block-create'; body: RoomBlockCreateRequest }
+  | { kind: 'room-block-delete'; targetId: string; reason: string };
 export interface AdminIntent {
   ownerId: string;
   key: string;
@@ -29,6 +34,7 @@ function text(value: Record<string, unknown>, key: string): string {
 }
 export function parseCommand(value: unknown, scope: AdminScope): AdminCommand {
   if (!record(value)) throw Error('Invalid command');
+  if (scope === 'room-block') return parseBlock(value);
   if (scope === 'property' && value.kind === 'property-update') {
     const tag = text(value, 'tag');
     if (!/^"\d+"$/.test(tag)) throw Error('Invalid version');
@@ -73,4 +79,16 @@ export function readAdminIntent(raw: string, ownerId: string, scope: AdminScope)
 }
 export function replayBeforeExpiry(intent: AdminIntent, now: number): boolean {
   return now >= intent.createdAt && now - intent.createdAt < 86400000;
+}
+
+function parseBlock(value: Record<string, unknown>): AdminCommand {
+  if (value.kind === 'room-block-create')
+    return { kind: 'room-block-create', body: roomBlockCreateRequestSchema.parse(value.body) };
+  if (value.kind === 'room-block-delete')
+    return {
+      kind: 'room-block-delete',
+      targetId: roomBlockSchema.shape.id.parse(value.targetId),
+      reason: roomBlockCreateRequestSchema.shape.note.unwrap().trim().parse(value.reason),
+    };
+  throw Error('Wrong block command');
 }

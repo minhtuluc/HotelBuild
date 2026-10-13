@@ -174,6 +174,22 @@ Nếu GET lỗi giữ acknowledgement nhưng không hiện graph cũ như đã c
 editor/comparison cũ, ngăn gửi draft từ context cũ. Mất phản hồi giữ intent qua
 reload và chỉ replay đúng UUID/body/tag trước24h; role/scope bị thu hồi vẫn403.
 
+**SCR-22 (HB-039), transport production:** phiên staff cùng BFF đọc hết catalogue
+cơ sở/phòng/khoá trong phạm vi, xác minh WHO trước và sau lượt đọc; đổi vai trò,
+phạm vi hoặc principal thì bỏ dữ liệu/editor cũ. FRONT_DESK có affordance tạo;
+MANAGER/OWNER có tạo/gỡ; HOUSEKEEPING chỉ đọc theo endpoint hiện có. Override
+assignment và mọi phép tính tồn vẫn do HB-034 quyết định dưới khoá transaction.
+Khoảng ngày của API/CSDL/BR là `[startDate, endDate)` với `endDate > startDate`;
+màn phản ánh khoảng này, cảnh báo khi giao nhau thật, không cảnh báo hai khoảng
+chạm mép. Ghi chú inclusive/equal-day trong ticket UI cũ không đổi API đã có.
+POST nhận đúng201/RoomBlock, DELETE nhận đúng204 với `reason` trong query, không
+thêm If-Match cho endpoint chưa có version. UUID và thân/query tối thiểu gắn
+principal được lưu trước một lượt gửi; mất phản hồi vẫn unknown qua reload/GET
+và chỉ phát lại nguyên yêu cầu trong hạn. Receipt đã nhận vẫn giữ khi GET lỗi;
+danh sách không được phủ nhận receipt bằng readback cũ. 400/422 giữ bản nhập;
+phiên hết hạn/thu hồi quyền xoá cache/editor, token rotation cùng chủ thể được
+xác minh lại trước khi hiện bản nhập.
+
 ### 2.3. INV — Tồn phòng (3 UC)
 
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |
