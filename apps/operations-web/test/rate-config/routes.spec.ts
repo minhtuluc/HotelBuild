@@ -20,6 +20,9 @@ test('actual rate BFF and TCP preserve typed commands/privacy/errors with pretra
     guards: true,
     rowErrors: true,
     privateStripped: true,
+    largePolicy: true,
+    defaultBudget: true,
+    boundedPolicy: true,
   });
   expect(result.stdout).not.toContain('SYNTHETIC_PRIVATE');
 });

@@ -26,7 +26,13 @@ function access(request: Request, required: boolean): string | null {
   if (required && !token) fail(401, 'E_AUTH_INVALID_CREDENTIALS');
   return token;
 }
-async function readBody(request: Request): Promise<unknown> {
+function bodyBudget(route: JourneyRoute, options: JourneyOptions): number {
+  const limit = route.maxBodyBytes ?? 16384;
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1048576) throw new JourneyInputError();
+  if (limit > 16384 && (!options.routeResolver || !route.protected)) throw new JourneyInputError();
+  return limit;
+}
+async function readBody(request: Request, budget: number): Promise<unknown> {
   if (!request.body) throw new JourneyInputError();
   const reader = request.body.getReader();
   let size = 0;
@@ -36,7 +42,7 @@ async function readBody(request: Request): Promise<unknown> {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > 16384) throw new JourneyInputError();
+      if (size > budget) throw new JourneyInputError();
       chunks.push(value);
     }
     const bytes = new Uint8Array(size);
@@ -138,7 +144,9 @@ async function execute(request: Request, options: JourneyOptions): Promise<Respo
   const token = access(request, route.protected);
   const idempotencyKey = writeKey(request);
   const parsedQuery = query(request, route);
-  const body = route.body ? parseInput(route.body, await readBody(request)) : undefined;
+  const body = route.body
+    ? parseInput(route.body, await readBody(request, bodyBudget(route, options)))
+    : undefined;
   validatePaymentReturn(request, route, body, options);
   const ifMatch = request.headers.get('if-match');
   const spec: RequestBase = {

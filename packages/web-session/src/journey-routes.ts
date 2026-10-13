@@ -33,6 +33,8 @@ export interface JourneyRoute {
   protected: boolean;
   decoder?: Decoder<unknown>;
   body?: Decoder<unknown>;
+  /** Trusted protected route only; byte cap cannot exceed the API transport ceiling (1 MiB). */
+  maxBodyBytes?: number;
   query?: (input: Record<string, string>) => Record<string, QueryValue>;
 }
 export function parseInput<T>(decoder: Decoder<T>, input: unknown): T {

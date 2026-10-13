@@ -73,6 +73,8 @@ test('explicit412 adoption keeps the user deposit change and preserves concurren
     .getByRole('button', { name: 'Sửa', exact: true })
     .click();
   await page.getByLabel('Cọc (%)', { exact: true }).fill('40');
+  await page.getByLabel('Đêm tối thiểu', { exact: true }).fill('01');
+  await page.getByLabel('Đêm tối đa', { exact: true }).fill(' 007 ');
   await page.getByLabel('Lý do thay đổi', { exact: true }).fill('Synthetic compare');
   await page
     .getByTestId('rate-plan-editor')
@@ -92,6 +94,9 @@ test('explicit412 adoption keeps the user deposit change and preserves concurren
     .click();
   await expect(page.getByTestId('rate-plans-saved')).toBeVisible();
   expect(backend.plan()).toMatchObject({ depositPercent: 40, minNights: 2, maxNights: 9 });
+  expect(backend.writes).toHaveLength(2);
+  for (const write of backend.writes)
+    expect(JSON.parse(write.body)).toEqual({ depositPercent: 40, reason: 'Synthetic compare' });
 });
 test('logout clears private lists/editor, and360 layout stays within viewport with accessible tables', async ({
   page,

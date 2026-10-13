@@ -32,6 +32,7 @@ export async function PUT(request: Request): Promise<Response> {
             method: 'PUT',
             path: '/cancellation-policies/' + id,
             protected: true,
+            maxBodyBytes: 1048576, // Matches the existing Fastify API cap for full-list replacement.
             body,
             decoder: strictPolicy,
           }

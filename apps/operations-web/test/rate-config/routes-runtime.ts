@@ -8,6 +8,7 @@ import { plan, policy, command, policyCommand } from './fixture';
 delete process.env.SESSION_APP_ORIGIN;
 let count = 0,
   fail = false;
+let expectedPolicyBody = policyCommand.body;
 const server = createServer((request, response) => {
   void (async () => {
     count++;
@@ -48,7 +49,7 @@ const server = createServer((request, response) => {
             data: request.url?.includes('/rate-plans/admin') ? [plan] : [policy],
             meta: { limit: 100, total: 1, hasMore: false, nextCursor: null },
           };
-    if (request.method === 'PUT') assert.deepEqual(requestBody, policyCommand.body);
+    if (request.method === 'PUT') assert.deepEqual(requestBody, expectedPolicyBody);
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify(body));
   })().catch((error) => response.destroy(error instanceof Error ? error : undefined));
@@ -81,6 +82,35 @@ try {
   assert.equal(written.headers.get('cache-control'), 'no-store');
   const writtenBody: unknown = await written.json();
   assert.deepEqual(writtenBody, { ...policy, version: 2 });
+  const largeTiers = Array.from({ length: 300 }, (_, index) => ({
+    offsetHours: 298 - index,
+    hoursBeforeCheckIn: Math.max(0, 298 - index),
+    refundPercent: 0,
+    chargeFirstNight: false,
+  }));
+  expectedPolicyBody = { ...policyCommand.body, tiers: largeTiers };
+  assert(Buffer.byteLength(JSON.stringify(expectedPolicyBody)) > 16384);
+  assert.equal(
+    (await policyPut(make('cancellation-policies/' + policy.id, expectedPolicyBody))).status,
+    200,
+  );
+  const budgetCount = count;
+  const padded = (path: string, body: unknown, bytes: number) => {
+    const template = make(path, body);
+    return new Request(template.url, {
+      method: template.method,
+      headers: template.headers,
+      body: JSON.stringify(body).padEnd(bytes, ' '),
+    });
+  };
+  assert.equal((await planPut(padded('rate-plans/' + plan.id, command.body, 16385))).status, 400);
+  assert.equal(
+    (await policyPut(padded('cancellation-policies/' + policy.id, expectedPolicyBody, 1048577)))
+      .status,
+    400,
+  );
+  assert.equal(count, budgetCount);
+  expectedPolicyBody = policyCommand.body;
   const before = count;
   assert.equal((await plans(make('rate-plans/admin', {}, { authorization: '' }))).status, 404);
   assert.equal(
@@ -129,6 +159,9 @@ try {
       guards: true,
       rowErrors: true,
       privateStripped: true,
+      largePolicy: true,
+      defaultBudget: true,
+      boundedPolicy: true,
     }),
   );
 } finally {
