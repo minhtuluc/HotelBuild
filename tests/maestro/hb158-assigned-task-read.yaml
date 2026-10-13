@@ -1,0 +1,30 @@
+appId: vn.pinehill.operations
+---
+# Synthetic HOUSEKEEPING fixture: no password reset required, PIN already configured.
+# The app build points to that fixture API. No credential values are committed here.
+- launchApp:
+    clearState: true
+- assertVisible: "Đăng nhập Pine Hill"
+- tapOn:
+    id: "username"
+- inputText: "${STAFF_USERNAME}"
+- tapOn:
+    id: "password"
+- inputText: "${STAFF_PASSWORD}"
+- tapOn:
+    id: "login-submit"
+- tapOn:
+    id: "open-housekeeping"
+- assertVisible: "Nhiệm vụ buồng phòng của tôi"
+- tapOn:
+    id: "task-business-date"
+- eraseText
+- inputText: "2026-11-01"
+- hideKeyboard
+- tapOn:
+    id: "task-load"
+- assertVisible:
+    id: "task-list"
+- tapOn:
+    id: "task-back"
+- assertVisible: "Pine Hill — Vận hành"

@@ -8,8 +8,10 @@ import ChangePasswordScreen from './change-password';
 import PinSetupScreen from './pin-setup';
 import SelectPropertyScreen from './select-property';
 import HomeScreen from './home';
+import { HousekeepingReadScreen } from '../src/housekeeping/screen';
 
-type Stage = 'boot' | 'login' | 'changePassword' | 'pinSetup' | 'selectProperty' | 'home';
+type Stage =
+  'boot' | 'login' | 'changePassword' | 'pinSetup' | 'selectProperty' | 'home' | 'housekeeping';
 
 export default function RootScreen(): ReactElement {
   const session = useMemo(createSession, []);
@@ -91,5 +93,13 @@ export default function RootScreen(): ReactElement {
       />
     );
   }
-  return <HomeScreen session={session} onLogout={() => setStage('login')} />;
+  if (stage === 'housekeeping')
+    return <HousekeepingReadScreen session={session} onBack={() => setStage('home')} />;
+  return (
+    <HomeScreen
+      session={session}
+      onLogout={() => setStage('login')}
+      onTasks={() => setStage('housekeeping')}
+    />
+  );
 }

@@ -2,7 +2,7 @@
  * Phiên nhân viên Android (SCR-56). Quản lý access token (bộ nhớ) và refresh token (secure
  * storage); mở khoá PIN trả `pinToken` chỉ trong bộ nhớ. Logic thuần để test không cần UI.
  */
-import { ApiClient, createAuthApi, isApiError, type AuthApi } from '@pinehill/api-client';
+import { ApiClient, ApiError, createAuthApi, isApiError, type AuthApi } from '@pinehill/api-client';
 import type { UserMe } from '@pinehill/contracts';
 import type { KeyValueStorage } from './storage.js';
 import { SESSION_KEY } from './storage.js';
@@ -28,6 +28,8 @@ export class Session {
   private pinToken: string | null = null;
   private selectedPropertyId: string | null = null;
   private readonly auth: AuthApi;
+  private revision = 0;
+  private listeners = new Set<() => void>();
 
   constructor(private readonly deps: SessionDeps) {
     const client = new ApiClient({
@@ -43,6 +45,34 @@ export class Session {
     this.auth = createAuthApi(client);
   }
 
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+  private changed(): void {
+    this.revision++;
+    for (const listener of this.listeners) listener();
+  }
+  /** Pinned resource transport: no automatic401 replay and no token exported to a screen. */
+  resourceClient(): ApiClient {
+    const token = this.accessToken,
+      revision = this.revision;
+    return new ApiClient({
+      baseUrl: this.deps.baseUrl,
+      createId: this.deps.createId,
+      maxAttempts: 1,
+      getAccessToken: async () => {
+        await requireOnline(this.deps.netInfo);
+        if (this.revision !== revision || this.accessToken !== token)
+          throw new ApiError({ kind: 'aborted', message: 'Session changed' });
+        if (!token) throw new ApiError({ kind: 'http', status: 401, message: 'Expired' });
+        return token;
+      },
+      ...(this.deps.fetchImpl === undefined ? {} : { fetchImpl: this.deps.fetchImpl }),
+    });
+  }
   hasAccessToken(): boolean {
     return this.accessToken !== null;
   }
@@ -56,6 +86,7 @@ export class Session {
   /** Cơ sở đang làm việc (QĐ-03 quyết định 9) — chỉ giữ trong bộ nhớ phiên. */
   selectProperty(propertyId: string): void {
     this.selectedPropertyId = propertyId;
+    this.changed();
   }
 
   selectedProperty(): string | null {
@@ -71,6 +102,7 @@ export class Session {
     await requireOnline(this.deps.netInfo);
     const response = await this.auth.login({ username, password, clientSurface: 'OPS_ANDROID' });
     this.accessToken = response.data.accessToken;
+    this.changed();
     await this.deps.storage.set(SESSION_KEY, response.data.refreshToken);
     return { mustChangePassword: response.data.mustChangePassword === true };
   }
@@ -83,6 +115,7 @@ export class Session {
     try {
       const response = await this.auth.refresh(refreshToken);
       this.accessToken = response.data.accessToken;
+      this.changed();
       await this.deps.storage.set(SESSION_KEY, response.data.refreshToken);
       return true;
     } catch (error) {
@@ -104,6 +137,7 @@ export class Session {
     this.accessToken = null;
     this.pinToken = null;
     this.selectedPropertyId = null;
+    this.changed();
     await this.deps.storage.remove(SESSION_KEY);
   }
 

@@ -22,6 +22,7 @@ export const catalog = {
   'property.select': 'Chọn cơ sở đang làm việc',
   'property.open': 'Làm việc tại',
   'home.title': 'Pine Hill — Vận hành',
+  'home.tasks': 'Nhiệm vụ buồng phòng của tôi',
   'home.pinDemo': 'Thử thao tác cần PIN',
   'home.pinDemo.ok': 'Đã mở khoá PIN: {purpose}',
   'home.logout': 'Đăng xuất',

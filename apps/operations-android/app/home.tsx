@@ -9,9 +9,10 @@ import { t } from '../src/strings';
 export interface HomeScreenProps {
   session: Session;
   onLogout: () => void;
+  onTasks?: () => void;
 }
 
-export default function HomeScreen({ session, onLogout }: HomeScreenProps): ReactElement {
+export default function HomeScreen({ session, onLogout, onTasks }: HomeScreenProps): ReactElement {
   const [pinResult, setPinResult] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -44,6 +45,21 @@ export default function HomeScreen({ session, onLogout }: HomeScreenProps): Reac
       <Text style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}>
         {t('home.title')}
       </Text>
+      {onTasks ? (
+        <Pressable
+          testID="open-housekeeping"
+          accessibilityRole="button"
+          accessibilityLabel={t('home.tasks')}
+          onPress={onTasks}
+          style={{
+            minHeight: touchTargetDp,
+            justifyContent: 'center',
+            paddingHorizontal: space.s3,
+          }}
+        >
+          <Text style={{ color: color.primary }}>{t('home.tasks')}</Text>
+        </Pressable>
+      ) : null}
       <Pressable
         testID="pin-demo"
         accessibilityRole="button"
