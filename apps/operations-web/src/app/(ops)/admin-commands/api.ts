@@ -8,11 +8,24 @@ import {
   userMeSchema,
   roomSummarySchema,
   connectingRoomRequestSchema,
+  type RoomSummary,
 } from '@pinehill/contracts';
 import { createSessionClient } from '@pinehill/web-session/client';
 import { AdminController, type AdminPorts } from './controller';
-import type { AdminScope } from './intent';
+import type { AdminScope, AdminCommand } from './intent';
 import { completeCatalogue } from './catalogue';
+function assertConnectionReceipt(
+  data: RoomSummary,
+  command: Extract<AdminCommand, { kind: 'connecting-update' }>,
+): void {
+  if (
+    data.id !== command.targetId ||
+    data.connectingRoomId !== command.body.connectingRoomId ||
+    !Number.isSafeInteger(data.version) ||
+    BigInt(data.version) <= BigInt(command.tag.slice(1, -1))
+  )
+    throw new ApiError({ kind: 'protocol', message: 'Mismatched or stale connection receipt' });
+}
 export function adminPorts(client: ApiClient, scope: AdminScope): AdminPorts {
   return {
     actor: async (signal) =>
@@ -68,12 +81,7 @@ export function adminPorts(client: ApiClient, scope: AdminScope): AdminPorts {
             decoder: roomSummarySchema,
           })
         ).data;
-        if (
-          data.id !== command.targetId ||
-          data.connectingRoomId !== command.body.connectingRoomId ||
-          !Number.isSafeInteger(data.version)
-        )
-          throw new ApiError({ kind: 'protocol', message: 'Mismatched connection receipt' });
+        assertConnectionReceipt(data, command);
         return { kind: 'connecting-update', data };
       }
       if (command.kind === 'property-update') {

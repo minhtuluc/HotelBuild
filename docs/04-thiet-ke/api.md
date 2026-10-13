@@ -163,6 +163,17 @@ nhập, đọc mới và so sánh trước khi người dùng nhận version m�
 BFF chỉ chuyển tiếp chi tiết trường/mã kiểm tra đã allowlist, không chuyển prose
 hay header riêng upstream. Logout/denial xoá catalogue/receipt hiển thị.
 
+**SCR-21 (HB-038), transport production:** staff BFF đọc hết catalogue phòng/loại
+phòng trong scope và chuyển PUT liên kết với UUID/body/If-Match đã ghim. MANAGER
+hoặc OWNER hiển thị affordance ghi từ `/auth/me`; API vẫn kiểm quyền/scope khi
+execute và replay. Room version dùng đúng số nguyên an toàn microseconds, không
+làm tròn/chuyển thành version tăng1 ở UI. Receipt chỉ xác nhận nguồn đã ghi;
+xoá graph cũ rồi đọc lại server để hiển thị cả hai phía, không tự dựng đối ứng.
+Nếu GET lỗi giữ acknowledgement nhưng không hiện graph cũ như đã cập nhật.
+412 giữ lựa chọn và cần so sánh/adopt version; thay đổi scope được xác minh xoá
+editor/comparison cũ, ngăn gửi draft từ context cũ. Mất phản hồi giữ intent qua
+reload và chỉ replay đúng UUID/body/tag trước24h; role/scope bị thu hồi vẫn403.
+
 ### 2.3. INV — Tồn phòng (3 UC)
 
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |

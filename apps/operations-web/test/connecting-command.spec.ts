@@ -118,3 +118,44 @@ test('connection412 uses existing comparison fence before issuing new tag', asyn
   await s.c.save(command);
   expect(s.writes).toHaveLength(1);
 });
+
+test('equal version with contradictory connection in readback is a protocol error, not an updated graph', async () => {
+  const s = setup('OWNER');
+  await s.c.load();
+  s.ports.read = async () => ({
+    properties: [],
+    roomTypes: [],
+    rooms: [{ ...source, version: 1789876543123460 }, target],
+  });
+  await s.c.save(command);
+  expect(s.c.state.receipt?.kind).toBe('connecting-update');
+  expect(s.c.state.data).toBeNull();
+  expect(s.c.state.phase).toBe('error');
+});
+
+test('same MANAGER scope change clears old conflict comparison and advances editor context', async () => {
+  const s = setup();
+  s.ports.actor = async () => ({ userId: 'manager1', role: 'MANAGER', propertyScope: ['p1'] });
+  await s.c.load();
+  s.fail(new ApiError({ kind: 'http', status: 412, message: 'conflict' }));
+  await s.c.save(command);
+  expect(s.c.state.phase).toBe('conflict');
+  s.ports.actor = async () => ({ userId: 'manager1', role: 'MANAGER', propertyScope: ['p2'] });
+  s.ports.read = async () => ({ properties: [], roomTypes: [], rooms: [] });
+  await s.c.load();
+  expect(s.c.state.phase).toBe('ready');
+  expect(s.c.state.canCompare).toBe(false);
+  expect(s.c.state.actorRevision).toBe(1);
+  expect(s.c.state.data?.rooms).toEqual([]);
+});
+test('scope changes during fresh prewrite identity check do not send the stale draft', async () => {
+  const s = setup();
+  s.ports.actor = async () => ({ userId: 'manager1', role: 'MANAGER', propertyScope: ['p1'] });
+  await s.c.load();
+  s.ports.actor = async () => ({ userId: 'manager1', role: 'MANAGER', propertyScope: ['p2'] });
+  await s.c.save(command);
+  expect(s.writes).toHaveLength(0);
+  expect(s.c.state.actorRevision).toBe(1);
+  expect(s.c.state.error).toMatchObject({ kind: 'aborted' });
+  expect(s.c.state.data).toBeNull();
+});

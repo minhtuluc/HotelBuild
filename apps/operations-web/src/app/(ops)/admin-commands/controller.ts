@@ -1,4 +1,4 @@
-import { isApiError } from '@pinehill/api-client';
+import { ApiError, isApiError } from '@pinehill/api-client';
 import { applyReceipt, assertAcknowledgedProjection } from './projection';
 import type { PropertySummary, RoomTypeSummary, RoomSummary, UserMe } from '@pinehill/contracts';
 import {
@@ -39,6 +39,7 @@ export interface AdminState {
   data: AdminData | null;
   canWrite: boolean;
   actorVerified: boolean;
+  actorRevision: number;
   busy: boolean;
   error: unknown;
   receipt: AdminReceipt | null;
@@ -66,6 +67,7 @@ export class AdminController {
     data: null,
     canWrite: false,
     actorVerified: false,
+    actorRevision: 0,
     busy: false,
     error: null,
     receipt: null,
@@ -143,10 +145,7 @@ export class AdminController {
       this.deny();
       return false;
     }
-    const context = JSON.stringify([actor.role, [...(actor.propertyScope ?? [])].sort()]);
-    if (this.context !== undefined && this.context !== context)
-      this.update({ data: null, receipt: null });
-    this.context = context;
+    const changed = this.acceptContext(actor);
     this.ownerId = actor.userId;
     const canWrite = writeAffordance(actor.role, this.options.scope);
     this.update({ canWrite, actorVerified: true });
@@ -154,7 +153,33 @@ export class AdminController {
       this.deny();
       return false;
     }
+    if (writing && changed) {
+      this.update({
+        phase: 'error',
+        busy: false,
+        error: new ApiError({
+          kind: 'aborted',
+          message: 'Phiên hoặc phạm vi đã thay đổi. Tải lại trước khi nhập lệnh mới.',
+        }),
+      });
+      return false;
+    }
     return true;
+  }
+  private acceptContext(actor: Awaited<ReturnType<AdminPorts['actor']>>): boolean {
+    const context = JSON.stringify([actor.role, [...(actor.propertyScope ?? [])].sort()]);
+    const changed = this.context !== undefined && this.context !== context;
+    if (changed) {
+      this.comparison = false;
+      this.update({
+        data: null,
+        receipt: null,
+        canCompare: false,
+        actorRevision: this.state.actorRevision + 1,
+      });
+    }
+    this.context = context;
+    return changed;
   }
   private restore(): void {
     if (!this.ownerId) return;

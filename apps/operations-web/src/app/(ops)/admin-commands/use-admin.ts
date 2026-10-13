@@ -9,6 +9,7 @@ export function useAdmin(scope: AdminScope, enabled: boolean) {
     data: null,
     canWrite: false,
     actorVerified: false,
+    actorRevision: 0,
     busy: false,
     error: null,
     receipt: null,

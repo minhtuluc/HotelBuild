@@ -16,12 +16,7 @@ export function applyReceipt(data: AdminData | null, receipt: AdminReceipt): Adm
 export function assertAcknowledgedProjection(data: AdminData, receipt: AdminReceipt | null): void {
   if (!receipt) return;
   if (receipt.kind === 'connecting-update') {
-    const row = data.rooms?.find((room) => room.id === receipt.data.id);
-    if (!row || row.version < receipt.data.version)
-      throw new ApiError({
-        kind: 'protocol',
-        message: 'Connection readback is older than receipt',
-      });
+    assertConnectingReadback(data, receipt);
     return;
   }
   if (receipt.kind === 'property-update') {
@@ -32,4 +27,20 @@ export function assertAcknowledgedProjection(data: AdminData, receipt: AdminRece
     const row = data.roomTypes.find((item) => item.id === receipt.data.id);
     if (!row) throw new ApiError({ kind: 'protocol', message: 'Missing acknowledged projection' });
   }
+}
+
+function assertConnectingReadback(
+  data: AdminData,
+  receipt: Extract<AdminReceipt, { kind: 'connecting-update' }>,
+): void {
+  const row = data.rooms?.find((room) => room.id === receipt.data.id);
+  if (
+    !row ||
+    row.version < receipt.data.version ||
+    (row.version === receipt.data.version && row.connectingRoomId !== receipt.data.connectingRoomId)
+  )
+    throw new ApiError({
+      kind: 'protocol',
+      message: 'Connection readback is older than receipt',
+    });
 }
