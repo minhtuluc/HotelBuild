@@ -204,7 +204,7 @@ export class AdminController {
       throw new ApiError({ kind: 'aborted', message: 'Catalogue scope changed during read' });
     return true;
   }
-  canStart(): boolean {
+  canSelect(): boolean {
     return (
       this.alive &&
       !this.denied &&
@@ -213,11 +213,14 @@ export class AdminController {
       !this.intent &&
       !this.corrupt &&
       !this.comparison &&
-      (this.options.scope !== 'allotment' || !!this.state.data?.allotment)
+      (this.options.scope !== 'allotment' || (this.state.actorVerified && this.state.data !== null))
     );
   }
+  canStart(): boolean {
+    return this.canSelect() && (this.options.scope !== 'allotment' || !!this.state.data?.allotment);
+  }
   resetRead(): boolean {
-    if (!this.canStart()) return false;
+    if (!this.canSelect()) return false;
     this.epoch++;
     this.abort.abort();
     this.update({

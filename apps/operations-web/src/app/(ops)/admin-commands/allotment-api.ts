@@ -55,9 +55,11 @@ export async function readAllotments(
           range: intent.range,
         }
       : selection;
-  if (!properties.length || !roomTypes.length || !channels.length)
-    return { properties, roomTypes, channels };
-  const { type, channel } = selectPair({ properties, roomTypes, channels }, requested);
+  const catalogues = { properties, roomTypes, channels };
+  const chosen = normalizeSelection(catalogues, requested);
+  const pair = selectPair(catalogues, chosen);
+  if (!pair) return { ...catalogues, allotmentSelection: chosen };
+  const { type, channel } = pair;
   const query = allotmentQuerySchema.parse({
     channelId: channel.id,
     roomTypeId: type.id,
@@ -80,6 +82,12 @@ export async function readAllotments(
     properties,
     roomTypes,
     channels,
+    allotmentSelection: {
+      ...chosen,
+      propertyId: type.propertyId,
+      channelId: channel.id,
+      roomTypeId: type.id,
+    },
     allotment: {
       propertyId: type.propertyId,
       channelId: channel.id,
@@ -93,17 +101,17 @@ export async function readAllotments(
 function selectPair(
   data: AdminData,
   selection: AllotmentSelection,
-): { type: RoomTypeSummary; channel: ChannelSummary } {
-  const selected = selectedType(data.roomTypes, selection.roomTypeId);
-  const propertyId = selection.propertyId ?? selected?.propertyId ?? data.properties[0]?.id;
-  const type = selected ?? data.roomTypes.find((type) => type.propertyId === propertyId);
-  if (
-    !type ||
-    type.propertyId !== propertyId ||
-    !data.properties.some((row) => row.id === propertyId)
-  )
-    throw selectionError();
-  return { type, channel: selectChannel(data.channels ?? [], selection.channelId) };
+): { type: RoomTypeSummary; channel: ChannelSummary } | undefined {
+  const type = pairType(data, selection);
+  if (!type || !data.properties.some((row) => row.id === type.propertyId)) return undefined;
+  const channel = selectChannel(data.channels ?? [], selection.channelId);
+  return channel ? { type, channel } : undefined;
+}
+function pairType(data: AdminData, selection: AllotmentSelection): RoomTypeSummary | undefined {
+  const type = selection.roomTypeId
+    ? selectedType(data.roomTypes, selection.roomTypeId)
+    : data.roomTypes.find((row) => row.propertyId === selection.propertyId);
+  return type?.propertyId === selection.propertyId ? type : undefined;
 }
 function selectedType(
   types: readonly RoomTypeSummary[],
@@ -111,19 +119,36 @@ function selectedType(
 ): RoomTypeSummary | undefined {
   if (!id) return undefined;
   const type = types.find((row) => row.id === id);
-  if (!type) throw selectionError();
+  if (!type) return undefined;
   return type;
 }
 function selectChannel(
   channels: readonly ChannelSummary[],
   id: string | undefined,
-): ChannelSummary {
+): ChannelSummary | undefined {
   const channel = id ? channels.find((row) => row.id === id) : channels[0];
-  if (!channel) throw selectionError();
+  if (!channel) return undefined;
   return channel;
 }
-function selectionError() {
-  return new ApiError({ kind: 'http', status: 403, message: 'Selection no longer available' });
+function normalizeSelection(data: AdminData, requested: AllotmentSelection): AllotmentSelection {
+  const propertyId = defaultProperty(data, requested);
+  const channelId = requested.channelId ?? data.channels?.[0]?.id;
+  return {
+    range: requested.range,
+    ...(propertyId ? { propertyId } : {}),
+    ...(channelId ? { channelId } : {}),
+    ...(requested.roomTypeId ? { roomTypeId: requested.roomTypeId } : {}),
+  };
+}
+function defaultProperty(data: AdminData, requested: AllotmentSelection): string | undefined {
+  if (requested.propertyId) return requested.propertyId;
+  const type = selectedType(data.roomTypes, requested.roomTypeId);
+  if (type) return type.propertyId;
+  const available =
+    data.properties.find((property) =>
+      data.roomTypes.some((type) => type.propertyId === property.id),
+    ) ?? data.properties[0];
+  return available?.id;
 }
 function validateRows(page: ListPage<AllotmentRow>, dates: Set<string>): void {
   if (

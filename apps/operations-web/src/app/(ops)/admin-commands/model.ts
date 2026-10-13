@@ -14,6 +14,12 @@ export interface AdminData {
   rooms?: readonly RoomSummary[];
   blocks?: readonly RoomBlock[];
   channels?: readonly ChannelSummary[];
+  allotmentSelection?: {
+    propertyId?: string;
+    channelId?: string;
+    roomTypeId?: string;
+    range: { from: string; to: string };
+  };
   allotment?: {
     propertyId: string;
     channelId: string;

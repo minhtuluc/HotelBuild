@@ -12,14 +12,45 @@ export function AllotmentControls({
   onSelect: () => void;
 }): ReactElement {
   const { state, select, controller } = model,
-    current = state.data?.allotment;
+    current = state.data?.allotmentSelection ?? state.data?.allotment;
   const [pending, setPending] = useState(() => defaultRange(new Date()));
   useEffect(() => {
     if (current) setPending(current.range);
   }, [current?.range.from, current?.range.to]);
-  const data = state.data;
-  if (!data || !current || !controller || !select) return <></>;
-  const disabled = !controller.canStart();
+  if (!state.data || !current || !controller || !select) return <></>;
+  return (
+    <ControlsForm
+      data={state.data}
+      current={current}
+      controller={controller}
+      select={select}
+      pending={pending}
+      setPending={setPending}
+      onSelect={onSelect}
+    />
+  );
+}
+type Selection = import('../admin-commands/allotment-api').AllotmentSelection;
+type Data = import('../admin-commands/model').AdminData;
+type Controller = import('../admin-commands/controller').AdminController;
+function ControlsForm({
+  data,
+  current,
+  controller,
+  select,
+  pending,
+  setPending,
+  onSelect,
+}: {
+  data: Data;
+  current: Selection;
+  controller: Controller;
+  select: (next: Selection) => boolean;
+  pending: { from: string; to: string };
+  setPending: (range: { from: string; to: string }) => void;
+  onSelect: () => void;
+}): ReactElement {
+  const disabled = !controller.canSelect();
   const change = (next: import('../admin-commands/allotment-api').AllotmentSelection) => {
     if (select(next)) onSelect();
   };
@@ -38,56 +69,7 @@ export function AllotmentControls({
         if (select({ ...current, range: pending })) onSelect();
       }}
     >
-      <label>
-        {t('allotments.form.channel')}
-        <select
-          value={current.channelId}
-          disabled={disabled}
-          onChange={(event) => change({ ...current, channelId: event.target.value })}
-        >
-          {data.channels?.map((row) => (
-            <option key={row.id} value={row.id}>
-              {t(`enum.channelCode.${row.code}`)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        {t('allotments.form.property')}
-        <select
-          value={current.propertyId}
-          disabled={disabled}
-          onChange={(event) =>
-            change({
-              propertyId: event.target.value,
-              channelId: current.channelId,
-              range: current.range,
-            })
-          }
-        >
-          {data.properties.map((row) => (
-            <option key={row.id} value={row.id}>
-              {row.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        {t('allotments.form.roomType')}
-        <select
-          value={current.roomTypeId}
-          disabled={disabled}
-          onChange={(event) => change({ ...current, roomTypeId: event.target.value })}
-        >
-          {data.roomTypes
-            .filter((row) => row.propertyId === current.propertyId)
-            .map((row) => (
-              <option key={row.id} value={row.id}>
-                {row.code}
-              </option>
-            ))}
-        </select>
-      </label>
+      <Selectors data={data} current={current} disabled={disabled} change={change} />
       <label>
         {t('allotments.form.from')}
         <input
@@ -110,5 +92,73 @@ export function AllotmentControls({
         {t('allotments.form.load')}
       </button>
     </form>
+  );
+}
+
+function Selectors({
+  data,
+  current,
+  disabled,
+  change,
+}: {
+  data: Data;
+  current: Selection;
+  disabled: boolean;
+  change: (next: Selection) => void;
+}): ReactElement {
+  return (
+    <>
+      {' '}
+      <label>
+        {t('allotments.form.channel')}
+        <select
+          value={current.channelId ?? ''}
+          disabled={disabled}
+          onChange={(event) => change({ ...current, channelId: event.target.value })}
+        >
+          {data.channels?.map((row) => (
+            <option key={row.id} value={row.id}>
+              {t(`enum.channelCode.${row.code}`)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        {t('allotments.form.property')}
+        <select
+          value={current.propertyId ?? ''}
+          disabled={disabled}
+          onChange={(event) =>
+            change({
+              propertyId: event.target.value,
+              ...(current.channelId ? { channelId: current.channelId } : {}),
+              range: current.range,
+            })
+          }
+        >
+          {data.properties.map((row) => (
+            <option key={row.id} value={row.id}>
+              {row.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        {t('allotments.form.roomType')}
+        <select
+          value={current.roomTypeId ?? ''}
+          disabled={disabled}
+          onChange={(event) => change({ ...current, roomTypeId: event.target.value })}
+        >
+          {data.roomTypes
+            .filter((row) => row.propertyId === current.propertyId)
+            .map((row) => (
+              <option key={row.id} value={row.id}>
+                {row.code}
+              </option>
+            ))}
+        </select>
+      </label>
+    </>
   );
 }

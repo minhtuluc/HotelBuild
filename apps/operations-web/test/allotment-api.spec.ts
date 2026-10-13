@@ -130,3 +130,36 @@ test.each(['', 'invalid', '"0"', '"9007199254740993"', '"9223372036854775808"'])
     expect(s.calls).toHaveLength(1);
   },
 );
+
+test('authorized property without room types remains a selectable catalogue, not local403', async () => {
+  const client = new ApiClient({
+    baseUrl: 'https://synthetic.test/api/session/sys',
+    maxAttempts: 1,
+    fetchImpl: async (input) => {
+      const path = new URL(String(input)).pathname;
+      const data = path.endsWith('/properties')
+        ? [{ ...property, id: 'empty' }, property]
+        : path.endsWith('/room-types')
+          ? [type]
+          : [channel];
+      return Response.json({
+        data,
+        meta: { limit: 100, total: data.length, hasMore: false, nextCursor: null },
+      });
+    },
+  });
+  const ports = adminPorts(client, 'allotment', { propertyId: 'empty', range: cmd.range });
+  const result = await ports.read(new AbortController().signal);
+  expect(result.properties.map((row) => row.id)).toEqual(['empty', 'p1']);
+  expect(result.allotment).toBeUndefined();
+});
+
+test('a missing explicit room type never silently retargets GET to a different default type', async () => {
+  const s = setup();
+  const result = await s.ports.read(new AbortController().signal, {
+    ...cmd,
+    body: { ...cmd.body, roomTypeId: 'missing' },
+  });
+  expect(result.allotment).toBeUndefined();
+  expect(s.calls.some((call) => call.path.endsWith('/channel-allotments'))).toBe(false);
+});

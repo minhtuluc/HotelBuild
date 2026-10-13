@@ -86,6 +86,12 @@ export function validateDrafts(
   return issues;
 }
 
+/** A normalized equal value has no user change; invalid input remains owned by the editor. */
+export function unchangedDraft(row: AllotmentDraftRow): boolean {
+  if (row.original === undefined) return row.value === '';
+  return parseInteger(row.value) === row.original;
+}
+
 /** Ngày nào **thực sự đổi** so với lần đọc (AC4) — không gửi cả khoảng. */
 export function changedItems(
   rows: readonly AllotmentDraftRow[],

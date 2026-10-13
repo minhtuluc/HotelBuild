@@ -321,6 +321,9 @@ test('lost batch remains unknown after reload/read; manual replay keeps exactUUI
   expect(spy.puts()[1]).toBe(spy.puts()[0]);
   expect(spy.keys()[1]).toBe(spy.keys()[0]);
   expect(spy.ifMatch()[1]).toBe(spy.ifMatch()[0]);
+  await expect(page.getByLabel('Hạn mức ngày 2026-12-24')).toHaveValue('6');
+  await expect(page.getByLabel('Từ ngày', { exact: true })).toHaveValue('2026-12-24');
+  await expect(page.getByRole('combobox', { name: 'Kênh', exact: true })).toHaveValue('c1');
 });
 test('412 fresh compare retains draft then explicit adoption uses newtag/newUUID', async ({
   page,
@@ -346,4 +349,66 @@ test('412 fresh compare retains draft then explicit adoption uses newtag/newUUID
   expect(spy.puts()).toHaveLength(2);
   expect(spy.keys()[1]).not.toBe(spy.keys()[0]);
   expect(spy.ifMatch()).toEqual([ETAG, '"8"']);
+});
+
+test('an empty authorized property keeps its picker and can return to a valid pair', async ({
+  page,
+}) => {
+  backend(page);
+  await page.route(PROPERTIES, (route) =>
+    fulfillJson(
+      route,
+      200,
+      listBody([{ ...PROPERTY, id: 'empty', name: 'Synthetic unclassified' }, PROPERTY]),
+    ),
+  );
+  await openScreen(page);
+  const picker = page.getByRole('combobox', { name: 'Cơ sở', exact: true });
+  await picker.selectOption('empty');
+  await expect(picker).toBeEnabled();
+  await expect(picker).toHaveValue('empty');
+  await expect(page.getByTestId('allotments-table')).toHaveCount(0);
+  await picker.selectOption('p1');
+  await expect(page.getByLabel('Hạn mức ngày 2026-12-24')).toHaveValue('5');
+});
+test('conflict comparison/adoption does not send an untouched date changed by another writer', async ({
+  page,
+}) => {
+  const options: { etag: string; failure?: 'conflict' } = { etag: ETAG, failure: 'conflict' };
+  const spy = backend(page, options);
+  await openScreen(page);
+  await page.getByLabel('Hạn mức ngày 2026-12-24').fill('4');
+  await page.getByRole('button', { name: 'Lưu lô', exact: true }).click();
+  await expect(page.getByTestId('admin-conflict')).toBeVisible();
+  await page.route(ALLOTMENTS, async (route) => {
+    if (route.request().method() === 'PUT') return route.fallback();
+    const url = new URL(route.request().url()),
+      from = url.searchParams.get('from') ?? '',
+      to = url.searchParams.get('to') ?? '';
+    return withEtag(
+      route,
+      listBody(
+        ALLOTMENT_ROWS.map((row) =>
+          row.date === '2026-12-25' ? { ...row, allotment: 7 } : row,
+        ).filter((row) => row.date >= from && row.date <= to),
+      ),
+      '"8"',
+    );
+  });
+  await page.getByRole('button', { name: 'Tải lại và so sánh', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Dùng phiên bản hiện tại để lưu bản nhập', exact: true }),
+  ).toBeEnabled();
+  await expect(page.getByLabel('Hạn mức ngày 2026-12-24')).toHaveValue('4');
+  await expect(page.getByLabel('Hạn mức ngày 2026-12-25')).toHaveValue('7');
+  delete options.failure;
+  await page
+    .getByRole('button', { name: 'Dùng phiên bản hiện tại để lưu bản nhập', exact: true })
+    .click();
+  await page.getByRole('button', { name: 'Lưu lô', exact: true }).click();
+  await expect(page.getByTestId('allotments-saved')).toBeVisible();
+  expect(spy.puts()).toHaveLength(2);
+  expect(allotmentPutRequestSchema.parse(JSON.parse(spy.puts()[1]!)).items).toEqual([
+    { date: '2026-12-24', allotment: 4 },
+  ]);
 });

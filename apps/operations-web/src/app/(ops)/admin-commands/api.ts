@@ -172,7 +172,11 @@ export function createAdminWorkspace(scope: AdminScope, selection?: AllotmentSel
     scope,
     ports: {
       actor,
-      read: (signal, intent) => current().read(signal, intent),
+      read: async (signal, intent) => {
+        const data = await current().read(signal, intent);
+        if (data.allotmentSelection) selection = data.allotmentSelection;
+        return data;
+      },
       write: (...args) => current().write(...args),
     },
     storage: {

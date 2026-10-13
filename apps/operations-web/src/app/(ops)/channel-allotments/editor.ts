@@ -1,4 +1,4 @@
-import { emptyRowsFor, type AllotmentDraftRow } from '../../../lib/allotments';
+import { emptyRowsFor, unchangedDraft, type AllotmentDraftRow } from '../../../lib/allotments';
 import type { AdminState, AdminData } from '../admin-commands/model';
 export interface Editor {
   key: string;
@@ -24,10 +24,12 @@ export function displayRows(
   editor: Editor | null,
 ): readonly AllotmentDraftRow[] {
   if (!current) return [];
-  return (editor?.rows ?? emptyRowsFor(current.range, current.rows)).map((row) => ({
-    ...row,
-    used: current.rows.find((item) => item.date === row.date)?.used,
-  }));
+  const fresh = emptyRowsFor(current.range, current.rows);
+  if (!editor) return fresh;
+  return fresh.map((row) => {
+    const prior = editor.rows.find((item) => item.date === row.date);
+    return !prior || unchangedDraft(prior) ? row : { ...prior, used: row.used };
+  });
 }
 export function sellingUnits(state: AdminState, current: Current | undefined): number | undefined {
   return state.data?.roomTypes.find((type) => type.id === current?.roomTypeId)?.sellingUnits;

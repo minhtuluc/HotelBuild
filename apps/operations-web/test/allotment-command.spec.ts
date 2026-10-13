@@ -170,3 +170,17 @@ test('selection reset clears private rows/tag immediately and cannot retarget un
   expect(s.c.resetRead()).toBe(false);
   expect(s.c.state.phase).toBe('unknown');
 });
+
+test('verified empty authorized pair keeps selection available but cannot issue a quota command', async () => {
+  const s = setup();
+  s.ports.read = async () => ({
+    properties: [],
+    roomTypes: [],
+    channels: [],
+    allotmentSelection: { propertyId: 'empty', range: command.range },
+  });
+  await s.c.load();
+  expect(s.c.state.phase).toBe('ready');
+  expect(s.c.canStart()).toBe(false);
+  expect(s.c.resetRead()).toBe(true);
+});
