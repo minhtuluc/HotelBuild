@@ -9,6 +9,7 @@ import { RetryTransaction } from '../../../common/idempotency/transaction-retry.
 import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import { loadInventoryFacts } from '../facts/loader.js';
 import { inventoryError } from '../../prop/room-blocks/locks.js';
+import { assertLockedActor } from '../../prop/room-blocks/locked-actor.js';
 import { lockAllotmentScope, readAllotmentConfiguration, allotmentETag } from './scope.js';
 import { forbidden, missing, nextDate, writeInput } from './validation.js';
 import type { ReadInput, WriteInput } from './validation.js';
@@ -89,6 +90,7 @@ export class AllotmentsService {
           new AppError(409, 'E_INV_LOCK_TIMEOUT', 'Phạm vi tồn đã thay đổi; vui lòng thử lại.'),
         );
       await lockAllotmentScope(tx, input, expected);
+      await assertLockedActor(tx, actor, lockedScope.type.property_id);
       const capacity = await this.capacity(tx, input.roomTypeId);
       const details = input.items
         .filter((item) => item.allotment > capacity)
