@@ -153,6 +153,16 @@ Consumer đọc lại cấu hình mới cho các kênh đang mở bán; replay k
 lỗi outbox rollback cả value/audit. Gate producer không thay bằng chứng giao OTA
 của relay/consumer ở các ticket CHAN.
 
+**SCR-19/20 (HB-037), transport production:** ops dùng phiên staff và BFF cùng
+origin cho GET catalogue đầy đủ, PATCH Property và POST RoomType; role/scope do
+API quyết định, chỉ hiện affordance ghi từ OWNER trả bởi `/auth/me`. Trước ghi
+lưu intent UUID/body/If-Match theo principal, gửi một lần với CSRF marker; mất
+phản hồi giữ trạng thái chưa xác định qua reload, chỉ replay đúng intent trước
+24h. Đọc danh mục không chứng minh request riêng đã hoàn tất. 412/428 giữ bản
+nhập, đọc mới và so sánh trước khi người dùng nhận version mới. 422 giữ biểu mẫu;
+BFF chỉ chuyển tiếp chi tiết trường/mã kiểm tra đã allowlist, không chuyển prose
+hay header riêng upstream. Logout/denial xoá catalogue/receipt hiển thị.
+
 ### 2.3. INV — Tồn phòng (3 UC)
 
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |

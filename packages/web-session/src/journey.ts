@@ -10,6 +10,8 @@ import {
 export interface JourneyOptions {
   baseUrl: string;
   origin?: string;
+  /** Opt-in public field identifiers; never forward upstream prose or arbitrary details. */
+  validationFields?: readonly string[];
   /** Trusted server composition only; a supplied resolver replaces the guest catalogue entirely. */
   routeResolver?: (request: Request) => JourneyRoute | undefined;
 }
@@ -80,7 +82,17 @@ function upstreamStatus(api: ApiError | undefined): number {
   const status = api?.status;
   return status !== undefined && status >= 400 && status <= 599 ? status : 502;
 }
-function failure(request: Request, error: unknown): Response {
+function publicDetails(api: ApiError | undefined, options: JourneyOptions) {
+  if (api?.status !== 400 && api?.status !== 422) return {};
+  const details = api.details
+    ?.filter(
+      (item) =>
+        options.validationFields?.includes(item.field) && /^[A-Z][A-Z0-9_]{0,63}$/.test(item.issue),
+    )
+    .slice(0, 30);
+  return details?.length ? { details } : {};
+}
+function failure(request: Request, error: unknown, options: JourneyOptions): Response {
   const api = error instanceof ApiError ? error : undefined;
   const invalid = error instanceof JourneyInputError;
   const status = invalid ? 400 : upstreamStatus(api);
@@ -93,6 +105,7 @@ function failure(request: Request, error: unknown): Response {
       traceId: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
       path: new URL(request.url).pathname,
+      ...publicDetails(api, options),
       ...(api?.retryAfterSeconds === undefined ? {} : { retryAfterSeconds: api.retryAfterSeconds }),
     },
     { status, headers },
@@ -157,7 +170,7 @@ export function createJourneyHandler(options: JourneyOptions) {
     try {
       return await execute(request, options);
     } catch (error) {
-      return failure(request, error);
+      return failure(request, error, options);
     }
   };
 }

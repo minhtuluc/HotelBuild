@@ -2,6 +2,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { errorBody, fulfillJson, listBody } from './fake-api';
 import { operationsWebOnly } from './guard';
+import {logoutCollectionStaff} from './collect-fixture';
+import {loginRefundStaff} from './refund-fixture';
 
 const PROPERTY = {
   id: 'p1',
@@ -31,10 +33,11 @@ const ROOM_TYPE = {
 /** Sàn cao hơn trần — máy chủ sẽ chặn, giao diện chỉ nhắc (BR-RATE-03, BR-RATE-04). */
 const BROKEN_ROOM_TYPE = { ...ROOM_TYPE, id: 'rt2', code: 'BAD', minPrice: 2_000_000, maxPrice: 1_000_000 };
 
-const PROPERTIES = '**/api/v1/properties';
-const ROOM_TYPES = '**/api/v1/room-types*';
+const PROPERTIES = '**/api/session/sys/properties?*';
+const ROOM_TYPES = '**/api/session/sys/room-types*';
 
 operationsWebOnly();
+test.beforeEach(async({page,request})=>{await loginRefundStaff(page,request,'OWNER');});
 
 async function mockReads(page: Page, rows: readonly unknown[]): Promise<void> {
   await page.route(PROPERTIES, (route) => fulfillJson(route, 200, listBody([PROPERTY])));
@@ -154,4 +157,12 @@ test.describe('SCR-20 loại phòng, sức chứa và sàn–trần trên API gi
     );
     expect(blocking.map((violation) => violation.id)).toEqual([]);
   });
+});
+
+test('MANAGER readonly catalogue hides create affordance',async({page,request})=>{
+ await loginRefundStaff(page,request,'MANAGER');await mockReads(page,[ROOM_TYPE]);await page.goto('/room-types');await expect(page.getByTestId('room-types-table')).toBeVisible();await expect(page.getByRole('button',{name:'Thêm loại phòng',exact:true})).toHaveCount(0);
+});
+test('logout from another tab removes room-type catalogue and draft',async({page})=>{
+ await mockReads(page,[ROOM_TYPE]);await page.goto('/room-types');await expect(page.getByTestId('room-types-table')).toBeVisible();await page.getByRole('button',{name:'Thêm loại phòng',exact:true}).click();
+ const other=await page.context().newPage();await logoutCollectionStaff(other);await expect(page.getByText('Phiên đã hết hạn.')).toBeVisible();await expect(page.getByTestId('room-types-table')).toHaveCount(0);await expect(page.getByTestId('room-type-form')).toHaveCount(0);await other.close();
 });

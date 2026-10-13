@@ -28,7 +28,9 @@ export function RoomTypeForm({
   onChange,
   onSubmit,
   onCancel,
+  disabled,
 }: {
+  disabled: boolean;
   draft: RoomTypeDraft;
   properties: readonly PropertySummary[];
   onChange: (next: RoomTypeDraft) => void;
@@ -52,7 +54,10 @@ export function RoomTypeForm({
       onSubmit={onSubmit}
       style={{ display: 'grid', gap: 'var(--space-s2, 8px)', maxWidth: 420 }}
     >
-      <fieldset style={{ display: 'grid', gap: 'var(--space-s2, 8px)', border: 0, padding: 0 }}>
+      <fieldset
+        disabled={disabled}
+        style={{ display: 'grid', gap: 'var(--space-s2, 8px)', border: 0, padding: 0 }}
+      >
         <legend>{t('roomTypes.form.legend')}</legend>
         <label style={{ display: 'grid', gap: 4 }}>
           {t('roomTypes.form.property')}
@@ -122,10 +127,10 @@ export function RoomTypeForm({
         ))}
       </ul>
       <div style={{ display: 'flex', gap: 'var(--space-s2, 8px)' }}>
-        <button type="submit" style={{ minHeight: 44 }}>
+        <button disabled={disabled} type="submit" style={{ minHeight: 44 }}>
           {t('roomTypes.form.submit')}
         </button>
-        <button type="button" onClick={onCancel} style={{ minHeight: 44 }}>
+        <button disabled={disabled} type="button" onClick={onCancel} style={{ minHeight: 44 }}>
           {t('roomTypes.form.cancel')}
         </button>
       </div>

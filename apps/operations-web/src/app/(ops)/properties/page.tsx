@@ -1,5 +1,4 @@
 import { Suspense, type ReactElement } from 'react';
-import { webEnv } from '../../../config';
 import { PropertiesScreen } from './properties-screen';
 
 /**
@@ -11,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export default function PropertiesPage(): ReactElement {
   return (
     <Suspense fallback={null}>
-      <PropertiesScreen baseUrl={webEnv().NEXT_PUBLIC_API_BASE_URL} />
+      <PropertiesScreen />
     </Suspense>
   );
 }

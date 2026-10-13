@@ -5,15 +5,14 @@
  * sửa qua `PATCH /properties/{id}` với `If-Match` theo phiên bản đang hiển thị.
  * Quyền vẫn do server quyết định: giao diện chỉ phản ánh `403` (BR-RBAC-01, BR-RBAC-02).
  */
-import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
-import { createPropertyApi, isApiError } from '@pinehill/api-client';
+import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import type { PropertySummary, PropertyUpdateRequest } from '@pinehill/contracts';
-import { StateSurface, formatStatusWithEnum, type ScreenState } from '@pinehill/ui-web';
-import { ScreenAlert } from '../../../components/screen-alert';
+import { StateSurface, formatStatusWithEnum } from '@pinehill/ui-web';
 import { useForcedState } from '../../../components/forced-state';
-import { opsApiClient } from '../../../lib/api';
 import { t } from '../../../lib/i18n';
-import { readFailureState, writeFailureState } from '../../../lib/screen-state';
+import { useAdmin } from '../admin-commands/use-admin';
+import { AdminPanels } from '../admin-commands/panels';
+import { adminText } from '../admin-commands/messages';
 
 interface Draft {
   row: PropertySummary;
@@ -23,11 +22,6 @@ interface Draft {
   checkInTime: string;
   checkOutTime: string;
   reason: string;
-}
-
-interface Saved {
-  name: string;
-  version: number;
 }
 
 function draftOf(row: PropertySummary): Draft {
@@ -63,7 +57,9 @@ function ifMatchOf(version: number): string {
 function PropertyTable({
   rows,
   onEdit,
+  canEdit,
 }: {
+  canEdit: boolean;
   rows: readonly PropertySummary[];
   onEdit: (row: PropertySummary) => void;
 }): ReactElement {
@@ -106,9 +102,11 @@ function PropertyTable({
               </td>
               <td>{row.version}</td>
               <td>
-                <button type="button" onClick={() => onEdit(row)} style={{ minHeight: 44 }}>
-                  {t('properties.edit')}
-                </button>
+                {canEdit ? (
+                  <button type="button" onClick={() => onEdit(row)} style={{ minHeight: 44 }}>
+                    {t('properties.edit')}
+                  </button>
+                ) : null}
               </td>
             </tr>
           ))}
@@ -123,7 +121,9 @@ function PropertyEditor({
   onChange,
   onSubmit,
   onCancel,
+  disabled,
 }: {
+  disabled: boolean;
   draft: Draft;
   onChange: (next: Draft) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -152,7 +152,10 @@ function PropertyEditor({
       onSubmit={onSubmit}
       style={{ display: 'grid', gap: 'var(--space-s2, 8px)', maxWidth: 420 }}
     >
-      <fieldset style={{ display: 'grid', gap: 'var(--space-s2, 8px)', border: 0, padding: 0 }}>
+      <fieldset
+        disabled={disabled}
+        style={{ display: 'grid', gap: 'var(--space-s2, 8px)', border: 0, padding: 0 }}
+      >
         <legend>
           {t('properties.form.legend', { name: draft.row.name, version: draft.row.version })}
         </legend>
@@ -203,10 +206,10 @@ function PropertyEditor({
         )}
       </fieldset>
       <div style={{ display: 'flex', gap: 'var(--space-s2, 8px)' }}>
-        <button type="submit" style={{ minHeight: 44 }}>
+        <button disabled={disabled} type="submit" style={{ minHeight: 44 }}>
           {t('properties.form.save')}
         </button>
-        <button type="button" onClick={onCancel} style={{ minHeight: 44 }}>
+        <button disabled={disabled} type="button" onClick={onCancel} style={{ minHeight: 44 }}>
           {t('properties.form.cancel')}
         </button>
       </div>
@@ -214,116 +217,124 @@ function PropertyEditor({
   );
 }
 
-export function PropertiesScreen({ baseUrl }: { baseUrl: string }): ReactElement {
-  const forced = useForcedState();
-  const [state, setState] = useState<ScreenState>({ kind: 'loading' });
-  const [rows, setRows] = useState<readonly PropertySummary[]>([]);
+function usePropertyEditor(enabled: boolean) {
+  const { controller, state } = useAdmin('property', enabled);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [saved, setSaved] = useState<Saved | null>(null);
-  const [readError, setReadError] = useState<unknown>(null);
-
-  const load = useCallback(async (): Promise<void> => {
-    setReadError(null);
-    try {
-      const page = await createPropertyApi(opsApiClient(baseUrl)).list();
-      setRows(page.data.data);
-      setState(
-        page.data.data.length === 0
-          ? { kind: 'empty', reason: 'noData', canCreate: false }
-          : { kind: 'ready' },
-      );
-    } catch (caught) {
-      const mapped = isApiError(caught) ? readFailureState(caught) : undefined;
-      if (mapped !== undefined) {
-        setState(mapped);
-        return;
-      }
-      // Giữ nguyên nội dung đã có; băng lỗi nói rõ chưa đọc được thay vì hiện "chưa có dữ liệu".
-      setReadError(caught);
-      setState({ kind: 'ready' });
-    }
-  }, [baseUrl]);
-
   useEffect(() => {
-    if (forced !== undefined) return;
-    void load();
-  }, [forced, load]);
-
-  const submit = async (): Promise<void> => {
-    if (draft === null) return;
-    if (draft.reason.trim() === '') {
-      setState({ kind: 'validationError', details: [{ field: 'reason', issue: 'REQUIRED' }] });
+    if (!state.canWrite) setDraft(null);
+  }, [state.canWrite]);
+  useEffect(() => {
+    if (state.receipt?.kind === 'property-update') setDraft(null);
+  }, [state.receipt]);
+  const rows = state.data?.properties ?? [];
+  const saved = state.receipt?.kind === 'property-update' ? state.receipt.data : null;
+  const current = rows.find((row) => row.id === draft?.row.id);
+  const submit = async () => {
+    if (!draft || !controller) return;
+    if (!draft.reason.trim()) {
+      controller.validation([{ field: 'reason', issue: 'REQUIRED' }]);
       return;
     }
-    const version = draft.row.version;
-    try {
-      const updated = await createPropertyApi(opsApiClient(baseUrl)).update(
-        draft.row.id,
-        changedFields(draft),
-        ifMatchOf(version),
-      );
-      setRows((current) => current.map((row) => (row.id === updated.data.id ? updated.data : row)));
-      setSaved({ name: updated.data.name, version: updated.data.version });
-      setDraft(null);
-      setState({ kind: 'ready' });
-    } catch (caught) {
-      setState(
-        writeFailureState(caught, {
-          attemptedVersion: String(version),
-          onReload: () => void load(),
-          onLookup: () => void load(),
-        }),
-      );
-    }
+    await controller.save({
+      kind: 'property-update',
+      targetId: draft.row.id,
+      tag: ifMatchOf(draft.row.version),
+      body: changedFields(draft),
+    });
   };
-
-  if (forced !== undefined) {
+  const adopt = () => {
+    if (!draft || !current || !state.canCompare) return;
+    setDraft({ ...draft, row: { ...draft.row, version: current.version } });
+    controller?.adoptVersion();
+  };
+  return { controller, state, draft, setDraft, rows, saved, current, submit, adopt };
+}
+type PropertyModel = ReturnType<typeof usePropertyEditor>;
+function PropertyBody({ model }: { model: PropertyModel }): ReactElement {
+  const { controller, state, draft, setDraft, rows, saved, submit } = model;
+  return (
+    <>
+      {saved ? (
+        <p role="status" data-testid="save-success" style={{ margin: 0 }}>
+          {t('properties.saved', { name: saved.name, version: saved.version })}
+        </p>
+      ) : null}
+      {rows.length ? (
+        <PropertyTable
+          rows={rows}
+          canEdit={state.canWrite && !!controller?.canStart()}
+          onEdit={(row) => {
+            controller?.clearValidation();
+            setDraft(draftOf(row));
+          }}
+        />
+      ) : null}
+      {draft ? (
+        <PropertyEditor
+          draft={draft}
+          disabled={state.busy || !controller?.canStart()}
+          onChange={setDraft}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
+          onCancel={() => {
+            setDraft(null);
+            controller?.clearValidation();
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+function PropertyComparison({ model }: { model: PropertyModel }): ReactElement | null {
+  const { state, current, adopt } = model;
+  if (state.phase !== 'conflict' || !state.canCompare || !current) return null;
+  return (
+    <div data-testid="admin-comparison">
+      <p>{adminText('current', { version: current.version, name: current.name })}</p>
+      <button type="button" disabled={state.busy} onClick={adopt} style={{ minHeight: 44 }}>
+        {adminText('adopt')}
+      </button>
+    </div>
+  );
+}
+export function PropertiesScreen(): ReactElement {
+  const forced = useForcedState();
+  const model = usePropertyEditor(forced === undefined);
+  const { state, controller, draft } = model;
+  if (forced !== undefined)
     return (
       <StateSurface state={forced}>
         <p>{t('screen.demo')}</p>
       </StateSurface>
     );
-  }
-
   return (
     <section
-      style={{ padding: 'var(--space-s6, 24px)', display: 'grid', gap: 'var(--space-s4, 16px)' }}
+      style={{
+        padding: 'var(--space-s6, 24px)',
+        display: 'grid',
+        gap: 'var(--space-s4, 16px)',
+        minWidth: 0,
+      }}
     >
       <h1 style={{ margin: 0 }}>{t('properties.title')}</h1>
       <p style={{ margin: 0 }}>{t('properties.intro')}</p>
       <button
         type="button"
-        onClick={() => {
-          // Mốc "cập nhật lúc" chỉ để hiển thị ở giao diện, không phải thời gian nghiệp vụ.
-          setState({ kind: 'refreshing', updatedAt: new Date().toISOString(), stale: false });
-          void load();
-        }}
+        disabled={state.busy}
+        onClick={() => void controller?.load()}
         style={{ minHeight: 44, justifySelf: 'start' }}
       >
         {t('properties.reload')}
       </button>
-      <StateSurface state={state}>
-        {saved === null ? null : (
-          <p role="status" data-testid="save-success" style={{ margin: 0 }}>
-            {t('properties.saved', { name: saved.name, version: saved.version })}
-          </p>
-        )}
-        {readError === null ? null : <ScreenAlert error={readError} onRetry={() => void load()} />}
-        {rows.length === 0 ? null : (
-          <PropertyTable rows={rows} onEdit={(row) => setDraft(draftOf(row))} />
-        )}
-        {draft === null ? null : (
-          <PropertyEditor
-            draft={draft}
-            onChange={setDraft}
-            onSubmit={(event) => {
-              event.preventDefault();
-              void submit();
-            }}
-            onCancel={() => setDraft(null)}
-          />
-        )}
-      </StateSurface>
+      <AdminPanels
+        state={state}
+        controller={controller}
+        version={String(draft?.row.version ?? 'mới')}
+      />
+      <PropertyComparison model={model} />
+      <PropertyBody model={model} />
     </section>
   );
 }

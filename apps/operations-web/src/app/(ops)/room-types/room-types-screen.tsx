@@ -5,18 +5,17 @@
  * Đọc `GET /room-types` (lọc theo cơ sở) và tạo mới bằng `POST /room-types`.
  * Cảnh báo sàn–trần ở giao diện chỉ để nhắc; máy chủ vẫn là nơi chặn (BR-RATE-03, BR-RATE-04).
  */
-import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
-import { createPropertyApi, isApiError } from '@pinehill/api-client';
-import type { PropertySummary, RoomTypeSummary } from '@pinehill/contracts';
-import { StateSurface, formatMoney, type ScreenState } from '@pinehill/ui-web';
-import { ScreenAlert } from '../../../components/screen-alert';
+import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
+import type { RoomTypeSummary } from '@pinehill/contracts';
+import { StateSurface, formatMoney } from '@pinehill/ui-web';
 import { useForcedState } from '../../../components/forced-state';
-import { opsApiClient } from '../../../lib/api';
 import { t } from '../../../lib/i18n';
-import { readFailureState, writeFailureState } from '../../../lib/screen-state';
 import { roomTypePriceWarnings, type RoomTypePriceWarning } from '../../../lib/room-type-warnings';
 import { RoomTypeForm } from './room-type-form';
 import { EMPTY_ROOM_TYPE_DRAFT, toRoomTypeRequest, type RoomTypeDraft } from './room-type-draft';
+
+import { useAdmin } from '../admin-commands/use-admin';
+import { AdminPanels } from '../admin-commands/panels';
 
 const WARNING_LABELS: Readonly<Record<RoomTypePriceWarning, string>> = {
   floorAboveCeiling: t('roomTypes.warn.floorAboveCeiling'),
@@ -79,134 +78,105 @@ function RoomTypeTable({ rows }: { rows: readonly RoomTypeSummary[] }): ReactEle
   );
 }
 
-export function RoomTypesScreen({ baseUrl }: { baseUrl: string }): ReactElement {
-  const forced = useForcedState();
-  const [state, setState] = useState<ScreenState>({ kind: 'loading' });
-  const [properties, setProperties] = useState<readonly PropertySummary[]>([]);
-  const [rows, setRows] = useState<readonly RoomTypeSummary[]>([]);
+function useRoomTypeEditor(enabled: boolean) {
+  const { controller, state } = useAdmin('room-type', enabled);
   const [draft, setDraft] = useState<RoomTypeDraft | null>(null);
-  const [created, setCreated] = useState<string | null>(null);
-  const [readError, setReadError] = useState<unknown>(null);
-
-  const load = useCallback(async (): Promise<void> => {
-    setReadError(null);
-    try {
-      const api = createPropertyApi(opsApiClient(baseUrl));
-      const [propertyPage, roomTypePage] = await Promise.all([api.list(), api.listRoomTypes()]);
-      setProperties(propertyPage.data.data);
-      setRows(roomTypePage.data.data);
-      setState(
-        roomTypePage.data.data.length === 0
-          ? {
-              kind: 'empty',
-              reason: 'noData',
-              canCreate: true,
-              onCreate: () => setDraft(EMPTY_ROOM_TYPE_DRAFT),
-            }
-          : { kind: 'ready' },
-      );
-    } catch (caught) {
-      const mapped = isApiError(caught) ? readFailureState(caught) : undefined;
-      if (mapped !== undefined) {
-        setState(mapped);
-        return;
-      }
-      setReadError(caught);
-      setState({ kind: 'ready' });
-    }
-  }, [baseUrl]);
-
   useEffect(() => {
-    if (forced !== undefined) return;
-    void load();
-  }, [forced, load]);
-
-  const submit = async (): Promise<void> => {
-    if (draft === null) return;
+    if (!state.canWrite) setDraft(null);
+  }, [state.canWrite]);
+  useEffect(() => {
+    if (state.receipt?.kind === 'room-type-create') setDraft(null);
+  }, [state.receipt]);
+  const properties = state.data?.properties ?? [];
+  const rows = state.data?.roomTypes ?? [];
+  const created = state.receipt?.kind === 'room-type-create' ? state.receipt.data.code : null;
+  const submit = async () => {
+    if (!draft || !controller) return;
     const parsed = toRoomTypeRequest(draft);
     if ('invalid' in parsed) {
-      setState({
-        kind: 'validationError',
-        details: parsed.invalid.map((field) => ({ field, issue: 'REQUIRED' })),
-      });
+      controller.validation(parsed.invalid.map((field) => ({ field, issue: 'REQUIRED' })));
       return;
     }
-    try {
-      const createdRoomType = await createPropertyApi(opsApiClient(baseUrl)).createRoomType(
-        parsed.input,
-      );
-      setCreated(createdRoomType.data.code);
-      setDraft(null);
-      await load();
-    } catch (caught) {
-      setState(
-        writeFailureState(caught, {
-          attemptedVersion: 'mới',
-          onReload: () => void load(),
-          onLookup: () => void load(),
-        }),
-      );
-    }
+    await controller.save({ kind: 'room-type-create', body: parsed.input });
   };
-
-  if (forced !== undefined) {
+  return { controller, state, draft, setDraft, properties, rows, created, submit };
+}
+type RoomTypeModel = ReturnType<typeof useRoomTypeEditor>;
+function RoomTypeBody({ model }: { model: RoomTypeModel }): ReactElement {
+  const { controller, state, created, rows, draft, properties, setDraft, submit } = model;
+  return (
+    <>
+      {created ? (
+        <p role="status" data-testid="create-success" style={{ margin: 0 }}>
+          {t('roomTypes.created', { code: created })}
+        </p>
+      ) : null}
+      {rows.length ? <RoomTypeTable rows={rows} /> : null}
+      {draft ? (
+        <RoomTypeForm
+          draft={draft}
+          properties={properties}
+          disabled={state.busy || !controller?.canStart()}
+          onChange={setDraft}
+          onSubmit={(event: FormEvent<HTMLFormElement>) => {
+            event.preventDefault();
+            void submit();
+          }}
+          onCancel={() => {
+            setDraft(null);
+            controller?.clearValidation();
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+export function RoomTypesScreen(): ReactElement {
+  const forced = useForcedState();
+  const model = useRoomTypeEditor(forced === undefined);
+  const { state, controller, setDraft } = model;
+  if (forced !== undefined)
     return (
       <StateSurface state={forced}>
         <p>{t('screen.demo')}</p>
       </StateSurface>
     );
-  }
-
   return (
     <section
-      style={{ padding: 'var(--space-s6, 24px)', display: 'grid', gap: 'var(--space-s4, 16px)' }}
+      style={{
+        padding: 'var(--space-s6, 24px)',
+        display: 'grid',
+        gap: 'var(--space-s4, 16px)',
+        minWidth: 0,
+      }}
     >
       <h1 style={{ margin: 0 }}>{t('roomTypes.title')}</h1>
       <p style={{ margin: 0 }}>{t('roomTypes.intro')}</p>
       <div style={{ display: 'flex', gap: 'var(--space-s2, 8px)' }}>
         <button
           type="button"
-          onClick={() => {
-            // Mốc "cập nhật lúc" chỉ để hiển thị ở giao diện, không phải thời gian nghiệp vụ.
-            setState({ kind: 'refreshing', updatedAt: new Date().toISOString(), stale: false });
-            void load();
-          }}
+          disabled={state.busy}
+          onClick={() => void controller?.load()}
           style={{ minHeight: 44 }}
         >
           {t('roomTypes.reload')}
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            setCreated(null);
-            setDraft(EMPTY_ROOM_TYPE_DRAFT);
-          }}
-          style={{ minHeight: 44 }}
-        >
-          {t('roomTypes.create')}
-        </button>
-      </div>
-      <StateSurface state={state}>
-        {created === null ? null : (
-          <p role="status" data-testid="create-success" style={{ margin: 0 }}>
-            {t('roomTypes.created', { code: created })}
-          </p>
-        )}
-        {readError === null ? null : <ScreenAlert error={readError} onRetry={() => void load()} />}
-        {rows.length === 0 ? null : <RoomTypeTable rows={rows} />}
-        {draft === null ? null : (
-          <RoomTypeForm
-            draft={draft}
-            properties={properties}
-            onChange={setDraft}
-            onSubmit={(event: FormEvent<HTMLFormElement>) => {
-              event.preventDefault();
-              void submit();
+        {state.canWrite ? (
+          <button
+            type="button"
+            disabled={!controller?.canStart()}
+            onClick={() => {
+              controller?.clearValidation();
+              setDraft(EMPTY_ROOM_TYPE_DRAFT);
             }}
-            onCancel={() => setDraft(null)}
-          />
-        )}
-      </StateSurface>
+            style={{ minHeight: 44 }}
+          >
+            {t('roomTypes.create')}
+          </button>
+        ) : null}
+      </div>
+      <AdminPanels state={state} controller={controller} />
+      <RoomTypeBody model={model} />
     </section>
   );
 }

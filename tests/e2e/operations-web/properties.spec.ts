@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { errorBody, fulfillJson, listBody } from './fake-api';
 import { operationsWebOnly } from './guard';
+import {loginRefundStaff} from './refund-fixture';
 
 const PROPERTY = {
   id: 'p1',
@@ -14,10 +15,11 @@ const PROPERTY = {
   version: 3,
 };
 
-const LIST = '**/api/v1/properties';
-const PATCH = '**/api/v1/properties/p1';
+const LIST = '**/api/session/sys/properties?*';
+const PATCH = '**/api/session/sys/properties/p1';
 
 operationsWebOnly();
+test.beforeEach(async({page,request})=>{await loginRefundStaff(page,request,'OWNER');});
 
 test.describe('SCR-19 cơ sở trên API giả (HB-037)', () => {
   test('hiện danh sách cơ sở', async ({ page }) => {
@@ -123,4 +125,22 @@ test.describe('SCR-19 cơ sở trên API giả (HB-037)', () => {
     );
     expect(blocking.map((violation) => violation.id)).toEqual([]);
   });
+});
+
+test('OWNER unknown survives reload; lookup is not proof and only exact key/body/version replay resolves',async({page})=>{
+ let current=PROPERTY;const attempts:{key:string|undefined;tag:string|undefined;body:string}[]=[];
+ await page.route(LIST,r=>fulfillJson(r,200,listBody([current])));
+ await page.route(PATCH,async r=>{attempts.push({key:r.request().headers()['idempotency-key'],tag:r.request().headers()['if-match'],body:r.request().postData()??''});current={...PROPERTY,version:4};if(attempts.length===1)return r.abort('failed');return fulfillJson(r,200,JSON.stringify(current));});
+ await page.goto('/properties');await page.getByRole('button',{name:'Sửa',exact:true}).click();await page.getByLabel('Lý do thay đổi').fill('  Original reason  ');await page.getByRole('button',{name:'Lưu',exact:true}).click();await expect(page.getByTestId('admin-unknown')).toBeVisible();
+ await page.reload();await expect(page.getByTestId('admin-unknown')).toBeVisible();await expect(page.getByRole('button',{name:'Sửa',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'Tra cứu kết quả',exact:true}).click();await expect(page.getByTestId('admin-unknown')).toBeVisible();expect(attempts).toHaveLength(1);
+ await page.getByRole('button',{name:'Gửi lại đúng yêu cầu',exact:true}).click();await expect(page.getByTestId('save-success')).toContainText('phiên bản 4');expect(attempts).toHaveLength(2);expect(attempts[1]).toEqual(attempts[0]);expect(JSON.parse(attempts[0]!.body).reason).toBe('  Original reason  ');
+});
+
+test('412 compare/adopt retains user delta and does not overwrite colleague fields',async({page})=>{
+ let current=PROPERTY;const bodies:unknown[]=[];const tags:(string|undefined)[]=[];
+ await page.route(LIST,r=>fulfillJson(r,200,listBody([current])));
+ await page.route(PATCH,async r=>{const body=JSON.parse(r.request().postData()??'{}');bodies.push(body);tags.push(r.request().headers()['if-match']);if(bodies.length===1){current={...PROPERTY,version:4,checkOutTime:'11:00'};return fulfillJson(r,412,errorBody('E_GEN_VERSION_CONFLICT','conflict','/properties/p1'));}current={...current,...body,version:5};return fulfillJson(r,200,JSON.stringify(current));});
+ await page.goto('/properties');await page.getByRole('button',{name:'Sửa',exact:true}).click();await page.getByLabel('Tên cơ sở').fill('Edited name');await page.getByLabel('Lý do thay đổi').fill('Keep my delta');await page.getByRole('button',{name:'Lưu',exact:true}).click();await expect(page.getByTestId('admin-conflict')).toBeVisible();await expect(page.getByLabel('Tên cơ sở')).toHaveValue('Edited name');
+ await page.getByRole('button',{name:'Tải lại và so sánh',exact:true}).click();await expect(page.getByTestId('admin-comparison')).toContainText('4');await page.getByRole('button',{name:'Dùng phiên bản hiện tại để lưu bản nhập',exact:true}).click();await page.getByRole('button',{name:'Lưu',exact:true}).click();await expect(page.getByTestId('save-success')).toContainText('5');expect(tags).toEqual(['"3"','"4"']);expect(bodies[1]).toEqual({name:'Edited name',reason:'Keep my delta'});await expect(page.getByTestId('properties-table')).toContainText('11:00');
 });
