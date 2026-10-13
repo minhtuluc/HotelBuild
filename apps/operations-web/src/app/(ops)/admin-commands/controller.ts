@@ -192,7 +192,7 @@ export class AdminController {
       busy: true,
       error: null,
       canCompare: false,
-      ...(this.options.scope === 'allotment' ? { data: null } : {}),
+      ...(['allotment', 'rate-config'].includes(this.options.scope) ? { data: null } : {}),
     });
   }
   private readCommand(): AdminCommand | undefined {
@@ -213,7 +213,8 @@ export class AdminController {
       !this.intent &&
       !this.corrupt &&
       !this.comparison &&
-      (this.options.scope !== 'allotment' || (this.state.actorVerified && this.state.data !== null))
+      (!['allotment', 'rate-config'].includes(this.options.scope) ||
+        (this.state.actorVerified && this.state.data !== null))
     );
   }
   canStart(): boolean {

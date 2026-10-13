@@ -13,6 +13,8 @@ import {
 import { createSessionClient } from '@pinehill/web-session/client';
 import { AdminController, type AdminPorts } from './controller';
 import type { AdminScope, AdminCommand } from './intent';
+import { readRates, writeRate } from './rate-api';
+import { isRateCommand } from './rate-intent';
 import { completeCatalogue } from './catalogue';
 import { readBlocks, writeBlock, isBlockCommand } from './blocks';
 import { readAllotments, writeAllotments, type AllotmentSelection } from './allotment-api';
@@ -45,6 +47,7 @@ export function adminPorts(
         })
       ).data,
     read: async (signal, intent) => {
+      if (scope === 'rate-config') return readRates(client, signal);
       if (scope === 'allotment') return readAllotments(client, signal, selection, intent);
       if (scope === 'room-block') return readBlocks(client, signal);
       const properties =
@@ -74,6 +77,7 @@ export function adminPorts(
       return { properties, roomTypes, ...(rooms ? { rooms } : {}) };
     },
     write: async (command, idempotencyKey, signal) => {
+      if (isRateCommand(command)) return writeRate(client, command, idempotencyKey, signal);
       const headers = { 'x-session-request': '1' };
       if (command.kind === 'allotment-put')
         return writeAllotments(client, command, idempotencyKey, signal);

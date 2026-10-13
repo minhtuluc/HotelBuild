@@ -89,12 +89,9 @@ describe('validateTiers — validate theo hàng (AC3, BR-RATE-20)', () => {
     });
   });
 
-  it('vượt 4 bậc thì chặn; rỗng thì chặn', () => {
-    expect(validateTiers(rows([168, 100], [72, 50], [24, 0], [12, 0], [0, 0]))).toContainEqual({
-      index: 4,
-      field: 'hoursBeforeCheckIn',
-      issue: 'TOO_MANY',
-    });
+  // BR-RATE-20 has no four-tier cap; match published HB057 and retain empty rejection.
+  it('năm bậc đúng BR được chấp nhận; rỗng thì chặn', () => {
+    expect(validateTiers(rows([168, 100], [72, 50], [24, 0], [12, 0], [0, 0]))).toEqual([]);
     expect(validateTiers([])).toEqual([{ index: -1, field: 'hoursBeforeCheckIn', issue: 'EMPTY' }]);
   });
 });

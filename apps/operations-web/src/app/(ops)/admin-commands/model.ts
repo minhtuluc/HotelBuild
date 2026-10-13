@@ -6,9 +6,13 @@ import type {
   UserMe,
   ChannelSummary,
   AllotmentRow,
+  RatePlanAdmin,
+  CancellationPolicy,
 } from '@pinehill/contracts';
 import type { AdminCommand, AdminScope } from './intent';
 export interface AdminData {
+  ratePlans?: readonly RatePlanAdmin[];
+  policies?: readonly CancellationPolicy[];
   properties: readonly PropertySummary[];
   roomTypes: readonly RoomTypeSummary[];
   rooms?: readonly RoomSummary[];
@@ -30,6 +34,8 @@ export interface AdminData {
   };
 }
 export type AdminReceipt =
+  | { kind: 'rate-plan-put'; id: string; priorVersion: number }
+  | { kind: 'policy-put'; data: CancellationPolicy }
   | { kind: 'property-update'; data: PropertySummary }
   | { kind: 'room-type-create'; data: RoomTypeSummary }
   | { kind: 'connecting-update'; data: RoomSummary }

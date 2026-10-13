@@ -130,7 +130,7 @@ classDiagram
     Money ..> Ratio : nhân hệ số
     PricingEngine ..> StayPeriod
     CancellationPolicyEngine --> CancellationPolicy : tra bậc
-    CancellationPolicy *-- "1..4" CancellationTierRule : tiers
+    CancellationPolicy *-- "1..*" CancellationTierRule : tiers
     CancellationPolicyEngine ..> CancellationDecision
     CancellationPolicyEngine ..> Money : hoàn & phụ thu
 ```

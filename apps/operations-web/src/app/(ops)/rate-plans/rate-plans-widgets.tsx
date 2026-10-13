@@ -5,12 +5,7 @@ import type { FormEvent, ReactElement } from 'react';
 import type { CancellationPolicy, RatePlanAdmin } from '@pinehill/contracts';
 import { formatStatusWithEnum } from '@pinehill/ui-web';
 import { t } from '../../../lib/i18n';
-import {
-  validateTiers,
-  type CancellationPolicyDraft,
-  type DiffRow,
-  type RatePlanDraft,
-} from '../../../lib/rate-plans';
+import { type DiffRow, type RatePlanDraft } from '../../../lib/rate-plans';
 
 /** Lỗi theo bậc do server trả (`E_RATE_CONFIGURATION_INVALID` đã trích chỉ số). */
 export interface ServerTierIssue {
@@ -22,6 +17,10 @@ export interface ServerTierIssue {
 export type Conflict =
   | { kind: 'ratePlan'; entity: RatePlanAdmin; diff: DiffRow[] }
   | { kind: 'policy'; entity: CancellationPolicy; diff: DiffRow[] };
+
+import { wireOffset } from '../../../lib/rate-policy-tiers';
+import { rateText as rs } from './messages-session';
+export { PolicyEditor } from './policy-editor';
 
 const FIELD_STYLE = { display: 'grid', gap: 4 } as const;
 
@@ -41,31 +40,43 @@ export function ConflictPanel({
       style={{ border: '1px solid var(--color-border)' }}
     >
       <p style={{ margin: 0 }}>{t('ratePlans.conflict.title')}</p>
-      <table style={{ borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            <th scope="col" style={{ textAlign: 'start' }}>
-              {t('ratePlans.conflict.local')}
-            </th>
-            <th scope="col" style={{ textAlign: 'start' }}>
-              {t('ratePlans.conflict.server')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {conflict.diff.map((row) => (
-            <tr key={row.label}>
-              <td data-testid={`diff-local-${row.label}`}>{row.local}</td>
-              <td data-testid={`diff-server-${row.label}`}>{row.server}</td>
+      {conflict.kind === 'policy' ? <p>{rs('keepPolicy')}</p> : null}
+      <div
+        role="region"
+        tabIndex={0}
+        aria-label={t('ratePlans.conflict.title')}
+        style={{ maxWidth: '100%', overflowX: 'auto' }}
+      >
+        <table style={{ borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th scope="col">{rs('field')}</th>
+              <th scope="col" style={{ textAlign: 'start' }}>
+                {t('ratePlans.conflict.local')}
+              </th>
+              <th scope="col" style={{ textAlign: 'start' }}>
+                {t('ratePlans.conflict.server')}
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {conflict.diff.map((row) => (
+              <tr key={row.label}>
+                <th scope="row">{fieldLabel(row.label)}</th>
+                <td data-testid={`diff-local-${row.label}`}>{fieldValue(row.label, row.local)}</td>
+                <td data-testid={`diff-server-${row.label}`}>
+                  {fieldValue(row.label, row.server)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <button type="button" onClick={onUseServer}>
         {t('ratePlans.conflict.useServer')}
       </button>
       <button type="button" onClick={onKeep}>
-        {t('ratePlans.conflict.keepEditing')}
+        {rs('adoptLocal')}
       </button>
     </div>
   );
@@ -164,17 +175,15 @@ export function PolicyList({
                 <th scope="col" style={{ textAlign: 'start' }}>
                   {t('ratePlans.col.refund')}
                 </th>
+                <th scope="col">{rs('firstNight')}</th>
               </tr>
             </thead>
             <tbody>
               {policy.tiers.map((tier) => (
-                <tr key={`${tier.hoursBeforeCheckIn}-${tier.refundPercent}`}>
-                  <td>
-                    {tier.hoursBeforeCheckIn === 0
-                      ? t('ratePlans.catchAll')
-                      : `${tier.hoursBeforeCheckIn}h`}
-                  </td>
+                <tr key={wireOffset(tier)}>
+                  <td>{wireOffset(tier) === -1 ? rs('catchAll') : `${wireOffset(tier)}h`}</td>
                   <td>{tier.refundPercent}%</td>
+                  <td>{tier.chargeFirstNight ? rs('yes') : rs('no')}</td>
                 </tr>
               ))}
             </tbody>
@@ -290,122 +299,30 @@ export function RatePlanEditor({
   );
 }
 
-export function PolicyEditor({
-  draft,
-  serverIssues,
-  onCancel,
-  onChange,
-  onSubmit,
-}: {
-  draft: CancellationPolicyDraft;
-  serverIssues: readonly ServerTierIssue[];
-  onCancel: () => void;
-  onChange: (draft: CancellationPolicyDraft) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-}): ReactElement {
-  const localIssues = validateTiers(draft.tiers);
-  const issueAt = (index: number): string | null => {
-    const local = localIssues.find((issue) => issue.index === index);
-    if (local !== undefined) return local.issue;
-    const server = serverIssues.find((issue) => issue.index === index);
-    return server?.issue ?? null;
+function fieldLabel(field: string): string {
+  const names: Record<string, string> = {
+    depositPercent: t('ratePlans.form.deposit'),
+    minNights: t('ratePlans.form.minNights'),
+    maxNights: t('ratePlans.form.maxNights'),
+    cancellationPolicyId: t('ratePlans.form.policy'),
+    status: t('ratePlans.form.status'),
+    earlyCheckoutFreeHours: t('ratePlans.form.earlyFreeHours'),
+    earlyCheckoutRefundPct: t('ratePlans.form.earlyRefundPct'),
   };
-  const setTier = (
-    index: number,
-    row: { hoursBeforeCheckIn?: string; refundPercent?: string },
-  ): void => {
-    const tiers = draft.tiers.map((current, i) => (i === index ? { ...current, ...row } : current));
-    onChange({ ...draft, tiers });
-  };
-  const removeTier = (index: number): void => {
-    onChange({ ...draft, tiers: draft.tiers.filter((_, i) => i !== index) });
-  };
-  const addTier = (): void => {
-    onChange({ ...draft, tiers: [...draft.tiers, { hoursBeforeCheckIn: '', refundPercent: '' }] });
-  };
-  return (
-    <form
-      data-testid="policy-editor"
-      onSubmit={onSubmit}
-      style={{ display: 'grid', gap: 'var(--space-s2, 8px)' }}
-    >
-      <legend>
-        {t('ratePlans.form.legend.policy', { name: draft.id, version: draft.version })}
-      </legend>
-      {draft.tiers.map((tier, index) => {
-        const issue = issueAt(index);
-        return (
-          <div
-            key={index}
-            data-testid={`tier-row-${index}`}
-            data-issue={issue ?? ''}
-            style={{
-              display: 'flex',
-              gap: 'var(--space-s2, 8px)',
-              alignItems: 'end',
-              border: issue === null ? undefined : '1px solid var(--color-danger, red)',
-            }}
-          >
-            <label style={FIELD_STYLE}>
-              {t('ratePlans.form.hours')}
-              <input
-                name={`hoursBeforeCheckIn-${index}`}
-                value={tier.hoursBeforeCheckIn}
-                onChange={(event) => setTier(index, { hoursBeforeCheckIn: event.target.value })}
-              />
-            </label>
-            <label style={FIELD_STYLE}>
-              {t('ratePlans.form.refund')}
-              <input
-                name={`refundPercent-${index}`}
-                value={tier.refundPercent}
-                onChange={(event) => setTier(index, { refundPercent: event.target.value })}
-              />
-            </label>
-            {tier.hoursBeforeCheckIn.trim() === '0' ? <span>{t('ratePlans.catchAll')}</span> : null}
-            {issue === null ? null : <span role="alert">{issue}</span>}
-            <button type="button" onClick={() => removeTier(index)}>
-              {t('ratePlans.removeTier')}
-            </button>
-          </div>
-        );
-      })}
-      <button type="button" onClick={addTier}>
-        {t('ratePlans.addTier')}
-      </button>
-      <label style={FIELD_STYLE}>
-        {t('ratePlans.form.earlyFreeHours')}
-        <input
-          name="earlyCheckoutFreeHours"
-          value={draft.earlyCheckoutFreeHours}
-          onChange={(event) => onChange({ ...draft, earlyCheckoutFreeHours: event.target.value })}
-        />
-      </label>
-      <label style={FIELD_STYLE}>
-        {t('ratePlans.form.earlyRefundPct')}
-        <input
-          name="earlyCheckoutRefundPct"
-          value={draft.earlyCheckoutRefundPct}
-          onChange={(event) => onChange({ ...draft, earlyCheckoutRefundPct: event.target.value })}
-        />
-      </label>
-      <label style={FIELD_STYLE}>
-        {t('ratePlans.form.reason')}
-        <input
-          name="reason"
-          value={draft.reason}
-          onChange={(event) => onChange({ ...draft, reason: event.target.value })}
-        />
-      </label>
-      <p role="note" style={{ margin: 0 }}>
-        {t('ratePlans.roundingNote')}
-      </p>
-      <div style={{ display: 'flex', gap: 'var(--space-s2, 8px)' }}>
-        <button type="submit">{t('ratePlans.save')}</button>
-        <button type="button" onClick={onCancel}>
-          {t('ratePlans.cancel')}
-        </button>
-      </div>
-    </form>
-  );
+  const tier = /^tiers\[(\d+)\]\.(offsetHours|refundPercent|chargeFirstNight)$/.exec(field);
+  if (tier) {
+    const label =
+      tier[2] === 'offsetHours'
+        ? t('ratePlans.form.hours')
+        : tier[2] === 'refundPercent'
+          ? t('ratePlans.form.refund')
+          : rs('firstNight');
+    return `${Number(tier[1]) + 1}. ${label}`;
+  }
+  return names[field] ?? field;
+}
+function fieldValue(field: string, value: string): string {
+  if (field.endsWith('.chargeFirstNight') && ['true', 'false'].includes(value))
+    return value === 'true' ? rs('yes') : rs('no');
+  return value;
 }

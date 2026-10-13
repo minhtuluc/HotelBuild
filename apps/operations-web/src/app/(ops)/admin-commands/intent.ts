@@ -12,9 +12,12 @@ import {
   type RoomTypeCreateRequest,
   type ConnectingRoomRequest,
 } from '@pinehill/contracts';
+import { parseRateCommand, type RateCommand } from './rate-intent';
 import { parseAllotmentCommand } from './allotment-intent';
-export type AdminScope = 'property' | 'room-type' | 'connecting' | 'room-block' | 'allotment';
+export type AdminScope =
+  'property' | 'room-type' | 'connecting' | 'room-block' | 'allotment' | 'rate-config';
 export type AdminCommand =
+  | RateCommand
   | { kind: 'property-update'; targetId: string; tag: string; body: PropertyUpdateRequest }
   | { kind: 'room-type-create'; body: RoomTypeCreateRequest }
   | { kind: 'connecting-update'; targetId: string; tag: string; body: ConnectingRoomRequest }
@@ -42,6 +45,7 @@ function text(value: Record<string, unknown>, key: string): string {
 }
 export function parseCommand(value: unknown, scope: AdminScope): AdminCommand {
   if (!record(value)) throw Error('Invalid command');
+  if (scope === 'rate-config') return parseRateCommand(value);
   if (scope === 'allotment') return parseAllotmentCommand(value);
   if (scope === 'room-block') return parseBlock(value);
   if (scope === 'property') return parseProperty(value);

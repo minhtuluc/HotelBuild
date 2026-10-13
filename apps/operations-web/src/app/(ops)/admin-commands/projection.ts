@@ -3,6 +3,8 @@ import type { AdminData, AdminReceipt } from './controller';
 export function applyReceipt(data: AdminData | null, receipt: AdminReceipt): AdminData | null {
   if (!data) return null;
   if (
+    receipt.kind === 'rate-plan-put' ||
+    receipt.kind === 'policy-put' ||
     receipt.kind === 'allotment-put' ||
     receipt.kind === 'connecting-update' ||
     receipt.kind === 'room-block-create' ||
@@ -21,6 +23,10 @@ export function applyReceipt(data: AdminData | null, receipt: AdminReceipt): Adm
 }
 export function assertAcknowledgedProjection(data: AdminData, receipt: AdminReceipt | null): void {
   if (!receipt) return;
+  if (receipt.kind === 'rate-plan-put' || receipt.kind === 'policy-put') {
+    assertRateReadback(data, receipt);
+    return;
+  }
   if (receipt.kind === 'allotment-put') {
     assertAllotmentReadback(data, receipt);
     return;
@@ -33,14 +39,7 @@ export function assertAcknowledgedProjection(data: AdminData, receipt: AdminRece
     assertConnectingReadback(data, receipt);
     return;
   }
-  if (receipt.kind === 'property-update') {
-    const row = data.properties.find((item) => item.id === receipt.data.id);
-    if (!row || row.version < receipt.data.version)
-      throw new ApiError({ kind: 'protocol', message: 'Stale acknowledged projection' });
-  } else {
-    const row = data.roomTypes.find((item) => item.id === receipt.data.id);
-    if (!row) throw new ApiError({ kind: 'protocol', message: 'Missing acknowledged projection' });
-  }
+  assertPropertyReadback(data, receipt);
 }
 
 function assertConnectingReadback(
@@ -80,4 +79,33 @@ function assertAllotmentReadback(
     BigInt(read.tag.slice(1, -1)) < BigInt(receipt.tag.slice(1, -1))
   )
     throw new ApiError({ kind: 'protocol', message: 'Stale allotment readback' });
+}
+
+function assertRateReadback(
+  data: AdminData,
+  receipt: Extract<AdminReceipt, { kind: 'rate-plan-put' | 'policy-put' }>,
+): void {
+  if (receipt.kind === 'rate-plan-put') {
+    const row = data.ratePlans?.find((item) => item.id === receipt.id);
+    if (!row || !Number.isSafeInteger(row.version) || row.version <= receipt.priorVersion)
+      throw new ApiError({ kind: 'protocol', message: 'Stale plan readback' });
+  } else {
+    const row = data.policies?.find((item) => item.id === receipt.data.id);
+    if (!row || !Number.isSafeInteger(row.version) || row.version < receipt.data.version)
+      throw new ApiError({ kind: 'protocol', message: 'Stale policy readback' });
+  }
+}
+
+function assertPropertyReadback(
+  data: AdminData,
+  receipt: Extract<AdminReceipt, { kind: 'property-update' | 'room-type-create' }>,
+): void {
+  if (receipt.kind === 'property-update') {
+    const row = data.properties.find((item) => item.id === receipt.data.id);
+    if (!row || row.version < receipt.data.version)
+      throw new ApiError({ kind: 'protocol', message: 'Stale acknowledged projection' });
+  } else {
+    const row = data.roomTypes.find((item) => item.id === receipt.data.id);
+    if (!row) throw new ApiError({ kind: 'protocol', message: 'Missing acknowledged projection' });
+  }
 }
