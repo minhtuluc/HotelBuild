@@ -82,8 +82,13 @@ function useRoomTypeEditor(enabled: boolean) {
   const { controller, state } = useAdmin('room-type', enabled);
   const [draft, setDraft] = useState<RoomTypeDraft | null>(null);
   useEffect(() => {
-    if (!state.canWrite) setDraft(null);
-  }, [state.canWrite]);
+    if (
+      state.phase === 'expired' ||
+      state.phase === 'forbidden' ||
+      (state.actorVerified && !state.canWrite)
+    )
+      setDraft(null);
+  }, [state.phase, state.actorVerified, state.canWrite]);
   useEffect(() => {
     if (state.receipt?.kind === 'room-type-create') setDraft(null);
   }, [state.receipt]);
@@ -112,7 +117,7 @@ function RoomTypeBody({ model }: { model: RoomTypeModel }): ReactElement {
         </p>
       ) : null}
       {rows.length ? <RoomTypeTable rows={rows} /> : null}
-      {draft ? (
+      {state.canWrite && draft ? (
         <RoomTypeForm
           draft={draft}
           properties={properties}

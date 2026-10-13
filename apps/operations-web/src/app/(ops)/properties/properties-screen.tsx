@@ -221,8 +221,13 @@ function usePropertyEditor(enabled: boolean) {
   const { controller, state } = useAdmin('property', enabled);
   const [draft, setDraft] = useState<Draft | null>(null);
   useEffect(() => {
-    if (!state.canWrite) setDraft(null);
-  }, [state.canWrite]);
+    if (
+      state.phase === 'expired' ||
+      state.phase === 'forbidden' ||
+      (state.actorVerified && !state.canWrite)
+    )
+      setDraft(null);
+  }, [state.phase, state.actorVerified, state.canWrite]);
   useEffect(() => {
     if (state.receipt?.kind === 'property-update') setDraft(null);
   }, [state.receipt]);
@@ -269,7 +274,7 @@ function PropertyBody({ model }: { model: PropertyModel }): ReactElement {
           }}
         />
       ) : null}
-      {draft ? (
+      {state.canWrite && draft ? (
         <PropertyEditor
           draft={draft}
           disabled={state.busy || !controller?.canStart()}

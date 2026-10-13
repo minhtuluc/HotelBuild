@@ -8,6 +8,7 @@ export function useAdmin(scope: AdminScope, enabled: boolean) {
     phase: 'loading',
     data: null,
     canWrite: false,
+    actorVerified: false,
     busy: false,
     error: null,
     receipt: null,

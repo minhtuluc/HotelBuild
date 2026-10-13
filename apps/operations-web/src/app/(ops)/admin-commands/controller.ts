@@ -36,6 +36,7 @@ export interface AdminState {
     'loading' | 'ready' | 'error' | 'validation' | 'conflict' | 'unknown' | 'forbidden' | 'expired';
   data: AdminData | null;
   canWrite: boolean;
+  actorVerified: boolean;
   busy: boolean;
   error: unknown;
   receipt: AdminReceipt | null;
@@ -59,6 +60,7 @@ export class AdminController {
     phase: 'loading',
     data: null,
     canWrite: false,
+    actorVerified: false,
     busy: false,
     error: null,
     receipt: null,
@@ -99,6 +101,7 @@ export class AdminController {
       phase,
       data: null,
       canWrite: false,
+      actorVerified: false,
       busy: false,
       error: null,
       receipt: null,
@@ -115,6 +118,7 @@ export class AdminController {
       phase: 'loading',
       data: null,
       canWrite: false,
+      actorVerified: false,
       busy: false,
       error: null,
       receipt: null,
@@ -139,7 +143,7 @@ export class AdminController {
       this.update({ data: null, receipt: null });
     this.context = context;
     this.ownerId = actor.userId;
-    this.update({ canWrite: actor.role === 'OWNER' });
+    this.update({ canWrite: actor.role === 'OWNER', actorVerified: true });
     if (writing && actor.role !== 'OWNER') {
       this.deny();
       return false;
