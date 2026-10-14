@@ -2,7 +2,7 @@ import type { ReactElement } from 'react';
 import { ActivityIndicator, Linking, ScrollView, Text } from 'react-native';
 import { Link } from 'expo-router';
 import { color, space, typography } from '@pinehill/ui-native';
-import { phaseMessages } from './messages';
+import { phaseMessages, paymentText as text } from './messages';
 import { PaymentSummary, PaymentActions } from './panels';
 import { usePayment } from './use-payment';
 export function PaymentScreen({ bookingId }: { bookingId: string }): ReactElement {
@@ -31,7 +31,7 @@ export function PaymentScreen({ bookingId }: { bookingId: string }): ReactElemen
         accessibilityRole="header"
         style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}
       >
-        Thanh toán tiền cọc
+        {text('title')}
       </Text>
       <Text
         accessibilityRole="alert"
@@ -41,12 +41,12 @@ export function PaymentScreen({ bookingId }: { bookingId: string }): ReactElemen
         {phaseMessages[view.phase]}
       </Text>
       {view.busy ? (
-        <ActivityIndicator accessibilityLabel="Đang đọc máy chủ" color={color.primary} />
+        <ActivityIndicator accessibilityLabel={text('reading')} color={color.primary} />
       ) : null}
       <PaymentSummary view={view} />
       {view.changed ? (
         <Text accessibilityRole="alert" style={{ color: color.warning }}>
-          Số tiền hoặc đặt phòng đã đổi. Đọc dữ liệu mới rồi xác nhận lại.
+          {text('changed')}
         </Text>
       ) : null}
       <PaymentActions
@@ -61,12 +61,11 @@ export function PaymentScreen({ bookingId }: { bookingId: string }): ReactElemen
       />
       {handoffFailed ? (
         <Text accessibilityRole="alert" style={{ color: color.danger }}>
-          Không mở được trình duyệt. Giao dịch vẫn được giữ; kiểm tra lại hoặc mở lại cùng giao
-          dịch.
+          {text('handoffFailed')}
         </Text>
       ) : null}
-      <Link href="/(tabs)/bookings" accessibilityLabel="Về đơn của tôi">
-        Về đơn của tôi
+      <Link href="/(tabs)/bookings" accessibilityLabel={text('backToBookings')}>
+        {text('backToBookings')}
       </Link>
     </ScrollView>
   );

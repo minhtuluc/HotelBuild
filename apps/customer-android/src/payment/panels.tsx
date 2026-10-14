@@ -5,6 +5,10 @@ import { formatVnd } from '../search';
 import type { PaymentView } from './flow';
 import { approvedAmount, safePaymentUrl } from './model';
 import { Link } from 'expo-router';
+import { paymentText as text } from './messages';
+
+const money = (amount: number): string => text('money', { amount: formatVnd(amount) });
+
 export function PaymentButton({
   label,
   onPress,
@@ -43,40 +47,43 @@ export function PaymentSummary({ view }: { view: PaymentView }): ReactElement | 
   return (
     <View style={{ gap: space.s2 }}>
       <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
-        Đặt phòng {offer.booking.code}
+        {text('booking', { code: offer.booking.code })}
       </Text>
       <Text style={{ color: color.text }}>
-        Tổng tiền phòng: {formatVnd(offer.balance.totalAmount)} đ
+        {text('total', { amount: money(offer.balance.totalAmount) })}
       </Text>
-      <Text style={{ color: color.text }}>Đã thu: {formatVnd(offer.balance.paidAmount)} đ</Text>
       <Text style={{ color: color.text }}>
-        Còn nợ theo sổ cái: {formatVnd(offer.balance.balanceDue)} đ
+        {text('paid', { amount: money(offer.balance.paidAmount) })}
+      </Text>
+      <Text style={{ color: color.text }}>
+        {text('balance', { amount: money(offer.balance.balanceDue) })}
       </Text>
       <Text style={{ color: color.text, fontWeight: '700' }}>
-        Cọc cần trả theo máy chủ: {amount === null ? 'Chưa có dữ liệu' : formatVnd(amount) + ' đ'}
+        {text('deposit', {
+          amount: amount === null ? text('unavailableAmount') : money(amount),
+        })}
       </Text>
       <Text style={{ color: color.text }}>
-        Trạng thái đặt phòng từ máy chủ: {offer.booking.status}
+        {text('bookingStatus', { status: offer.booking.status })}
       </Text>
       {offer.booking.holdExpiresAt ? (
         <Text style={{ color: color.textMuted }}>
-          Hạn giữ chỗ: {formatDateTimeVn(offer.booking.holdExpiresAt)}. Hạn giữ chỗ độc lập với giao
-          dịch thanh toán.
+          {text('holdExpiry', { time: formatDateTimeVn(offer.booking.holdExpiresAt) })}
         </Text>
       ) : null}
       {view.payment ? (
         <>
           <Text selectable style={{ color: color.text }}>
-            Mã giao dịch: {view.payment.paymentId}
+            {text('transaction', { id: view.payment.paymentId })}
           </Text>
           <Text style={{ color: color.text }}>
-            Trạng thái giao dịch từ máy chủ: {view.payment.status}
+            {text('paymentStatus', { status: view.payment.status })}
           </Text>
         </>
       ) : null}
       {view.checkedAt ? (
         <Text style={{ color: color.textMuted }}>
-          Đã đọc máy chủ lúc {formatDateTimeVn(view.checkedAt)}
+          {text('checkedAt', { time: formatDateTimeVn(view.checkedAt) })}
         </Text>
       ) : null}
     </View>
@@ -94,14 +101,14 @@ export function PaymentMethods({
   return (
     <View
       accessibilityRole="radiogroup"
-      accessibilityLabel="Cổng thanh toán"
+      accessibilityLabel={text('provider')}
       style={{ gap: space.s2 }}
     >
       {(['VNPAY', 'MOMO'] as const).map((value) => (
         <Pressable
           key={value}
           accessibilityRole="radio"
-          accessibilityLabel={value === 'VNPAY' ? 'VNPay' : 'MoMo'}
+          accessibilityLabel={value === 'VNPAY' ? text('providerVnpay') : text('providerMomo')}
           accessibilityState={{ checked: method === value, disabled }}
           disabled={disabled}
           onPress={() => onChange(value)}
@@ -115,7 +122,7 @@ export function PaymentMethods({
         >
           <Text style={{ color: color.text }}>
             {method === value ? '● ' : '○ '}
-            {value === 'VNPAY' ? 'VNPay' : 'MoMo'}
+            {value === 'VNPAY' ? text('providerVnpay') : text('providerMomo')}
           </Text>
         </Pressable>
       ))}
@@ -144,25 +151,18 @@ function CreationActions({
     return (
       <>
         <PaymentMethods method={method} onChange={setMethod} disabled={view.busy} />
-        <PaymentButton
-          label="Xem lại trước khi thanh toán"
-          disabled={view.busy}
-          onPress={prepare}
-        />
+        <PaymentButton label={text('prepare')} disabled={view.busy} onPress={prepare} />
       </>
     );
   if (view.phase !== 'confirm') return null;
   return (
     <>
       <Text style={{ color: color.text }}>
-        Cổng đã chọn: {method === 'MOMO' ? 'MoMo' : 'VNPay'}. Thanh toán mở trình duyệt hệ thống;
-        khi trở về sẽ đọc lại máy chủ.
+        {text('confirmInfo', {
+          provider: method === 'MOMO' ? text('providerMomo') : text('providerVnpay'),
+        })}
       </Text>
-      <PaymentButton
-        label="Xác nhận và mở cổng thanh toán"
-        disabled={view.busy}
-        onPress={confirm}
-      />
+      <PaymentButton label={text('confirm')} disabled={view.busy} onPress={confirm} />
     </>
   );
 }
@@ -170,15 +170,9 @@ function PendingActions({ view, open }: Actions): ReactElement | null {
   if (view.phase !== 'pending') return null;
   const url = view.fullPayment ? safePaymentUrl(view.fullPayment) : null;
   return url ? (
-    <PaymentButton
-      label="Mở lại cổng thanh toán cho giao dịch này"
-      disabled={view.busy}
-      onPress={() => open(url)}
-    />
+    <PaymentButton label={text('reopen')} disabled={view.busy} onPress={() => open(url)} />
   ) : (
-    <Text style={{ color: color.warning }}>
-      Máy chủ chưa trả liên kết HTTPS an toàn. Hãy kiểm tra trạng thái giao dịch.
-    </Text>
+    <Text style={{ color: color.warning }}>{text('unsafeUrl')}</Text>
   );
 }
 export function PaymentActions(props: Actions): ReactElement {
@@ -187,21 +181,17 @@ export function PaymentActions(props: Actions): ReactElement {
     <>
       {props.view.phase === 'unknown' && props.referenceId ? (
         <Text selectable style={{ color: color.text }}>
-          Mã tham chiếu: {props.referenceId}
+          {text('reference', { id: props.referenceId })}
         </Text>
       ) : null}
       <CreationActions {...props} />
       <PendingActions {...props} />
       {denied ? (
-        <Link href="/" accessibilityLabel="Về đăng nhập">
-          Về đăng nhập
+        <Link href="/" accessibilityLabel={text('login')}>
+          {text('login')}
         </Link>
       ) : (
-        <PaymentButton
-          label="Kiểm tra lại từ máy chủ"
-          disabled={props.view.busy}
-          onPress={props.check}
-        />
+        <PaymentButton label={text('check')} disabled={props.view.busy} onPress={props.check} />
       )}
     </>
   );
