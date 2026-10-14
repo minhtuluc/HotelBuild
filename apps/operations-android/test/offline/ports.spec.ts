@@ -122,3 +122,35 @@ test('session property change invalidates queued data before any HTTP request', 
     f.writer.dispose();
   }
 });
+
+test.each([
+  { when: 'before', change: { propertyScope: [] } },
+  { when: 'after', change: { propertyScope: [] } },
+  { when: 'before', change: { role: 'RESERVATION_AGENT' } },
+  { when: 'after', change: { role: 'RESERVATION_AGENT' } },
+])('fresh profile revocation via real ports clears RAM: %j', async ({ when, change }) => {
+  const f = await queueFixture();
+  try {
+    await f.queue.draft(f.command);
+    await f.queue.enqueue(key);
+    if (when === 'before') Object.assign(f.actor, change);
+    else
+      f.s.response = async () => {
+        Object.assign(f.actor, change);
+        return Response.json(
+          { ...task, status: 'IN_PROGRESS', version: 4 },
+          { headers: { etag: '"4"' } },
+        );
+      };
+    await f.queue.sync();
+    expect(f.queue.snapshot()).toEqual([]);
+    expect(f.s.writes).toHaveLength(when === 'before' ? 0 : 1);
+    const raw = await f.storage.get('offline.queue.' + f.ctx.userId + '.' + f.ctx.propertyId);
+    expect(raw).toContain('AUTHORIZATION');
+    expect(raw).not.toContain('CONFIRMED');
+    await expect(f.queue.restore()).rejects.toMatchObject({ code: 'CONTEXT_CHANGED' });
+  } finally {
+    f.queue.dispose();
+    f.writer.dispose();
+  }
+});

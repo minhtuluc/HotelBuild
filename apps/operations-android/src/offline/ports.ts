@@ -52,7 +52,12 @@ export function offlinePorts(
         signal,
         maxAttempts: 1,
       });
-      return offlineContext(result.data, session.selectedProperty());
+      try {
+        return offlineContext(result.data, session.selectedProperty());
+      } catch {
+        // A decoded fresh profile outside this queue's context revokes its private view.
+        throw new QueueFailure('CONTEXT_CHANGED');
+      }
     },
     send: async (entry, signal) => {
       const intent = taskIntent(entry);

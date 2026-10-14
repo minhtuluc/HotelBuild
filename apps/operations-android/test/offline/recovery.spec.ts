@@ -194,3 +194,13 @@ test('enqueue and retry of an unknown key do not silently claim to queue a comma
   await expect(f.queue.retry(key)).rejects.toMatchObject({ code: 'NOT_FOUND' });
   expect(f.sent).toEqual([]);
 });
+
+test('the published reservation-agent staff role can persist a local note draft', async () => {
+  const f = fixture({ context: { ...context, role: 'RESERVATION_AGENT' } });
+  await f.queue.draft({ kind: 'NOTE_DRAFT', text: 'fixture reservation note' });
+  expect(f.queue.snapshot()[0]).toMatchObject({
+    context: { role: 'RESERVATION_AGENT' },
+    action: { kind: 'NOTE_DRAFT', text: 'fixture reservation note' },
+    phase: 'DRAFT',
+  });
+});

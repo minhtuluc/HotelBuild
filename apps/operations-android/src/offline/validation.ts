@@ -1,3 +1,4 @@
+import { userRoleSchema } from '@pinehill/contracts';
 import { validTaskDate } from '../housekeeping/reader';
 import { QueueFailure, type OfflineAction, type OfflineContext, type QueueEntry } from './types';
 
@@ -16,12 +17,16 @@ export function uuid(value: unknown): value is string {
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
   );
 }
-const staffRoles = ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER', 'OWNER', 'ACCOUNTANT', 'SYSADMIN'];
 export function parseContext(value: unknown): OfflineContext {
   if (!record(value) || !keys(value, ['userId', 'role', 'propertyId', 'propertyScope']))
     throw new QueueFailure('INVALID_CONTEXT');
   const { userId, role, propertyId, propertyScope } = value;
-  if (!uuid(userId) || !uuid(propertyId) || typeof role !== 'string' || !staffRoles.includes(role))
+  if (
+    !uuid(userId) ||
+    !uuid(propertyId) ||
+    typeof role !== 'string' ||
+    !userRoleSchema.safeParse(role).success
+  )
     throw new QueueFailure('INVALID_CONTEXT');
   if (
     !Array.isArray(propertyScope) ||
