@@ -51,9 +51,7 @@ export function createWorkerApp(config: WorkerConfig, deps: WorkerDeps): WorkerA
         const queue = deps.createQueue(name);
         queues.push(queue);
         workers.push(
-          deps.createWorker(name, async (job) =>
-            deps.log({ queue: name, msg: `nhận job ${job.name}` }),
-          ),
+          deps.createWorker(name, async () => deps.log({ queue: name, msg: 'nhận job' })),
         );
         const every = repeatIntervalSeconds(config, name);
         if (config.ENABLE_REPEATABLE_SCHEDULERS && isRepeatableQueue(name) && every !== undefined) {
@@ -89,8 +87,11 @@ export function installSignalHandlers(
           logger.info({ queue: 'all' }, `nhận ${signal}: đã dừng êm`);
           exit(0);
         })
-        .catch((error: unknown) => {
-          logger.error(error, `nhận ${signal}: dừng worker thất bại`);
+        .catch(() => {
+          logger.error(
+            { queue: 'all', component: 'shutdown', errorCode: 'UNKNOWN' },
+            `nhận ${signal}: dừng worker thất bại`,
+          );
           exit(1);
         });
     });
