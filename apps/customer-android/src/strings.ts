@@ -78,6 +78,7 @@ export const catalog = {
   'orders.search.run': 'Tra cứu',
   'orders.reload': 'Tải lại',
   'orders.open': 'Xem chi tiết',
+  'orders.period': '{checkIn} → {checkOut} · {nights} đêm · {roomCount} phòng',
   'orders.money': '{amount} ₫',
   'orders.paid': 'Đã trả {amount}',
   'orders.balance': 'Còn phải trả {amount}',
@@ -92,6 +93,7 @@ export const catalog = {
   'orders.detail.total': 'Tổng tiền: {amount}',
   'orders.detail.print': 'In / lưu xác nhận',
   'orders.detail.share': 'Chia sẻ / lưu xác nhận',
+  'orders.detail.pay': 'Thanh toán tiền cọc',
   'orders.detail.notFound': 'Không thấy đơn này trong danh sách đã tải.',
   'orders.detail.notCached': 'Đang offline và đơn này chưa từng được tải về máy.',
   'orders.detail.snapshotPending':

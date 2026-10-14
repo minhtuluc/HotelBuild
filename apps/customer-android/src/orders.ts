@@ -11,7 +11,7 @@ import type { BookingStatus, BookingSummary, ListPage } from '@pinehill/contract
 import { isApiError } from '@pinehill/api-client';
 import { OfflineError, requireOnline, type NetInfoSource } from './netinfo';
 import type { KeyValueStorage } from './storage';
-import type { MessageKey } from './strings';
+import { t, type MessageKey } from './strings';
 
 export const ORDERS_CACHE_KEY = 'orders.cache.v1';
 
@@ -153,14 +153,24 @@ export function balanceRows(booking: {
   ];
 }
 
-/** Kỳ lưu trú một dòng: `2026-12-24 → 2026-12-26 · 2 đêm · 1 phòng`. */
+/** Reorder an API calendar date for display without interpreting it as an instant. */
+function calendarDateLabel(value: string): string {
+  return value.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1');
+}
+
+/** Kỳ lưu trú một dòng: `24/12/2026 → 26/12/2026 · 2 đêm · 1 phòng`. */
 export function stayOf(booking: {
   readonly checkIn: string;
   readonly checkOut: string;
   readonly nights: number;
   readonly roomCount: number;
 }): string {
-  return `${booking.checkIn} → ${booking.checkOut} · ${booking.nights} đêm · ${booking.roomCount} phòng`;
+  return t('orders.period', {
+    checkIn: calendarDateLabel(booking.checkIn),
+    checkOut: calendarDateLabel(booking.checkOut),
+    nights: booking.nights,
+    roomCount: booking.roomCount,
+  });
 }
 
 /** Khách tra theo mã (SCR-79): khớp không phân biệt hoa thường, bỏ khoảng trắng. */

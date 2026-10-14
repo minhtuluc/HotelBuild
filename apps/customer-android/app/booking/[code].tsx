@@ -197,10 +197,10 @@ export default function BookingDetailScreen(): ReactElement {
       {booking ? (
         <Link
           href={{ pathname: '/payment/[bookingId]', params: { bookingId: booking.id } }}
-          accessibilityLabel="Thanh toán tiền cọc"
+          accessibilityLabel={t('orders.detail.pay')}
           style={{ minHeight: touchTargetDp, color: color.primary, padding: space.s3 }}
         >
-          Thanh toán tiền cọc
+          {t('orders.detail.pay')}
         </Link>
       ) : null}
       {booking === null ? null : <DetailBody booking={booking} />}

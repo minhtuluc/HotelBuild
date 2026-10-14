@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@pinehill/api-client';
 import type { BookingSummary } from '@pinehill/contracts';
 import {
@@ -13,6 +13,10 @@ import {
   type OrdersApi,
 } from '../src/orders';
 import { memoryStorage } from '../src/storage';
+
+// The real catalog loads ui-native's barrel. Node cannot parse native host Flow bindings.
+// Only those bindings are substituted; stayOf, translation, cache and API logic remain real.
+vi.mock('react-native', () => ({ Pressable: 'Pressable', Text: 'Text', View: 'View' }));
 
 const online = { getConnected: async () => true };
 const offline = { getConnected: async () => false };
@@ -161,6 +165,20 @@ describe('SCR-79/SCR-80 đơn của tôi trên Android (HB-113)', () => {
       { key: 'paid', amount: 600_000 },
       { key: 'balance', amount: 1_400_000 },
     ]);
-    expect(stayOf(booking())).toBe('2026-12-24 → 2026-12-26 · 2 đêm · 1 phòng');
+    expect(stayOf(booking())).toBe('24/12/2026 → 26/12/2026 · 2 đêm · 1 phòng');
   });
+
+  it.each([
+    ['2024-02-29', '2024-03-01', '29/02/2024 → 01/03/2024 · 42 đêm · 3 phòng'],
+    ['2026-12-31', '2027-01-01', '31/12/2026 → 01/01/2027 · 42 đêm · 3 phòng'],
+    ['2026-03-08', '2026-03-09', '08/03/2026 → 09/03/2026 · 42 đêm · 3 phòng'],
+    ['2026-11-01', '2026-11-02', '01/11/2026 → 02/11/2026 · 42 đêm · 3 phòng'],
+  ])(
+    'formats calendar dates %s without calculating nights or changing input',
+    (checkIn, checkOut, expected) => {
+      const stay = Object.freeze({ checkIn, checkOut, nights: 42, roomCount: 3 });
+      expect(stayOf(stay)).toBe(expected);
+      expect(stay).toEqual({ checkIn, checkOut, nights: 42, roomCount: 3 });
+    },
+  );
 });
