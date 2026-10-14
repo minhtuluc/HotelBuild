@@ -179,6 +179,7 @@ export class AuthService {
             surface,
             family_id: familyId,
             token_hash: hashRefreshToken(refreshToken),
+            created_at: now,
             expires_at: new Date(now.getTime() + REFRESH_TOKEN_TTL_SECONDS * 1000),
             last_seen_at: now,
             ip: context.ip,

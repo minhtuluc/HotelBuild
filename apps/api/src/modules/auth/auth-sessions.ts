@@ -104,6 +104,7 @@ export class AuthSessions {
           surface: session.surface,
           family_id: session.family_id,
           token_hash: hashRefreshToken(nextToken),
+          created_at: now,
           expires_at: session.expires_at,
           last_seen_at: now,
           ip: session.ip,
