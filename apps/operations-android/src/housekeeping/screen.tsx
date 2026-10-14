@@ -1,17 +1,20 @@
 import { useEffect, useState, type ReactElement } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { color, space, touchTargetDp, typography } from '@pinehill/ui-native';
-import type { HousekeepingTask } from '@pinehill/contracts';
 import type { Session } from '../session';
 import { TaskReader, todayVN, type TaskState } from './reader';
 import { taskPorts } from './ports';
-import { taskText as text, statusText } from './messages';
+import { taskText as text } from './messages';
+import type { TaskWriter } from './writer';
+import { TaskWorkspace } from './workspace';
 export function HousekeepingReadScreen({
   session,
   onBack,
+  createWriter,
 }: {
   session: Session;
   onBack: () => void;
+  createWriter: () => TaskWriter;
 }): ReactElement {
   const [reader, setReader] = useState<TaskReader | null>(null);
   const [state, setState] = useState<TaskState>({ phase: 'idle', tasks: [] });
@@ -87,13 +90,11 @@ export function HousekeepingReadScreen({
           {text(state.phase)}
         </Text>
       )}
-      <FlatList
-        testID="task-list"
-        accessibilityLabel={text('assigned')}
-        data={state.tasks}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <TaskCard task={item} />}
-        contentContainerStyle={{ gap: space.s3 }}
+      <TaskWorkspace
+        session={session}
+        reader={reader}
+        tasks={state.tasks}
+        createWriter={createWriter}
       />
       <Pressable
         testID="task-back"
@@ -104,21 +105,6 @@ export function HousekeepingReadScreen({
       >
         <Text style={{ color: color.primary }}>{text('back')}</Text>
       </Pressable>
-    </View>
-  );
-}
-function TaskCard({ task }: { task: HousekeepingTask }): ReactElement {
-  return (
-    <View
-      testID={'housekeeping-task-' + task.id}
-      style={{ padding: space.s3, gap: space.s2, borderWidth: 1, borderRadius: 8 }}
-    >
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
-        {text('room', { code: task.roomCode })}
-      </Text>
-      <Text>{task.businessDate}</Text>
-      <Text>{statusText(task.status)}</Text>
-      {task.note ? <Text>{task.note}</Text> : null}
     </View>
   );
 }

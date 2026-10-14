@@ -1,0 +1,38 @@
+appId: vn.pinehill.operations
+---
+# Real HB148 API fixture: owned PENDING TASK_ID on 2026-11-01, active HOUSEKEEPING with PIN.
+# Supply synthetic credentials/ID through Maestro environment; no values are committed.
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "username"
+- inputText: "${STAFF_USERNAME}"
+- tapOn:
+    id: "password"
+- inputText: "${STAFF_PASSWORD}"
+- tapOn:
+    id: "login-submit"
+- tapOn:
+    id: "open-housekeeping"
+- tapOn:
+    id: "task-business-date"
+- eraseText
+- inputText: "2026-11-01"
+- hideKeyboard
+- tapOn:
+    id: "task-load"
+- tapOn:
+    id: "task-start-${TASK_ID}"
+- assertVisible: "Máy chủ đã xác nhận cập nhật. Tải lại danh sách để xem trạng thái hiện tại."
+- tapOn:
+    id: "task-load"
+- assertVisible: "Đang thực hiện"
+- tapOn:
+    id: "task-done-${TASK_ID}"
+- assertVisible: "Máy chủ đã xác nhận cập nhật. Tải lại danh sách để xem trạng thái hiện tại."
+- tapOn:
+    id: "task-load"
+- assertVisible: "Đã hoàn thành"
+- tapOn:
+    id: "task-back"
+- assertVisible: "Pine Hill — Vận hành"

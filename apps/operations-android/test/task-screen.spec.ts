@@ -4,6 +4,8 @@ import { Session } from '../src/session';
 import { memoryStorage } from '../src/storage';
 import { TaskReader } from '../src/housekeeping/reader';
 import { HousekeepingReadScreen } from '../src/housekeeping/screen';
+import { TaskWriter } from '../src/housekeeping/writer';
+import { taskWritePorts } from '../src/housekeeping/write-ports';
 
 const hooks = vi.hoisted(() => ({ values: new Array<unknown>(), index: 0, setDate: vi.fn() }));
 vi.mock('react', async (original) => ({
@@ -77,7 +79,19 @@ test.each(['2026-11-02', 'invalid'])(
       netInfo: { getConnected: async () => true },
     });
     try {
-      const change = dateInput(HousekeepingReadScreen({ session, onBack: () => {} }));
+      const change = dateInput(
+        HousekeepingReadScreen({
+          session,
+          onBack: () => {},
+          createWriter: () =>
+            new TaskWriter({
+              ...taskWritePorts(session),
+              storage: memoryStorage(),
+              createId: () => '00000000-0000-4000-8000-000000000001',
+              now: () => 1793491200000,
+            }),
+        }),
+      );
       expect(change).toBeTypeOf('function');
       change?.(date);
       expect(hooks.setDate).toHaveBeenCalledWith(date);

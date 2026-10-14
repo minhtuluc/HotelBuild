@@ -1,5 +1,5 @@
 /** Điểm vào Operations Android: đăng nhập → me() → đổi mật khẩu/PIN/chọn cơ sở → màn chính. */
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import type { UserMe } from '@pinehill/contracts';
 import { createSession } from '../src/session-factory';
@@ -9,12 +9,14 @@ import PinSetupScreen from './pin-setup';
 import SelectPropertyScreen from './select-property';
 import HomeScreen from './home';
 import { HousekeepingReadScreen } from '../src/housekeeping/screen';
+import { createTaskWriter } from '../src/housekeeping/writer-factory.native';
 
 type Stage =
   'boot' | 'login' | 'changePassword' | 'pinSetup' | 'selectProperty' | 'home' | 'housekeeping';
 
 export default function RootScreen(): ReactElement {
   const session = useMemo(createSession, []);
+  const makeTaskWriter = useCallback(() => createTaskWriter(session), [session]);
   const [stage, setStage] = useState<Stage>('boot');
   const [currentPassword, setCurrentPassword] = useState('');
   const [profile, setProfile] = useState<UserMe | null>(null);
@@ -94,7 +96,13 @@ export default function RootScreen(): ReactElement {
     );
   }
   if (stage === 'housekeeping')
-    return <HousekeepingReadScreen session={session} onBack={() => setStage('home')} />;
+    return (
+      <HousekeepingReadScreen
+        session={session}
+        createWriter={makeTaskWriter}
+        onBack={() => setStage('home')}
+      />
+    );
   return (
     <HomeScreen
       session={session}
