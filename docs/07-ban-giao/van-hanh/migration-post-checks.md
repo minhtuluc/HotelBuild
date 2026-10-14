@@ -1,6 +1,6 @@
 # HB-178 — cổng kiểm sau migration (AC2)
 
-Phần này hiện thực ba kiểm tra trong [csdl §8.3](../../04-thiet-ke/csdl.md#83-kiểm-thử-bắt-buộc-sau-mỗi-migration). Đây là phần kiểm sau migrate của [HB-178](../../08-thi-cong/tickets/HB-178-migration-production.md); snapshot, staging/production và runbook expand → migrate → contract đầy đủ còn OPEN.
+Phần này hiện thực ba kiểm tra trong [csdl §8.3](../../04-thiet-ke/csdl.md#83-kiểm-thử-bắt-buộc-sau-mỗi-migration). Đây là phần kiểm sau migrate của [HB-178](../../08-thi-cong/tickets/HB-178-migration-production.md); thủ tục expand → migrate → contract nằm trong [runbook migration](migration.md). Snapshot và lần chạy staging/production còn OPEN.
 
 ## Chạy
 
