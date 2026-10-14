@@ -147,6 +147,49 @@ function independentOracle(): Record<string, Expected> {
     status: 428,
     method: RequestMethod.PUT,
   };
+  // HB-162 / api.md §2.12: báo cáo vận hành từ MANAGER, báo cáo tài chính chỉ ACCOUNTANT/OWNER,
+  // `force-majeure` chỉ OWNER. Thiếu `from`/`to` → 400 trước khi chạm dữ liệu.
+  keyed[`${RequestMethod.GET}:reports/occupancy`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.GET}:reports/adr-revpar`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.GET}:reports/revenue-by-channel`] = {
+    roles: ['ACCOUNTANT', 'OWNER'],
+    status: 400,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.GET}:reports/cancellations`] = {
+    roles: ['ACCOUNTANT', 'OWNER'],
+    status: 400,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.GET}:reports/force-majeure`] = {
+    roles: ['OWNER'],
+    status: 400,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.GET}:reports/overbooking`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.GET,
+  };
+  // HB-149 / UC-CRM-01: hồ sơ khách cho quầy lễ tân và điều phối đặt phòng.
+  keyed[`${RequestMethod.GET}:guests`] = {
+    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
+    status: 200,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.POST}:guests`] = {
+    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
   for (const path of ['properties', 'room-types', 'rooms'])
     keyed[`${RequestMethod.GET}:${path}`] = {
       roles: ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER', 'OWNER'],

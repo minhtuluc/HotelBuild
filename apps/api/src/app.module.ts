@@ -33,6 +33,8 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { SysModule } from './modules/sys/sys.module.js';
 import { IdempotencyModule } from './modules/sys/idempotency/idempotency.module.js';
 import { IdempotencyInterceptor } from './common/idempotency/interceptor.js';
+import { ReportsModule } from './modules/rep/reports/module.js';
+import { GuestsModule } from './modules/crm/guests/module.js';
 
 @Module({})
 export class AppModule {
@@ -71,6 +73,8 @@ export class AppModule {
         HousekeepingModule,
         AuditLogsModule,
         SettingsModule,
+        ReportsModule,
+        GuestsModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },
