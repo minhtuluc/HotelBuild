@@ -10,6 +10,7 @@ import SelectPropertyScreen from './select-property';
 import HomeScreen from './home';
 import { HousekeepingReadScreen } from '../src/housekeeping/screen';
 import { createTaskWriter } from '../src/housekeeping/writer-factory.native';
+import { t } from '../src/strings';
 
 type Stage =
   'boot' | 'login' | 'changePassword' | 'pinSetup' | 'selectProperty' | 'home' | 'housekeeping';
@@ -55,7 +56,7 @@ export default function RootScreen(): ReactElement {
   if (stage === 'boot') {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator accessibilityLabel="Đang khôi phục phiên" />
+        <ActivityIndicator accessibilityLabel={t('session.restoring')} />
       </View>
     );
   }

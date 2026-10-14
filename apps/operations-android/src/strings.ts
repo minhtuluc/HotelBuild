@@ -4,6 +4,7 @@ import { makeTranslate, stateMessages } from '@pinehill/ui-native';
 export const catalog = {
   ...stateMessages,
   'login.title': 'Đăng nhập Pine Hill',
+  'session.restoring': 'Đang khôi phục phiên',
   'login.username': 'Tên đăng nhập',
   'login.password': 'Mật khẩu',
   'login.submit': 'Đăng nhập',
@@ -16,6 +17,7 @@ export const catalog = {
   'changePassword.required': 'Bạn phải đổi mật khẩu tạm trước khi tiếp tục.',
   'pin.setup.title': 'Đặt PIN',
   'pin.setup.hint': 'Nhập PIN 6 số hai lần để xác nhận.',
+  'pin.setup.entry': 'PIN lần {number}',
   'pin.setup.mismatch': 'Hai lần nhập không khớp.',
   'pin.prompt': 'Nhập PIN để mở khoá',
   'pin.locked': 'PIN tạm khoá.',

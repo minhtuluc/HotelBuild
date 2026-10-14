@@ -49,7 +49,7 @@ export default function PinSetupScreen({
       <Text style={{ color: color.textMuted }}>{t('pin.setup.hint')}</Text>
       <TextInput
         testID="pin-1"
-        accessibilityLabel="PIN lần 1"
+        accessibilityLabel={t('pin.setup.entry', { number: 1 })}
         value={first}
         onChangeText={setFirst}
         keyboardType="number-pad"
@@ -64,7 +64,7 @@ export default function PinSetupScreen({
       />
       <TextInput
         testID="pin-2"
-        accessibilityLabel="PIN lần 2"
+        accessibilityLabel={t('pin.setup.entry', { number: 2 })}
         value={second}
         onChangeText={setSecond}
         keyboardType="number-pad"
