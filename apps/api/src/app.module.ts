@@ -44,6 +44,9 @@ export class AppModule {
         LoggerModule.forRoot({
           pinoHttp: {
             level: config.LOG_LEVEL,
+            // nestjs-pino uses the response child for its request context: both must omit raw req.
+            quietReqLogger: true,
+            quietResLogger: true,
             serializers: { req: serializeSafeRequest },
             customProps: (request) => ({ correlationId: request.headers['x-correlation-id'] }),
             redact: {

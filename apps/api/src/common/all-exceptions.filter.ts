@@ -15,6 +15,13 @@ export interface ErrorLogger {
   error(context: Record<string, unknown>, message: string): void;
 }
 
+interface FailureLogContext {
+  correlationId: string;
+  path: string;
+  outcome: 'error';
+  errorCode: ErrorCode;
+}
+
 const UNAVAILABLE = {
   code: 'E_GEN_SERVICE_UNAVAILABLE',
   message: 'Hệ thống tạm thời không sẵn sàng.',
@@ -43,7 +50,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
     reply.header('X-Trace-Id', correlationId);
 
     const path = requestPath(request.url);
-    const classified = this.classify(exception, correlationId, path);
+    // Log the framework route template, never client path parameters or query values.
+    // The response keeps its original path projection; request.url is not mutated.
+    const diagnostic: FailureLogContext = {
+      correlationId,
+      path: request.routeOptions?.url ?? '/[unmatched]',
+      outcome: 'error',
+      errorCode: UNAVAILABLE.code,
+    };
+    const classified = this.classify(exception, diagnostic);
     if (classified.retryAfterSeconds !== undefined) {
       reply.header('Retry-After', String(classified.retryAfterSeconds));
     }
@@ -61,7 +76,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const parsed = errorBodySchema.safeParse(candidate);
     if (!parsed.success) {
       this.logger.error(
-        { issues: parsed.error.issues, correlationId, path },
+        {
+          ...diagnostic,
+          failureKind: 'INVALID_ERROR_BODY',
+          issueCount: parsed.error.issues.length,
+          // Zod key names/messages can contain submitted data; codes are a closed enum.
+          issueCodes: [...new Set(parsed.error.issues.map((issue) => issue.code))],
+        },
         'Body lỗi không khớp hợp đồng — trả lỗi hệ thống',
       );
       reply.status(500).send({
@@ -78,8 +99,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
   /** Lỗi đã biết giữ mã/trạng thái; lỗi HTTP lạ và lỗi không lường trước quy về 500 đã che chi tiết. */
   private classify(
     exception: unknown,
-    correlationId: string,
-    path: string,
+    diagnostic: FailureLogContext,
   ): {
     status: number;
     code: ErrorCode;
@@ -102,9 +122,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const mapped = HTTP_ERRORS[exception.getStatus()];
       if (mapped)
         return { status: exception.getStatus(), code: mapped.code, message: mapped.message };
-      this.logger.error({ err: exception, correlationId, path }, 'Lỗi HTTP không ánh xạ được');
+      this.logger.error(
+        { ...diagnostic, failureKind: 'UNMAPPED_HTTP' },
+        'Lỗi HTTP không ánh xạ được',
+      );
     } else {
-      this.logger.error({ err: exception, correlationId, path }, 'Lỗi không lường trước');
+      // Do not serialize arbitrary errors: message/stack/cause/custom fields can hold PII or credentials.
+      this.logger.error({ ...diagnostic, failureKind: 'UNEXPECTED' }, 'Lỗi không lường trước');
     }
     return { status: 500, code: UNAVAILABLE.code, message: UNAVAILABLE.message };
   }
