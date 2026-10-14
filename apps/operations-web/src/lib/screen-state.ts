@@ -1,14 +1,19 @@
 import { isApiError, type ApiError } from '@pinehill/api-client';
 import type { ScreenState } from '@pinehill/ui-web';
+import { t } from './i18n';
 
 /**
- * Ánh xạ lỗi API sang trạng thái màn hình (§8.1) cho các màn F2/F3. Hàm thuần, không React.
+ * Ánh xạ lỗi API sang trạng thái màn hình (§8.1) cho các màn F2/F3. Hàm thuần, không React —
+ * nguồn câu chữ là danh mục `lib/i18n.ts` (NFR-LOC-01), không viết cứng tại chỗ.
  * Chỉ suy từ `code` và lớp HTTP — **không** từ `message` của server (thiết kế màn hình §8.1).
  */
-export const VERSION_UNKNOWN = 'chưa rõ';
+export const VERSION_UNKNOWN = t('screen.version.unknown');
+
+/** Phiên bản mặc định khi màn hình chưa có bản của máy chủ để so sánh. */
+export const VERSION_NEW = t('screen.version.new');
 
 /** Trường lỗi khi server trả 400/422 mà không kèm `details[]`. */
-export const FORM_WIDE_FIELD = '(biểu mẫu)';
+export const FORM_WIDE_FIELD = t('screen.field.formWide');
 
 const CONFLICT_CODES: readonly string[] = [
   'E_GEN_VERSION_CONFLICT',
@@ -29,7 +34,7 @@ function isConflict(error: ApiError): boolean {
 }
 
 function reference(error: ApiError): string {
-  return error.traceId ?? error.correlationId ?? 'không có mã';
+  return error.traceId ?? error.correlationId ?? t('screen.reference.none');
 }
 
 function validationDetails(error: ApiError): ScreenState {
@@ -37,7 +42,7 @@ function validationDetails(error: ApiError): ScreenState {
   if (details !== undefined && details.length > 0) return { kind: 'validationError', details };
   return {
     kind: 'validationError',
-    details: [{ field: FORM_WIDE_FIELD, issue: error.code ?? 'không hợp lệ' }],
+    details: [{ field: FORM_WIDE_FIELD, issue: error.code ?? t('screen.issue.invalid') }],
   };
 }
 
@@ -57,7 +62,11 @@ export function readFailureState(error: ApiError): ScreenState | undefined {
 export function writeFailureState(caught: unknown, context: WriteContext): ScreenState {
   if (!isApiError(caught)) {
     // Phản hồi sai hợp đồng: không rõ máy chủ đã áp dụng lệnh hay chưa → không báo thất bại chắc chắn.
-    return { kind: 'unknownOutcome', referenceId: 'không có mã', onLookup: context.onLookup };
+    return {
+      kind: 'unknownOutcome',
+      referenceId: t('screen.reference.none'),
+      onLookup: context.onLookup,
+    };
   }
   const error: ApiError = caught;
   if (error.status === 403 || error.status === 401) return { kind: 'forbidden' };

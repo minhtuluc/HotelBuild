@@ -5,7 +5,7 @@ import './globals.css';
 
 export const metadata = {
   title: 'Pine Hill — Operations Web',
-  description: 'Back-office vận hành chuỗi Pine Hill',
+  description: operationsCatalog['ops.app.description'],
 };
 
 export default function OperationsLayout({ children }: { children: ReactNode }): ReactElement {

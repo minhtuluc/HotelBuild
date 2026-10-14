@@ -2,6 +2,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { defaultRange } from '../../../lib/inventory-grid';
 import { changedItems, validateDrafts } from '../../../lib/allotments';
+import { FORM_WIDE_FIELD } from '../../../lib/screen-state';
 import { useAdmin } from '../admin-commands/use-admin';
 import { selectionKey, visibleEditor, displayRows, sellingUnits, type Editor } from './editor';
 export function useAllotments(enabled: boolean) {
@@ -33,7 +34,7 @@ export function useAllotments(enabled: boolean) {
     }
     const items = changedItems(rows);
     if (!items.length) {
-      controller.validation([{ field: '(biểu mẫu)', issue: 'UNCHANGED' }]);
+      controller.validation([{ field: FORM_WIDE_FIELD, issue: 'UNCHANGED' }]);
       return;
     }
     await controller.save({

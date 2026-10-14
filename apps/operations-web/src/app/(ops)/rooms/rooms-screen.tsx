@@ -6,6 +6,7 @@ import { StateSurface } from '@pinehill/ui-web';
 import { useForcedState } from '../../../components/forced-state';
 import { t } from '../../../lib/i18n';
 import { pairingCandidates, connectingCode } from '../../../lib/room-pairing';
+import { VERSION_NEW } from '../../../lib/screen-state';
 import { useAdmin } from '../admin-commands/use-admin';
 import { AdminPanels } from '../admin-commands/panels';
 import { adminText } from '../admin-commands/messages';
@@ -168,7 +169,7 @@ export function RoomsScreen(): ReactElement {
       <AdminPanels
         state={state}
         controller={controller}
-        version={String(draft?.source.version ?? 'mới')}
+        version={String(draft?.source.version ?? VERSION_NEW)}
       />
       <Comparison model={model} />
       <Body model={model} />

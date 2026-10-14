@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../components/screen-alert';
+import { VERSION_NEW } from '../../../lib/screen-state';
 import type { AdminController, AdminState } from './controller';
 import { adminText as text } from './messages';
 function surface(state: AdminState): ScreenState {
@@ -12,7 +13,7 @@ function surface(state: AdminState): ScreenState {
 export function AdminPanels({
   state,
   controller,
-  version = 'mới',
+  version = VERSION_NEW,
 }: {
   state: AdminState;
   controller: AdminController | null;
