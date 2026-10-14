@@ -12,6 +12,7 @@ export type { AdminData, AdminReceipt, AdminPorts, AdminState } from './model';
 import type { AdminPorts, AdminState, AdminReceipt, Options } from './model';
 import { denial, conflict, validation, writeAffordance, commandAllowed } from './support';
 import { assertAllotmentSelection } from './allotment-intent';
+import { FORM_WIDE_FIELD } from '../../../lib/screen-state';
 export class AdminController {
   state: AdminState = {
     phase: 'loading',
@@ -318,7 +319,7 @@ export class AdminController {
         canCompare: false,
         referenceId: null,
         issues: isApiError(error)
-          ? (error.details ?? [{ field: '(biểu mẫu)', issue: error.code ?? 'INVALID' }])
+          ? (error.details ?? [{ field: FORM_WIDE_FIELD, issue: error.code ?? 'INVALID' }])
           : [],
       });
       return;

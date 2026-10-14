@@ -15,6 +15,7 @@ export const refundsCatalog = {
   'ops.refunds.unverified':
     'Chưa xác minh kết quả chi. Tra hồ sơ và chứng từ trước khi thực hiện tiếp.',
   'ops.refunds.gross': 'Tiền hoàn gộp',
+  'ops.refunds.field.payout': 'Chi hoàn',
   'ops.refunds.fee': 'Phí xử lý hoàn',
   'ops.refunds.net': 'Thực chi theo hồ sơ',
   'ops.refunds.event': 'Tổng thực chi của sự kiện',

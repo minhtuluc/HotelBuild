@@ -21,6 +21,7 @@ import {
   type TierRow,
   type TierIssue,
 } from './rate-policy-tiers';
+import { FORM_WIDE_FIELD } from './screen-state';
 export {
   MAX_TIERS,
   CATCH_ALL_HOURS,
@@ -121,7 +122,7 @@ export function validateRatePlanDraft(
     reasonIssue(draft.reason),
   ]);
   if (issues.length === 0 && !ratePlanChanged(draft, plan)) {
-    issues.push({ field: '(biểu mẫu)', issue: 'UNCHANGED' });
+    issues.push({ field: FORM_WIDE_FIELD, issue: 'UNCHANGED' });
   }
   return issues;
 }
@@ -181,7 +182,7 @@ export function validatePolicyDraft(
   const reason = reasonIssue(draft.reason);
   if (reason) issues.push(reason);
   if (issues.length === 0 && !policyChanged(draft, policy, freeHours, refundPct)) {
-    issues.push({ field: '(biểu mẫu)', issue: 'UNCHANGED' });
+    issues.push({ field: FORM_WIDE_FIELD, issue: 'UNCHANGED' });
   }
   return issues;
 }

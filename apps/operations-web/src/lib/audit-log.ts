@@ -5,6 +5,7 @@
  */
 import type { AuditLogEntry } from '@pinehill/contracts';
 import { formatDateTimeVn } from '@pinehill/ui-web';
+import { t } from './i18n';
 
 /** Số bản ghi mỗi trang (khớp mặc định `auditLogQuerySchema`, tối đa 100). */
 export const AUDIT_PAGE_SIZE = 50;
@@ -73,12 +74,12 @@ export function mergeAuditRows(
 
 /** Cột hiển thị = cột CSV; danh sách trường an toàn theo BR-SYS-05 (không có JSON thô, token, PII). */
 export const AUDIT_CSV_HEADERS = [
-  'Thời điểm',
-  'Người thao tác',
-  'Hành động',
-  'Loại đối tượng',
-  'Mã đối tượng',
-  'Lý do',
+  t('audit.col.time'),
+  t('audit.col.actor'),
+  t('audit.col.action'),
+  t('audit.col.entityType'),
+  t('audit.col.entityId'),
+  t('audit.col.reason'),
 ] as const;
 
 function csvCell(value: string): string {

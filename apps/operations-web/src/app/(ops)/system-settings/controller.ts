@@ -6,6 +6,7 @@ import {
   type UserMe,
 } from '@pinehill/contracts';
 import { ifMatchOf, validateEdit, type FieldIssue } from '../../../lib/system-settings.js';
+import { t } from '../../../lib/i18n.js';
 import { readIntent, replayAllowed, storageKey, type SettingIntent } from './intent.js';
 export interface SettingsPorts {
   actor(signal: AbortSignal): Promise<Pick<UserMe, 'userId' | 'role'>>;
@@ -335,7 +336,9 @@ export class SettingsController {
         error,
         canCompare: false,
         issues: isApiError(error)
-          ? (error.details ?? [{ field: '(biểu mẫu)', issue: error.code ?? 'INVALID' }])
+          ? (error.details ?? [
+              { field: t('screen.field.formWide'), issue: error.code ?? 'INVALID' },
+            ])
           : [],
       });
       return;

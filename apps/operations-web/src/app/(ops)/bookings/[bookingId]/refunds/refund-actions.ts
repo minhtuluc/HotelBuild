@@ -87,7 +87,7 @@ export function useRefundActions(workspace: RefundWorkspace) {
             kind: 'validationError',
             details: [
               {
-                field: 'Chi hoàn',
+                field: t('ops.refunds.field.payout'),
                 issue: t('ops.refunds.guardUnavailable'),
               },
             ],

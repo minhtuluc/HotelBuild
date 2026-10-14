@@ -10,6 +10,7 @@ import type { PropertySummary, PropertyUpdateRequest } from '@pinehill/contracts
 import { StateSurface, formatStatusWithEnum } from '@pinehill/ui-web';
 import { useForcedState } from '../../../components/forced-state';
 import { t } from '../../../lib/i18n';
+import { VERSION_NEW } from '../../../lib/screen-state';
 import { useAdmin } from '../admin-commands/use-admin';
 import { AdminPanels } from '../admin-commands/panels';
 import { adminText } from '../admin-commands/messages';
@@ -341,7 +342,7 @@ export function PropertiesScreen(): ReactElement {
       <AdminPanels
         state={state}
         controller={controller}
-        version={String(draft?.row.version ?? 'mới')}
+        version={String(draft?.row.version ?? VERSION_NEW)}
       />
       <PropertyComparison model={model} />
       <PropertyBody model={model} />
