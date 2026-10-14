@@ -54,6 +54,7 @@ function failure(error: unknown): ReviewReason {
   if (error instanceof QueueFailure) {
     if (error.code === 'CONTEXT_CHANGED') return 'AUTHORIZATION';
     if (error.code === 'UNSUPPORTED') return 'UNSUPPORTED';
+    if (error.code === 'LOOKUP_REQUIRED') return 'LOOKUP_REQUIRED';
   }
   if (!isApiError(error) || error.kind !== 'http') return 'UNKNOWN_RESULT';
   if (error.code === 'E_SYS_REQUEST_IN_PROGRESS') return 'UNKNOWN_RESULT';
@@ -70,6 +71,7 @@ export async function deliver(
   deps: QueueDeps,
   signal: AbortSignal,
   publish: (entries: QueueEntry[]) => void,
+  invalidate: () => void,
 ): Promise<void> {
   const save = async (patch: Partial<QueueEntry>) => {
     await tx.save(
@@ -78,6 +80,7 @@ export async function deliver(
     publish(tx.entries);
   };
   const review = async (reason: ReviewReason) => {
+    if (reason === 'AUTHORIZATION') invalidate();
     await save({ phase: 'NEEDS_REVIEW', reason });
     if (reason === 'AUTHORIZATION') throw new QueueFailure('CONTEXT_CHANGED');
   };

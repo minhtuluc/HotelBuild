@@ -5,6 +5,7 @@ import { QueueFailure, type QueueDeps, type OfflineContext, type QueueEntry } fr
 import { parseContext } from './validation';
 import { claimPending, clearPending, type TaskIntent } from '../housekeeping/intent';
 import { verifyAck } from '../housekeeping/write-validation';
+import { inReplayWindow } from './delivery';
 
 export function offlineContext(actor: UserMe, propertyId: string | null): OfflineContext {
   return parseContext({
@@ -39,6 +40,7 @@ function taskIntent(entry: QueueEntry): TaskIntent {
 export function offlinePorts(
   session: Session,
   storage: KeyValueStorage,
+  now: () => number = () => Date.now(),
 ): Pick<QueueDeps, 'authorize' | 'send' | 'watch' | 'supports'> {
   return {
     supports: (action) => action.kind === 'HOUSEKEEPING_STATUS',
@@ -56,16 +58,29 @@ export function offlinePorts(
       const intent = taskIntent(entry);
       // Share the existing owner lock; neither coordinator may acquire a second intent.
       await claimPending(storage, intent);
-      const result = await session.resourceClient().request({
-        method: 'PATCH',
-        path: '/housekeeping/tasks/' + encodeURIComponent(intent.taskId),
-        body: { status: intent.target },
-        ifMatch: '"' + intent.version + '"',
-        idempotencyKey: intent.key,
-        decoder: housekeepingTaskSchema.strict(),
-        signal,
-        maxAttempts: 1,
-      });
+      let deadlineError: QueueFailure | undefined;
+      const guard = () => {
+        if (!inReplayWindow(entry, now())) {
+          deadlineError = new QueueFailure('LOOKUP_REQUIRED');
+          throw deadlineError;
+        }
+      };
+      guard();
+      const result = await session
+        .resourceClient(guard)
+        .request({
+          method: 'PATCH',
+          path: '/housekeeping/tasks/' + encodeURIComponent(intent.taskId),
+          body: { status: intent.target },
+          ifMatch: '"' + intent.version + '"',
+          idempotencyKey: intent.key,
+          decoder: housekeepingTaskSchema.strict(),
+          signal,
+          maxAttempts: 1,
+        })
+        .catch((error: unknown) => {
+          throw deadlineError ?? error;
+        });
       verifyAck(result, intent);
       await clearPending(storage, intent);
       return { key: entry.key, context: entry.context, action: entry.action, status: 'CONFIRMED' };

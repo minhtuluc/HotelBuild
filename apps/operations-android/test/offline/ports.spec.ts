@@ -16,7 +16,7 @@ async function queueFixture() {
     status: 'IN_PROGRESS',
   } as const;
   const queue = new OfflineQueue({
-    ...offlinePorts(f.session, f.storage),
+    ...offlinePorts(f.session, f.storage, () => f.s.now),
     context: ctx,
     storage: f.storage,
     online: async () => f.s.online,

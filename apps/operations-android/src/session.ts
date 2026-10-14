@@ -55,10 +55,11 @@ export class Session {
     this.revision++;
     for (const listener of this.listeners) listener();
   }
-  /** Pinned resource transport: no automatic401 replay and no token exported to a screen. */
-  resourceClient(): ApiClient {
+  /** Pinned transport; an optional synchronous guard runs immediately before fetch. */
+  resourceClient(beforeFetch?: () => void): ApiClient {
     const token = this.accessToken,
       revision = this.revision;
+    const fetchImpl = this.deps.fetchImpl ?? globalThis.fetch.bind(globalThis);
     return new ApiClient({
       baseUrl: this.deps.baseUrl,
       createId: this.deps.createId,
@@ -70,7 +71,10 @@ export class Session {
         if (!token) throw new ApiError({ kind: 'http', status: 401, message: 'Expired' });
         return token;
       },
-      ...(this.deps.fetchImpl === undefined ? {} : { fetchImpl: this.deps.fetchImpl }),
+      fetchImpl: (input, init) => {
+        beforeFetch?.();
+        return fetchImpl(input, init);
+      },
     });
   }
   hasAccessToken(): boolean {

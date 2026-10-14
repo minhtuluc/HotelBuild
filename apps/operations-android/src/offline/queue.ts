@@ -110,9 +110,16 @@ export class OfflineQueue {
             entry.reason === 'UNKNOWN_RESULT' &&
             !inReplayWindow(entry, this.deps.now());
           if (entry.phase !== 'QUEUED' && !expiredUnknown) continue;
-          await deliver(tx, entry, this.deps, this.abort.signal, (entries) => {
-            if (this.alive) this.entries = entries;
-          });
+          await deliver(
+            tx,
+            entry,
+            this.deps,
+            this.abort.signal,
+            (entries) => {
+              if (this.alive) this.entries = entries;
+            },
+            () => this.dispose(),
+          );
           this.active();
         }
       });

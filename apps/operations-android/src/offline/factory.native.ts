@@ -8,13 +8,14 @@ import { offlineContext, offlinePorts } from './ports';
 
 export function createOfflineQueue(session: Session, actor: UserMe): OfflineQueue {
   const storage = secureStorage();
-  const ports = offlinePorts(session, storage);
+  const now = () => Date.now();
+  const ports = offlinePorts(session, storage, now);
   return new OfflineQueue({
     context: offlineContext(actor, session.selectedProperty()),
     storage,
     ...ports,
     createId: randomUUID,
-    now: () => Date.now(),
+    now,
     online: () => netInfoSource().getConnected(),
   });
 }
