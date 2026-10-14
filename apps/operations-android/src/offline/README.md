@@ -1,0 +1,27 @@
+# HB-159: owner-bound offline queue infrastructure
+
+This module implements the local queue and native factory for [HB-159](../../../../docs/08-thi-cong/tickets/HB-159-hang-doi-offline-android.md), screen design section8.3 and TC-FO-08. It does not complete the ticket's dependent screens HB-153/HB-154 or add an authoritative command-result API. The current SCR-66 UI continues using its existing online Writer; no offline-success UI has been enabled by this module.
+
+## Contract
+
+`OfflineQueue` accepts only three strict data shapes: `HOUSEKEEPING_STATUS`, `NOTE_DRAFT` and `SEARCH_DRAFT`. It does not accept URLs, arbitrary methods/bodies, financial operations, check-in/out, booking confirmation, room assignment/move, PINs or session tokens. Only declared fields survive validation; unknown credential fields are rejected before persistence. Notes/search are user drafts, not resource or financial caches.
+
+The local states are `DRAFT → QUEUED → SENDING → CONFIRMED | NEEDS_REVIEW`. Drafting and enqueueing never send or claim business success. `sync()` requires connectivity and fresh authorization; it persists and reads back SENDING before invoking transport. A strict command receipt must match owner/role/scope/property, key and exact action. An equal resource returned by GET is not a receipt. Current native ports support only the published housekeeping status PATCH; notes/search have no command adapter and remain local/need review, with no invented endpoint.
+
+The key, action payload and version never change on retry. Only explicit retry of UNKNOWN_RESULT within the replay window can queue the same request again. HTTP412/428, current permission failures, unsupported operations and other definitive rejections require resolution; there is no version rebasing or new key behind the user's back. Creation time and last attempted time guard clock rollback, and TTL is checked again after SENDING persistence. At/exceeding24h, only durable result lookup can confirm the command. The published API has no such lookup for these synchronous commands: native lookup is intentionally absent, the record remains LOOKUP_REQUIRED and dispatch is blocked. Never resolve it by matching a current task status or deleting an ambiguous record.
+
+Restart restores SENDING or an attempted queued replay as UNKNOWN_RESULT without sending it. Logout, token/property revision or a fresh authorization mismatch disposes the queue, aborts its transport and clears its RAM snapshot. Encrypted unresolved records remain bound to their original context. A different owner cannot read the same storage namespace; changed role/scope cannot restore old context. Consumers must clear their own rendered/cached copies when their session lifetime ends.
+
+## Persistence and coexistence
+
+The native factory uses the installed Expo SecureStore adapter and Expo Crypto UUIDs; there is no plaintext disk or memory fallback. Android SecureStore encrypts through its native Keystore implementation. Tests substitute that OS boundary and do not claim to prove native encrypted-at-rest behavior on a device.
+
+Repository mutations serialize across queue instances for the owner/property. Each save compares the previously read raw value and checks readback before publishing/sending. Corrupt/foreign records and storage failures are retained and surfaced, never reset to an empty queue. Limits are32 records and16,384 JSON code units; SecureStore can reject a value at a smaller device-specific limit (the installed JS wrapper warns above2KiB). This is a storage failure, never an excuse to send without durable intent. A new draft removes only already-CONFIRMED local receipts to bound queue growth; it never prunes uncertain requests. Discard is allowed only before a request was attempted.
+
+The housekeeping adapter shares the existing `housekeeping.pending.<owner>` claim/clear helpers with the online Writer. It claims the identical minimal legacy intent before PATCH and clears it only after validating status200, entity/date/assignee/status, advanced version and ETag. Another intent cannot acquire that owner slot while a command is unresolved. Failures leave the slot intact. This prevents two coordinators from silently issuing different keys for the same unresolved work; backend idempotency/locks remain authoritative.
+
+## Consumer wiring and verification limits
+
+After authenticated profile/property selection, a consumer can create the native coordinator using `createOfflineQueue(session, profile)`, call `restore()`, then explicitly draft/enqueue/sync supported work. Dispose it on unmount. Do not replace a profile/queue's context in place. Front-office UI consumers do not exist yet; their screen wiring and UX/Maestro acceptance remain pending HB-153/HB-154. Missing notes/search command APIs and durable result lookup must stay BLOCKED rather than be simulated as successful product capabilities.
+
+The tests execute real queue/repository/validation and Session/ApiClient/legacy-intent code. Storage/network/clock and native OS modules are boundaries. Fault cases include restart, lost ACK, scope change, repeated sync, stable retry, TTL/rollback, corruption, partial persistence and concurrent external changes. Hermes bundle compilation is separate from device installation, SecureStore runtime or TalkBack/Maestro acceptance; report device smoke BLOCKED if no device exists. Full HB-159 remains OPEN while those consumer/result-lookup obligations are unavailable.
