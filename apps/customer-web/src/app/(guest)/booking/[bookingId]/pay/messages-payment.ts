@@ -1,3 +1,5 @@
+import { makeTranslate } from '@pinehill/ui-web/messages';
+
 export const messages = {
   title: 'Thanh toán tiền cọc',
   intro: 'Chọn cổng thanh toán. Trạng thái giao dịch và đặt phòng được kiểm tra lại từ máy chủ.',
@@ -21,4 +23,24 @@ export const messages = {
   poll: 'Tự kiểm tra tối đa 12 lần, dừng khi rời tab, hết hạn giao dịch hoặc có kết quả. Bạn vẫn có thể kiểm tra thủ công.',
   unknown:
     'Yêu cầu đã gửi nhưng chưa rõ kết quả. Giữ nguyên giao dịch này; không tạo khoản thanh toán khác.',
+  currentVersion: 'máy chủ mới',
+  previousVersion: 'bản trước',
+  methodRequired: 'Hãy chọn VNPay hoặc MoMo.',
+  summaryBooking: 'Đặt phòng {code}',
+  total: 'Tổng tiền phòng',
+  paid: 'Đã thu',
+  balance: 'Còn nợ theo sổ cái',
+  deposit: 'Cọc cần trả theo máy chủ',
+  bookingStatus: 'Trạng thái đặt phòng từ máy chủ',
+  holdExpiry: 'Hạn giữ chỗ: {time}. Thời hạn giữ chỗ độc lập với giao dịch thanh toán.',
+  provider: 'Cổng thanh toán',
+  providerVnpay: 'VNPay',
+  providerMomo: 'MoMo',
+  selectedProvider: 'Cổng đã chọn: {provider}.',
+  observed: 'Giao dịch đã kiểm tra',
+  transaction: 'Mã giao dịch:',
+  paymentStatus: 'Số tiền: {amount} · Trạng thái máy chủ: {status}',
+  paymentExpiry: 'Hạn giao dịch: {time}.',
 } as const;
+
+export const paymentText = makeTranslate(messages);

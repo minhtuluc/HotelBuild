@@ -3,7 +3,7 @@ import styles from './payment.module.css';
 import { formatDateTimeVn, formatMoney, type ScreenState } from '@pinehill/ui-web';
 import type { PaymentView } from './payment-flow';
 import { approvedAmount, safePaymentUrl, type Offer } from './payment-model';
-import { messages as m } from './messages-payment';
+import { messages as m, paymentText as text } from './messages-payment';
 export type MethodChoice = 'VNPAY' | 'MOMO' | '';
 function blockedSurface(view: PaymentView, reload: () => void): ScreenState {
   const expiry = view.offer?.booking.holdExpiresAt;
@@ -35,14 +35,14 @@ function auxiliarySurface(view: PaymentView, invalid: boolean, reload: () => voi
   if (view.changed)
     return {
       kind: 'conflict',
-      currentVersion: String(view.offer?.booking.version ?? 'máy chủ mới'),
-      attemptedVersion: 'bản trước',
+      currentVersion: String(view.offer?.booking.version ?? m.currentVersion),
+      attemptedVersion: m.previousVersion,
       onReload: reload,
     };
   if (invalid)
     return {
       kind: 'validationError',
-      details: [{ field: 'method', issue: 'Hãy chọn VNPay hoặc MoMo.' }],
+      details: [{ field: 'method', issue: m.methodRequired }],
     };
   if (view.busy && view.offer)
     return {
@@ -65,33 +65,28 @@ export function PaymentSummary({ offer }: { offer: Offer }) {
   const expiry = offer.booking.holdExpiresAt;
   return (
     <section aria-labelledby="payment-summary">
-      <h2 id="payment-summary">Đặt phòng {offer.booking.code}</h2>
+      <h2 id="payment-summary">{text('summaryBooking', { code: offer.booking.code })}</h2>
       <dl style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '8px 16px' }}>
-        <dt>Tổng tiền phòng</dt>
+        <dt>{m.total}</dt>
         <dd style={{ margin: 0 }}>{formatMoney(offer.balance.totalAmount)}</dd>
-        <dt>Đã thu</dt>
+        <dt>{m.paid}</dt>
         <dd style={{ margin: 0 }}>{formatMoney(offer.balance.paidAmount)}</dd>
-        <dt>Còn nợ theo sổ cái</dt>
+        <dt>{m.balance}</dt>
         <dd style={{ margin: 0 }}>{formatMoney(offer.balance.balanceDue)}</dd>
         {amount !== null ? (
           <>
-            <dt>Cọc cần trả theo máy chủ</dt>
+            <dt>{m.deposit}</dt>
             <dd data-testid="approved-deposit" style={{ margin: 0, fontWeight: 700 }}>
               {formatMoney(amount)}
             </dd>
           </>
         ) : null}
-        <dt>Trạng thái đặt phòng từ máy chủ</dt>
+        <dt>{m.bookingStatus}</dt>
         <dd data-testid="server-booking-status" style={{ margin: 0 }}>
           {offer.booking.status}
         </dd>
       </dl>
-      {expiry ? (
-        <p>
-          Hạn giữ chỗ: {formatDateTimeVn(expiry)}. Thời hạn giữ chỗ độc lập với giao dịch thanh
-          toán.
-        </p>
-      ) : null}
+      {expiry ? <p>{text('holdExpiry', { time: formatDateTimeVn(expiry) })}</p> : null}
     </section>
   );
 }
@@ -112,7 +107,7 @@ export function PaymentForm({
   return (
     <>
       <fieldset disabled={view.busy || view.phase === 'confirm'}>
-        <legend>Cổng thanh toán</legend>
+        <legend>{m.provider}</legend>
         {(['VNPAY', 'MOMO'] as const).map((value) => (
           <label
             key={value}
@@ -131,14 +126,17 @@ export function PaymentForm({
               checked={method === value}
               onChange={() => onMethod(value)}
             />
-            {value === 'VNPAY' ? 'VNPay' : 'MoMo'}
+            {value === 'VNPAY' ? m.providerVnpay : m.providerMomo}
           </label>
         ))}
       </fieldset>
       {view.phase === 'confirm' ? (
         <>
           <p>
-            {m.confirmInfo} Cổng đã chọn: {method === 'VNPAY' ? 'VNPay' : 'MoMo'}.
+            {m.confirmInfo}{' '}
+            {text('selectedProvider', {
+              provider: method === 'VNPAY' ? m.providerVnpay : m.providerMomo,
+            })}
           </p>
           <button className={styles.primary} type="button" disabled={view.busy} onClick={onConfirm}>
             {m.confirm}
@@ -178,17 +176,19 @@ export function PaymentDetails({
   const portal = portalUrl(view, fixtureOrigin);
   return (
     <section aria-labelledby="payment-observed">
-      <h2 id="payment-observed">Giao dịch đã kiểm tra</h2>
+      <h2 id="payment-observed">{m.observed}</h2>
       <p>
-        Mã giao dịch: <span style={{ overflowWrap: 'anywhere' }}>{payment.paymentId}</span>
+        {m.transaction} <span style={{ overflowWrap: 'anywhere' }}>{payment.paymentId}</span>
       </p>
       <p>
-        Số tiền: {formatMoney(payment.amount)} · Trạng thái máy chủ: {payment.status}
+        {text('paymentStatus', { amount: formatMoney(payment.amount), status: payment.status })}
       </p>
       <p role="status" data-testid="payment-result">
         {observedMessage(view)}
       </p>
-      {payment.expiresAt ? <p>Hạn giao dịch: {formatDateTimeVn(payment.expiresAt)}.</p> : null}
+      {payment.expiresAt ? (
+        <p>{text('paymentExpiry', { time: formatDateTimeVn(payment.expiresAt) })}</p>
+      ) : null}
       {portal ? (
         <a href={portal} rel="noreferrer">
           {m.portal}
