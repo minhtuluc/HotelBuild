@@ -76,7 +76,12 @@ describe('HB-097 cổng chặn huỷ', () => {
       warnings: ['FORCE_MAJEURE_REQUIRES_MANAGER'],
     });
     // 403 thắng neo: kiểm quyền bất khả kháng chạy trước khi kiểm neo.
-    const denied = await cancel(front, forced.id, { ...fmBody, note: fmNote }, { tag: frontPreview.headers.etag! });
+    const denied = await cancel(
+      front,
+      forced.id,
+      { ...fmBody, note: fmNote },
+      { tag: frontPreview.headers.etag! },
+    );
     expect(denied.status).toBe(403);
     expect(errorCode(denied.body)).toBe('E_PAY_REFUND_FORCE_MAJEURE_FORBIDDEN');
 
@@ -95,9 +100,14 @@ describe('HB-097 cổng chặn huỷ', () => {
     expect(noAnchor.status).toBe(428);
 
     await setFee(1_000);
-    const accepted = await cancel(manager, forced.id, { ...fmBody, note: fmNote, evidenceRefs: ['ev-1'] }, {
-      tag: managerPreview.headers.etag!,
-    });
+    const accepted = await cancel(
+      manager,
+      forced.id,
+      { ...fmBody, note: fmNote, evidenceRefs: ['ev-1'] },
+      {
+        tag: managerPreview.headers.etag!,
+      },
+    );
     expect(accepted.status).toBe(200);
     expect(cancelResponseSchema.parse(accepted.body).cancellation).toMatchObject({
       requestedAmount: 5_001,
@@ -146,7 +156,10 @@ describe('HB-097 cổng chặn huỷ', () => {
     expect(result).toMatchObject({ status: 'CANCELLED', cancelReason: 'OTA_CANCELLATION' });
     expect(result.refundRequest).toBeNull();
     expect(await refundRequests(ota.id)).toEqual([]);
-    expect(await bookingRow(ota.id)).toMatchObject({ status: 'CANCELLED', cancel_reason: 'OTA_CANCELLATION' });
+    expect(await bookingRow(ota.id)).toMatchObject({
+      status: 'CANCELLED',
+      cancel_reason: 'OTA_CANCELLATION',
+    });
     expect(await auditCount(ota.id, 'LEDGER_REFUND_RESERVED')).toBe(0);
   });
 
@@ -163,7 +176,11 @@ describe('HB-097 cổng chặn huỷ', () => {
     const withFee = await cancel(token, fee.id, guestCancel, { tag: feePreview.headers.etag! });
     expect(withFee.status).toBe(200);
     expect(await refundRequests(fee.id)).toEqual([
-      expect.objectContaining({ requested_amount: '500000', refund_fee: '1000', net_refund: '499000' }),
+      expect.objectContaining({
+        requested_amount: '500000',
+        refund_fee: '1000',
+        net_refund: '499000',
+      }),
     ]);
     expect(await heldAmount(fee.id)).toBe('499000');
 

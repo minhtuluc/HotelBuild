@@ -84,10 +84,15 @@ describe('HB-097 huỷ booking', () => {
     });
     expect(Number(after.version)).toBeGreaterThan(Number(before.version));
     expect(
-      await rows('SELECT status,cancelled_at IS NOT NULL AS done FROM booking_rooms WHERE id=$1', [bookingRoom]),
+      await rows('SELECT status,cancelled_at IS NOT NULL AS done FROM booking_rooms WHERE id=$1', [
+        bookingRoom,
+      ]),
     ).toEqual([{ status: 'CANCELLED', done: true }]);
     expect(
-      await rows('SELECT count(*) AS n FROM booking_charges WHERE booking_id=$1 AND voided_amount=amount', [held.id]),
+      await rows(
+        'SELECT count(*) AS n FROM booking_charges WHERE booking_id=$1 AND voided_amount=amount',
+        [held.id],
+      ),
     ).toEqual([{ n: '3' }]);
     expect(
       await rows(
@@ -97,7 +102,10 @@ describe('HB-097 huỷ booking', () => {
       ),
     ).toEqual([{ n: '3' }]);
     expect(
-      await rows('SELECT released_at IS NOT NULL AS done,release_reason FROM room_assignments WHERE id=$1', [assignment]),
+      await rows(
+        'SELECT released_at IS NOT NULL AS done,release_reason FROM room_assignments WHERE id=$1',
+        [assignment],
+      ),
     ).toEqual([{ done: true, release_reason: 'GUEST_REQUEST' }]);
     expect(
       await rows(
@@ -130,9 +138,11 @@ describe('HB-097 huỷ booking', () => {
     expect(await heldAmount(held.id)).toBe('500000');
     expect(await auditCount(held.id, 'BOOKING_CANCELLED')).toBe(1);
     expect(await auditCount(held.id, 'LEDGER_REFUND_RESERVED')).toBe(1);
-    expect(await rows('SELECT to_status,from_status FROM booking_status_history WHERE booking_id=$1', [held.id])).toEqual([
-      { to_status: 'CANCELLED', from_status: 'CONFIRMED' },
-    ]);
+    expect(
+      await rows('SELECT to_status,from_status FROM booking_status_history WHERE booking_id=$1', [
+        held.id,
+      ]),
+    ).toEqual([{ to_status: 'CANCELLED', from_status: 'CONFIRMED' }]);
     expect(await db.$transaction((tx) => ledger.read(tx, held.id))).toMatchObject({
       paidAmount: 500_000n,
       refundedAmount: 0n,
@@ -177,7 +187,10 @@ describe('HB-097 huỷ booking', () => {
     const later = await login('FRONT_DESK');
     const drifted = await cancel(later, moved.id, guestCancel, { tag: stale.headers.etag! });
     expect(drifted.status).toBe(412);
-    expect(await bookingRow(moved.id)).toMatchObject({ status: 'CONFIRMED', total_amount: '800000' });
+    expect(await bookingRow(moved.id)).toMatchObject({
+      status: 'CONFIRMED',
+      total_amount: '800000',
+    });
 
     const fresh = await preview(later, moved.id);
     expect(fresh.headers.etag).not.toBe(stale.headers.etag);
@@ -190,7 +203,10 @@ describe('HB-097 huỷ booking', () => {
     expect(confirmed.status).toBe(200);
     expect(cancelResponseSchema.parse(confirmed.body).refundRequest).toBeNull();
     expect(await refundRequests(moved.id)).toEqual([]);
-    expect(await bookingRow(moved.id)).toMatchObject({ status: 'CANCELLED', penalty_amount: '300000' });
+    expect(await bookingRow(moved.id)).toMatchObject({
+      status: 'CANCELLED',
+      penalty_amount: '300000',
+    });
 
     // Neo gắn với booking đã xem trước: không dùng lại được cho booking khác.
     const other = await booking({ checkIn: '2026-10-12', nights: 2, price: 400_000 });
@@ -229,16 +245,21 @@ describe('HB-097 huỷ booking', () => {
     const confirmed = await booking({ nights: 3, price: 100_000 });
     await pay(confirmed.id, 5_001n);
     const previewedConfirmed = await preview(token, confirmed.id);
-    expect(cancelPreviewSchema.parse(previewedConfirmed.body).cancellation.requestedAmount).toBe(5_000);
-    const done = await cancel(token, confirmed.id, guestCancel, { tag: previewedConfirmed.headers.etag! });
+    expect(cancelPreviewSchema.parse(previewedConfirmed.body).cancellation.requestedAmount).toBe(
+      5_000,
+    );
+    const done = await cancel(token, confirmed.id, guestCancel, {
+      tag: previewedConfirmed.headers.etag!,
+    });
     expect(cancelResponseSchema.parse(done.body).cancellation.requestedAmount).toBe(5_000);
     expect(await refundRequests(confirmed.id)).toEqual([
       expect.objectContaining({ requested_amount: '5000' }),
     ]);
     expect(
-      await rows('SELECT applied_tier_id IS NOT NULL AS tier FROM refund_requests WHERE booking_id=$1', [
-        confirmed.id,
-      ]),
+      await rows(
+        'SELECT applied_tier_id IS NOT NULL AS tier FROM refund_requests WHERE booking_id=$1',
+        [confirmed.id],
+      ),
     ).toEqual([{ tier: true }]);
   });
 
@@ -255,7 +276,11 @@ describe('HB-097 huỷ booking', () => {
     const cancelled = await cancel(token, soon.id, guestCancel, { tag: previewed.headers.etag! });
     expect(cancelled.status).toBe(200);
     const result = cancelResponseSchema.parse(cancelled.body);
-    expect(result.cancellation).toMatchObject({ requestedAmount: 0, penaltyAmount: 800_000, refundFee: 0 });
+    expect(result.cancellation).toMatchObject({
+      requestedAmount: 0,
+      penaltyAmount: 800_000,
+      refundFee: 0,
+    });
     expect(result.refundRequest).toBeNull();
     expect(await bookingRow(soon.id)).toMatchObject({
       status: 'CANCELLED',
@@ -265,19 +290,28 @@ describe('HB-097 huỷ booking', () => {
       paid_amount: '200000',
     });
     expect(
-      await rows("SELECT kind,amount,voided_amount FROM booking_charges WHERE booking_id=$1 AND kind='PENALTY'", [
-        soon.id,
-      ]),
+      await rows(
+        "SELECT kind,amount,voided_amount FROM booking_charges WHERE booking_id=$1 AND kind='PENALTY'",
+        [soon.id],
+      ),
     ).toEqual([{ kind: 'PENALTY', amount: '800000', voided_amount: '0' }]);
     expect(
-      await rows("SELECT type,method,amount,status FROM payments WHERE booking_id=$1 AND type='PENALTY'", [soon.id]),
+      await rows(
+        "SELECT type,method,amount,status FROM payments WHERE booking_id=$1 AND type='PENALTY'",
+        [soon.id],
+      ),
     ).toEqual([{ type: 'PENALTY', method: 'CASH', amount: '800000', status: 'PENDING' }]);
   });
 
   test('AC4/TC-BOOK-27: neo gắn tập phòng; huỷ hai phòng liên tiếp không vượt đã thu; snapshot PARTIAL_CANCEL giữ nguyên đêm', async () => {
     const token = await login('FRONT_DESK');
     // 100.000/đêm niêm yết, giảm 10.000/đêm ⇒ nghĩa vụ 90.000/đêm; 2 phòng × 3 đêm = 540.000.
-    const two = await booking({ rooms: [roomId, room2Id], nights: 3, price: 100_000, discount: 10_000 });
+    const two = await booking({
+      rooms: [roomId, room2Id],
+      nights: 3,
+      price: 100_000,
+      discount: 10_000,
+    });
     expect(two.total).toBe(540_000n);
     const [firstPhysical, firstRoom] = [...two.rooms.entries()][0]!;
     const [secondPhysical, secondRoom] = [...two.rooms.entries()][1]!;
@@ -297,7 +331,9 @@ describe('HB-097 huỷ booking', () => {
     expect(errorCode(mismatch.body)).toBe('E_GEN_VERSION_CONFLICT');
 
     const partialAnchor = await preview(token, two.id, undefined, [firstRoom]);
-    expect(cancelPreviewSchema.parse(partialAnchor.body).cancellation.requestedAmount).toBe(270_000);
+    expect(cancelPreviewSchema.parse(partialAnchor.body).cancellation.requestedAmount).toBe(
+      270_000,
+    );
     const partial = await cancel(
       token,
       two.id,
@@ -323,7 +359,12 @@ describe('HB-097 huỷ booking', () => {
          FROM price_snapshots WHERE booking_id=$1 ORDER BY seq`,
       [two.id],
     );
-    expect(snapshots[0]).toMatchObject({ seq: 1, kind: 'ORIGINAL', gross: '540000', gross_col: '540000' });
+    expect(snapshots[0]).toMatchObject({
+      seq: 1,
+      kind: 'ORIGINAL',
+      gross: '540000',
+      gross_col: '540000',
+    });
     expect(snapshots[1]).toMatchObject({
       seq: 2,
       kind: 'PARTIAL_CANCEL',
@@ -354,15 +395,21 @@ describe('HB-097 huỷ booking', () => {
     expect(String(copied[0]!.nights)).toBe(String(kept[0]!.nights));
     expect(String(copied[0]!.nights)).toContain('"channelVersion"');
     expect(String(copied[0]!.nights)).toContain('"nightlyPrice"');
-    expect(await rows('SELECT released_at IS NOT NULL AS done FROM room_assignments WHERE id=$1', [firstAssignment])).toEqual([
-      { done: true },
-    ]);
-    expect(await rows('SELECT released_at IS NULL AS open FROM room_assignments WHERE id=$1', [secondAssignment])).toEqual([
-      { open: true },
-    ]);
+    expect(
+      await rows('SELECT released_at IS NOT NULL AS done FROM room_assignments WHERE id=$1', [
+        firstAssignment,
+      ]),
+    ).toEqual([{ done: true }]);
+    expect(
+      await rows('SELECT released_at IS NULL AS open FROM room_assignments WHERE id=$1', [
+        secondAssignment,
+      ]),
+    ).toEqual([{ open: true }]);
 
     // Neo cũ (xem trước trước khi huỷ phòng đầu) không dùng lại được sau khi booking đổi version.
-    const staleRest = await cancel(token, two.id, guestCancel, { tag: partialAnchor.headers.etag! });
+    const staleRest = await cancel(token, two.id, guestCancel, {
+      tag: partialAnchor.headers.etag!,
+    });
     expect(staleRest.status).toBe(412);
     const restAnchor = await preview(token, two.id);
     const rest = await cancel(token, two.id, guestCancel, { tag: restAnchor.headers.etag! });
@@ -372,9 +419,16 @@ describe('HB-097 huỷ booking', () => {
     expect(await heldAmount(two.id)).toBe('540000');
     const projection = await db.$transaction((tx) => ledger.read(tx, two.id));
     expect(projection.refundReserved).toBe(540_000n);
-    expect(projection.refundReserved + projection.refundedAmount).toBeLessThanOrEqual(projection.paidAmount);
+    expect(projection.refundReserved + projection.refundedAmount).toBeLessThanOrEqual(
+      projection.paidAmount,
+    );
 
-    const third = await cancel(token, two.id, { ...guestCancel, bookingRoomIds: [firstRoom] }, { tag: restAnchor.headers.etag! });
+    const third = await cancel(
+      token,
+      two.id,
+      { ...guestCancel, bookingRoomIds: [firstRoom] },
+      { tag: restAnchor.headers.etag! },
+    );
     expect(third.status).toBe(409);
     expect(errorCode(third.body)).toBe('E_CANCEL_NOT_ALLOWED');
   });

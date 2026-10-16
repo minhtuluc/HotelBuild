@@ -69,7 +69,8 @@ export type JsonRecord = Record<string, JsonScalar>;
 
 /** `jsonb NOT NULL` + `CHECK jsonb_typeof(...)='object'`: object JSON; guard kiểm lại khi đọc. */
 export function jsonObject(value: JsonScalar, message: string): JsonRecord {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) throw notAllowed(message);
+  if (typeof value !== 'object' || value === null || Array.isArray(value))
+    throw notAllowed(message);
   return value;
 }
 const nightsSchema = z.array(

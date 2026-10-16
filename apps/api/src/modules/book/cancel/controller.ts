@@ -17,13 +17,7 @@ import { Idempotent } from '../../../common/idempotency/decorators.js';
 import { IdempotencyContext } from '../../../common/idempotency/context.js';
 import { CancelService } from './service.js';
 import { CancelAccess } from './access.js';
-import {
-  bookingId,
-  cancelInput,
-  previewInput,
-  previewRooms,
-  requestActor,
-} from './validation.js';
+import { bookingId, cancelInput, previewInput, previewRooms, requestActor } from './validation.js';
 
 @Controller('bookings/:bookingId')
 export class CancelController {
