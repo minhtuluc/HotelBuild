@@ -5,8 +5,9 @@
  * Mọi dữ kiện giá đến từ **một** nguồn (`loadPricingFacts` của `pricing-facts`), nên lịch giá và báo
  * giá luôn cùng đầu vào (BR-RATE-17, ADR-015). File này **không** truy vấn CSDL và **không** ánh xạ
  * dòng CSDL; nó chỉ:
- * - thay gói giá bằng gói trung tính để dòng `RATE_PLAN` (priority 90) không tham gia lịch giá theo
- *   loại phòng (api.md §2.4 không nhận `ratePlanId`),
+ * - gọi loader chung với `ratePlanCode: null` — endpoint không nhận `ratePlanId` (api.md §2.4) nên
+ *   dữ kiện mang `NEUTRAL_RATE_PLAN`: dòng `RATE_PLAN` không tham gia **và** lịch giá không phụ thuộc
+ *   việc có gói giá nào đang bán,
  * - chọn kênh tham chiếu khi lệnh không khai `channelCode` (WEB như màn SCR-26 hiển thị),
  * - mang thêm phần riêng của màn hình lịch giá: tên mùa đang thắng (`seasonName`) và cờ cảnh báo
  *   BR-RATE-19 (đọc qua helper export từ `pricing-facts`).
@@ -15,26 +16,11 @@
  * tuần/công suất/LOS/kênh, kẹp sàn–trần) do `quotePrice`/`resolution` quyết định (BR-RATE-01…09, 19).
  */
 import type { Prisma } from '@prisma/client';
-import type { PricingInput, RatePlan, RoomRate } from '@pinehill/domain/pricing';
+import type { PricingInput, RoomRate } from '@pinehill/domain/pricing';
 import {
   loadPricingFacts as loadSharedPricingFacts,
   longstayWithoutOwnPrice,
 } from '../pricing-facts/index.js';
-
-/**
- * Gói giá trung tính cho lịch giá **theo loại phòng**: endpoint không nhận `ratePlanId` (api.md §2.4)
- * nên dòng `RATE_PLAN` (priority 90) không tham gia; `losDiscountEnabled=false` và LOS = 1,00 vì mức
- * giảm dài ngày phụ thuộc **cả kỳ** lưu trú, không phải thuộc tính của một đêm (BR-RATE-10). `id` là
- * UUID không thể trùng gói thật nên engine bỏ qua mọi dòng `RATE_PLAN`.
- */
-export const CALENDAR_PLAN_ID = '00000000-0000-0000-0000-000000000000';
-const CALENDAR_RATE_PLAN: RatePlan = Object.freeze({
-  id: CALENDAR_PLAN_ID,
-  minNights: 1,
-  maxNights: 32767,
-  losDiscountEnabled: false,
-  depositPercent: '0',
-});
 
 /** Kênh tham chiếu khi lệnh không khai `channelCode`: giá niêm yết trực tiếp là mức màn hình hiển thị. */
 export const WEB_CHANNEL = 'WEB';
@@ -90,13 +76,15 @@ export async function loadPricingFacts(
     roomTypeId: query.room.id,
     checkIn: query.checkIn,
     checkOut: query.checkOut,
+    // Lịch giá không bán theo gói: gói trung tính, không đòi hỏi gói nào đang bán (BR-RATE-10, HB-198).
+    ratePlanCode: null,
   });
   const channelCode = resolveChannelCode(
     facts.channels.map((channel) => channel.code),
     query.channelCode,
   );
   return {
-    input: { ...facts, ratePlan: CALENDAR_RATE_PLAN, channelCode },
+    input: { ...facts, channelCode },
     seasons: facts.seasons.map((season) => ({
       id: season.id,
       name: season.name,

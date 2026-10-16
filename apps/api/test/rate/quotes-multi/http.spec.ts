@@ -170,3 +170,23 @@ test('kỳ công suất tươi: đổi mùa thay đổi giá nhưng không lệc
   expect(result.ok).toBe(true);
   if (result.ok) expect(parsed.options[0]!.totalFrom).toBe(result.value.total);
 });
+
+test('HB-198: hết gói giá ACTIVE thì báo giá đa kênh vẫn 422 (tách khỏi lịch giá)', async () => {
+  const token = await login('MANAGER');
+  const plans = await rows('SELECT id::text AS id, status FROM rate_plans ORDER BY id');
+  try {
+    await rows("UPDATE rate_plans SET status='INACTIVE'");
+    const response = await post(token, {
+      roomTypeId: dlxTypeId,
+      checkIn: stay.checkIn,
+      checkOut: stay.checkOut,
+      channelCodes: ['WEB'],
+    });
+    // Báo giá phải có gói giá: không phân giải được gói ⇒ 422, khác hẳn lịch giá (vẫn 200).
+    expect(response.status).toBe(422);
+    expect(errorBodySchema.parse(response.body).code).toBe('E_RATE_CONFIGURATION_INVALID');
+  } finally {
+    for (const plan of plans)
+      await rows('UPDATE rate_plans SET status=$1 WHERE id=$2', [plan.status, plan.id]);
+  }
+});

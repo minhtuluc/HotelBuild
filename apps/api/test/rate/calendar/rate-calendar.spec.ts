@@ -179,6 +179,36 @@ test('AC1/BR-RATE-02 — dòng RATE_PLAN của **mọi** gói đang bán không 
   });
 });
 
+test('AC1/BR-RATE-19 — không còn gói giá ACTIVE vẫn phục vụ lịch giá bằng gói trung tính', async () => {
+  const token = await login();
+  const range = { from: '2027-01-10', to: '2027-01-10' } as const;
+  const withPlans = rateCalendarSchema.parse((await calendarRequest(token, typeId, range)).body);
+  const plans = await rows('SELECT id::text AS id, status FROM rate_plans ORDER BY id');
+  try {
+    // OWNER có thể cho cả bốn gói về `INACTIVE` qua `PUT /rate-plans/admin`: lịch giá không được hỏng.
+    await rows("UPDATE rate_plans SET status='INACTIVE'");
+    const response = await calendarRequest(token, typeId, range);
+    expect(response.status).toBe(200);
+    const withoutPlans = rateCalendarSchema.parse(response.body);
+    // Gói trung tính: khung ngày và từng trường của entry không đổi so với khi còn gói đang bán.
+    expect(withoutPlans.roomTypeId).toBe(withPlans.roomTypeId);
+    expect(withoutPlans.from).toBe(withPlans.from);
+    expect(withoutPlans.to).toBe(withPlans.to);
+    expect(withoutPlans.entries).toEqual(withPlans.entries);
+    expect(withoutPlans.entries[0]).toMatchObject({
+      date: '2027-01-10',
+      source: 'BASE',
+      basePrice: STD.basePrice,
+      nightlyPrice: STD.basePrice,
+    });
+    // BR-RATE-19 chỉ nói về gói **đang bán**: hết gói ACTIVE thì không còn cảnh báo LONGSTAY14.
+    expect(withoutPlans.warnings ?? []).toEqual([]);
+  } finally {
+    for (const plan of plans)
+      await rows('UPDATE rate_plans SET status=$1 WHERE id=$2', [plan.status, plan.id]);
+  }
+});
+
 test('đầu vào hỏng — query sai là 400, loại phòng không tồn tại là 404', async () => {
   const token = await login();
   const badQueries: readonly Record<string, unknown>[] = [
