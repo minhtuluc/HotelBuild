@@ -144,6 +144,9 @@ export function makeContext(db: PrismaClient, clock: FakeClock, ownerUrl: string
       config: loadWorkerConfig({
         DATABASE_URL: ownerUrl,
         REDIS_URL: process.env.REDIS_URL ?? 'redis://127.0.0.1:56379',
+        // Không đăng ký nhịp lặp: BullMQ giữ job scheduler ở Redis nên bật cờ này trong test sẽ bắn job vào
+        // worker của chính ca (xem `redis.integration.spec.ts`); test tự đẩy job để điều khiển nhịp.
+        ENABLE_REPEATABLE_SCHEDULERS: 'false',
         LOG_LEVEL: 'silent',
       }),
       clock,

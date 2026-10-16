@@ -139,25 +139,61 @@ describe('HB-127 — adapter BullMQ với Redis thật', () => {
   }, 20_000);
 });
 
+/**
+ * BullMQ giữ **job scheduler ở Redis**, không ở tiến trình: dùng chung DB Redis với một worker thật đã bật
+ * `ENABLE_REPEATABLE_SCHEDULERS` (ví dụ lượt smoke `OUTBOX_RELAY_INTERVAL_SECONDS=1`) thì scheduler còn sót
+ * của `q.outbox-relay` sẽ bắn job của nó vào chính worker của ca này. Vì vậy ca này:
+ * - chạy trên **DB Redis riêng** (`OUTBOX_RELAY_REDIS_DB`) thay vì DB dùng chung của `REDIS_URL`;
+ * - **dọn trước** scheduler + job còn lại của hàng đợi mình dùng, nên chạy được cả trên DB đã dùng;
+ * - chỉ khẳng định trên job **do test tự phát** (`data.seq`), không so toàn bộ danh sách nhận được;
+ * - tự dựng `Queue`/`Worker` BullMQ trực tiếp nên **không** đăng ký nhịp lặp nào — `ENABLE_REPEATABLE_SCHEDULERS`
+ *   không tham gia ca này vì không có `WorkerApp`/`WorkerConfig` (worker thật chỉ đăng ký nhịp khi chạy sản phẩm).
+ */
+const OUTBOX_RELAY_REDIS_DB = 11;
+
+/** Bỏ mọi scheduler còn sót rồi xoá sạch job của hàng đợi này (không đụng hàng đợi của ca khác). */
+async function resetQueue(queue: Queue<unknown, void>): Promise<void> {
+  for (const scheduler of await queue.getJobSchedulers())
+    await queue.removeJobScheduler(scheduler.key);
+  await queue.obliterate({ force: true }).catch(() => undefined);
+}
+
 describe.skipIf(!redisUrl)('q.outbox-relay với Redis thật', () => {
   it('job được handler nhận đúng một lần', async () => {
-    const connection = redisOptions(redisUrl ?? '');
-    const queue = new Queue('q.outbox-relay', { connection });
-    const received: string[] = [];
-    const worker = new Worker(
+    // Cùng máy với `REDIS_URL` nhưng DB riêng của ca này (lý do ở docblock của describe).
+    const relayRedisUrl = new URL(redisUrl ?? '');
+    relayRedisUrl.pathname = `/${OUTBOX_RELAY_REDIS_DB}`;
+    const connection = redisOptions(relayRedisUrl.href);
+    const queue = new Queue<unknown, void>('q.outbox-relay', { connection });
+    const events = new QueueEvents('q.outbox-relay', { connection });
+    const received: { name: string; seq: number | undefined }[] = [];
+    const worker = new Worker<{ seq?: number }>(
       'q.outbox-relay',
       async (job) => {
-        received.push(job.name);
+        received.push({ name: job.name, seq: job.data.seq });
       },
       { connection },
     );
-    opened.push(queue, worker);
-    const completed = Promise.withResolvers<void>();
-    worker.on('completed', () => completed.resolve());
-    await worker.waitUntilReady();
-    await queue.add('relay-once', { seq: 1 });
-    await completed.promise;
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    expect(received).toEqual(['relay-once']);
+    opened.push(queue, worker, events);
+    await resetQueue(queue);
+    // Cố ý để lại một scheduler của chính hàng đợi này — đúng kịch bản làm đỏ CI: job do nó bắn ra
+    // **không** được tính là job của test.
+    await queue.upsertJobScheduler('hb006-leftover-scheduler', { every: 60_000 });
+    try {
+      await worker.waitUntilReady();
+      await events.waitUntilReady();
+      const job = await queue.add('relay-once', { seq: 1 });
+      await job.waitUntilFinished(events, 10_000);
+      // Job khác cũng do ca này phát: chứng minh khẳng định bên dưới là phép lọc, không phải danh sách rỗng.
+      await queue.add('hb006-noop', { seq: 999 });
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect(received.filter((entry) => entry.seq === 1).map((entry) => entry.name)).toEqual([
+        'relay-once',
+      ]);
+      expect(received.map((entry) => entry.name)).toContain('hb006-noop');
+    } finally {
+      await worker.close();
+      await resetQueue(queue);
+    }
   }, 20_000);
 });

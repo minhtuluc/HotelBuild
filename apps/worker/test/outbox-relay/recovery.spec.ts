@@ -210,6 +210,8 @@ test.skipIf(!redisUrl)('redis-loss-after-published', async () => {
     context,
   });
   try {
+    // Dọn trước job + scheduler còn sót của chính hàng đợi này (BullMQ giữ job scheduler ở Redis): ca phải
+    // chạy được cả trên DB Redis đã dùng, không phụ thuộc trạng thái ngoài.
     await queue.obliterate({ force: true }).catch(() => undefined);
     await events.waitUntilReady();
     // Job mất khỏi Redis trước khi ai xử lý.
