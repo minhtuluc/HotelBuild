@@ -8,6 +8,7 @@ import { formatMoney, formatStatusWithEnum, formatStayPeriod } from '@pinehill/u
 import { t, type CustomerMessageKey } from '../../../../../lib/i18n';
 import { STATUS_KEYS } from '../../model';
 import { nightsBetween, stayDifference } from '../../reschedule-model';
+import { formatStayNights, formatStaySpan } from '../../stay-format';
 
 const DIFF_KEYS = {
   more: 'guest.reschedule.diff.more',
@@ -38,7 +39,7 @@ function QuoteDiff({
         {t('guest.reschedule.diff.title')}
       </h2>
       <p style={{ margin: 0 }} data-testid="reschedule-new-stay">
-        {checkIn} → {checkOut} · {nights} đêm
+        {formatStayNights(checkIn, checkOut, nights)}
       </p>
       <p style={{ margin: 0 }} data-testid="reschedule-new-total">
         {t('guest.reschedule.diff.newTotal', { amount: formatMoney(quote.total) })}
@@ -83,8 +84,11 @@ function RescheduleResult({
         )}
       </p>
       <p style={{ margin: 0 }} data-testid="reschedule-result-stay">
-        {booking.checkIn} → {booking.checkOut} ·{' '}
-        {formatStayPeriod(booking.nights, booking.adults, booking.children)}
+        {formatStaySpan(
+          booking.checkIn,
+          booking.checkOut,
+          formatStayPeriod(booking.nights, booking.adults, booking.children),
+        )}
       </p>
       <p style={{ margin: 0 }}>
         {t('guest.reschedule.result.total', { amount: formatMoney(booking.totalAmount) })}

@@ -137,7 +137,7 @@ test.describe('SCR-12 đổi ngày trên API giả (HB-104)', () => {
     page,
   }) => {
     const bookingId = await openReschedule(page);
-    await expect(page.getByTestId('reschedule-current')).toContainText('2026-10-10 → 2026-10-11');
+    await expect(page.getByTestId('reschedule-current')).toContainText('10/10/2026 → 11/10/2026');
     // Chưa xem chênh lệch thì chưa được xác nhận (AC1).
     await expect(page.getByTestId('reschedule-confirm')).toBeDisabled();
 
@@ -147,7 +147,9 @@ test.describe('SCR-12 đổi ngày trên API giả (HB-104)', () => {
 
     const diff = page.getByTestId('reschedule-diff');
     await expect(diff).toBeVisible();
-    await expect(page.getByTestId('reschedule-new-stay')).toContainText('2026-10-12 → 2026-10-15 · 3 đêm');
+    await expect(page.getByTestId('reschedule-new-stay')).toContainText(
+      '12/10/2026 → 15/10/2026 · 3 đêm',
+    );
     await expect(page.getByTestId('reschedule-new-total')).toContainText('3.000.000 ₫');
     await expect(page.getByTestId('reschedule-difference')).toContainText('tăng thêm 2.000.000 ₫');
     await expect(page.getByTestId('reschedule-fee')).toContainText('hợp đồng chưa có trường này');
@@ -157,7 +159,9 @@ test.describe('SCR-12 đổi ngày trên API giả (HB-104)', () => {
     await expect(page.getByTestId('reschedule-result')).toBeVisible();
     await expect(page.getByTestId('reschedule-result-status')).toContainText('Trạng thái giữ nguyên');
     await expect(page.getByTestId('reschedule-result-status')).toContainText('HELD');
-    await expect(page.getByTestId('reschedule-result-stay')).toContainText('2026-10-12 → 2026-10-15');
+    await expect(page.getByTestId('reschedule-result-stay')).toContainText(
+      '12/10/2026 → 15/10/2026',
+    );
     await expect(page.getByTestId('reschedule-result-count')).toContainText('1');
 
     // Máy chủ xác nhận: kỳ mới, trạng thái giữ nguyên, số lần đổi = 1 (BR-BOOK-12).

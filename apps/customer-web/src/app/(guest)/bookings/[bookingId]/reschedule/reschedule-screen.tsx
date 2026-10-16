@@ -31,6 +31,7 @@ import { fetchQuoteWithSession } from '../../../book/booking-api';
 import { rescheduleBooking } from '../../api';
 import { STATUS_KEYS } from '../../model';
 import { STAY_ISSUE_KEYS, isSameStay, stayIssue } from '../../reschedule-model';
+import { formatStaySpan } from '../../stay-format';
 import { RescheduleForm, RescheduleOutcome } from './reschedule-parts';
 
 export function RescheduleScreen(): ReactElement {
@@ -178,8 +179,11 @@ export function RescheduleScreen(): ReactElement {
             {t(result === null ? 'guest.reschedule.current' : 'guest.reschedule.currentBefore')}{' '}
             <code>{baseline.code}</code> ·{' '}
             {formatStatusWithEnum(t(STATUS_KEYS[baseline.status]), baseline.status)} ·{' '}
-            {baseline.checkIn} → {baseline.checkOut} ·{' '}
-            {formatStayPeriod(baseline.nights, baseline.adults, baseline.children)}
+            {formatStaySpan(
+              baseline.checkIn,
+              baseline.checkOut,
+              formatStayPeriod(baseline.nights, baseline.adults, baseline.children),
+            )}
           </p>
         )}
 
