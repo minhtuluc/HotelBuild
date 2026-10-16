@@ -72,9 +72,9 @@ describe('SCR-11 huỷ & tiền hoàn (HB-103)', () => {
     expect(refundRows(breakdown).map((row) => row.amount)).toEqual([250_499, 250_499, 0, 0]);
   });
 
-  it('hiện số giờ trước giờ nhận phòng đúng một chữ số thập phân', () => {
-    expect(formatHoursBeforeCheckIn(96)).toBe('96.0');
-    expect(formatHoursBeforeCheckIn(5.5)).toBe('5.5');
-    expect(formatHoursBeforeCheckIn(0)).toBe('0.0');
+  it('hiện số giờ trước giờ nhận phòng một chữ số thập phân theo vi-VN', () => {
+    expect(formatHoursBeforeCheckIn(96)).toBe('96,0');
+    expect(formatHoursBeforeCheckIn(5.5)).toBe('5,5');
+    expect(formatHoursBeforeCheckIn(0)).toBe('0,0');
   });
 });

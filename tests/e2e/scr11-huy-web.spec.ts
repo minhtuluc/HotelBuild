@@ -231,7 +231,7 @@ test.describe('SCR-11 huỷ & tiền hoàn trên API giả (HB-103)', () => {
     const breakdown = page.getByTestId('cancel-preview');
     await expect(breakdown).toBeVisible();
     await expect(page.getByTestId('cancel-tier')).toContainText('unconfirmed');
-    await expect(page.getByTestId('cancel-tier')).toContainText('96.0 giờ');
+    await expect(page.getByTestId('cancel-tier')).toContainText('96,0 giờ');
     await expect(page.getByTestId('cancel-tier')).toContainText('hoàn 100%');
     const refund = page.getByTestId('cancel-refund');
     await expect(refund).toContainText('Đã thu');
