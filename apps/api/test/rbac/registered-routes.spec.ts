@@ -227,6 +227,17 @@ function independentOracle(): Record<string, Expected> {
     status: 404,
     method: RequestMethod.DELETE,
   };
+  // HB-097 / api.md §2.5: xem trước và huỷ booking; thân oracle không hợp lệ → 400.
+  keyed[`${RequestMethod.POST}:bookings/:bookingId/cancel-preview`] = {
+    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
+  keyed[`${RequestMethod.POST}:bookings/:bookingId/cancel`] = {
+    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
   // HB-168 / api.md §2.11: danh sách và gửi lại thông báo (lý do bắt buộc ở thân lệnh).
   keyed[`${RequestMethod.GET}:notifications`] = {
     roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
@@ -329,7 +340,7 @@ test('every discovered protected HTTP route has an independent oracle and runs a
     for (const role of roles) {
       clock.value += 61000;
       const token = await login(role);
-      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':operationId', roomId).replace(':notificationId', roomId).replace(':guestId', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId).replace(':taskId', roomId).replace(':key', 'refund.feeAmount').replace(':propertyId', roomId).replace(':roomTypeId', roomId).replace(':roomId', roomId)}`;
+      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':operationId', roomId).replace(':notificationId', roomId).replace(':guestId', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId).replace(':taskId', roomId).replace(':key', 'refund.feeAmount').replace(':propertyId', roomId).replace(':bookingId', roomId).replace(':roomTypeId', roomId).replace(':roomId', roomId)}`;
       const pending = routeRequest(route.method, path);
       const result = await pending
         .set('Authorization', `Bearer ${token}`)
