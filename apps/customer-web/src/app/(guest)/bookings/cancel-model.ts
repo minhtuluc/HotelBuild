@@ -65,7 +65,15 @@ export function refundRows(breakdown: CancellationBreakdown): readonly RefundRow
   ];
 }
 
-/** Số giờ trước giờ nhận phòng tại lúc xem trước (máy chủ tính), hiển thị một chữ số thập phân. */
+/**
+ * Số giờ trước giờ nhận phòng tại lúc xem trước (máy chủ tính), hiển thị một chữ số thập phân
+ * theo quy ước `vi-VN` (dấu phẩy thập phân — NFR-LOC-02). Đây là số giờ, không phải tiền.
+ */
+const HOURS_FORMATTER = new Intl.NumberFormat('vi-VN', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
 export function formatHoursBeforeCheckIn(hours: number): string {
-  return hours.toFixed(1);
+  return HOURS_FORMATTER.format(hours);
 }

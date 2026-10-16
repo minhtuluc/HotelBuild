@@ -5,7 +5,7 @@ import './globals.css';
 
 export const metadata = {
   title: 'Pine Hill — Customer Web',
-  description: 'Đặt phòng trực tiếp tại chuỗi Pine Hill',
+  description: customerCatalog['guest.app.description'],
 };
 
 export default function GuestLayout({ children }: { children: ReactNode }): ReactElement {
