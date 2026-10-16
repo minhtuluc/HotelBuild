@@ -276,6 +276,12 @@ function independentOracle(): Record<string, Expected> {
     status: 200,
     method: RequestMethod.GET,
   };
+  //  HB-056 / api.md §2.4 / BR-RATE-07,08,09: báo giá đa kênh chỉ MANAGER+; oracle gửi thân sai → 400.
+  keyed[`${RequestMethod.POST}:quotes/multi-channel`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
   return keyed;
 }
 

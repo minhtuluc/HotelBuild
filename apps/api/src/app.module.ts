@@ -10,6 +10,7 @@ import { AllotmentsModule } from './modules/inv/allotments/module.js';
 import { RoomBlocksModule } from './modules/prop/room-blocks/module.js';
 import { RatePlansModule } from './modules/rate/rate-plans/module.js';
 import { CancellationPoliciesModule } from './modules/rate/cancellation-policies/module.js';
+import { QuotesMultiChannelModule } from './modules/rate/quotes-multi/module.js';
 import { Module } from '@nestjs/common';
 import type { DynamicModule } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -73,6 +74,7 @@ export class AppModule {
         RatePlansModule,
         ChannelsModule,
         CancellationPoliciesModule,
+        QuotesMultiChannelModule,
         HousekeepingModule,
         AuditLogsModule,
         SettingsModule,
