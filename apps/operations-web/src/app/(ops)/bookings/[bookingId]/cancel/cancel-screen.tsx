@@ -20,12 +20,12 @@ import { StateSurface, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../../components/screen-alert';
 import { useForcedState } from '../../../../../components/forced-state';
 import { opsApiClient } from '../../../../../lib/api';
+import { formatBusinessDate } from '../../../../../lib/business-date';
 import { t } from '../../../../../lib/i18n';
 import { readFailureState, writeFailureState } from '../../../../../lib/screen-state';
 import { CancelForm, CancelPreviewPanel, CancelResult } from './cancel-parts';
 import {
   EMPTY_CANCEL_DRAFT,
-  calendarDateLabel,
   canConfirmCancel,
   cancelRequestOf,
   previewRequestOf,
@@ -191,8 +191,8 @@ export function CancelScreen({ baseUrl }: { baseUrl: string }): ReactElement {
       <h1 style={{ margin: 0 }}>{t('ops.cancel.title')}</h1>
       {booking === null ? null : (
         <p data-testid="cancel-booking" style={{ margin: 0 }}>
-          <code>{booking.code}</code> · {booking.status} · {calendarDateLabel(booking.checkIn)} →{' '}
-          {calendarDateLabel(booking.checkOut)} · {booking.roomCount} {t('ops.cancel.rooms')}
+          <code>{booking.code}</code> · {booking.status} · {formatBusinessDate(booking.checkIn)} →{' '}
+          {formatBusinessDate(booking.checkOut)} · {booking.roomCount} {t('ops.cancel.rooms')}
         </p>
       )}
       <StateSurface state={state}>

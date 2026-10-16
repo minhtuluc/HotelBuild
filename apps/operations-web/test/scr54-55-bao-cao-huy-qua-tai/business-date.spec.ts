@@ -4,7 +4,7 @@
  */
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { OverbookingReport } from '@pinehill/contracts';
 import { formatBusinessDate } from '../../src/lib/business-date';
 import { OverbookingTable } from '../../src/app/(ops)/reports/report-tables';
@@ -52,6 +52,40 @@ describe('formatBusinessDate (NFR-LOC-02)', () => {
     expect(formatBusinessDate('')).toBe('');
     expect(formatBusinessDate('không-phải-ngày')).toBe('không-phải-ngày');
     expect(formatBusinessDate('2026-12')).toBe('2026-12');
+  });
+});
+
+/**
+ * HB-108 (SCR-35/SCR-36) — nhãn ngày chỉ-ngày hoán vị chuỗi nên **không** phụ thuộc múi giờ và
+ * không biến ngày lịch thành một mốc thời gian. Gộp về bản chuẩn `formatBusinessDate`.
+ */
+describe('nhãn ngày lịch (HB-108)', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('đổi ngày nghiệp vụ ISO sang dd/MM/yyyy và không còn dạng ISO', () => {
+    expect(formatBusinessDate('2026-12-24')).toBe('24/12/2026');
+    expect(formatBusinessDate('2026-12-26')).toBe('26/12/2026');
+    expect(formatBusinessDate('2026-01-05')).toBe('05/01/2026');
+    const label = formatBusinessDate('2026-12-24');
+    expect(label).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+    expect(label).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  });
+
+  it('cùng kết quả bất kể TZ của máy (không diễn giải ngày lịch thành mốc thời gian)', () => {
+    for (const tz of ['America/New_York', 'UTC', 'Asia/Tokyo', 'Pacific/Kiritimati']) {
+      vi.stubEnv('TZ', tz);
+      expect(formatBusinessDate('2026-03-01')).toBe('01/03/2026');
+      expect(formatBusinessDate('2026-01-01')).toBe('01/01/2026');
+      expect(formatBusinessDate('2026-12-31')).toBe('31/12/2026');
+    }
+  });
+
+  it('trả nguyên văn chuỗi không phải ngày ISO-ngày để màn hình không vỡ', () => {
+    expect(formatBusinessDate('—')).toBe('—');
+    expect(formatBusinessDate('2026-12-24T00:00:00Z')).toBe('2026-12-24T00:00:00Z');
+    expect(formatBusinessDate('')).toBe('');
   });
 });
 

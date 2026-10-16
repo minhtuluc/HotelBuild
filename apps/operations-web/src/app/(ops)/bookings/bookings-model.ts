@@ -7,6 +7,7 @@
  */
 import { bookingStatusSchema } from '@pinehill/contracts';
 import type { BookingStatus, BookingSummary, ListPage } from '@pinehill/contracts';
+import { formatBusinessDate } from '../../../lib/business-date';
 import { t, type OperationsMessageKey } from '../../../lib/i18n';
 
 export interface BookingFilters {
@@ -135,14 +136,6 @@ export function balanceRows(booking: {
   ];
 }
 
-/**
- * Ngày chỉ có ngày lịch `YYYY-MM-DD` đổi sang thứ tự `dd/MM/yyyy` để hiển thị; **không** dựng `Date`
- * hay múi giờ nên ngày nghiệp vụ gửi API giữ nguyên, chỉ đổi thứ tự chuỗi.
- */
-function calendarDateLabel(value: string): string {
-  return value.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1');
-}
-
 /** Kỳ lưu trú một dòng cho bảng: `24/12/2026 → 26/12/2026 · 2 đêm · 1 phòng`. */
 export function stayOf(booking: {
   readonly checkIn: string;
@@ -151,8 +144,8 @@ export function stayOf(booking: {
   readonly roomCount: number;
 }): string {
   return t('ops.bookings.stayPeriod', {
-    checkIn: calendarDateLabel(booking.checkIn),
-    checkOut: calendarDateLabel(booking.checkOut),
+    checkIn: formatBusinessDate(booking.checkIn),
+    checkOut: formatBusinessDate(booking.checkOut),
     nights: booking.nights,
     roomCount: booking.roomCount,
   });
