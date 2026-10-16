@@ -151,6 +151,11 @@ test.describe('SCR-09/10 đơn của tôi trên API giả (HB-102)', () => {
     await expect(page.getByTestId('booking-row-SYN079')).toContainText('Đang giữ chỗ');
     await expect(page.getByTestId('booking-row-SYN079')).toContainText('2.000.000 ₫');
     await expect(page.getByTestId('booking-row-SYN080')).toContainText('Đã xác nhận');
+    // Kỳ lưu trú của danh sách cũng là ngày lịch dd/MM/yyyy, không còn ISO nguyên văn.
+    await expect(page.getByTestId('booking-row-SYN079')).toContainText(
+      '24/12/2026 → 26/12/2026 · 2 đêm · 2 người lớn · 0 trẻ em',
+    );
+    await expect(page.getByTestId('booking-row-SYN079')).not.toContainText('2026-12-24');
     await expect(page.getByTestId('booking-row-SYN079')).toContainText(/\d{2}:\d{2}/);
     expect(listQueries[0]).toContain('limit=20');
 
@@ -235,7 +240,10 @@ test.describe('SCR-09/10 đơn của tôi trên API giả (HB-102)', () => {
     await expect(page).toHaveURL('/bookings/bk-1');
     await expect(page.getByTestId('booking-detail-code')).toContainText('SYN079');
     await expect(page.getByTestId('booking-detail-status')).toContainText('Đang giữ chỗ');
-    await expect(page.getByTestId('booking-detail-stay')).toContainText('2026-12-24 → 2026-12-26');
+    await expect(page.getByTestId('booking-detail-stay')).toContainText(
+      '24/12/2026 → 26/12/2026 · 2 đêm · 2 người lớn · 0 trẻ em',
+    );
+    await expect(page.getByTestId('booking-detail-stay')).not.toContainText('2026-12-24');
     const balance = page.getByTestId('booking-detail-balance');
     await expect(balance).toContainText('Đã thu');
     await expect(balance).toContainText('600.000 ₫');

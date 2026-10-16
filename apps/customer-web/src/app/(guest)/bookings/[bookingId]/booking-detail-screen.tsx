@@ -20,14 +20,13 @@ import {
   formatDateTimeVn,
   formatMoney,
   formatStatusWithEnum,
-  formatStayPeriod,
   type ScreenState,
 } from '@pinehill/ui-web';
 import { t } from '../../../../lib/i18n';
 import { fetchBookingBalance } from '../api';
 import { fetchBooking } from '../../booking/booking-api';
-import { STATUS_KEYS, balanceRows, type BalanceRow } from '../model';
-import { formatCountdown, holdView } from '../../booking/booking-model';
+import { STATUS_KEYS, balanceRows, stayText, type BalanceRow } from '../model';
+import { formatCountdown, holdView, type HoldView } from '../../booking/booking-model';
 
 const CELL = { padding: '4px 12px 4px 0', textAlign: 'left' } as const;
 
@@ -54,6 +53,54 @@ function BalancePanel({ balance }: { balance: BookingBalance }): ReactElement {
             <td style={CELL}>{formatMoney(row.amount)}</td>
           </tr>
         ))}
+      </tbody>
+    </table>
+  );
+}
+
+/**
+ * Bảng "Kỳ lưu trú" của SCR-10: ngày nhận/trả là **ngày lịch** nên hiển thị `dd/MM/yyyy` qua helper
+ * dùng chung `stayText`; giờ tạo đơn vẫn là mốc thời điểm nên giữ `formatDateTimeVn`.
+ */
+export function StayPanel({
+  booking,
+  hold,
+}: {
+  booking: BookingSummary;
+  hold: HoldView | null;
+}): ReactElement {
+  return (
+    <table data-testid="booking-detail-stay">
+      <caption style={{ textAlign: 'left', paddingBottom: 4 }}>{t('guest.booking.stay')}</caption>
+      <tbody>
+        <tr>
+          <th scope="row" style={CELL}>
+            {t('guest.booking.stay.period')}
+          </th>
+          <td style={CELL}>{stayText(booking)}</td>
+        </tr>
+        <tr>
+          <th scope="row" style={CELL}>
+            {t('guest.booking.stay.rooms')}
+          </th>
+          <td style={CELL}>{booking.roomCount}</td>
+        </tr>
+        <tr>
+          <th scope="row" style={CELL}>
+            {t('guest.booking.created')}
+          </th>
+          <td style={CELL}>{formatDateTimeVn(booking.createdAt)}</td>
+        </tr>
+        {hold === null || hold.kind !== 'active' ? null : (
+          <tr>
+            <th scope="row" style={CELL}>
+              {t('guest.bookings.col.hold')}
+            </th>
+            <td style={CELL} data-testid="booking-detail-hold">
+              {formatCountdown(hold.remainingMs)}
+            </td>
+          </tr>
+        )}
       </tbody>
     </table>
   );
@@ -165,44 +212,7 @@ export function BookingDetailScreen(): ReactElement {
             <p data-testid="booking-detail-status" style={{ margin: 0 }}>
               {formatStatusWithEnum(t(STATUS_KEYS[booking.status]), booking.status)}
             </p>
-            <table data-testid="booking-detail-stay">
-              <caption style={{ textAlign: 'left', paddingBottom: 4 }}>
-                {t('guest.booking.stay')}
-              </caption>
-              <tbody>
-                <tr>
-                  <th scope="row" style={CELL}>
-                    {t('guest.booking.stay.period')}
-                  </th>
-                  <td style={CELL}>
-                    {booking.checkIn} → {booking.checkOut} ·{' '}
-                    {formatStayPeriod(booking.nights, booking.adults, booking.children)}
-                  </td>
-                </tr>
-                <tr>
-                  <th scope="row" style={CELL}>
-                    {t('guest.booking.stay.rooms')}
-                  </th>
-                  <td style={CELL}>{booking.roomCount}</td>
-                </tr>
-                <tr>
-                  <th scope="row" style={CELL}>
-                    {t('guest.booking.created')}
-                  </th>
-                  <td style={CELL}>{formatDateTimeVn(booking.createdAt)}</td>
-                </tr>
-                {hold === null || hold.kind !== 'active' ? null : (
-                  <tr>
-                    <th scope="row" style={CELL}>
-                      {t('guest.bookings.col.hold')}
-                    </th>
-                    <td style={CELL} data-testid="booking-detail-hold">
-                      {formatCountdown(hold.remainingMs)}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+            <StayPanel booking={booking} hold={hold} />
             {balance === null ? null : <BalancePanel balance={balance} />}
             <p style={{ margin: 0 }} data-testid="booking-detail-pending">
               {t('guest.bookings.detail.pending')}
