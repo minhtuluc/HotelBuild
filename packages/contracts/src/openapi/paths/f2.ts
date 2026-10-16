@@ -9,6 +9,7 @@ import { z } from 'zod';
 import {
   businessDateSchema,
   listResponseSchema,
+  operationDownloadQuerySchema,
   operationRefSchema,
   operationStatusViewSchema,
 } from '../../common.js';
@@ -384,6 +385,32 @@ export function registerF2Paths(registry: OpenAPIRegistry, errorBodyComponent: z
     parameters: [pathParam('operationId')],
     responses: {
       200: { description: 'Trạng thái tác vụ', ...jsonBody(operationStatusViewSchema) },
+      403: errorResponse('E_RBAC_FORBIDDEN'),
+      404: errorResponse('E_GEN_NOT_FOUND'),
+    },
+  });
+
+  // HB-163: tải tệp xuất bằng link ký có hạn; nội dung là CSV hoặc XLSX tuỳ định dạng đã yêu cầu.
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/operations/{operationId}/download',
+    operationId: 'operationsDownload',
+    summary: 'Tải tệp xuất còn hạn bằng chữ ký (HB-163)',
+    tags: ['sys'],
+    ...bearerRead,
+    parameters: [pathParam('operationId')],
+    request: { query: operationDownloadQuerySchema },
+    responses: {
+      200: {
+        description: 'Nội dung tệp xuất (CSV hoặc XLSX)',
+        content: {
+          'text/csv': { schema: { type: 'string', format: 'binary' } },
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
+            schema: { type: 'string', format: 'binary' },
+          },
+        },
+      },
+      400: errorResponse('E_GEN_VALIDATION_FAILED'),
       403: errorResponse('E_RBAC_FORBIDDEN'),
       404: errorResponse('E_GEN_NOT_FOUND'),
     },

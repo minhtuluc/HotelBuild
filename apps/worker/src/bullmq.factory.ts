@@ -2,6 +2,7 @@ import { Queue, Worker } from 'bullmq';
 import type { ConnectionOptions } from 'bullmq';
 import type { WorkerConfig } from './config/env.js';
 import type { WorkerLogger } from './logger.js';
+import type { JobAttempt, JobContext, JobRegistry } from './jobs/types.js';
 import type { JobLike, QueueLike, WorkerDeps, WorkerLike } from './worker-app.js';
 import { createLogger } from './pino.logger.js';
 
@@ -68,7 +69,14 @@ export function bullmqConstructors(
     createWorker: (name, connection, concurrency, handler) => {
       const worker = new Worker<unknown, void>(
         name,
-        (job) => handler({ id: job.id, name: job.name, data: job.data }),
+        (job) =>
+          handler({
+            id: job.id,
+            name: job.name,
+            data: job.data,
+            attemptsMade: job.attemptsMade,
+            maxAttempts: job.opts.attempts,
+          }),
         {
           connection,
           concurrency,
@@ -80,17 +88,41 @@ export function bullmqConstructors(
   };
 }
 
+/** Handler thật cho từng hàng đợi; hàng đợi chưa có handler rơi về log mặc định. */
+export interface JobDispatch {
+  readonly handlers: JobRegistry;
+  readonly context: JobContext;
+}
+
+/**
+ * Lượt chạy hiện tại của job: BullMQ tăng `attemptsMade` **sau** khi lượt chạy xong nên lượt đầu là 0,
+ * còn `opts.attempts = 0` nghĩa là chạy đúng một lượt. `attempt` kẹp trần để job bị đẩy lại thủ công
+ * (`attemptsMade ≥ attempts`) vẫn được coi là lượt cuối.
+ */
+export function jobAttempt(job: JobLike): JobAttempt {
+  const attempts = Math.max(job.maxAttempts ?? 0, 1);
+  return { attempt: Math.min((job.attemptsMade ?? 0) + 1, attempts), attempts };
+}
+
 /** Nối BullMQ vào `createWorkerApp`; Redis chỉ được nối khi có lệnh chạy. */
 export function createBullmqDeps(
   config: WorkerConfig,
   logger: WorkerLogger,
   ctors: BullmqConstructors = bullmqConstructors(logger),
+  dispatch?: JobDispatch,
 ): WorkerDeps {
   const connection = redisOptions(config.REDIS_URL);
   return {
     createQueue: (name) => ctors.createQueue(name, connection),
     createWorker: (name, handler) =>
-      ctors.createWorker(name, connection, config.WORKER_CONCURRENCY, handler),
+      ctors.createWorker(name, connection, config.WORKER_CONCURRENCY, async (job) => {
+        const real = dispatch === undefined ? undefined : dispatch.handlers[name];
+        if (real === undefined || dispatch === undefined) {
+          await handler(job);
+          return;
+        }
+        await real(job.data, dispatch.context, jobAttempt(job));
+      }),
     log: ({ queue, msg }) => logger.info({ queue }, msg),
   };
 }

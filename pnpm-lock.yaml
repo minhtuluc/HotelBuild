@@ -83,6 +83,9 @@ importers:
       '@prisma/client':
         specifier: 6.19.3
         version: 6.19.3(prisma@6.19.3(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3)
+      bullmq:
+        specifier: 5.81.5
+        version: 5.81.5
       fastify:
         specifier: ^5.12.5
         version: 5.12.5
@@ -358,6 +361,12 @@ importers:
 
   apps/worker:
     dependencies:
+      '@pinehill/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@prisma/client':
+        specifier: 6.19.3
+        version: 6.19.3(prisma@6.19.3(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3)
       bullmq:
         specifier: ^5.81.5
         version: 5.81.5
@@ -371,9 +380,15 @@ importers:
       '@types/node':
         specifier: ^22.20.4
         version: 22.20.4
+      '@types/pg':
+        specifier: ^8.23.1
+        version: 8.23.1
       '@vitest/coverage-v8':
         specifier: ^3.2.7
         version: 3.2.7(vitest@3.2.7(@types/node@22.20.4)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
+      pg:
+        specifier: 8.23.1
+        version: 8.23.1
       tsx:
         specifier: ^4.23.15
         version: 4.23.15

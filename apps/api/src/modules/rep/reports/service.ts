@@ -52,8 +52,16 @@ export class ReportsService {
     if (propertyId !== undefined) requireProperty(actor, propertyId);
   }
 
-  async occupancy(actor: AuthorizedActor, input: GroupedReportInput) {
-    this.permitted(actor, ['MANAGER', 'OWNER']);
+  /**
+   * `roles` cho phép tuyến khác dùng lại truy vấn với tập vai trò của chính tuyến đó (HB-163: xuất báo
+   * cáo mở cho ACCOUNTANT/OWNER) — mặc định vẫn là tập tối thiểu của api.md §2.12 cho tuyến đọc.
+   */
+  async occupancy(
+    actor: AuthorizedActor,
+    input: GroupedReportInput,
+    roles: readonly string[] = ['MANAGER', 'OWNER'],
+  ) {
+    this.permitted(actor, roles);
     this.inScope(actor, input.propertyId);
     const rows = await this.read((tx) =>
       tx.$queryRaw<queries.RoomNightAggregate[]>(
@@ -63,8 +71,12 @@ export class ReportsService {
     return mapping.occupancyReport(rows, input.groupBy, input.from, input.to);
   }
 
-  async adrRevpar(actor: AuthorizedActor, input: GroupedReportInput) {
-    this.permitted(actor, ['MANAGER', 'OWNER']);
+  async adrRevpar(
+    actor: AuthorizedActor,
+    input: GroupedReportInput,
+    roles: readonly string[] = ['MANAGER', 'OWNER'],
+  ) {
+    this.permitted(actor, roles);
     this.inScope(actor, input.propertyId);
     const rows = await this.read((tx) =>
       tx.$queryRaw<queries.RoomNightAggregate[]>(
@@ -74,8 +86,12 @@ export class ReportsService {
     return mapping.adrRevparReport(rows, input.groupBy, input.from, input.to);
   }
 
-  async revenueByChannel(actor: AuthorizedActor, input: RevenueByChannelInput) {
-    this.permitted(actor, ['ACCOUNTANT', 'OWNER']);
+  async revenueByChannel(
+    actor: AuthorizedActor,
+    input: RevenueByChannelInput,
+    roles: readonly string[] = ['ACCOUNTANT', 'OWNER'],
+  ) {
+    this.permitted(actor, roles);
     this.inScope(actor, input.propertyId);
     const rows = await this.read((tx) =>
       tx.$queryRaw<queries.ChannelRevenueRow[]>(
@@ -93,8 +109,12 @@ export class ReportsService {
     return mapping.revenueByChannelReport(rows, input.from, input.to);
   }
 
-  async cancellations(actor: AuthorizedActor, input: CancellationsInput) {
-    this.permitted(actor, ['ACCOUNTANT', 'OWNER']);
+  async cancellations(
+    actor: AuthorizedActor,
+    input: CancellationsInput,
+    roles: readonly string[] = ['ACCOUNTANT', 'OWNER'],
+  ) {
+    this.permitted(actor, roles);
     this.inScope(actor, input.propertyId);
     const [rate, tiers] = await this.read(async (tx) => {
       const filter = this.scoped(actor, input);

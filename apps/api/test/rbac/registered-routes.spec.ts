@@ -190,6 +190,54 @@ function independentOracle(): Record<string, Expected> {
     status: 400,
     method: RequestMethod.POST,
   };
+  // HB-163: xuất báo cáo trả 202; theo dõi/tải thao tác kiểm quyền người tạo trong service.
+  keyed[`${RequestMethod.POST}:reports/export`] = {
+    roles: ['ACCOUNTANT', 'OWNER'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
+  keyed[`${RequestMethod.GET}:operations/:operationId`] = {
+    roles: ['ACCOUNTANT', 'OWNER'],
+    status: 404,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.GET}:operations/:operationId/download`] = {
+    roles: ['ACCOUNTANT', 'OWNER'],
+    status: 404,
+    method: RequestMethod.GET,
+  };
+  // HB-166 / api.md §2.10: CRM quản trị — ẩn danh hoá, hạng/điểm, danh sách đen.
+  keyed[`${RequestMethod.POST}:guests/:guestId/anonymize`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
+  keyed[`${RequestMethod.GET}:guests/:guestId/loyalty`] = {
+    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
+    status: 404,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.POST}:guests/:guestId/blacklist`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
+  keyed[`${RequestMethod.DELETE}:guests/:guestId/blacklist`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 404,
+    method: RequestMethod.DELETE,
+  };
+  // HB-168 / api.md §2.11: danh sách và gửi lại thông báo (lý do bắt buộc ở thân lệnh).
+  keyed[`${RequestMethod.GET}:notifications`] = {
+    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
+    status: 200,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.POST}:notifications/:notificationId/resend`] = {
+    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
   for (const path of ['properties', 'room-types', 'rooms'])
     keyed[`${RequestMethod.GET}:${path}`] = {
       roles: ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER', 'OWNER'],
@@ -253,7 +301,7 @@ test('every discovered protected HTTP route has an independent oracle and runs a
     for (const role of roles) {
       clock.value += 61000;
       const token = await login(role);
-      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId).replace(':taskId', roomId).replace(':key', 'refund.feeAmount').replace(':propertyId', roomId).replace(':roomTypeId', roomId).replace(':roomId', roomId)}`;
+      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':operationId', roomId).replace(':notificationId', roomId).replace(':guestId', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId).replace(':taskId', roomId).replace(':key', 'refund.feeAmount').replace(':propertyId', roomId).replace(':roomTypeId', roomId).replace(':roomId', roomId)}`;
       const pending = routeRequest(route.method, path);
       const result = await pending
         .set('Authorization', `Bearer ${token}`)

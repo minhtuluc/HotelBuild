@@ -18,6 +18,10 @@ export interface JobLike {
   name: string;
   /** Payload từ hàng đợi; consumer kiểm schema trước khi dùng. */
   data: unknown;
+  /** Số lượt BullMQ đã chạy xong trước lượt hiện tại (0 ở lượt đầu). */
+  attemptsMade?: number | undefined;
+  /** Tổng số lượt BullMQ sẽ chạy cho job này (`opts.attempts`; 0 = chạy đúng một lượt). */
+  maxAttempts?: number | undefined;
 }
 
 export interface WorkerDeps {
@@ -34,6 +38,7 @@ export interface WorkerApp {
 function repeatIntervalSeconds(config: WorkerConfig, name: QueueName): number | undefined {
   if (name === 'q.hold-expiry') return config.HOLD_EXPIRY_INTERVAL_SECONDS;
   if (name === 'q.outbox-relay') return config.OUTBOX_RELAY_INTERVAL_SECONDS;
+  if (name === 'q.export-cleanup') return config.EXPORT_CLEANUP_INTERVAL_SECONDS;
   return undefined;
 }
 

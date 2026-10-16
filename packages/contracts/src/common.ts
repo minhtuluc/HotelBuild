@@ -96,6 +96,17 @@ export const operationStatusViewSchema = z.object({
   errorMessage: z.string().min(1).optional(),
 });
 
+/**
+ * HB-163: tham số link tải tệp xuất — `expires` là mốc Unix giây đã ký trong `signature` (HMAC-SHA256
+ * trên `operationId:expires`). Máy chủ vẫn kiểm thêm bearer token của chính người yêu cầu.
+ */
+export const operationDownloadQuerySchema = z.strictObject({
+  expires: z.coerce.number().int().positive(),
+  signature: z.string().min(32).max(128),
+});
+
+export type OperationDownloadQuery = z.infer<typeof operationDownloadQuerySchema>;
+
 export type OperationRef = z.infer<typeof operationRefSchema>;
 export type OperationStatusView = z.infer<typeof operationStatusViewSchema>;
 

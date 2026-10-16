@@ -5,7 +5,15 @@ import { QUEUE_NAMES, REPEATABLE_QUEUES } from '../src/queues.js';
 import { createWorkerApp, installSignalHandlers } from '../src/worker-app.js';
 import type { JobLike, QueueLike, WorkerLike } from '../src/worker-app.js';
 import { run } from '../src/main.js';
-import { bullmqConstructors, createBullmqDeps, redisOptions } from '../src/bullmq.factory.js';
+import {
+  bullmqConstructors,
+  createBullmqDeps,
+  jobAttempt,
+  redisOptions,
+  type BullmqConstructors,
+} from '../src/bullmq.factory.js';
+import { createJobRuntime } from '../src/jobs/context.js';
+import type { JobAttempt } from '../src/jobs/types.js';
 
 const env = {
   DATABASE_URL: 'postgresql://u:p@127.0.0.1:5432/db',
@@ -90,13 +98,13 @@ describe('redisOptions', () => {
 });
 
 describe('createWorkerApp', () => {
-  it('đăng ký đủ 5 hàng đợi, scheduler tắt theo mặc định', async () => {
+  it('đăng ký đủ mọi hàng đợi trong QUEUE_NAMES, scheduler tắt theo mặc định', async () => {
     const h = harness();
     await createWorkerApp(config(), h.deps).start();
     expect([...h.handlers.keys()]).toEqual([...QUEUE_NAMES]);
     expect(h.schedulers).toEqual([]);
   });
-  it('bật scheduler chỉ cho đúng 2 hàng đợi lặp', async () => {
+  it('bật scheduler cho đúng các hàng đợi lặp', async () => {
     const h = harness();
     await createWorkerApp(config({ ENABLE_REPEATABLE_SCHEDULERS: true }), h.deps).start();
     expect(h.schedulers).toEqual(REPEATABLE_QUEUES.map((name) => `${name}:${name}-scheduler`));
@@ -175,6 +183,63 @@ describe('createBullmqDeps', () => {
       ['q.channel-sync:ok'],
     ]);
     expect(typeof bullmqConstructors().createQueue).toBe('function');
+  });
+
+  it('bơm lượt chạy của job vào handler thật (attempt 1-based theo opts.attempts)', async () => {
+    const processors: ((job: JobLike) => Promise<void>)[] = [];
+    const received: JobAttempt[] = [];
+    const ctors: BullmqConstructors = {
+      createQueue: () => ({
+        add: () => Promise.resolve({}),
+        upsertJobScheduler: () => Promise.resolve({}),
+        close: () => Promise.resolve(),
+      }),
+      createWorker: (_name, _connection, _concurrency, handler) => {
+        processors.push(handler);
+        return { close: () => Promise.resolve() };
+      },
+    };
+    const runtime = createJobRuntime(config(), silentLogger);
+    try {
+      const deps = createBullmqDeps(config(), silentLogger, ctors, {
+        handlers: {
+          'q.report-export': (_data, _context, attempt) => {
+            if (attempt !== undefined) received.push(attempt);
+            return Promise.resolve();
+          },
+        },
+        context: runtime.context,
+      });
+      deps.createWorker('q.report-export', () => Promise.resolve());
+      await processors[0]!({ name: 'report-export', data: {}, attemptsMade: 0, maxAttempts: 3 });
+      await processors[0]!({ name: 'report-export', data: {}, attemptsMade: 2, maxAttempts: 3 });
+    } finally {
+      await runtime.close();
+    }
+    expect(received).toEqual([
+      { attempt: 1, attempts: 3 },
+      { attempt: 3, attempts: 3 },
+    ]);
+  });
+});
+
+describe('jobAttempt', () => {
+  it('đổi attemptsMade của BullMQ thành lượt bắt đầu từ 1 và kẹp trần', () => {
+    expect(jobAttempt({ name: 'j', data: {}, attemptsMade: 0, maxAttempts: 3 })).toEqual({
+      attempt: 1,
+      attempts: 3,
+    });
+    expect(jobAttempt({ name: 'j', data: {}, attemptsMade: 2, maxAttempts: 3 })).toEqual({
+      attempt: 3,
+      attempts: 3,
+    });
+    // Job bị đẩy lại thủ công (attemptsMade ≥ attempts) vẫn được coi là lượt cuối.
+    expect(jobAttempt({ name: 'j', data: {}, attemptsMade: 4, maxAttempts: 3 })).toEqual({
+      attempt: 3,
+      attempts: 3,
+    });
+    // Thiếu `opts.attempts` (BullMQ mặc định 0) nghĩa là chạy đúng một lượt.
+    expect(jobAttempt({ name: 'j', data: {} })).toEqual({ attempt: 1, attempts: 1 });
   });
 });
 

@@ -14,13 +14,17 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@pinehill/contracts": "workspace:*",
+    "@prisma/client": "6.19.3",
     "bullmq": "^5.81.5",
     "pino": "^10.3.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^22.20.4",
+    "@types/pg": "^8.23.1",
     "@vitest/coverage-v8": "^3.2.7",
+    "pg": "8.23.1",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vitest": "^3.2.7"

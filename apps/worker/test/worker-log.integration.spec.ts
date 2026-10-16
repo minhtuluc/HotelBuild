@@ -53,7 +53,7 @@ test('real Redis preserves private job content without putting it into receipt l
         msg: 'nhận job',
       }),
     ]);
-    expect(received).toEqual([{ id, name: privateText, data }]);
+    expect(received).toEqual([{ id, name: privateText, data, attemptsMade: 0, maxAttempts: 0 }]);
     const persisted = await target.getJob(id);
     expect(persisted?.name).toBe(privateText);
     expect(persisted?.data).toEqual(data);

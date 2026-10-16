@@ -28,6 +28,9 @@ const apiEnvSchema = z.object({
     }
   }),
   IDEMPOTENCY_TTL_HOURS: z.coerce.number().int().positive().default(24),
+  // Thư mục tệp xuất tạm (HB-163). Bỏ trống ⇒ `<tmpdir>/pinehill-exports`; **phải trùng** giá trị với
+  // `apps/worker` vì worker ghi tệp còn API đọc tệp để phục vụ link tải.
+  EXPORT_DIR: z.string().min(1).optional(),
   LOG_LEVEL: z.enum(logLevels).default('info'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   // Mặc định chỉ nghe loopback (dev); container đặt HOST=0.0.0.0 (AC6).
