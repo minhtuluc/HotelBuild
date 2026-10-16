@@ -21,15 +21,6 @@ export type CancellationBreakdown = CancelPreview['cancellation'];
 
 export type CancelStep = 'choose' | 'computing' | 'previewed' | 'submitting' | 'done';
 
-/**
- * Ngày nghiệp vụ `YYYY-MM-DD` hiển thị theo định dạng lịch `dd/MM/yyyy` (NFR-LOC-02, §7.4): hoán vị
- * chuỗi thuần, **không** dựng `Date`/múi giờ nên không thể đổi ngày lịch thành một mốc thời gian.
- * Chuỗi không đúng dạng ISO ngày-only trả nguyên văn để màn hình không vỡ khi hợp đồng trả lạ.
- */
-export function calendarDateLabel(value: string): string {
-  return value.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1');
-}
-
 /** Chỉ mở nút xác nhận khi đã có bản xem trước (AC1: "xác nhận hai bước"). */
 export function canConfirmCancel(step: CancelStep): boolean {
   return step === 'previewed';
