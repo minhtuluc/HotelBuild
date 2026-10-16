@@ -42,6 +42,7 @@ import { GuestsModule } from './modules/crm/guests/module.js';
 import { OperationsModule } from './modules/sys/operations/module.js';
 import { ReportExportModule } from './modules/rep/export/module.js';
 import { NotiModule } from './modules/noti/module.js';
+import { CancelModule } from './modules/book/cancel/module.js';
 
 @Module({})
 export class AppModule {
@@ -89,6 +90,7 @@ export class AppModule {
         GuestsModule,
         OperationsModule,
         NotiModule,
+        CancelModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },
