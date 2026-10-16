@@ -123,7 +123,20 @@ describe('SCR-31/SCR-32 danh sách & chi tiết booking (HB-106)', () => {
       { key: 'balance', amount: 1_400_000 },
     ]);
     expect(stayOf({ checkIn: '2026-12-24', checkOut: '2026-12-26', nights: 2, roomCount: 1 })).toBe(
-      '2026-12-24 → 2026-12-26 · 2 đêm · 1 phòng',
+      '24/12/2026 → 26/12/2026 · 2 đêm · 1 phòng',
     );
+  });
+
+  it('ngày lịch hiện dd/MM/yyyy, không đổi sang instant/múi giờ', () => {
+    // Mốc đầu năm: hiểu nhầm thành instant UTC rồi đổi múi giờ sẽ lệch về 31/12/2026.
+    expect(stayOf({ checkIn: '2027-01-01', checkOut: '2027-01-02', nights: 1, roomCount: 1 })).toBe(
+      '01/01/2027 → 02/01/2027 · 1 đêm · 1 phòng',
+    );
+  });
+
+  it('số đêm và số phòng ít/nhiều đều lấy nguyên số máy chủ trả', () => {
+    expect(
+      stayOf({ checkIn: '2026-12-24', checkOut: '2026-12-27', nights: 3, roomCount: 12 }),
+    ).toBe('24/12/2026 → 27/12/2026 · 3 đêm · 12 phòng');
   });
 });
