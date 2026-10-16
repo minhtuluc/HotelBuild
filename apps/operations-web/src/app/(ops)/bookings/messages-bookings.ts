@@ -18,6 +18,7 @@ export const bookingsCatalog = {
   'ops.bookings.col.channel': 'Kênh',
   'ops.bookings.col.status': 'Trạng thái',
   'ops.bookings.col.stay': 'Kỳ lưu trú',
+  'ops.bookings.stayPeriod': '{checkIn} → {checkOut} · {nights} đêm · {roomCount} phòng',
   'ops.bookings.col.money': 'Tiền',
   'ops.bookings.col.paid': 'Đã thu',
   'ops.bookings.col.balance': 'Còn nợ',
