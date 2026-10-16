@@ -282,6 +282,28 @@ function independentOracle(): Record<string, Expected> {
     status: 400,
     method: RequestMethod.POST,
   };
+  // HB-054 / api.md §2.4 + BR-RBAC-02, BR-RBAC-04: lịch giá theo loại phòng và mùa.
+  // GET thiếu `from`/`to` → 400 trước khi chạm dữ liệu; thân lệnh của oracle không hợp lệ → 422.
+  keyed[`${RequestMethod.GET}:room-types/:roomTypeId/rate-calendar`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.PUT}:room-types/:roomTypeId/rate-calendar`] = {
+    roles: ['OWNER'],
+    status: 422,
+    method: RequestMethod.PUT,
+  };
+  keyed[`${RequestMethod.GET}:seasons`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 200,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.POST}:seasons`] = {
+    roles: ['OWNER'],
+    status: 422,
+    method: RequestMethod.POST,
+  };
   return keyed;
 }
 

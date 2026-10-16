@@ -1,4 +1,6 @@
 import { ChannelsModule } from './modules/rate/channels/module.js';
+import { RateCalendarModule } from './modules/rate/calendar/module.js';
+import { SeasonsModule } from './modules/rate/seasons/module.js';
 import { PropertyAdminModule } from './modules/prop/property-admin/module.js';
 import { serializeSafeRequest } from './common/safe-request.js';
 import { AuditLogsModule } from './modules/sys/audit-logs/module.js';
@@ -73,6 +75,8 @@ export class AppModule {
         GridModule,
         RatePlansModule,
         ChannelsModule,
+        RateCalendarModule,
+        SeasonsModule,
         CancellationPoliciesModule,
         QuotesMultiChannelModule,
         HousekeepingModule,
