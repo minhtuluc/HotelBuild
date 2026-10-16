@@ -18,6 +18,10 @@
  *   hợp lệ → `E_RATE_CONFIGURATION_INVALID`. Truyền `ratePlanCode: null` khi bề mặt **không** nhận
  *   gói giá (lịch giá theo loại phòng, HB-198): facts mang `NEUTRAL_RATE_PLAN`, không truy vấn
  *   `rate_plans` và không đòi hỏi gói nào đang bán.
+ * - `promotionCodes` người gọi chọn PHẢI có trong danh mục `promotions`: mã **không tồn tại** ⇒
+ *   `422 E_RATE_PROMO_INVALID` (BR-RATE-14; api.md §3.1, §5). Mã có trong danh mục nhưng không dùng
+ *   được (hết hạn, hết lượt, xếp chồng sai) do engine quyết — `quotePrice` trả `E_RATE_PROMOTION_INVALID`
+ *   và bề mặt báo giá map thành cùng mã lỗi đó.
  * - Hệ số công suất/LOS/cuối tuần: ngưỡng đọc từ `system_settings` (`pricing.*`), còn các mức hệ số
  *   và thang LOS là hằng số nghiệp vụ của BR-RATE-01 bước 4/5 và `dong-gia.md` §4.4, §6.1.
  */
@@ -61,7 +65,7 @@ export interface PricingFactsQuery {
    * `ratePlan` là `NEUTRAL_RATE_PLAN`, dùng cho bề mặt không nhận gói giá (lịch giá theo loại phòng).
    */
   readonly ratePlanCode?: RatePlanCode | null;
-  /** Mã khuyến mãi người gọi đã chọn; mặc định rỗng. */
+  /** Mã khuyến mãi người gọi đã chọn; mặc định rỗng (xem docstring về mã không có trong danh mục). */
   readonly promotionCodes?: readonly string[];
 }
 
@@ -270,10 +274,33 @@ function resolveRatePlan(tx: Prisma.TransactionClient, code?: RatePlanCode) {
 }
 
 /**
+ * Mã khuyến mãi người gọi chọn PHẢI có trong **danh mục** `promotions` (mọi trạng thái); mã không tồn
+ * tại ⇒ `422 E_RATE_PROMO_INVALID` (BR-RATE-14; api.md §3.1 và bảng mã lỗi §5).
+ *
+ * Chỉ gọi khi có mã không phân giải được ở truy vấn `status = 'ACTIVE'` (mã lạ, hoặc mã đang `INACTIVE`)
+ * nên đường nạp bình thường không thêm round-trip. Mã đang `INACTIVE` **không** phải lỗi: nó có trong
+ * danh mục nhưng không được áp — đúng cách đọc hẹp của đặc tả (chỉ mã không tồn tại mới bị từ chối).
+ */
+async function assertPromotionsInCatalogue(
+  tx: Prisma.TransactionClient,
+  codes: readonly string[],
+): Promise<void> {
+  if (codes.length === 0) return;
+  const catalogue = await tx.promotions.findMany({
+    where: { code: { in: [...codes] } },
+    select: { code: true },
+  });
+  const known = new Set(catalogue.map((row) => row.code));
+  if (codes.every((code) => known.has(code))) return;
+  throw new AppError(422, 'E_RATE_PROMO_INVALID', 'Mã khuyến mãi không hợp lệ.');
+}
+
+/**
  * Dựng dữ kiện giá cho một loại phòng trên một kỳ lưu trú (`checkOut` không bao gồm).
  *
  * @throws AppError `404 E_GEN_NOT_FOUND` khi không có loại phòng / gói giá yêu cầu.
  * @throws AppError `422 E_RATE_CONFIGURATION_INVALID` khi thiếu gói giá mặc định (trừ `ratePlanCode: null`).
+ * @throws AppError `422 E_RATE_PROMO_INVALID` khi `promotionCodes` có mã không tồn tại trong danh mục.
  */
 export async function loadPricingFacts(
   tx: Prisma.TransactionClient,
@@ -297,7 +324,7 @@ export async function loadPricingFacts(
     throw new AppError(422, 'E_RATE_CONFIGURATION_INVALID', 'Cấu hình giá không đủ để báo giá.');
 
   const now = (await tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`)[0]!.now;
-  const promotionCodes = query.promotionCodes ?? [];
+  const promotionCodes = [...new Set(query.promotionCodes ?? [])];
 
   const [seasonRows, calendarRows, channelRows, settingRows, occupancyRows, promotionRows, config] =
     await Promise.all([
@@ -327,7 +354,7 @@ export async function loadPricingFacts(
       }),
       promotionCodes.length > 0
         ? tx.promotions.findMany({
-            where: { code: { in: [...new Set(promotionCodes)] }, status: 'ACTIVE' },
+            where: { code: { in: promotionCodes }, status: 'ACTIVE' },
           })
         : Promise.resolve([]),
       tx.system_settings.findMany({
@@ -335,6 +362,14 @@ export async function loadPricingFacts(
         select: { key: true, value: true },
       }),
     ]);
+
+  // BR-RATE-14 + api.md §3.1/§5: mã người gọi chọn phải có trong danh mục `promotions`; mã **không tồn
+  // tại** là lỗi người gọi (không phải "mã không được áp"); mã đang tắt chỉ đơn giản là không áp dụng.
+  const resolvedCodes = new Set(promotionRows.map((row) => row.code));
+  await assertPromotionsInCatalogue(
+    tx,
+    promotionCodes.filter((code) => !resolvedCodes.has(code)),
+  );
 
   const roomRate: RoomRate = {
     id: room.id,
