@@ -11,7 +11,9 @@
  *
  * Quy ước:
  * - Một bộ dữ kiện dựng cho **đúng một loại phòng trên một khoảng ngày** (kỳ 1 đêm hợp lệ), không
- *   chọn kênh: caller ghép `{ ...facts, channelCode }` để chạy engine cho từng kênh.
+ *   chọn kênh: caller ghép `{ ...facts, channelCode }` để chạy engine cho từng kênh. Ngoại lệ duy
+ *   nhất là khi caller khai `promotionCodes`: phạm vi kênh của mã (`promotions.channel_scope`) chỉ
+ *   kiểm được khi biết kênh nên hai trường đó phải đi cùng nhau (HB-199).
  * - `ratePlan` trả trong facts mang `minNights`/`maxNights`/`losDiscountEnabled`/`depositPercent`.
  *   Khi không truyền `ratePlanCode`, dùng **gói giá mặc định** = gói `ACTIVE` gắn chính sách huỷ
  *   `cancellation_policies.is_default = true` (seed → `FLEX7`), dự phòng mã `FLEX7`; không có gói
@@ -22,6 +24,10 @@
  *   `422 E_RATE_PROMO_INVALID` (BR-RATE-14; api.md §3.1, §5). Mã có trong danh mục nhưng không dùng
  *   được (hết hạn, hết lượt, xếp chồng sai) do engine quyết — `quotePrice` trả `E_RATE_PROMOTION_INVALID`
  *   và bề mặt báo giá map thành cùng mã lỗi đó.
+ * - HB-199: trước khi đưa mã vào dữ kiện, loader kiểm **phạm vi áp dụng** theo cột thật của
+ *   `promotions` (csdl.md §3) — xem `promotionScopedTo`; mã **không áp được cho đầu vào** (sai kênh /
+ *   sai loại phòng) là `422 E_RATE_PROMO_INVALID`, còn **chưa đủ `min_nights`** chỉ đơn giản không
+ *   được áp (không lỗi). Cửa sổ `valid_from`/`valid_to` vẫn do engine thi hành.
  * - Hệ số công suất/LOS/cuối tuần: ngưỡng đọc từ `system_settings` (`pricing.*`), còn các mức hệ số
  *   và thang LOS là hằng số nghiệp vụ của BR-RATE-01 bước 4/5 và `dong-gia.md` §4.4, §6.1.
  */
@@ -38,7 +44,7 @@ import type {
   RoomRate,
   Season,
 } from '@pinehill/domain/pricing';
-import { rateSourceSchema, type RatePlanCode } from '@pinehill/contracts';
+import { rateSourceSchema, type ChannelCode, type RatePlanCode } from '@pinehill/contracts';
 import { AppError } from '../../../common/app-error.js';
 
 /**
@@ -54,7 +60,8 @@ export interface PricingFacts extends Omit<PricingInput, 'channelCode'> {
   readonly seasons: readonly NamedSeason[];
 }
 
-export interface PricingFactsQuery {
+/** Truy vấn chung của mọi bề mặt báo giá (không phụ thuộc việc có khai mã khuyến mãi hay không). */
+interface PricingFactsQueryBase {
   readonly roomTypeId: string;
   readonly checkIn: string;
   readonly checkOut: string;
@@ -65,9 +72,29 @@ export interface PricingFactsQuery {
    * `ratePlan` là `NEUTRAL_RATE_PLAN`, dùng cho bề mặt không nhận gói giá (lịch giá theo loại phòng).
    */
   readonly ratePlanCode?: RatePlanCode | null;
-  /** Mã khuyến mãi người gọi đã chọn; mặc định rỗng (xem docstring về mã không có trong danh mục). */
-  readonly promotionCodes?: readonly string[];
 }
+
+/**
+ * Truy vấn dữ kiện giá.
+ *
+ * Dữ kiện trả về **không** kênh (caller ghép `{ ...facts, channelCode }`), **trừ** khi khai
+ * `promotionCodes`: lúc đó `channelCode` là **bắt buộc** để kiểm `promotions.channel_scope`. Union
+ * dưới đây chặn ngay ở kiểu để không còn đường nạp mã mà không kiểm được kênh (HB-199).
+ */
+export type PricingFactsQuery = PricingFactsQueryBase &
+  (
+    | {
+        /** Không khai mã khuyến mãi thì cũng không cần kênh. */
+        readonly promotionCodes?: undefined;
+        readonly channelCode?: ChannelCode;
+      }
+    | {
+        /** Mã khuyến mãi người gọi đã chọn (xem docstring về mã không có trong danh mục). */
+        readonly promotionCodes: readonly string[];
+        /** Kênh của báo giá — bắt buộc khi có mã, vì phạm vi kênh của mã chỉ kiểm được khi biết kênh. */
+        readonly channelCode: ChannelCode;
+      }
+  );
 
 /** Thang ưu đãi dài ngày LOS — `dong-gia.md` §4.4 (3–6 đêm 0,95; 7–13 đêm 0,90; ≥ 14 đêm 0,85). */
 export const LOS_LADDER: PricingSettings['los'] = [
@@ -296,11 +323,68 @@ async function assertPromotionsInCatalogue(
 }
 
 /**
+ * Lọc mã theo **phạm vi áp dụng** trước khi đưa vào dữ kiện cho engine (HB-199). Engine `Promotion`
+ * của `packages/domain` không mang phạm vi nên đây là chỗ duy nhất chặn được "giảm giá sai".
+ *
+ * Cột thật của `promotions` (csdl.md §3) dùng ở đây: `min_nights`, `channel_scope`, `room_type_scope`.
+ * `room_type_scope` chứa **mã loại phòng** chứ không phải UUID — `ck_promotions_room_types` chỉ cho
+ * `STD/SUP/DLX/FAM/DOR`, khớp `room_types.code`. Cửa sổ `valid_from`/`valid_to` **không** lọc tại đây:
+ * hai cột đó đã có trong `Promotion` của domain nên engine tự thi hành (`now` vs `validFrom`/`validTo`)
+ * và trả `E_RATE_PROMOTION_INVALID`; lọc trước ở loader sẽ nuốt mất lỗi đã công bố (api.md §3.1).
+ *
+ * Cách đọc nhóm lỗi (api.md §3.1 + bảng mã lỗi §5 + BR-RATE-14; HB-061 AC5):
+ * - **sai kênh / sai loại phòng** ⇒ `422 E_RATE_PROMO_INVALID`: §5 ghi nguyên văn nhóm nguyên nhân
+ *   "hết hạn, hết lượt, sai kênh/loại phòng".
+ * - **chưa đủ `min_nights`** ⇒ mã **không được áp**, không lỗi: không nguồn nào xếp số đêm tối thiểu
+ *   vào nhóm lỗi, nên mã chỉ đơn giản là không đủ điều kiện (khác "mã không hợp lệ").
+ *
+ * `channel_scope`/`room_type_scope` rỗng = **không giới hạn**: DDL để mặc định `'{}'` (csdl.md §3) nên
+ * dữ liệu cũ/seed chưa khai phạm vi vẫn dùng được cho mọi kênh/loại phòng.
+ *
+ * @throws AppError `400 E_GEN_VALIDATION_FAILED` khi có mã mà không khai `channelCode` (chỉ xảy ra với
+ *   caller bỏ qua kiểu `PricingFactsQuery`).
+ * @throws AppError `422 E_RATE_PROMO_INVALID` khi mã sai kênh hoặc sai loại phòng.
+ */
+function promotionScopedTo<
+  T extends {
+    code: string;
+    min_nights: number;
+    channel_scope: string[];
+    room_type_scope: string[];
+  },
+>(
+  rows: readonly T[],
+  input: {
+    readonly channelCode: ChannelCode | undefined;
+    readonly roomCode: string;
+    readonly nights: number;
+  },
+): T[] {
+  if (rows.length === 0) return [];
+  const { channelCode } = input;
+  if (channelCode === undefined)
+    throw new AppError(400, 'E_GEN_VALIDATION_FAILED', 'Thiếu kênh để kiểm phạm vi mã khuyến mãi.');
+  return rows.filter((row) => {
+    if (row.channel_scope.length > 0 && !row.channel_scope.includes(channelCode))
+      throw new AppError(422, 'E_RATE_PROMO_INVALID', 'Mã khuyến mãi không áp dụng cho kênh này.');
+    if (row.room_type_scope.length > 0 && !row.room_type_scope.includes(input.roomCode))
+      throw new AppError(
+        422,
+        'E_RATE_PROMO_INVALID',
+        'Mã khuyến mãi không áp dụng cho loại phòng này.',
+      );
+    return row.min_nights <= input.nights;
+  });
+}
+
+/**
  * Dựng dữ kiện giá cho một loại phòng trên một kỳ lưu trú (`checkOut` không bao gồm).
  *
  * @throws AppError `404 E_GEN_NOT_FOUND` khi không có loại phòng / gói giá yêu cầu.
  * @throws AppError `422 E_RATE_CONFIGURATION_INVALID` khi thiếu gói giá mặc định (trừ `ratePlanCode: null`).
- * @throws AppError `422 E_RATE_PROMO_INVALID` khi `promotionCodes` có mã không tồn tại trong danh mục.
+ * @throws AppError `422 E_RATE_PROMO_INVALID` khi `promotionCodes` có mã không tồn tại trong danh mục,
+ *   hoặc mã đang bán nhưng **sai kênh / sai loại phòng** (HB-199).
+ * @throws AppError `400 E_GEN_VALIDATION_FAILED` khi khai `promotionCodes` mà thiếu `channelCode`.
  */
 export async function loadPricingFacts(
   tx: Prisma.TransactionClient,
@@ -308,10 +392,19 @@ export async function loadPricingFacts(
 ): Promise<PricingFacts> {
   const start = new Date(`${query.checkIn}T00:00:00Z`);
   const end = new Date(`${query.checkOut}T00:00:00Z`);
+  /** Số đêm của kỳ (`checkOut` không tính) — dùng cho `promotions.min_nights`. */
+  const nights = Math.round((end.getTime() - start.getTime()) / 86_400_000);
 
   const room = await tx.room_types.findUnique({
     where: { id: query.roomTypeId },
-    select: { id: true, property_id: true, base_price: true, min_price: true, max_price: true },
+    select: {
+      id: true,
+      code: true,
+      property_id: true,
+      base_price: true,
+      min_price: true,
+      max_price: true,
+    },
   });
   if (!room) throw new AppError(404, 'E_GEN_NOT_FOUND', 'Không tìm thấy tài nguyên.');
   if (query.propertyId && query.propertyId !== room.property_id)
@@ -370,6 +463,12 @@ export async function loadPricingFacts(
     tx,
     promotionCodes.filter((code) => !resolvedCodes.has(code)),
   );
+  // HB-199: chỉ mã **áp được cho đúng đầu vào này** mới vào dữ kiện (phạm vi kênh/loại phòng/số đêm).
+  const applicablePromotions = promotionScopedTo(promotionRows, {
+    channelCode: query.channelCode,
+    roomCode: room.code,
+    nights,
+  });
 
   const roomRate: RoomRate = {
     id: room.id,
@@ -390,7 +489,7 @@ export async function loadPricingFacts(
     channels: channelRows.map(channelData),
     channelSettings: settingRows.map(channelSettingData),
     occupancy: occupancyRows.map(occupancyData),
-    promotions: promotionRows.map(promotionData),
+    promotions: applicablePromotions.map(promotionData),
     settings: pricingSettings(new Map(config.map((row) => [row.key, row.value]))),
   };
 }

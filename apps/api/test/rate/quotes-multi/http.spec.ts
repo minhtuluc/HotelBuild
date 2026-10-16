@@ -6,7 +6,12 @@
  */
 import { z } from 'zod';
 import { expect, test } from 'vitest';
-import { channelCodeSchema, errorBodySchema, multiChannelQuoteSchema } from '@pinehill/contracts';
+import {
+  channelCodeSchema,
+  errorBodySchema,
+  multiChannelQuoteSchema,
+  type ChannelCode,
+} from '@pinehill/contracts';
 import { quotePrice } from '@pinehill/domain/pricing';
 import { http, login } from '../../room-blocks/http-fixture.js';
 import { otherTypeId } from '../../room-blocks/inventory-seed.js';
@@ -16,13 +21,18 @@ import { loadPricingFacts } from '../../../src/modules/rate/pricing-facts/loader
 const post = (token: string, body: object) =>
   http().post('/api/v1/quotes/multi-channel').set('Authorization', `Bearer ${token}`).send(body);
 
-async function factsFor(roomTypeId = dlxTypeId, promotionCodes?: readonly string[]) {
+/** HB-199: khai mã khuyến mãi thì phải khai kênh — phạm vi kênh của mã chỉ kiểm được khi biết kênh. */
+async function factsFor(
+  roomTypeId = dlxTypeId,
+  promotionCodes?: readonly string[],
+  channelCode: ChannelCode = 'WEB',
+) {
   return db.$transaction((tx) =>
     loadPricingFacts(tx, {
       roomTypeId,
       checkIn: stay.checkIn,
       checkOut: stay.checkOut,
-      ...(promotionCodes === undefined ? {} : { promotionCodes }),
+      ...(promotionCodes === undefined ? {} : { promotionCodes, channelCode }),
     }),
   );
 }
