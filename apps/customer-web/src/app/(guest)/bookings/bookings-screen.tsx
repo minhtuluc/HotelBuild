@@ -26,7 +26,6 @@ import {
   StateSurface,
   formatMoney,
   formatStatusWithEnum,
-  formatStayPeriod,
   type ScreenState,
 } from '@pinehill/ui-web';
 import { t } from '../../../lib/i18n';
@@ -39,6 +38,7 @@ import {
   filtersFrom,
   filtersToQuery,
   nextCursorOf,
+  stayText,
   type BookingFilters,
 } from './model';
 import { formatCountdown, holdView } from '../booking/booking-model';
@@ -119,10 +119,7 @@ function BookingRow({ booking }: { booking: BookingSummary }): ReactElement {
         <Link href={`/bookings/${booking.id}`}>{booking.code}</Link>
       </td>
       <td style={CELL}>{formatStatusWithEnum(t(STATUS_KEYS[booking.status]), booking.status)}</td>
-      <td style={CELL}>
-        {booking.checkIn} → {booking.checkOut} ·{' '}
-        {formatStayPeriod(booking.nights, booking.adults, booking.children)}
-      </td>
+      <td style={CELL}>{stayText(booking)}</td>
       <td style={CELL}>{formatMoney(booking.totalAmount)}</td>
       <td style={CELL}>{formatMoney(booking.balanceDue)}</td>
       <td style={CELL}>

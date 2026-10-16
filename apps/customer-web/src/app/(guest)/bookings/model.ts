@@ -8,7 +8,9 @@
  */
 import { bookingStatusSchema } from '@pinehill/contracts';
 import type { BookingBalance, BookingStatus, BookingSummary, ListPage } from '@pinehill/contracts';
+import { formatStayPeriod } from '@pinehill/ui-web';
 import type { CustomerMessageKey } from '../../../lib/i18n';
+import { formatStaySpan } from './stay-format';
 
 /** Nhãn trạng thái dùng chung cho danh sách và chi tiết (danh mục câu chữ ở `lib/i18n.ts`). */
 export const STATUS_KEYS: Readonly<Record<BookingStatus, CustomerMessageKey>> = {
@@ -22,6 +24,26 @@ export const STATUS_KEYS: Readonly<Record<BookingStatus, CustomerMessageKey>> = 
   NO_SHOW: 'guest.booking.status.NO_SHOW',
   EXPIRED: 'guest.booking.status.EXPIRED',
 };
+
+/**
+ * Kỳ lưu trú một dòng của SCR-09/SCR-10: `24/12/2026 → 26/12/2026 · 2 đêm · 2 người lớn · 0 trẻ em`.
+ *
+ * Ghép hai helper dùng chung đã có (`formatStaySpan` + `formatStayPeriod`) để danh sách và chi tiết nói
+ * cùng một câu; ngày lịch đổi sang `dd/MM/yyyy` bằng thao tác chuỗi, không dựng `Date`.
+ */
+export function stayText(booking: {
+  readonly checkIn: string;
+  readonly checkOut: string;
+  readonly nights: number;
+  readonly adults: number;
+  readonly children: number;
+}): string {
+  return formatStaySpan(
+    booking.checkIn,
+    booking.checkOut,
+    formatStayPeriod(booking.nights, booking.adults, booking.children),
+  );
+}
 
 export interface BookingFilters {
   /** `''` = tất cả trạng thái. */
