@@ -21,6 +21,7 @@ import { createSession } from '../../src/session-factory';
 import { holdApiFrom } from '../../src/hold-api';
 import { netInfoSource } from '../../src/netinfo.native';
 import { t } from '../../src/strings';
+import { calendarDateLabel } from '../../src/calendar-date';
 import { formatVnd } from '../../src/search';
 import { planCodeOf } from '../../src/room-detail';
 import {
@@ -357,7 +358,11 @@ export default function ConfirmHoldScreen(): ReactElement {
         {t('hold.title')}
       </Text>
       <Text style={CELL}>
-        {parsed.criteria.checkIn} → {parsed.criteria.checkOut} · {parsed.criteria.roomCount} phòng
+        {t('hold.criteria', {
+          checkIn: calendarDateLabel(parsed.criteria.checkIn),
+          checkOut: calendarDateLabel(parsed.criteria.checkOut),
+          roomCount: parsed.criteria.roomCount,
+        })}
       </Text>
 
       <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
