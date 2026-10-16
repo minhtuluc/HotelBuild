@@ -16,9 +16,14 @@ import { loadPricingFacts } from '../../../src/modules/rate/pricing-facts/loader
 const post = (token: string, body: object) =>
   http().post('/api/v1/quotes/multi-channel').set('Authorization', `Bearer ${token}`).send(body);
 
-async function factsFor(roomTypeId = dlxTypeId) {
+async function factsFor(roomTypeId = dlxTypeId, promotionCodes?: readonly string[]) {
   return db.$transaction((tx) =>
-    loadPricingFacts(tx, { roomTypeId, checkIn: stay.checkIn, checkOut: stay.checkOut }),
+    loadPricingFacts(tx, {
+      roomTypeId,
+      checkIn: stay.checkIn,
+      checkOut: stay.checkOut,
+      ...(promotionCodes === undefined ? {} : { promotionCodes }),
+    }),
   );
 }
 
@@ -67,6 +72,44 @@ test('AC3: mọi kênh khớp từng VND với engine gọi trực tiếp trên 
     expect(option.nightlyFrom).toBe(Math.min(...engine.nights.map((night) => night.nightlyPrice)));
     expect(option.warnings).toEqual([...engine.warnings]);
     expect(option.netTotal).toBe(option.grossTotal! - option.commissionAmount!);
+  }
+});
+
+test('BR-RATE-14: mã khuyến mãi không có trong danh mục là 422 E_RATE_PROMO_INVALID, mã hợp lệ vẫn giảm giá', async () => {
+  // Danh mục thật trong CSDL: một mã đang bán và một mã đã tắt.
+  await rows(
+    "INSERT INTO promotions(code,name,type,value,min_nights,valid_from,valid_to,stackable,status) VALUES('H074-ON','Synthetic HB074 bật','PERCENT',10,1,'2026-01-01','2027-12-31',false,'ACTIVE'),('H074-OFF','Synthetic HB074 tắt','PERCENT',10,1,'2026-01-01','2027-12-31',false,'INACTIVE')",
+  );
+
+  // (1) Mã không tồn tại trong danh mục ⇒ lỗi người gọi, đúng mã/status của catalogue (api.md §5).
+  await expect(factsFor(dlxTypeId, ['H074-KHONG-CO'])).rejects.toMatchObject({
+    status: 422,
+    code: 'E_RATE_PROMO_INVALID',
+  });
+
+  // (2) Có trong danh mục nhưng đang tắt: đặc tả chỉ buộc từ chối mã không hợp lệ/hết hạn/hết lượt nên
+  // mã đang tắt chỉ đơn giản không được áp (cách đọc hẹp — HB-198 PR ghi rõ).
+  const off = await factsFor(dlxTypeId, ['H074-OFF']);
+  expect(off.promotions).toEqual([]);
+
+  // (3) Mã hợp lệ: dữ kiện mang mã và engine vẫn giảm giá đúng như hiện nay.
+  const plain = quotePrice({ ...(await factsFor()), channelCode: 'WEB' });
+  const withPromo = await factsFor(dlxTypeId, ['H074-ON']);
+  expect(withPromo.promotions.map((promotion) => promotion.code)).toEqual(['H074-ON']);
+  const discounted = quotePrice({ ...withPromo, channelCode: 'WEB' });
+  expect(plain.ok && discounted.ok).toBe(true);
+  if (plain.ok && discounted.ok) {
+    expect(discounted.value.appliedPromotions).toEqual(['H074-ON']);
+    expect(discounted.value.total).toBeLessThan(plain.value.total);
+    // BR-RATE-10: PERCENT áp **một lần trên tổng tạm tính**; phần giảm là phân số chính xác, còn tổng
+    // chốt bị làm tròn **xuống** bội số 1.000 (BR-RATE-01 bước cuối) nên chênh lệch không đúng bằng 10%.
+    const discount = discounted.value.discountAmount;
+    expect(Number(discount.numerator) / Number(discount.denominator)).toBe(
+      plain.value.subtotal / 10,
+    );
+    expect(discounted.value.total).toBe(
+      Math.floor((plain.value.subtotal - plain.value.subtotal / 10) / 1000) * 1000,
+    );
   }
 });
 
@@ -169,4 +212,24 @@ test('kỳ công suất tươi: đổi mùa thay đổi giá nhưng không lệc
   const result = quotePrice({ ...facts, channelCode: 'WEB' });
   expect(result.ok).toBe(true);
   if (result.ok) expect(parsed.options[0]!.totalFrom).toBe(result.value.total);
+});
+
+test('HB-198: hết gói giá ACTIVE thì báo giá đa kênh vẫn 422 (tách khỏi lịch giá)', async () => {
+  const token = await login('MANAGER');
+  const plans = await rows('SELECT id::text AS id, status FROM rate_plans ORDER BY id');
+  try {
+    await rows("UPDATE rate_plans SET status='INACTIVE'");
+    const response = await post(token, {
+      roomTypeId: dlxTypeId,
+      checkIn: stay.checkIn,
+      checkOut: stay.checkOut,
+      channelCodes: ['WEB'],
+    });
+    // Báo giá phải có gói giá: không phân giải được gói ⇒ 422, khác hẳn lịch giá (vẫn 200).
+    expect(response.status).toBe(422);
+    expect(errorBodySchema.parse(response.body).code).toBe('E_RATE_CONFIGURATION_INVALID');
+  } finally {
+    for (const plan of plans)
+      await rows('UPDATE rate_plans SET status=$1 WHERE id=$2', [plan.status, plan.id]);
+  }
 });

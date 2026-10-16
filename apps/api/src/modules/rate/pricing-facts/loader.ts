@@ -15,7 +15,13 @@
  * - `ratePlan` trả trong facts mang `minNights`/`maxNights`/`losDiscountEnabled`/`depositPercent`.
  *   Khi không truyền `ratePlanCode`, dùng **gói giá mặc định** = gói `ACTIVE` gắn chính sách huỷ
  *   `cancellation_policies.is_default = true` (seed → `FLEX7`), dự phòng mã `FLEX7`; không có gói
- *   hợp lệ → `E_RATE_CONFIGURATION_INVALID`.
+ *   hợp lệ → `E_RATE_CONFIGURATION_INVALID`. Truyền `ratePlanCode: null` khi bề mặt **không** nhận
+ *   gói giá (lịch giá theo loại phòng, HB-198): facts mang `NEUTRAL_RATE_PLAN`, không truy vấn
+ *   `rate_plans` và không đòi hỏi gói nào đang bán.
+ * - `promotionCodes` người gọi chọn PHẢI có trong danh mục `promotions`: mã **không tồn tại** ⇒
+ *   `422 E_RATE_PROMO_INVALID` (BR-RATE-14; api.md §3.1, §5). Mã có trong danh mục nhưng không dùng
+ *   được (hết hạn, hết lượt, xếp chồng sai) do engine quyết — `quotePrice` trả `E_RATE_PROMOTION_INVALID`
+ *   và bề mặt báo giá map thành cùng mã lỗi đó.
  * - Hệ số công suất/LOS/cuối tuần: ngưỡng đọc từ `system_settings` (`pricing.*`), còn các mức hệ số
  *   và thang LOS là hằng số nghiệp vụ của BR-RATE-01 bước 4/5 và `dong-gia.md` §4.4, §6.1.
  */
@@ -35,8 +41,18 @@ import type {
 import { rateSourceSchema, type RatePlanCode } from '@pinehill/contracts';
 import { AppError } from '../../../common/app-error.js';
 
+/**
+ * Mùa kèm tên hiển thị. Engine chỉ đọc phần `Season`; bề mặt lịch giá cần tên mùa đang thắng
+ * (hợp đồng HB-050 `seasonName`), nên loader trả luôn `seasons.name` thay vì để adapter truy vấn lại.
+ */
+export interface NamedSeason extends Season {
+  readonly name: string;
+}
+
 /** Đầu vào engine trừ `channelCode` (caller chọn kênh), nên ghép trực tiếp bằng spread. */
-export type PricingFacts = Omit<PricingInput, 'channelCode'>;
+export interface PricingFacts extends Omit<PricingInput, 'channelCode'> {
+  readonly seasons: readonly NamedSeason[];
+}
 
 export interface PricingFactsQuery {
   readonly roomTypeId: string;
@@ -44,9 +60,12 @@ export interface PricingFactsQuery {
   readonly checkOut: string;
   /** Bỏ trống thì suy từ `room_types.property_id`; truyền vào để đối chiếu chủ sở hữu loại phòng. */
   readonly propertyId?: string;
-  /** Bỏ trống thì dùng gói giá mặc định (xem docstring). */
-  readonly ratePlanCode?: RatePlanCode;
-  /** Mã khuyến mãi người gọi đã chọn; mặc định rỗng. */
+  /**
+   * Bỏ trống thì dùng gói giá mặc định (xem docstring); `null` = **không phân giải gói giá** ⇒
+   * `ratePlan` là `NEUTRAL_RATE_PLAN`, dùng cho bề mặt không nhận gói giá (lịch giá theo loại phòng).
+   */
+  readonly ratePlanCode?: RatePlanCode | null;
+  /** Mã khuyến mãi người gọi đã chọn; mặc định rỗng (xem docstring về mã không có trong danh mục). */
   readonly promotionCodes?: readonly string[];
 }
 
@@ -73,6 +92,20 @@ const SETTING_KEYS = [
 /** Ngày VN `YYYY-MM-DD` từ cột `date`/`timestamptz` đã chuẩn hoá UTC (BR-GEN-05). */
 const dateOnly = (date: Date): string => date.toISOString().slice(0, 10);
 
+/**
+ * Gói giá trung tính cho bề mặt **không** nhận gói giá (`ratePlanCode: null`, HB-198): `id` là UUID
+ * không thể trùng gói thật nên engine bỏ qua mọi dòng lịch giá `RATE_PLAN`; `losDiscountEnabled=false`
+ * (mức giảm dài ngày phụ thuộc **cả kỳ** lưu trú, không phải thuộc tính của một đêm — BR-RATE-10) và
+ * không có `fixedNightlyPrice`.
+ */
+export const NEUTRAL_RATE_PLAN: RatePlan = Object.freeze({
+  id: '00000000-0000-0000-0000-000000000000',
+  minNights: 1,
+  maxNights: 32767,
+  losDiscountEnabled: false,
+  depositPercent: '0',
+});
+
 function ratePlanData(row: {
   id: string;
   min_nights: number;
@@ -95,6 +128,7 @@ function ratePlanData(row: {
 
 function seasonData(row: {
   id: string;
+  name: string;
   property_id: string | null;
   start_date: Date;
   end_date: Date;
@@ -102,9 +136,10 @@ function seasonData(row: {
   created_at: Date;
   multiplier: { toString(): string };
   weekend_surcharge_enabled: boolean;
-}): Season {
+}): NamedSeason {
   return {
     id: row.id,
+    name: row.name,
     ...(row.property_id === null ? {} : { propertyId: row.property_id }),
     from: dateOnly(row.start_date),
     to: dateOnly(row.end_date),
@@ -239,10 +274,33 @@ function resolveRatePlan(tx: Prisma.TransactionClient, code?: RatePlanCode) {
 }
 
 /**
+ * Mã khuyến mãi người gọi chọn PHẢI có trong **danh mục** `promotions` (mọi trạng thái); mã không tồn
+ * tại ⇒ `422 E_RATE_PROMO_INVALID` (BR-RATE-14; api.md §3.1 và bảng mã lỗi §5).
+ *
+ * Chỉ gọi khi có mã không phân giải được ở truy vấn `status = 'ACTIVE'` (mã lạ, hoặc mã đang `INACTIVE`)
+ * nên đường nạp bình thường không thêm round-trip. Mã đang `INACTIVE` **không** phải lỗi: nó có trong
+ * danh mục nhưng không được áp — đúng cách đọc hẹp của đặc tả (chỉ mã không tồn tại mới bị từ chối).
+ */
+async function assertPromotionsInCatalogue(
+  tx: Prisma.TransactionClient,
+  codes: readonly string[],
+): Promise<void> {
+  if (codes.length === 0) return;
+  const catalogue = await tx.promotions.findMany({
+    where: { code: { in: [...codes] } },
+    select: { code: true },
+  });
+  const known = new Set(catalogue.map((row) => row.code));
+  if (codes.every((code) => known.has(code))) return;
+  throw new AppError(422, 'E_RATE_PROMO_INVALID', 'Mã khuyến mãi không hợp lệ.');
+}
+
+/**
  * Dựng dữ kiện giá cho một loại phòng trên một kỳ lưu trú (`checkOut` không bao gồm).
  *
  * @throws AppError `404 E_GEN_NOT_FOUND` khi không có loại phòng / gói giá yêu cầu.
- * @throws AppError `422 E_RATE_CONFIGURATION_INVALID` khi thiếu gói giá mặc định.
+ * @throws AppError `422 E_RATE_CONFIGURATION_INVALID` khi thiếu gói giá mặc định (trừ `ratePlanCode: null`).
+ * @throws AppError `422 E_RATE_PROMO_INVALID` khi `promotionCodes` có mã không tồn tại trong danh mục.
  */
 export async function loadPricingFacts(
   tx: Prisma.TransactionClient,
@@ -260,12 +318,13 @@ export async function loadPricingFacts(
     throw new AppError(404, 'E_GEN_NOT_FOUND', 'Không tìm thấy tài nguyên.');
   const propertyId = room.property_id;
 
-  const plan = await resolveRatePlan(tx, query.ratePlanCode);
-  if (!plan)
+  // `ratePlanCode: null` = bề mặt không nhận gói giá ⇒ gói trung tính, không truy vấn `rate_plans`.
+  const plan = query.ratePlanCode === null ? null : await resolveRatePlan(tx, query.ratePlanCode);
+  if (query.ratePlanCode !== null && !plan)
     throw new AppError(422, 'E_RATE_CONFIGURATION_INVALID', 'Cấu hình giá không đủ để báo giá.');
 
   const now = (await tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`)[0]!.now;
-  const promotionCodes = query.promotionCodes ?? [];
+  const promotionCodes = [...new Set(query.promotionCodes ?? [])];
 
   const [seasonRows, calendarRows, channelRows, settingRows, occupancyRows, promotionRows, config] =
     await Promise.all([
@@ -295,7 +354,7 @@ export async function loadPricingFacts(
       }),
       promotionCodes.length > 0
         ? tx.promotions.findMany({
-            where: { code: { in: [...new Set(promotionCodes)] }, status: 'ACTIVE' },
+            where: { code: { in: promotionCodes }, status: 'ACTIVE' },
           })
         : Promise.resolve([]),
       tx.system_settings.findMany({
@@ -303,6 +362,14 @@ export async function loadPricingFacts(
         select: { key: true, value: true },
       }),
     ]);
+
+  // BR-RATE-14 + api.md §3.1/§5: mã người gọi chọn phải có trong danh mục `promotions`; mã **không tồn
+  // tại** là lỗi người gọi (không phải "mã không được áp"); mã đang tắt chỉ đơn giản là không áp dụng.
+  const resolvedCodes = new Set(promotionRows.map((row) => row.code));
+  await assertPromotionsInCatalogue(
+    tx,
+    promotionCodes.filter((code) => !resolvedCodes.has(code)),
+  );
 
   const roomRate: RoomRate = {
     id: room.id,
@@ -314,7 +381,7 @@ export async function loadPricingFacts(
   return {
     propertyId,
     room: roomRate,
-    ratePlan: ratePlanData(plan),
+    ratePlan: plan === null ? NEUTRAL_RATE_PLAN : ratePlanData(plan),
     checkIn: query.checkIn,
     checkOut: query.checkOut,
     now: now.getTime(),
@@ -326,4 +393,23 @@ export async function loadPricingFacts(
     promotions: promotionRows.map(promotionData),
     settings: pricingSettings(new Map(config.map((row) => [row.key, row.value]))),
   };
+}
+
+/**
+ * BR-RATE-19: gói dài ngày `LONGSTAY14` đang bán nhưng **chưa có giá riêng** — không `fixed_nightly_price`
+ * và không có dòng lịch giá `RATE_PLAN` nào gắn gói đó. Bề mặt lịch giá dùng để nhắc trên màn hình cấu
+ * hình; các bề mặt báo giá không cảnh báo.
+ *
+ * Cố ý **không** gộp vào `loadPricingFacts`: loader chuẩn giữ nguyên tập truy vấn cho mọi bề mặt báo giá
+ * (HB-198 AC3), nên helper đọc thêm này được export riêng cho adapter nào cần.
+ */
+export async function longstayWithoutOwnPrice(tx: Prisma.TransactionClient): Promise<boolean> {
+  const plan = await tx.rate_plans.findFirst({
+    where: { code: 'LONGSTAY14', status: 'ACTIVE' },
+    select: { id: true, fixed_nightly_price: true },
+  });
+  if (plan === null || plan.fixed_nightly_price !== null) return false;
+  return (
+    (await tx.rate_calendars.count({ where: { source: 'RATE_PLAN', rate_plan_id: plan.id } })) === 0
+  );
 }
