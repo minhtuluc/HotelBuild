@@ -18,7 +18,12 @@ import { useForcedState } from '../../../../../components/forced-state';
 import { opsApiClient } from '../../../../../lib/api';
 import { t } from '../../../../../lib/i18n';
 import { writeFailureState } from '../../../../../lib/screen-state';
-import { quoteRequestOf, rescheduleRequestOf, stayDifference } from '../cancel/cancel-model';
+import {
+  calendarDateLabel,
+  quoteRequestOf,
+  rescheduleRequestOf,
+  stayDifference,
+} from '../cancel/cancel-model';
 
 function Difference({ booking, quote }: { booking: BookingSummary; quote: Quote }): ReactElement {
   const difference = stayDifference(quote.total, booking.totalAmount);
@@ -154,8 +159,8 @@ export function RescheduleBookingScreen({ baseUrl }: { baseUrl: string }): React
       <h1 style={{ margin: 0 }}>{t('ops.reschedule.title')}</h1>
       {booking === null ? null : (
         <p data-testid="reschedule-current" style={{ margin: 0 }}>
-          <code>{booking.code}</code> · {booking.status} · {booking.checkIn} → {booking.checkOut} ·
-          rescheduleCount {booking.rescheduleCount}
+          <code>{booking.code}</code> · {booking.status} · {calendarDateLabel(booking.checkIn)} →{' '}
+          {calendarDateLabel(booking.checkOut)} · rescheduleCount {booking.rescheduleCount}
         </p>
       )}
       <StateSurface state={state}>
@@ -170,8 +175,8 @@ export function RescheduleBookingScreen({ baseUrl }: { baseUrl: string }): React
             {t('ops.reschedule.result', {
               status: updated.status,
               count: updated.rescheduleCount,
-              from: updated.checkIn,
-              to: updated.checkOut,
+              from: calendarDateLabel(updated.checkIn),
+              to: calendarDateLabel(updated.checkOut),
             })}
           </p>
         ) : null}

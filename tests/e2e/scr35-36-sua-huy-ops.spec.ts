@@ -158,6 +158,11 @@ test.describe('SCR-35/SCR-36 sửa/đổi ngày/huỷ booking (HB-108)', () => {
   test('huỷ hai bước: xem trước (có thang bậc) rồi mới xác nhận (AC1)', async ({ page }) => {
     const spy = await stubBooking(page);
     await page.goto('/bookings/b1/cancel');
+    // HB-108: ngày chỉ-ngày hiển thị theo định dạng lịch dd/MM/yyyy, không còn ISO nguyên văn.
+    const cancelHeader = page.getByTestId('cancel-booking');
+    await expect(cancelHeader).toContainText('24/12/2026');
+    await expect(cancelHeader).toContainText('26/12/2026');
+    await expect(cancelHeader).not.toContainText('2026-12-24');
     await expect(page.getByTestId('cancel-confirm')).toBeDisabled();
 
     await page.getByLabel('Lý do huỷ').selectOption('GUEST_REQUEST');
@@ -204,6 +209,11 @@ test.describe('SCR-35/SCR-36 sửa/đổi ngày/huỷ booking (HB-108)', () => {
   test('đổi ngày: chênh lệch trước xác nhận + ghi chú phí chờ hợp đồng (AC2)', async ({ page }) => {
     const spy = await stubBooking(page);
     await page.goto('/bookings/b1/reschedule');
+    // HB-108: ngày chỉ-ngày hiển thị theo định dạng lịch dd/MM/yyyy, không còn ISO nguyên văn.
+    const currentHeader = page.getByTestId('reschedule-current');
+    await expect(currentHeader).toContainText('24/12/2026');
+    await expect(currentHeader).toContainText('26/12/2026');
+    await expect(currentHeader).not.toContainText('2026-12-24');
     await expect(page.getByTestId('reschedule-confirm')).toBeDisabled();
     await page.getByLabel('Ngày nhận phòng mới').fill('2026-12-27');
     await page.getByLabel('Ngày trả phòng mới').fill('2026-12-29');
@@ -217,6 +227,10 @@ test.describe('SCR-35/SCR-36 sửa/đổi ngày/huỷ booking (HB-108)', () => {
     await page.getByTestId('reschedule-confirm').click();
     await expect(page.getByTestId('reschedule-result')).toContainText('số lần đổi 1');
     await expect(page.getByTestId('reschedule-result')).toContainText('trạng thái CONFIRMED');
+    const result = page.getByTestId('reschedule-result');
+    await expect(result).toContainText('27/12/2026');
+    await expect(result).toContainText('29/12/2026');
+    await expect(result).not.toContainText('2026-12-27');
     expect(spy.rescheduleBodies[0]).toContain('"quoteId":"q-new"');
   });
 
