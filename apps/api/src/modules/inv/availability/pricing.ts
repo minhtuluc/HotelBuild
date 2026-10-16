@@ -8,7 +8,9 @@
 import type { Prisma } from '@prisma/client';
 import type { ChannelCode } from '@pinehill/domain/inventory';
 import { quotePrice } from '@pinehill/domain/pricing';
+import { AppError } from '../../../common/app-error.js';
 import { loadPricingFacts } from '../../rate/pricing-facts/index.js';
+import { nightsBetween } from './validation.js';
 
 export interface StayPrice {
   readonly minNights: number;
@@ -23,6 +25,12 @@ export interface StayPriceQuery {
   readonly checkIn: string;
   readonly checkOut: string;
   readonly channelCode: ChannelCode;
+  /**
+   * Mốc duy nhất của cả phản hồi (từ `clock_timestamp()` của transaction). Mọi loại phòng được định
+   * giá ở **cùng một thời điểm**, nên hệ số công suất và ngưỡng tươi 5 phút không lệch giữa các loại
+   * trong cùng một kết quả tìm phòng.
+   */
+  readonly now: Date;
 }
 
 /**
@@ -40,10 +48,19 @@ export async function stayPrice(
     checkIn: query.checkIn,
     checkOut: query.checkOut,
   });
-  const quote = quotePrice({ ...facts, channelCode: query.channelCode });
-  // Loader đã dựng đủ dữ kiện nên engine từ chối ở đây là bất biến cấu hình bị phá ⇒ lỗi hệ thống,
-  // không phải lỗi đầu vào của khách (mã lỗi nghiệp vụ của loader vẫn đi thẳng ra ngoài).
-  if (!quote.ok) throw new Error(`Availability pricing failed: ${quote.error.code}`);
+  // BR-BOOK-03: kỳ dài/ngắn hơn cửa sổ gói giá là lỗi nghiệp vụ của khách, không phải lỗi hệ thống.
+  // Engine chỉ báo chung `E_RATE_INVALID_INPUT` nên phải chặn trước khi gọi.
+  const nights = nightsBetween(query.checkIn, query.checkOut);
+  if (nights < facts.ratePlan.minNights || nights > facts.ratePlan.maxNights)
+    throw new AppError(
+      422,
+      'E_BOOK_MIN_NIGHTS',
+      `Kỳ lưu trú phải từ ${facts.ratePlan.minNights} đến ${facts.ratePlan.maxNights} đêm.`,
+    );
+  const quote = quotePrice({ ...facts, now: query.now.getTime(), channelCode: query.channelCode });
+  // Phần còn lại là bất biến cấu hình giá bị phá ⇒ mã hạ tầng của catalogue, không phải 500 trần.
+  if (!quote.ok)
+    throw new AppError(503, 'E_GEN_SERVICE_UNAVAILABLE', 'Chưa tính được giá cho kỳ lưu trú.');
   return {
     minNights: facts.ratePlan.minNights,
     maxNights: facts.ratePlan.maxNights,

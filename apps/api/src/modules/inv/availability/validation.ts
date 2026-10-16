@@ -41,6 +41,13 @@ export function decodeCursor(value: string): RoomTypeCursor {
   return { code: match[1]!, id: uuid(match[2]!) };
 }
 
+/** Ngày nghiệp vụ `YYYY-MM-DD` ⇒ số đêm của khoảng nửa mở `[checkIn, checkOut)`. */
+export function nightsBetween(checkIn: string, checkOut: string): number {
+  const start = Date.parse(`${checkIn}T00:00:00Z`);
+  const end = Date.parse(`${checkOut}T00:00:00Z`);
+  return Math.round((end - start) / 86_400_000);
+}
+
 /** Hình dạng do `availabilityQuerySchema` chốt; `businessDateSchema` chỉ kiểm định dạng nên kiểm lại ngày lịch. */
 export function availabilityInput(value: unknown): AvailabilityInput {
   const result = availabilityQuerySchema.safeParse(value);

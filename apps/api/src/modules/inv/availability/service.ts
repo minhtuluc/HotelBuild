@@ -9,7 +9,7 @@ import { AppError } from '../../../common/app-error.js';
 import { loadInventoryFacts } from '../facts/loader.js';
 import { missing } from '../allotments/validation.js';
 import { stayPrice } from './pricing.js';
-import { encodeCursor } from './validation.js';
+import { encodeCursor, nightsBetween } from './validation.js';
 import type { AvailabilityInput, RoomTypeCursor } from './validation.js';
 
 /**
@@ -17,13 +17,6 @@ import type { AvailabilityInput, RoomTypeCursor } from './validation.js';
  * (giống lưới tồn `modules/inv/grid`). Kênh OTA có hạn mức riêng nên phải truyền rõ.
  */
 const directChannel: ChannelCode = 'WEB';
-
-/** Ngày nghiệp vụ `YYYY-MM-DD` ⇒ khoảng nửa mở `[checkIn, checkOut)` đếm bằng số đêm. */
-function nightsBetween(checkIn: string, checkOut: string): number {
-  const start = Date.parse(`${checkIn}T00:00:00Z`);
-  const end = Date.parse(`${checkOut}T00:00:00Z`);
-  return Math.round((end - start) / 86_400_000);
-}
 
 /** Thứ tự danh sách là `(code, id)` như lưới tồn; khoá tiếp tục so đúng thứ tự đó. */
 function afterCursor(type: RoomTypeRow, cursor: RoomTypeCursor | null): boolean {
@@ -177,6 +170,8 @@ export class AvailabilityService {
         // Kênh ngừng bán/không tồn tại không có giá riêng để engine tính ⇒ giữ "giá từ" theo kênh
         // trực tiếp, còn tồn của kênh đó vẫn là 0 (kết quả vẫn nói đúng: kênh này không bán được).
         channelCode: channelActive ? channelCode : directChannel,
+        // Cùng một mốc cho mọi loại phòng trong phản hồi (xem `StayPriceQuery.now`).
+        now,
       })),
     };
   }

@@ -7,7 +7,9 @@ import type { SeedSummary } from '../../prisma/seed/index.js';
 import { databaseUrl } from '../idempotency/database.js';
 import { http } from '../room-blocks/http-fixture.js';
 import { PUBLIC_REQUEST_LIMIT } from '../../src/modules/inv/availability/rate-limit.js';
+import { stayPrice } from '../../src/modules/inv/availability/pricing.js';
 import {
+  db,
   rows,
   propertyId,
   otherPropertyId,
@@ -154,18 +156,77 @@ test('ba kỳ mẫu khớp tính tay: đêm bị chặn, hold chưa gán và h�
   expect(countOf(webC, 'DOR')).toBe(6);
 }, 30000);
 
-test('kênh OTA ngừng bán: availableCount = 0 dù tồn chung còn nguyên (api.md §3.8)', async () => {
+test('kênh ngừng bán / đóng theo ngày: trả 0 mà không thành lỗi hệ thống (api.md §3.8)', async () => {
+  // Đóng bán một đêm bằng dòng hạn mức `is_closed` — cơ chế đồng bộ dùng khi tồn thấp (BR-CHAN-05).
+  // Hạn mức không vượt số đơn vị bán của STD (BR-INV-05) để thoả ràng buộc CSDL.
+  await allotment('OTA_BOOKING', 2, true);
+  const closed = publicBodySchema.parse((await availability({ channelCode: 'OTA_BOOKING' })).body);
+  expect(countOf(closed, 'STD')).toBe(0);
+  // Hạn mức đóng chỉ thuộc STD, nên DOR vẫn giữ quota mặc định 80% của 6 = 4.
+  expect(countOf(closed, 'DOR')).toBe(4);
+  await rows('DELETE FROM channel_allotments');
+  // Cả kênh ngừng hoạt động: loader giá chỉ nạp kênh ACTIVE nên phải xử lý trước khi định giá.
   await rows("UPDATE channels SET status='INACTIVE' WHERE code='OTA_BOOKING'");
   try {
     const ota = publicBodySchema.parse((await availability({ channelCode: 'OTA_BOOKING' })).body);
     expect(countOf(ota, 'STD')).toBe(0);
     expect(countOf(ota, 'DOR')).toBe(0);
     expect(ota.data.every((item) => item.soldOut)).toBe(true);
+    expect(ota.data.every((item) => item.totalFrom > 0)).toBe(true);
   } finally {
     await rows("UPDATE channels SET status='ACTIVE' WHERE code='OTA_BOOKING'");
   }
   // Kênh ngừng bán không làm giảm tồn chung của kênh trực tiếp.
   expect(countOf(publicBodySchema.parse((await availability()).body), 'STD')).toBe(2);
+});
+
+test('kỳ ngoài cửa sổ số đêm của gói giá: 422 E_BOOK_MIN_NIGHTS, không phải lỗi 5xx (BR-BOOK-03)', async () => {
+  // 01/11/2026 → 02/11/2027 = 366 đêm > `maxNights` 365 của gói mặc định (FLEX7).
+  const long = { checkIn: '2026-11-01', checkOut: '2027-11-02' };
+  const search = await availability(long);
+  expect(search.status).toBe(422);
+  expect(errorBodySchema.parse(search.body).code).toBe('E_BOOK_MIN_NIGHTS');
+  const one = await availability({ ...long, roomTypeId: typeId });
+  expect(one.status).toBe(422);
+  expect(errorBodySchema.parse(one.body).code).toBe('E_BOOK_MIN_NIGHTS');
+});
+
+test('đường tính giá dùng đúng một mốc thời gian của người gọi (BR-RATE-01 bước 4)', async () => {
+  const clock = await rows('SELECT clock_timestamp() AS now');
+  const now = new Date(String(clock[0]!.now));
+  const capturedAt = new Date(now.getTime() - 4 * 60_000);
+  for (const date of ['2026-11-01', '2026-11-02', '2026-11-03']) {
+    await rows(
+      `INSERT INTO occupancy_snapshots(property_id,room_type_id,date,physical_rooms,sold_rooms,occupancy_pct,captured_at)
+       VALUES($1,NULL,$2,100,95,95.00,$3)`,
+      [propertyId, date, capturedAt],
+    );
+  }
+  try {
+    const query = {
+      propertyId,
+      roomTypeId: typeId,
+      checkIn: '2026-11-01',
+      checkOut: '2026-11-04',
+      channelCode: 'WEB',
+    } as const;
+    /* 3 đêm, FLEX7 (LOS 0,95), WEB (hệ số 1,00), STD 100.000/100.000–200.000:
+       mốc còn tươi (cách 4 phút) ⇒ công suất 95% ≥ ngưỡng cao ⇒ 1,25 → ceil1000(118.750) = 119.000/đêm, tổng 357.000;
+       mốc đã cũ (quá 5 phút) ⇒ hệ số 1,00 → chạm sàn 100.000/đêm, tổng 300.000. */
+    const fresh = await db.$transaction((tx) => stayPrice(tx, { ...query, now }));
+    expect(fresh).toMatchObject({
+      minNights: 1,
+      maxNights: 365,
+      nightlyFrom: 119_000,
+      totalFrom: 357_000,
+    });
+    const stale = await db.$transaction((tx) =>
+      stayPrice(tx, { ...query, now: new Date(now.getTime() + 6 * 60_000) }),
+    );
+    expect(stale).toMatchObject({ nightlyFrom: 100_000, totalFrom: 300_000 });
+  } finally {
+    await rows('DELETE FROM occupancy_snapshots');
+  }
 });
 
 test('một đêm hết phòng: loại vẫn được trả về với soldOut, yêu cầu rõ loại thì 409 (BR-INV-07)', async () => {
