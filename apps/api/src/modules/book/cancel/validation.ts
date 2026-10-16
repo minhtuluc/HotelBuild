@@ -58,22 +58,41 @@ function checkReasonPair(reason: string, isForceMajeure: boolean): void {
 
 export interface PreviewAnchor {
   readonly version: bigint;
-  readonly decision: string | null;
+  /** Vân tay của **toàn bộ** kết quả xem trước (bậc, tiền, phí, tập phòng) — xem `anchor.ts`. */
+  readonly fingerprint: string;
 }
 
 /**
- * Neo xem trước (AC1): `"<version>"` kiểm mốc phiên bản; `"<version>.<quyết định>"`
- * (ETag của cancel-preview) kiểm thêm bậc/số hoàn đã xem — lệch mốc giờ/version → 412.
- * Thiếu header vẫn cho qua để tương thích client SCR-36 (không gửi If-Match).
+ * Neo xem trước **bắt buộc** (AC1; api.md §1.3: `If-Match` cho mọi thay đổi booking):
+ * thiếu header → `428`, token sai/cũ → `412` (tải lại và xem trước lại).
  */
-export function previewAnchor(value: unknown): PreviewAnchor | null {
-  if (value === undefined) return null;
-  if (typeof value !== 'string' || !/^"[1-9]\d{0,15}(?:\.[A-Za-z0-9_-]{1,64})?"$/.test(value))
-    throw precondition();
-  const [versionText, decision] = value.slice(1, -1).split('.');
+export function previewAnchor(value: unknown): PreviewAnchor {
+  if (value === undefined) throw precondition();
+  if (typeof value !== 'string' || !/^"[1-9]\d{0,15}\.[0-9a-f]{16}"$/.test(value)) throw stale();
+  const [versionText, fingerprint] = value.slice(1, -1).split('.');
   const version = BigInt(versionText!);
-  if (version > BigInt(Number.MAX_SAFE_INTEGER)) throw precondition();
-  return { version, decision: decision ?? null };
+  if (version > BigInt(Number.MAX_SAFE_INTEGER)) throw stale();
+  return { version, fingerprint: fingerprint! };
+}
+
+const previewQuerySchema = z.object({
+  bookingRoomIds: z.union([z.string(), z.array(z.string())]).optional(),
+});
+
+/**
+ * Tập phòng của lần xem trước, cùng kênh dữ liệu với lệnh huỷ (api.md §3.3) — thân lệnh preview của
+ * hợp đồng đã chốt chỉ có `reason`/`isForceMajeure` nên tập phòng đi bằng query, không đổi thân.
+ * Bỏ trống ⇒ toàn bộ phòng đang hoạt động, đúng như lệnh huỷ không truyền `bookingRoomIds`.
+ */
+export function previewRooms(query: unknown): string[] | null {
+  const parsed = previewQuerySchema.safeParse(query);
+  if (!parsed.success) throw invalid();
+  const raw = parsed.data.bookingRoomIds;
+  if (raw === undefined) return null;
+  const items = (Array.isArray(raw) ? raw : [raw]).flatMap((item) => item.split(','));
+  const ids = items.map((item) => item.trim()).filter((item) => item.length > 0);
+  if (!ids.length) throw invalid();
+  return [...new Set(ids.map((id) => bookingId(id)))];
 }
 
 export function requestActor(request: FastifyRequest) {

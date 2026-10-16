@@ -4,8 +4,8 @@ import type { Clock } from '@pinehill/domain';
 import { PRISMA } from '../../../infrastructure/prisma/prisma.module.js';
 import { CLOCK } from '../../../infrastructure/ports.js';
 import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
-import { permissionProvider } from '../../../common/rbac/permissions.js';
 import { CancelAccess } from './access.js';
+import { cancelPermissions } from './permissions.js';
 import { CancelController } from './controller.js';
 import { CancelService } from './service.js';
 
@@ -13,11 +13,7 @@ import { CancelService } from './service.js';
   controllers: [CancelController],
   providers: [
     CancelAccess,
-    permissionProvider('book-cancel', {
-      // api.md §2.5: quầy/điều phối huỷ và xem trước; khách tự huỷ chờ phiên GUEST (HB-017).
-      'bookings.cancelPreview': ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
-      'bookings.cancel': ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
-    }),
+    cancelPermissions,
     {
       provide: CancelService,
       inject: [PRISMA, CLOCK],

@@ -25,6 +25,10 @@ export interface CancelFacts {
   readonly policy: { readonly id: string; readonly tiers: readonly TierInput[] };
   /** Bản `policy_snapshot_json` nguyên trạng (object) để ghi lại khi tạo snapshot PARTIAL_CANCEL. */
   readonly policyJson: Record<string, z.infer<typeof jsonValueSchema>>;
+  /** `payload_json` nguyên trạng (mọi khoá) để ghi lại **nguyên vẹn** khi tạo snapshot PARTIAL_CANCEL. */
+  readonly payloadJson: JsonRecord;
+  readonly channelCode: string;
+  readonly channelPolicyCode: string | null;
   readonly checkInMs: number;
   readonly fee: bigint;
   readonly paidAmount: bigint;
@@ -59,8 +63,23 @@ const tierJsonSchema = z.object({
 });
 const policyJsonSchema = z.object({ id: z.string().min(1), tiers: z.array(tierJsonSchema).min(1) });
 const policyRecordSchema = z.record(z.string(), jsonValueSchema);
+
+export type JsonScalar = z.infer<typeof jsonValueSchema>;
+export type JsonRecord = Record<string, JsonScalar>;
+
+/** `jsonb NOT NULL` + `CHECK jsonb_typeof(...)='object'`: object JSON; guard kiểm lại khi đọc. */
+export function jsonObject(value: JsonScalar, message: string): JsonRecord {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) throw notAllowed(message);
+  return value;
+}
 const nightsSchema = z.array(
-  z.object({ bookingRoomId: z.string().min(1), grossAmount: z.number().int().nonnegative() }),
+  z.object({
+    bookingRoomId: z.string().min(1),
+    grossAmount: z.number().int().nonnegative(),
+    // Hai trường dưới đây là tổng hợp theo đêm (csdl §3.6); thiếu thì coi như 0 khi tính lại tổng.
+    commissionAmount: z.number().int().nonnegative().optional(),
+    nightlyPrice: z.number().int().nonnegative().optional(),
+  }),
 );
 /** `payload_json` theo csdl §3.6 / ADR-015: thiếu khoá bắt buộc thì dừng (fail closed), không đoán giá. */
 export const snapshotPayloadSchema = z.object({
@@ -127,12 +146,17 @@ interface BookingRow {
   check_in: Date;
   check_out: Date;
   timezone: string;
+  channel_code: string;
+  channel_policy_code: string | null;
 }
 
 async function loadBooking(tx: Tx, bookingId: string, lock: boolean): Promise<BookingRow> {
   const rows = await tx.$queryRaw<BookingRow[]>`
-    SELECT b.id, b.property_id, b.status, b.version, b.check_in, b.check_out, p.timezone
-      FROM bookings b JOIN properties p ON p.id = b.property_id
+    SELECT b.id, b.property_id, b.status, b.version, b.check_in, b.check_out, p.timezone,
+           c.code AS channel_code, b.channel_policy_code
+      FROM bookings b
+      JOIN properties p ON p.id = b.property_id
+      JOIN channels c ON c.id = b.channel_id
      WHERE b.id = ${bookingId}::uuid
     ${lock ? Prisma.sql`FOR UPDATE` : Prisma.empty}`;
   const booking = rows[0];
@@ -197,12 +221,20 @@ async function loadSnapshot(tx: Tx, bookingId: string) {
   if (!policy.success) throw notAllowed('Snapshot chính sách huỷ không hợp lệ.');
   const policyJson = policyRecordSchema.safeParse(snapshot.policy_snapshot_json);
   if (!policyJson.success) throw notAllowed('Snapshot chính sách huỷ không hợp lệ.');
+  const rawPayload = jsonValueSchema.safeParse(snapshot.payload_json);
+  if (!rawPayload.success) throw notAllowed('Snapshot giá không hợp lệ.');
+  const payloadJson = jsonObject(rawPayload.data, 'Snapshot giá không hợp lệ.');
   for (const tier of policy.data.tiers)
     if (!Number.isInteger(tier.refundPercent) || tier.refundPercent < 0 || tier.refundPercent > 100)
       throw notAllowed('Tỷ lệ hoàn trong snapshot phải là số nguyên 0..100.');
   const payload = snapshotPayloadSchema.safeParse(snapshot.payload_json);
   if (!payload.success) throw notAllowed('Snapshot giá không hợp lệ.');
-  return { policy: policy.data, policyJson: policyJson.data, payload: payload.data };
+  return {
+    policy: policy.data,
+    policyJson: policyJson.data,
+    payload: payload.data,
+    payloadJson,
+  };
 }
 
 async function loadFee(tx: Tx): Promise<bigint> {
@@ -235,6 +267,9 @@ export async function readFacts(
     receipts: await loadReceipts(tx, bookingId),
     policy: snapshot.policy,
     policyJson: snapshot.policyJson,
+    payloadJson: snapshot.payloadJson,
+    channelCode: booking.channel_code,
+    channelPolicyCode: booking.channel_policy_code,
     checkInMs: nominalCheckInMs(
       checkIn,
       snapshot.payload.stay.checkInTime,

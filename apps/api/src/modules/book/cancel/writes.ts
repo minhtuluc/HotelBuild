@@ -7,7 +7,8 @@ import { RetryTransaction } from '../../../common/idempotency/transaction-retry.
 import { BookingLedger } from '../../pay/ledger/service.js';
 import { LedgerError } from '../../pay/ledger/projection.js';
 import { exceedsPaid, notAllowed } from './validation.js';
-import type { CancelDecision, CancelFacts, RoomBasis } from './context.js';
+import { jsonObject } from './context.js';
+import type { CancelDecision, CancelFacts, JsonRecord, JsonScalar, RoomBasis } from './context.js';
 
 export type Tx = Prisma.TransactionClient;
 export type RefundView = CancelResponse['refundRequest'];
@@ -197,7 +198,14 @@ export async function recordRefund(
   };
 }
 
-/** BR-CANCEL-19/BR-RATE-16: giữ bản gốc, thêm snapshot PARTIAL_CANCEL cho phần ở lại. */
+/**
+ * BR-CANCEL-19/BR-RATE-16: giữ bản gốc, thêm snapshot PARTIAL_CANCEL cho phần ở lại.
+ * `payload_json` là **bản sao nguyên vẹn** của bản mới nhất (giữ `date`, giá cơ bản, mọi hệ số, nguồn/
+ * ID/version giá và hoa hồng từng đêm — csdl §3.6): chỉ lọc `nights[]` theo phòng ở lại rồi **tính lại
+ * mọi tổng từ chính các đêm đó**, để JSON khớp hai cột `gross_amount`/`commission_amount`.
+ * `depositAmount` giữ nguyên giá trị của bản nguồn: cọc tính theo BR-PAY-01 từ `ratePlan.depositPercent`
+ * và không suy ra được từ danh sách đêm, nên không tự dựng lại công thức tiền ở tầng API.
+ */
 export async function partialSnapshot(
   tx: Tx,
   facts: CancelFacts,
@@ -208,30 +216,73 @@ export async function partialSnapshot(
   const source = await tx.price_snapshots.findFirstOrThrow({
     where: { booking_id: facts.id },
     orderBy: { seq: 'desc' },
-    select: { seq: true, gross_amount: true, commission_amount: true, engine_version: true },
+    select: { seq: true, engine_version: true },
   });
   const remaining = new Set(leaving.map((room) => room.roomId));
-  const nights = facts.payload.nights.filter((night) => remaining.has(night.bookingRoomId));
-  if (nights.reduce((sum, night) => sum + BigInt(night.grossAmount), 0n) !== total)
+  const nights = nightsOf(facts.payloadJson).filter((night) => remaining.has(roomOfNight(night)));
+  const totals = totalsOf(nights);
+  if (totals.grossAmount !== safeAmount(total))
     throw notAllowed('Nghĩa vụ phòng–đêm không khớp snapshot giá.');
-  // Hoa hồng phần ở lại theo tỷ lệ gross còn lại; không tính lại giá/LOS (BR-CANCEL-19).
-  const commission =
-    source.gross_amount > 0n ? (source.commission_amount * total) / source.gross_amount : 0n;
   await tx.price_snapshots.create({
     data: {
       booking_id: facts.id,
       seq: source.seq + 1,
       kind: 'PARTIAL_CANCEL',
       payload_json: {
-        ...facts.payload,
+        ...facts.payloadJson,
         nights,
-        totals: { ...facts.payload.totals, grossAmount: safeAmount(total) },
+        totals: {
+          ...jsonObject(facts.payloadJson.totals ?? null, 'Tổng snapshot giá không hợp lệ.'),
+          ...totals,
+        },
       },
       policy_snapshot_json: facts.policyJson,
       gross_amount: total,
-      commission_amount: commission,
+      commission_amount: BigInt(totals.commissionAmount),
       engine_version: source.engine_version,
       captured_at: now,
     },
   });
+}
+
+function nightsOf(payload: JsonRecord): JsonScalar[] {
+  const value = payload.nights;
+  if (!Array.isArray(value)) throw notAllowed('Snapshot giá thiếu danh sách đêm.');
+  return value;
+}
+
+function roomOfNight(night: JsonScalar): string {
+  const value = jsonObject(night, 'Đêm trong snapshot giá không hợp lệ.').bookingRoomId;
+  if (typeof value !== 'string' || !value.trim())
+    throw notAllowed('Đêm trong snapshot giá không hợp lệ.');
+  return value;
+}
+
+/** Số tiền nguyên VND của một trường theo đêm; `required` khi tổng hợp buộc phải có. */
+function amountOf(night: JsonRecord, key: string, required: boolean): number | null {
+  const value = night[key];
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) return value;
+  if (required) throw notAllowed('Đêm trong snapshot giá thiếu số tiền.');
+  return null;
+}
+
+/** Tổng của các đêm còn lại: `subtotal` = Σ giá cơ bản, `discountAmount` = subtotal − gross (csdl §3.6). */
+function totalsOf(nights: readonly JsonScalar[]) {
+  let subtotal = 0,
+    gross = 0,
+    commission = 0;
+  for (const night of nights) {
+    const value = jsonObject(night, 'Đêm trong snapshot giá không hợp lệ.');
+    const nightGross = amountOf(value, 'grossAmount', true)!;
+    gross += nightGross;
+    subtotal += amountOf(value, 'nightlyPrice', false) ?? nightGross;
+    commission += amountOf(value, 'commissionAmount', false) ?? 0;
+  }
+  if (subtotal < gross) throw notAllowed('Tổng các đêm còn lại không hợp lệ.');
+  return {
+    subtotal,
+    discountAmount: subtotal - gross,
+    grossAmount: gross,
+    commissionAmount: commission,
+  };
 }

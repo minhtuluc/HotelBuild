@@ -91,6 +91,8 @@ afterAll(async () => {
   await redis?.quit();
 }, 30000);
 
+const COMMISSION_PCT = 18;
+
 export const errorCode = (body: unknown) => errorBodySchema.parse(body).code;
 export const guestCancel = { reason: 'GUEST_REQUEST', isForceMajeure: false };
 export const setFee = (amount: number) =>
@@ -127,15 +129,19 @@ export const heldAmount = async (id: string) =>
     )
   )[0]!.held;
 
+/** `rooms` gửi bằng query vì thân lệnh preview của hợp đồng chỉ có `reason`/`isForceMajeure`. */
 export const preview = (
   token: string,
   id: string,
   body: object = { reason: 'GUEST_REQUEST', isForceMajeure: false },
-) =>
-  http()
+  rooms?: readonly string[],
+) => {
+  const pending = http()
     .post(`/api/v1/bookings/${id}/cancel-preview`)
-    .set('Authorization', `Bearer ${token}`)
-    .send(body);
+    .set('Authorization', `Bearer ${token}`);
+  if (rooms?.length) pending.query({ bookingRoomIds: rooms.join(',') });
+  return pending.send(body);
+};
 
 export const cancel = (
   token: string,
@@ -150,6 +156,29 @@ export const cancel = (
   if (options.tag !== undefined) pending.set('If-Match', options.tag);
   return pending.send(body);
 };
+
+/**
+ * Luồng hai bước của hợp đồng: xem trước (cùng tập phòng) rồi xác nhận bằng `If-Match` lấy từ `ETag`.
+ * Lệnh huỷ **bắt buộc** neo nên mọi ca dương tính phải đi qua đây.
+ */
+export async function anchoredCancel(
+  token: string,
+  id: string,
+  body: { reason: string; isForceMajeure: boolean; bookingRoomIds?: string[]; note?: string },
+  options: { rooms?: readonly string[]; key?: string } = {},
+) {
+  const previewed = await preview(
+    token,
+    id,
+    { reason: body.reason, isForceMajeure: body.isForceMajeure },
+    options.rooms,
+  );
+  expect(previewed.status).toBe(200);
+  return cancel(token, id, body, {
+    tag: previewed.headers.etag!,
+    ...(options.key === undefined ? {} : { key: options.key }),
+  });
+}
 
 /** Bậc huỷ của FLEX7 (§6.1) đúng như seed gói giá dùng trong test. */
 export async function flexPolicy(): Promise<string> {
@@ -173,6 +202,12 @@ export interface BookingInput {
   checkIn?: string;
   price?: number;
   holdExpiresAt?: Date | null;
+  /** Kênh bán: `WEB`/`WALKIN`… hoặc `OTA_AGODA` cho luồng BR-CHAN-04. */
+  channel?: string;
+  /** Mã chính sách kênh (`bookings.channel_policy_code`) — dấu hiệu booking đến từ OTA. */
+  channelPolicyCode?: string | null;
+  /** Giảm giá mỗi đêm (khác 0 ⇒ `nightlyPrice` > `grossAmount` để kiểm tổng `subtotal`/`discountAmount`). */
+  discount?: number;
 }
 
 export interface PolicySnapshot {
@@ -209,37 +244,60 @@ async function insertPolicy(policyId: string): Promise<PolicySnapshot> {
   };
 }
 
-/** `price_snapshots` ORIGINAL theo csdl §3.6 (policy + stay + nights + totals) — bản gốc bất biến. */
+/**
+ * Một dòng `nights[]` theo đủ trường đã chốt (csdl §3.6): giá cơ bản, hệ số, nguồn/version giá,
+ * `grossAmount` sau giảm, hoa hồng từng đêm. Bản sao PARTIAL_CANCEL phải giữ **nguyên vẹn** các trường này.
+ */
+function nightOf(bookingRoomId: string, date: string, price: number, discount: number) {
+  const grossAmount = price - discount;
+  return {
+    bookingRoomId,
+    date,
+    basePrice: price,
+    nightlyPrice: price,
+    grossAmount,
+    commissionPct: COMMISSION_PCT,
+    commissionAmount: Math.floor((grossAmount * COMMISSION_PCT) / 100),
+    source: { type: 'ROOM_TYPE', id: null, version: 1 },
+    multipliers: { weekend: 1, season: 1, los: 1, channel: 1 },
+    channelPropertySettingId: null,
+    channelPropertySettingVersion: null,
+    channelVersion: 1,
+  };
+}
+
+/** `price_snapshots` ORIGINAL theo csdl §3.6: tổng = tổng các đêm (khớp hai cột gross/commission). */
 async function insertSnapshot(input: {
   id: string;
   checkIn: string;
   checkOut: string;
   nights: number;
   price: number;
+  discount: number;
   total: bigint;
   policy: PolicySnapshot;
   bookingRooms: readonly string[];
 }) {
   const day = (offset: number) =>
-    new Date(Date.parse(`${input.checkIn}T00:00:00Z`) + offset * 86_400_000)
-      .toISOString()
-      .slice(0, 10);
+    new Date(Date.parse(`${input.checkIn}T00:00:00Z`) + offset * 86_400_000).toISOString().slice(0, 10);
   const nights = input.bookingRooms.flatMap((bookingRoom) =>
-    Array.from({ length: input.nights }, (_unused, night) => ({
-      bookingRoomId: bookingRoom,
-      date: day(night),
-      grossAmount: input.price,
-    })),
+    Array.from({ length: input.nights }, (_unused, night) =>
+      nightOf(bookingRoom, day(night), input.price, input.discount),
+    ),
   );
+  const subtotal = nights.reduce((sum, night) => sum + night.nightlyPrice, 0);
+  const discountAmount = nights.reduce((sum, night) => sum + (night.nightlyPrice - night.grossAmount), 0);
+  const grossAmount = nights.reduce((sum, night) => sum + night.grossAmount, 0);
+  const commissionAmount = nights.reduce((sum, night) => sum + night.commissionAmount, 0);
   await rows(
     `INSERT INTO price_snapshots(booking_id,seq,kind,payload_json,gross_amount,commission_amount,
         policy_snapshot_json,engine_version)
-     VALUES($1::uuid,1,'ORIGINAL',$2::jsonb,$3,0,$4::jsonb,'hb097-test')`,
+     VALUES($1::uuid,1,'ORIGINAL',$2::jsonb,$3,$4,$5::jsonb,'hb097-test')`,
     [
       input.id,
       JSON.stringify({
         schemaVersion: 1,
-        ratePlan: { id: 'rate-plan', code: 'FLEX7', version: 1 },
+        ratePlan: { id: 'rate-plan', code: 'FLEX7', version: 1, depositPercent: 30 },
         policy: input.policy,
         stay: {
           checkIn: input.checkIn,
@@ -250,26 +308,27 @@ async function insertSnapshot(input: {
         },
         nights,
         totals: {
-          subtotal: Number(input.total),
-          discountAmount: 0,
-          grossAmount: Number(input.total),
-          commissionAmount: 0,
-          depositAmount: 0,
+          subtotal,
+          discountAmount,
+          grossAmount,
+          commissionAmount,
+          depositAmount: Math.ceil(grossAmount * 0.3),
           currency: 'VND',
         },
       }),
       input.total.toString(),
+      commissionAmount.toString(),
       JSON.stringify(input.policy),
     ],
   );
 }
 
-/** BookingRoom + nghĩa vụ ROOM mỗi phòng–đêm (đơn giá đã chốt, không đổi khi huỷ). */
+/** BookingRoom + nghĩa vụ ROOM mỗi phòng–đêm (đơn giá sau giảm, không đổi khi huỷ). */
 async function insertRooms(
   id: string,
   rooms: readonly string[],
   nights: number,
-  price: number,
+  chargedNightly: number,
   day: (offset: number) => string,
 ): Promise<Map<string, string>> {
   const bookingRooms = new Map<string, string>();
@@ -279,7 +338,7 @@ async function insertRooms(
         await rows(
           `INSERT INTO booking_rooms(booking_id,room_type_id,adults,price_per_night)
            SELECT $1,room_type_id,1,$3 FROM rooms WHERE id=$2::uuid RETURNING id`,
-          [id, room, price],
+          [id, room, chargedNightly],
         )
       )[0]!.id,
     );
@@ -288,7 +347,7 @@ async function insertRooms(
       await rows(
         `INSERT INTO booking_charges(booking_id,booking_room_id,stay_date,kind,source_key,amount)
          VALUES($1::uuid,$2::uuid,$3::date,'ROOM',$4,$5)`,
-        [id, bookingRoom, day(night), `room:${bookingRoom}:${day(night)}`, price],
+        [id, bookingRoom, day(night), `room:${bookingRoom}:${day(night)}`, chargedNightly],
       );
   }
   return bookingRooms;
@@ -300,6 +359,7 @@ export async function booking(input: BookingInput = {}) {
   const checkIn = input.checkIn ?? stay.checkIn;
   const nights = input.nights ?? 3;
   const price = input.price ?? 500_000;
+  const discount = input.discount ?? 0;
   const rooms = input.rooms ?? [roomId];
   const day = (offset: number) =>
     new Date(Date.parse(`${checkIn}T00:00:00Z`) + offset * 86_400_000).toISOString().slice(0, 10);
@@ -316,7 +376,7 @@ export async function booking(input: BookingInput = {}) {
         `INSERT INTO bookings(code,guest_id,property_id,room_type_id,rate_plan_id,channel_id,check_in,
             check_out,adults,deposit_percent,status,hold_expires_at,room_count,total_amount)
          SELECT $1,(SELECT id FROM guests LIMIT 1),$2,(SELECT room_type_id FROM rooms WHERE id=$3::uuid),
-            (SELECT id FROM rate_plans WHERE code='FLEX7'),(SELECT id FROM channels WHERE code='WEB'),
+            (SELECT id FROM rate_plans WHERE code='FLEX7'),(SELECT id FROM channels WHERE code=$9),
             $4,$5,1,30,$6,$7,$8,0
          RETURNING id`,
         [
@@ -328,19 +388,26 @@ export async function booking(input: BookingInput = {}) {
           status,
           holdExpiry,
           rooms.length,
+          input.channel ?? 'WEB',
         ],
       )
     )[0]!.id,
   );
-  const bookingRooms = await insertRooms(id, rooms, nights, price, day);
-  const total = BigInt(price) * BigInt(nights) * BigInt(rooms.length);
-  await rows('UPDATE bookings SET total_amount=$2 WHERE id=$1', [id, total.toString()]);
+  // `booking_charges` là nghĩa vụ phòng–đêm **sau giảm giá** (csdl §3.6) ⇒ bằng tổng snapshot.
+  const bookingRooms = await insertRooms(id, rooms, nights, price - discount, day);
+  const total = BigInt(price - discount) * BigInt(nights) * BigInt(rooms.length);
+  await rows('UPDATE bookings SET total_amount=$2, channel_policy_code=$3 WHERE id=$1', [
+    id,
+    total.toString(),
+    input.channelPolicyCode ?? null,
+  ]);
   await insertSnapshot({
     id,
     checkIn,
     checkOut: day(nights),
     nights,
     price,
+    discount,
     total,
     policy,
     bookingRooms: [...bookingRooms.values()],

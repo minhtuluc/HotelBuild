@@ -7,6 +7,7 @@ import {
   Inject,
   Param,
   Post,
+  Query,
   Req,
   Res,
 } from '@nestjs/common';
@@ -16,7 +17,13 @@ import { Idempotent } from '../../../common/idempotency/decorators.js';
 import { IdempotencyContext } from '../../../common/idempotency/context.js';
 import { CancelService } from './service.js';
 import { CancelAccess } from './access.js';
-import { bookingId, cancelInput, previewAnchor, previewInput, requestActor } from './validation.js';
+import {
+  bookingId,
+  cancelInput,
+  previewInput,
+  previewRooms,
+  requestActor,
+} from './validation.js';
 
 @Controller('bookings/:bookingId')
 export class CancelController {
@@ -25,7 +32,10 @@ export class CancelController {
     @Inject(IdempotencyContext) private readonly context: IdempotencyContext,
   ) {}
 
-  /** AC1: xem trước thuần đọc; ETag là neo để `cancel` kiểm lại mốc giờ/version. */
+  /**
+   * AC1: xem trước thuần đọc; `ETag` là neo **bắt buộc** cho `cancel` (mốc phiên bản + vân tay cả kết quả).
+   * `?bookingRoomIds=` chọn cùng tập phòng với lệnh huỷ (thân lệnh đã chốt chỉ có `reason`/`isForceMajeure`).
+   */
   @Post('cancel-preview')
   @HttpCode(200)
   @Header('Cache-Control', 'no-store')
@@ -33,6 +43,7 @@ export class CancelController {
   async preview(
     @Param('bookingId') id: unknown,
     @Body() body: unknown,
+    @Query() query: unknown,
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
@@ -40,6 +51,7 @@ export class CancelController {
       requestActor(request),
       bookingId(id),
       previewInput(body),
+      previewRooms(query),
     );
     reply.header('ETag', tag);
     return preview;
@@ -62,7 +74,7 @@ export class CancelController {
       requestActor(request),
       bookingId(id),
       cancelInput(body),
-      previewAnchor(tag),
+      tag,
     );
   }
 }
