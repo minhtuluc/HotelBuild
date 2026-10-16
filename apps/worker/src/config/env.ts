@@ -31,6 +31,12 @@ const workerEnvSchema = z.object({
     .transform((value) => value === 'true'),
   HOLD_EXPIRY_INTERVAL_SECONDS: z.coerce.number().positive().default(30),
   OUTBOX_RELAY_INTERVAL_SECONDS: z.coerce.number().positive().default(5),
+  // Vận chuyển outbox (HB-130): kích thước lô mỗi lượt, thời gian giữ lease một lượt và backoff thử lại.
+  // Trần 5 lượt vận chuyển thất bại trước dead letter là hằng nghiệp vụ BR-CHAN-07 (không cấu hình được).
+  OUTBOX_RELAY_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(50),
+  OUTBOX_RELAY_LEASE_SECONDS: z.coerce.number().positive().max(3600).default(30),
+  OUTBOX_RELAY_RETRY_BASE_SECONDS: z.coerce.number().positive().max(3600).default(30),
+  OUTBOX_RELAY_RETRY_MAX_SECONDS: z.coerce.number().positive().max(86_400).default(900),
   // Chu kỳ dọn tệp xuất hết hạn (HB-163 AC2). Tệp chỉ sống `EXPORT_TTL_SECONDS` = 15 phút nên quét
   // mỗi 15 phút là đủ; đây là chu kỳ chạy, không phải hạn sống của tệp.
   EXPORT_CLEANUP_INTERVAL_SECONDS: z.coerce.number().positive().default(900),
