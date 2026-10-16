@@ -98,6 +98,8 @@ export const customerCatalog = {
   'guest.booking.stay': 'Kỳ lưu trú',
   'guest.booking.stay.period': 'Nhận → trả phòng',
   'guest.booking.stay.rooms': 'Số phòng',
+  'guest.booking.stay.range': '{from} → {to} · {nights} đêm',
+  'guest.booking.stay.summary': '{from} → {to} · {stay}',
   'guest.booking.money': 'Thanh toán',
   'guest.booking.money.total': 'Tổng tiền',
   'guest.booking.money.deposit': 'Tiền cọc ({percent}%)',

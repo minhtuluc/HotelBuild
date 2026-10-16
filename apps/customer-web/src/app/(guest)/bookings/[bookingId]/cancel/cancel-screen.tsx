@@ -32,6 +32,7 @@ import { t, type CustomerMessageKey } from '../../../../../lib/i18n';
 import { fetchBooking } from '../../../booking/booking-api';
 import { fetchCancelPreview, cancelBooking } from '../../api';
 import { STATUS_KEYS } from '../../model';
+import { formatStaySpan } from '../../stay-format';
 import {
   CANCEL_REASONS,
   CANCEL_REASON_KEYS,
@@ -367,8 +368,11 @@ export function CancelScreen(): ReactElement {
           <p data-testid="cancel-booking" style={{ margin: 0 }}>
             <code>{booking.code}</code> ·{' '}
             {formatStatusWithEnum(t(STATUS_KEYS[booking.status]), booking.status)} ·{' '}
-            {booking.checkIn} → {booking.checkOut} ·{' '}
-            {formatStayPeriod(booking.nights, booking.adults, booking.children)}
+            {formatStaySpan(
+              booking.checkIn,
+              booking.checkOut,
+              formatStayPeriod(booking.nights, booking.adults, booking.children),
+            )}
           </p>
         )}
 
