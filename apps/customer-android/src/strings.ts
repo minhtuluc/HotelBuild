@@ -2,6 +2,7 @@ import { makeTranslate, stateMessages } from '@pinehill/ui-native';
 
 export const catalog = {
   ...stateMessages,
+  'session.restoring': 'Đang khôi phục phiên',
   'guest.title': 'Đăng nhập khách',
   'guest.phone': 'Số điện thoại',
   'guest.password': 'Mật khẩu',
