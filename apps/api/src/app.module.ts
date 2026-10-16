@@ -6,6 +6,7 @@ import { SettingsCommittedInterceptor } from './modules/sys/settings/committed-i
 import { SettingsModule } from './modules/sys/settings/module.js';
 import { HousekeepingModule } from './modules/fo/housekeeping/module.js';
 import { GridModule } from './modules/inv/grid/module.js';
+import { AvailabilityModule } from './modules/inv/availability/module.js';
 import { AllotmentsModule } from './modules/inv/allotments/module.js';
 import { RoomBlocksModule } from './modules/prop/room-blocks/module.js';
 import { RatePlansModule } from './modules/rate/rate-plans/module.js';
@@ -71,6 +72,7 @@ export class AppModule {
         PropertyAdminModule,
         AllotmentsModule,
         GridModule,
+        AvailabilityModule,
         RatePlansModule,
         ChannelsModule,
         CancellationPoliciesModule,
