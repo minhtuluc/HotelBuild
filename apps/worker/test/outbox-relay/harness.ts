@@ -113,7 +113,7 @@ export async function insertOutboxEvent(
   await db.$executeRaw`
     INSERT INTO outbox_events(id, event_type, aggregate_type, aggregate_id, payload_json,
                               available_at, created_at, status)
-    VALUES (${id}::uuid, ${fixture.eventType ?? 'InventoryChanged'},
+    VALUES (${id}::uuid, ${fixture.eventType ?? FIXTURE_EVENT_TYPE},
             ${fixture.aggregateType ?? 'RoomType'}, ${fixture.aggregateId ?? randomUUID()}::uuid,
             ${JSON.stringify(fixture.payload ?? { schemaVersion: 1 })}::jsonb,
             ${fixture.availableAt ?? createdAt}, ${createdAt}, ${fixture.status ?? 'PENDING'})`;
@@ -153,7 +153,7 @@ export function makeContext(db: PrismaClient, clock: FakeClock, ownerUrl: string
 }
 
 export interface RecorderOptions {
-  /** Loại sự kiện được nhận; bỏ trống = nhận mọi loại. */
+  /** Loại sự kiện được nhận; bỏ trống ⇒ `[FIXTURE_EVENT_TYPE]` (khớp mặc định của `insertOutboxEvent`). */
   readonly eventTypes?: readonly string[];
   /** Số lượt đầu ném lỗi (ghi tác dụng **trước** khi ném, mô phỏng chết sau khi đã gây tác dụng). */
   readonly failFirst?: number;
@@ -165,6 +165,12 @@ export interface Recorder {
   readonly consumer: OutboxConsumer;
   readonly calls: OutboxEnvelope[];
 }
+
+/** Loại sự kiện mặc định của fixture — khớp `insertOutboxEvent` khi test không ghi rõ. */
+export const FIXTURE_EVENT_TYPE = 'InventoryChanged';
+
+/** Mã lỗi fixture **thuộc danh mục** `@pinehill/contracts`: consumer chỉ được ném mã trong danh mục. */
+export const FIXTURE_FAILURE_CODE = 'E_GEN_SERVICE_UNAVAILABLE';
 
 /**
  * Consumer kiểm soát được: ghi tác dụng idempotent vào `hb130_effects` rồi (tuỳ chọn) ném lỗi. `calls` đếm
@@ -181,8 +187,7 @@ export function recordingConsumer(
     consumer: {
       name,
       version: 1,
-      accepts: (eventType) =>
-        options.eventTypes === undefined || options.eventTypes.includes(eventType),
+      eventTypes: options.eventTypes ?? [FIXTURE_EVENT_TYPE],
       handle: async (envelope) => {
         calls.push(envelope);
         await db.$executeRaw`
@@ -193,7 +198,7 @@ export function recordingConsumer(
         if (options.failFirst !== undefined && calls.length <= options.failFirst) {
           throw options.rawError === true
             ? new Error('lỗi thô có PII: khach 0905123456 token=secret-abc')
-            : new OutboxConsumerError('SYNTHETIC_CONSUMER_FAILURE');
+            : new OutboxConsumerError(FIXTURE_FAILURE_CODE);
         }
       },
     },

@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, expect, test } from 'vitest';
 import {
+  OUTBOX_ATTEMPTS_EXHAUSTED_REASON,
+  claimDelivery,
   relayOnce,
   retryDelaySeconds,
   type RelayOptions,
@@ -8,6 +10,7 @@ import {
   createOutboxTestDb,
   deliveryRow,
   fakeClock,
+  insertDelivery,
   insertOutboxEvent,
   makeContext,
   recordingConsumer,
@@ -18,6 +21,9 @@ import {
  * HB-130 AC7 — đúng **5** lượt vận chuyển thất bại thì vào `DEAD_LETTER` bền, giữ payload, `last_error` đã
  * che (không PII), backoff theo clock + cấu hình, và lượt quét sau không giành lại hàng đã chết.
  * Ngưỡng 5 là BR-CHAN-07 (khác ngưỡng 3 lỗi sync liên tiếp của HB-131).
+ *
+ * Ca thứ hai là hồi quy cho lỗi P2 "chết ngay sau khi giành hàng không tiêu lượt nào": lượt vận chuyển
+ * được ghi nhận **lúc giành** nên chuỗi giành-rồi-chết cũng dừng sau đúng 5 lượt thay vì quay vô hạn.
  */
 let h: OutboxTestDb;
 
@@ -108,4 +114,53 @@ test('fifth-failure-dead-letter', async () => {
   expect(logged).toContain('dead letter');
   for (const leaked of ['PII-SECRET', '0905123456', 'secret-abc', 'nguyen-van-a'])
     expect(logged).not.toContain(leaked);
+});
+
+test('crash-after-claim-still-exhausts-attempts', async () => {
+  const clock = fakeClock('2026-11-05T07:00:00Z');
+  const { context, logs } = makeContext(h.db, clock, h.ownerUrl);
+  const consumerName = 'hb130-crash-after-claim';
+  const consumer = recordingConsumer(h.db, consumerName);
+  const payload = { schemaVersion: 1, guestName: 'PII-SECRET-crash-loop' };
+  const eventId = await insertOutboxEvent(h.db, { payload, createdAt: clock.now() });
+  await insertDelivery(h.db, consumerName, eventId);
+
+  // "Giành hàng rồi tiến trình chết" 5 lần: mỗi lượt tiêu một lượt vận chuyển, không ai chốt kết quả.
+  for (let attempt = 1; attempt <= OPTIONS.maxAttempts; attempt += 1) {
+    const claim = await claimDelivery(h.db, consumerName, eventId, clock.now(), OPTIONS);
+    expect(claim?.attempt).toBe(attempt);
+    expect(await deliveryRow(h.db, consumerName, eventId)).toMatchObject({
+      status: 'PROCESSING',
+      attempts: attempt,
+    });
+    clock.advance((OPTIONS.leaseSeconds + 1) * 1000);
+  }
+  // Hết lượt: lượt kế tiếp **không** giành được, hàng được chốt DEAD_LETTER bền ở lượt quét sau.
+  expect(await claimDelivery(h.db, consumerName, eventId, clock.now(), OPTIONS)).toBeNull();
+  const report = await relayOnce(context, [consumer.consumer], OPTIONS);
+  expect(report.deadLettered).toBe(1);
+  expect(await deliveryRow(h.db, consumerName, eventId)).toMatchObject({
+    status: 'DEAD_LETTER',
+    attempts: OPTIONS.maxAttempts,
+    last_error: OUTBOX_ATTEMPTS_EXHAUSTED_REASON,
+    lease_token: null,
+    lease_expires_at: null,
+  });
+  // Handler chưa từng được gọi ⇒ không có tác dụng nào, nhưng payload vẫn còn để đối soát/requeue.
+  expect(consumer.calls).toHaveLength(0);
+  expect(
+    await h.rows('SELECT count(*)::int AS n FROM hb130_effects WHERE event_id = $1::uuid', [
+      eventId,
+    ]),
+  ).toEqual([{ n: 0 }]);
+  const eventRow = await h.rows(
+    'SELECT status, payload_json FROM outbox_events WHERE id = $1::uuid',
+    [eventId],
+  );
+  expect(eventRow[0]).toMatchObject({ status: 'DEAD_LETTER' });
+  expect(eventRow[0]?.['payload_json']).toEqual(payload);
+  // Log ổn định và không mang payload/PII.
+  const logged = logs.join('\n');
+  expect(logged).toContain(`cạn ${OPTIONS.maxAttempts} lượt`);
+  expect(logged).not.toContain('PII-SECRET');
 });

@@ -117,14 +117,23 @@ test('bao hình không đoán giá trị thiếu hoặc không hợp lệ', () =
   expect(envelopeOf({ ...eventRow({}), channel_id: null }).channelId).toBeNull();
 });
 
-test('che mã lỗi trước khi ghi bền', () => {
-  expect(outboxErrorCode(new OutboxConsumerError('NOTI_PROVIDER_UNAVAILABLE'))).toBe(
-    'NOTI_PROVIDER_UNAVAILABLE',
+test('chỉ mã trong danh mục lỗi mới vào last_error; mã tự do bị che', () => {
+  // Mã thuộc danh mục `@pinehill/contracts` đi qua nguyên vẹn.
+  expect(outboxErrorCode(new OutboxConsumerError('E_GEN_SERVICE_UNAVAILABLE'))).toBe(
+    'E_GEN_SERVICE_UNAVAILABLE',
   );
-  expect(outboxErrorCode(new OutboxConsumerError('không phải mã ổn định'))).toBe(
+  expect(outboxErrorCode(new OutboxConsumerError('E_CHAN_SYNC_FAILED'))).toBe('E_CHAN_SYNC_FAILED');
+  // Mã tự do — kể cả mã viết hoa mang PII (tên khách + số điện thoại) — bị thay bằng mã chung.
+  expect(outboxErrorCode(new OutboxConsumerError('GUEST_0905123456'))).toBe(
     OUTBOX_CONSUMER_UNKNOWN_ERROR,
   );
-  expect(outboxErrorCode(new OutboxConsumerError('X'.repeat(80)))).toBe(
+  expect(outboxErrorCode(new OutboxConsumerError('E_GUEST_0905123456'))).toBe(
+    OUTBOX_CONSUMER_UNKNOWN_ERROR,
+  );
+  expect(outboxErrorCode(new OutboxConsumerError('E_CHAN_NEW_CODE_NOT_IN_CATALOGUE'))).toBe(
+    OUTBOX_CONSUMER_UNKNOWN_ERROR,
+  );
+  expect(outboxErrorCode(new OutboxConsumerError('không phải mã'))).toBe(
     OUTBOX_CONSUMER_UNKNOWN_ERROR,
   );
   expect(outboxErrorCode(new Error('lỗi thô có PII 0905123456'))).toBe(

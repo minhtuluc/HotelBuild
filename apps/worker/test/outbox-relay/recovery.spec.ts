@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { Queue, QueueEvents } from 'bullmq';
 import { afterAll, beforeAll, expect, test } from 'vitest';
 import { bullmqConstructors, createBullmqDeps, redisOptions } from '../../src/bullmq.factory.js';
@@ -13,6 +12,7 @@ import {
 } from '../../src/jobs/outbox-relay/relay.js';
 import { JOB_HANDLERS } from '../../src/jobs/registry.js';
 import {
+  FIXTURE_FAILURE_CODE,
   createOutboxTestDb,
   deliveryRow,
   fakeClock,
@@ -72,16 +72,15 @@ test('crash-at-publish-boundaries', async () => {
   const abandonedConsumer = 'hb130-crash-before-publish';
   const abandonedEvent = await insertOutboxEvent(h.db, {});
   await insertDelivery(h.db, abandonedConsumer, abandonedEvent);
-  expect(
-    await claimDelivery(
-      h.db,
-      abandonedConsumer,
-      abandonedEvent,
-      randomUUID(),
-      clock.now(),
-      OPTIONS.leaseSeconds,
-    ),
-  ).toBe(true);
+  const abandonedClaim = await claimDelivery(
+    h.db,
+    abandonedConsumer,
+    abandonedEvent,
+    clock.now(),
+    OPTIONS,
+  );
+  // Giành hàng đã tiêu một lượt vận chuyển (attempts 0 → 1) dù tiến trình chết trước khi gọi consumer.
+  expect(abandonedClaim?.attempt).toBe(1);
   const other = recordingConsumer(h.db, abandonedConsumer);
   // Trong lúc lease còn hạn, lượt kế tiếp không giành được: hàng chờ hết lease, không mất sự kiện.
   const early = await relayOnce(context, [other.consumer], OPTIONS);
@@ -141,9 +140,9 @@ test('five-minute-delivery-and-consumer-isolation', async () => {
   const notiFailure: OutboxConsumer = {
     name: 'hb130-noti-consumer',
     version: 1,
-    accepts: (eventType) => eventType === 'InventoryChanged',
+    eventTypes: ['InventoryChanged'],
     handle: async () => {
-      throw new OutboxConsumerError('NOTI_PROVIDER_UNAVAILABLE');
+      throw new OutboxConsumerError(FIXTURE_FAILURE_CODE);
     },
   };
   const failingEvent = await insertOutboxEvent(h.db, {
@@ -163,7 +162,7 @@ test('five-minute-delivery-and-consumer-isolation', async () => {
       clock.advance(retryDelaySeconds(attempt, OPTIONS) * 1000);
     } else {
       expect(notiRow.status).toBe('DEAD_LETTER');
-      expect(notiRow.last_error).toBe('NOTI_PROVIDER_UNAVAILABLE');
+      expect(notiRow.last_error).toBe(FIXTURE_FAILURE_CODE);
       expect(report.deadLettered).toBe(1);
     }
   }
@@ -186,7 +185,7 @@ test('five-minute-delivery-and-consumer-isolation', async () => {
     guestPhone: 'PII-SECRET-0905123456',
   });
   expect(logs.join('\n')).not.toContain('PII-SECRET');
-  expect(logs.join('\n')).toContain('NOTI_PROVIDER_UNAVAILABLE');
+  expect(logs.join('\n')).toContain(FIXTURE_FAILURE_CODE);
 });
 
 test.skipIf(!redisUrl)('redis-loss-after-published', async () => {
