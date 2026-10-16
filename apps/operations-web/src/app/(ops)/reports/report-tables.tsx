@@ -11,6 +11,7 @@ import type {
   RevenueByChannelReport,
 } from '@pinehill/contracts';
 import { formatDateTimeVn, formatMoney, formatStatusWithEnum } from '@pinehill/ui-web';
+import { formatBusinessDate } from '../../../lib/business-date';
 import { t, type OperationsMessageKey } from '../../../lib/i18n';
 import { OPERATION_STATUS_KEY, OVERBOOKING_STATUS_KEY } from './report-shared';
 
@@ -235,7 +236,7 @@ export function OverbookingTable({ report }: { report: OverbookingReport }): Rea
             <tr key={row.caseId} data-testid={`overbooking-row-${row.caseId}`}>
               <td style={CELL}>{row.caseId}</td>
               <td style={CELL}>{row.propertyId}</td>
-              <td style={CELL}>{row.businessDate}</td>
+              <td style={CELL}>{formatBusinessDate(row.businessDate)}</td>
               <td style={CELL}>
                 {formatStatusWithEnum(t(OVERBOOKING_STATUS_KEY[row.status]), row.status)}
               </td>
