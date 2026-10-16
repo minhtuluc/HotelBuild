@@ -5373,6 +5373,98 @@
         }
       }
     },
+    "/api/v1/operations/{operationId}/download": {
+      "get": {
+        "operationId": "operationsDownload",
+        "summary": "Tải tệp xuất còn hạn bằng chữ ký (HB-163)",
+        "tags": [
+          "sys"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "operationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "required": true,
+            "name": "expires",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 128
+            },
+            "required": true,
+            "name": "signature",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Nội dung tệp xuất (CSV hoặc XLSX)",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "E_GEN_VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/room-types/{roomTypeId}/rate-calendar": {
       "get": {
         "operationId": "rateCalendarGet",

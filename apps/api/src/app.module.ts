@@ -35,6 +35,9 @@ import { IdempotencyModule } from './modules/sys/idempotency/idempotency.module.
 import { IdempotencyInterceptor } from './common/idempotency/interceptor.js';
 import { ReportsModule } from './modules/rep/reports/module.js';
 import { GuestsModule } from './modules/crm/guests/module.js';
+import { OperationsModule } from './modules/sys/operations/module.js';
+import { ReportExportModule } from './modules/rep/export/module.js';
+import { NotiModule } from './modules/noti/module.js';
 
 @Module({})
 export class AppModule {
@@ -74,7 +77,10 @@ export class AppModule {
         AuditLogsModule,
         SettingsModule,
         ReportsModule,
+        ReportExportModule,
         GuestsModule,
+        OperationsModule,
+        NotiModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },

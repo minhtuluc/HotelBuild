@@ -1319,6 +1319,41 @@ PIN grant gắn đúng user của phiên; FK booking đặt sau `bookings` theo 
 ALTER TABLE pin_grants ADD CONSTRAINT fk_pin_grants_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE;
 ```
 
+**`operations` — thao tác bất đồng bộ (migration `0006_report_export_operations`, HB-163).** Mỗi thao tác nền
+(xuất báo cáo trước, sao lưu sau này) ghi lại người yêu cầu và **ảnh chụp phạm vi cơ sở** để job chạy sau vẫn
+chỉ chạm dữ liệu người yêu cầu được xem (BR-RBAC-02). `payload_json` giữ tham số yêu cầu, `result_json` là
+ảnh chụp kết quả cho worker sinh tệp (job xoá sau khi ghi tệp), `result_path`/`result_expires_at` là tệp tạm
+và hạn tải. Bảng được đọc/ghi bằng **SQL thô** trong `modules/sys/operations` và `modules/rep/export`, không
+khai trong Prisma schema để tránh sinh lại client trong cùng migration.
+
+```sql
+CREATE TABLE operations (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  kind              text NOT NULL CHECK (kind IN ('REPORT_EXPORT')),
+  status            text NOT NULL DEFAULT 'PENDING'
+                    CHECK (status IN ('PENDING','RUNNING','SUCCEEDED','FAILED')),
+  requested_by      uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  property_scope    uuid[] NOT NULL DEFAULT '{}',
+  payload_json      jsonb NOT NULL,
+  result_json       jsonb,
+  result_ref        text,
+  result_path       text,
+  result_expires_at timestamptz,
+  error_code        text,
+  error_message     text,
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  updated_at        timestamptz NOT NULL DEFAULT now(),
+  started_at        timestamptz,
+  finished_at       timestamptz,
+  CONSTRAINT ck_operations_failed CHECK (
+    status <> 'FAILED' OR (error_code IS NOT NULL AND finished_at IS NOT NULL)),
+  CONSTRAINT ck_operations_succeeded CHECK (
+    status <> 'SUCCEEDED' OR (result_ref IS NOT NULL AND result_path IS NOT NULL AND finished_at IS NOT NULL))
+);
+
+CREATE INDEX idx_operations_requested_by ON operations (requested_by, created_at DESC);
+```
+
 ### 3.3. Ràng buộc loại trừ, trigger bảo vệ bất biến
 
 ```sql
@@ -2425,6 +2460,13 @@ Migration được deploy/redeploy trên PostgreSQL16 bởi runner hiện có; t
 kiểm microsecond chính xác, hai lệnh cùng version, quyền đổi lúc chờ và rollback
 cả cặp liên kết khi audit lỗi. Schema baseline vẫn là nguồn tạo bảng, migration
 này là bước tiến riêng, không sửa migration đã áp dụng.
+
+## 10.2. Migration 0006 — bảng `operations` cho thao tác bất đồng bộ (HB-163)
+
+Bảng `operations` (§3.2) ghi vết thao tác nền: loại, trạng thái, người yêu cầu, ảnh chụp phạm vi cơ sở,
+tham số, ảnh chụp kết quả cho worker, và tệp xuất tạm kèm hạn. Migration tiến thuần (bảng mới, một chỉ mục);
+không sửa cột/trigger của bảng cũ, không đổi Prisma model (module đọc/ghi bằng SQL thô). HB-179 (sao lưu) dùng
+lại bảng này nên `kind` là enum mở rộng được khi thêm loại thao tác mới.
 
 ## 11. Đề xuất bổ sung
 

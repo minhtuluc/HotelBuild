@@ -105,7 +105,9 @@ describe('HB-127 — adapter BullMQ với Redis thật', () => {
         },
         async (job, events) => {
           await job.waitUntilFinished(events, 10_000);
-          expect(received).toEqual([{ id: 'payload-job', name: 'payload-command', data }]);
+          expect(received).toEqual([
+            { id: 'payload-job', name: 'payload-command', data, attemptsMade: 0, maxAttempts: 0 },
+          ]);
           expect(await job.getState()).toBe('completed');
         },
       );
@@ -126,7 +128,9 @@ describe('HB-127 — adapter BullMQ với Redis thật', () => {
         await expect(job.waitUntilFinished(events, 10_000)).rejects.toThrow(
           'synthetic-handler-failure',
         );
-        expect(received).toEqual([{ id: 'payload-job', name: 'payload-command', data }]);
+        expect(received).toEqual([
+          { id: 'payload-job', name: 'payload-command', data, attemptsMade: 0, maxAttempts: 0 },
+        ]);
         expect(await job.getState()).toBe('failed');
         const persisted = await queue.getJob(job.id ?? '');
         expect(persisted?.failedReason).toBe('synthetic-handler-failure');

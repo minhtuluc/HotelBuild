@@ -163,7 +163,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 87 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3 và tuyến self của HB-105)', () => {
+  it('có đủ 88 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3 và tuyến self của HB-105)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -200,6 +200,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/system/backups',
         '/api/v1/system/backups/{backupId}/restore',
         '/api/v1/operations/{operationId}',
+        '/api/v1/operations/{operationId}/download',
         '/api/v1/room-types/{roomTypeId}/rate-calendar',
         '/api/v1/seasons',
         '/api/v1/channels',

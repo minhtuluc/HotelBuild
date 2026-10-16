@@ -1,13 +1,28 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import type { Clock } from '@pinehill/domain';
-import type { GuestCreateRequest, GuestQuery, GuestSummary, ListPage } from '@pinehill/contracts';
+import {
+  loyaltyTierSchema,
+  type GuestAnonymizeRequest,
+  type GuestBlacklistRequest,
+  type GuestCreateRequest,
+  type GuestLoyalty,
+  type GuestQuery,
+  type GuestSummary,
+  type ListPage,
+} from '@pinehill/contracts';
 import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
 import { requireProperty, ScopeDeniedError } from '../../../common/rbac/scope.js';
 import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
-import { forbidden } from '../../sys/settings/validation.js';
-import { guestSelect, project } from './projection.js';
+import { maskOperationalText } from '../../prop/room-blocks/operational-text.js';
+import { forbidden, missing } from '../../sys/settings/validation.js';
+import { ANONYMIZED_NOTE, anonymizeData, maskAnonymizeReason } from './anonymize.js';
+import { countedStayStatuses, windowStartDate } from './loyalty.js';
+import { auditGuest, guestAdminSelect, guestSelect, project } from './projection.js';
 
 const staff = ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'];
+
+/** api.md §6.3 (dòng "Blacklist/ẩn danh hoá"): thao tác quản trị hồ sơ chỉ MANAGER/OWNER. */
+const managers = ['MANAGER', 'OWNER'];
 
 export interface GuestCreateResult {
   readonly summary: GuestSummary;
@@ -116,6 +131,22 @@ export class GuestsService {
     if (total > 0 && scoped === 0) throw new ScopeDeniedError();
   }
 
+  /**
+   * Đọc hồ sơ cho thao tác quản trị (ẩn danh hoá, loyalty, danh sách đen): không có → `404 E_GEN_NOT_FOUND`,
+   * rồi `assertReachable` chặn hồ sơ **chỉ** thuộc cơ sở ngoài phạm vi → `403 E_AUTH_OUT_OF_SCOPE`.
+   * Hồ sơ chưa phát sinh booking vẫn thao tác được, đúng quy ước sẵn có của module (README mục 3).
+   */
+  private async manageableGuest(
+    tx: Prisma.TransactionClient,
+    actor: AuthorizedActor,
+    guestId: string,
+  ): Promise<Prisma.guestsGetPayload<{ select: typeof guestAdminSelect }>> {
+    const row = await tx.guests.findUnique({ where: { id: guestId }, select: guestAdminSelect });
+    if (row === null) throw missing();
+    await this.assertReachable(tx, actor, guestId);
+    return row;
+  }
+
   /** Chèn hồ sơ mới; `undefined` khi SĐT đã có hồ sơ chưa ẩn danh (`uq_guests_phone` từng phần). */
   private async insertGuest(
     tx: Prisma.TransactionClient,
@@ -161,10 +192,158 @@ export class GuestsService {
         entityType: 'Guest',
         entityId: summary.id,
         beforeJson: null,
-        afterJson: summary,
+        afterJson: auditGuest(summary),
         reason: null,
       });
       return { summary, created: true };
+    });
+  }
+
+  /**
+   * UC-CRM-01 / BR-CRM-05, NFR-COMP-01/02 — ẩn danh hoá hồ sơ theo yêu cầu khách, không xoá cứng.
+   *
+   * Idempotent: lượt gọi thứ hai (kể cả chạy song song) thấy `anonymized_at` đã có thì trả nguyên hồ sơ,
+   * **không** ghi lại cột nào và **không** thêm bản ghi nhật ký. Điều kiện `anonymized_at IS NULL` nằm
+   * ngay trong lệnh ghi nên chỉ một lượt thắng.
+   */
+  async anonymize(
+    actor: AuthorizedActor,
+    guestId: string,
+    input: GuestAnonymizeRequest,
+  ): Promise<GuestSummary> {
+    if (!managers.includes(actor.role)) throw forbidden();
+    return this.db.$transaction(async (tx) => {
+      const row = await this.manageableGuest(tx, actor, guestId);
+      const before = project(row);
+      const at = this.clock.now();
+      const written = await tx.guests.updateMany({
+        where: { id: guestId, anonymized_at: null },
+        data: anonymizeData(row.blacklisted, at),
+      });
+      if (written.count === 0)
+        return project(
+          await tx.guests.findUniqueOrThrow({ where: { id: guestId }, select: guestSelect }),
+        );
+      // Ghi chú và lý do điều chỉnh điểm là văn bản tự do có thể chứa PII → thay nội dung, giữ bản ghi
+      // (BR-CRM-05: ẩn danh hoá cùng hồ sơ, không xoá cứng).
+      await tx.guest_notes.updateMany({
+        where: { guest_id: guestId },
+        data: { content: ANONYMIZED_NOTE },
+      });
+      await tx.loyalty_transactions.updateMany({
+        where: { guest_id: guestId, reason: { not: null } },
+        data: { reason: null },
+      });
+      const after = project(
+        await tx.guests.findUniqueOrThrow({ where: { id: guestId }, select: guestSelect }),
+      );
+      await this.audit.record(tx, {
+        actor,
+        action: 'GUEST_ANONYMIZED',
+        entityType: 'Guest',
+        entityId: guestId,
+        // `auditGuest` che `fullName` (AuditWriter chưa che trường này); `AuditWriter` che `phone`/`email`.
+        // Hồ sơ xử lý yêu cầu chủ thể dữ liệu gồm cả mốc yêu cầu khách báo và mốc ẩn danh hoá máy chủ đặt.
+        beforeJson: auditGuest(before, { anonymizedAt: null }),
+        afterJson: auditGuest(after, {
+          anonymizedAt: at.toISOString(),
+          requestedAt: input.requestedAt,
+        }),
+        // Lý do tự do không được giữ lại tên khách vừa bị xoá khỏi hồ sơ (BR-CRM-05, NFR-COMP-01).
+        reason: maskAnonymizeReason(input.reason, row.full_name),
+      });
+      return after;
+    });
+  }
+
+  /**
+   * UC-CRM-02 / BR-CRM-02,03,06 — hạng, điểm và số đêm tích luỹ 12 tháng gần nhất.
+   * Hạng/điểm đọc từ cột hồ sơ (luồng tích điểm sau check-out ghi); số đêm tính từ booking **đã ở thực tế**
+   * (`CHECKED_IN`/`CHECKED_OUT`) có `check_in` trong cửa sổ 12 tháng — booking huỷ/no-show không cộng.
+   */
+  async loyalty(actor: AuthorizedActor, guestId: string): Promise<GuestLoyalty> {
+    if (!staff.includes(actor.role)) throw forbidden();
+    return this.db.$transaction(async (tx) => {
+      const row = await this.manageableGuest(tx, actor, guestId);
+      const stays = await tx.$queryRaw<{ nights: number }[]>`
+        SELECT COALESCE(sum(nights), 0)::int AS nights
+          FROM bookings
+         WHERE guest_id = ${guestId}::uuid
+           AND status = ANY(${[...countedStayStatuses]}::text[])
+           AND check_in >= ${windowStartDate(this.clock.now())}::date`;
+      return {
+        guestId,
+        loyaltyTier: loyaltyTierSchema.parse(row.loyalty_tier),
+        loyaltyPoints: row.loyalty_points,
+        staysLast12Months: stays[0]?.nights ?? 0,
+        totalStays: row.total_stays,
+        updatedAt: row.updated_at.toISOString(),
+      };
+    });
+  }
+
+  /**
+   * UC-CRM-03 / BR-CRM-04 — đưa khách vào danh sách đen kèm lý do bắt buộc; lý do vào nhật ký.
+   * Lặp lại đúng trạng thái + lý do đang có là no-op (không sinh nhật ký thứ hai).
+   */
+  async blacklist(
+    actor: AuthorizedActor,
+    guestId: string,
+    input: GuestBlacklistRequest,
+  ): Promise<GuestSummary> {
+    if (!managers.includes(actor.role)) throw forbidden();
+    const reason = maskOperationalText(input.blacklistReason);
+    return this.db.$transaction(async (tx) => {
+      const row = await this.manageableGuest(tx, actor, guestId);
+      const before = project(row);
+      if (row.blacklisted && row.blacklist_reason === reason) return before;
+      const after = project(
+        await tx.guests.update({
+          where: { id: guestId },
+          data: { blacklisted: true, blacklist_reason: reason },
+          select: guestSelect,
+        }),
+      );
+      await this.audit.record(tx, {
+        actor,
+        action: 'GUEST_BLACKLISTED',
+        entityType: 'Guest',
+        entityId: guestId,
+        beforeJson: auditGuest(before),
+        afterJson: auditGuest(after),
+        reason,
+      });
+      return after;
+    });
+  }
+
+  /**
+   * UC-CRM-03 / BR-CRM-04,05 — gỡ khỏi danh sách đen kèm lý do (api.md §2.10, trả `204`).
+   * Khách vốn không bị chặn là no-op, không ghi nhật ký.
+   */
+  async releaseBlacklist(actor: AuthorizedActor, guestId: string, reason: string): Promise<void> {
+    if (!managers.includes(actor.role)) throw forbidden();
+    const masked = maskOperationalText(reason);
+    await this.db.$transaction(async (tx) => {
+      const row = await this.manageableGuest(tx, actor, guestId);
+      if (!row.blacklisted) return;
+      const before = project(row);
+      const after = project(
+        await tx.guests.update({
+          where: { id: guestId },
+          data: { blacklisted: false, blacklist_reason: null },
+          select: guestSelect,
+        }),
+      );
+      await this.audit.record(tx, {
+        actor,
+        action: 'GUEST_BLACKLIST_RELEASED',
+        entityType: 'Guest',
+        entityId: guestId,
+        beforeJson: auditGuest(before),
+        afterJson: auditGuest(after),
+        reason: masked,
+      });
     });
   }
 }
