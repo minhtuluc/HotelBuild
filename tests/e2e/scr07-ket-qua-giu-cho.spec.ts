@@ -58,9 +58,12 @@ test.describe('SCR-07 kết quả đặt & đếm ngược giữ chỗ trên API
     await expect(page.getByTestId('booking-status')).toContainText('HELD');
     await expect(page.getByTestId('booking-countdown')).toContainText(/^\d{2}:\d{2}$/);
     await expect(page.getByTestId('booking-hold-expires')).toContainText('(giờ VN)');
-    await expect(page.getByTestId('booking-stay')).toContainText('2026-12-24 → 2026-12-26');
+    await expect(page.getByTestId('booking-stay')).toContainText('24/12/2026 → 26/12/2026');
+    await expect(page.getByTestId('booking-stay')).not.toContainText(/\d{4}-\d{2}-\d{2}/);
     await expect(page.getByTestId('booking-money')).toContainText('2.000.000 ₫');
     await expect(page.getByTestId('booking-confirmation')).toContainText('Nội dung xác nhận');
+    await expect(page.getByTestId('booking-confirmation')).toContainText('24/12/2026 → 26/12/2026');
+    await expect(page.getByTestId('booking-confirmation')).not.toContainText(/\d{4}-\d{2}-\d{2}/);
     await expect(page.getByTestId('booking-continue')).toBeEnabled();
     expect(reads).toBeGreaterThanOrEqual(1);
     expect(bookingId).not.toBe('');
