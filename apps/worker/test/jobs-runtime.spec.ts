@@ -86,6 +86,7 @@ describe('JOB_HANDLERS', () => {
     expect(Object.keys(JOB_HANDLERS).sort()).toEqual([
       'q.export-cleanup',
       'q.notification-send',
+      'q.outbox-relay',
       'q.report-export',
     ]);
     for (const name of Object.keys(JOB_HANDLERS)) expect(QUEUE_NAMES).toContain(name);
