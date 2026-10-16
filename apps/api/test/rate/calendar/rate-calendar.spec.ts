@@ -160,6 +160,25 @@ test('AC2/BR-RATE-19 — warnings[] nêu LONGSTAY14 chưa có giá riêng, biế
   expect(body.entries[1]).toMatchObject({ date: '2026-12-25', source: 'BASE' });
 });
 
+test('AC1/BR-RATE-02 — dòng RATE_PLAN của **mọi** gói đang bán không tham gia lịch giá theo loại phòng', async () => {
+  const token = await login();
+  // Gói giá mặc định mà loader chuẩn phân giải có thể là bất kỳ gói ACTIVE nào, nên chèn dòng RATE_PLAN
+  // (priority 90) cho **tất cả** gói: dù engine có nhận gói thật thì đêm này cũng bị dòng đó chiếm.
+  await rows(
+    "INSERT INTO rate_calendars(room_type_id,property_id,date,price,source,priority,rate_plan_id) SELECT $1,$2,'2027-01-10',1234000,'RATE_PLAN',90,id FROM rate_plans WHERE status='ACTIVE'",
+    [typeId, propertyId],
+  );
+  const body = rateCalendarSchema.parse(
+    (await calendarRequest(token, typeId, { from: '2027-01-10', to: '2027-01-10' })).body,
+  );
+  expect(body.entries[0]).toMatchObject({
+    date: '2027-01-10',
+    source: 'BASE',
+    basePrice: STD.basePrice,
+    nightlyPrice: STD.basePrice,
+  });
+});
+
 test('đầu vào hỏng — query sai là 400, loại phòng không tồn tại là 404', async () => {
   const token = await login();
   const badQueries: readonly Record<string, unknown>[] = [

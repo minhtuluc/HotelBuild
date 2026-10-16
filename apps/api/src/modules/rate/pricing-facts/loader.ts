@@ -35,8 +35,18 @@ import type {
 import { rateSourceSchema, type RatePlanCode } from '@pinehill/contracts';
 import { AppError } from '../../../common/app-error.js';
 
+/**
+ * Mùa kèm tên hiển thị. Engine chỉ đọc phần `Season`; bề mặt lịch giá cần tên mùa đang thắng
+ * (hợp đồng HB-050 `seasonName`), nên loader trả luôn `seasons.name` thay vì để adapter truy vấn lại.
+ */
+export interface NamedSeason extends Season {
+  readonly name: string;
+}
+
 /** Đầu vào engine trừ `channelCode` (caller chọn kênh), nên ghép trực tiếp bằng spread. */
-export type PricingFacts = Omit<PricingInput, 'channelCode'>;
+export interface PricingFacts extends Omit<PricingInput, 'channelCode'> {
+  readonly seasons: readonly NamedSeason[];
+}
 
 export interface PricingFactsQuery {
   readonly roomTypeId: string;
@@ -95,6 +105,7 @@ function ratePlanData(row: {
 
 function seasonData(row: {
   id: string;
+  name: string;
   property_id: string | null;
   start_date: Date;
   end_date: Date;
@@ -102,9 +113,10 @@ function seasonData(row: {
   created_at: Date;
   multiplier: { toString(): string };
   weekend_surcharge_enabled: boolean;
-}): Season {
+}): NamedSeason {
   return {
     id: row.id,
+    name: row.name,
     ...(row.property_id === null ? {} : { propertyId: row.property_id }),
     from: dateOnly(row.start_date),
     to: dateOnly(row.end_date),
@@ -326,4 +338,23 @@ export async function loadPricingFacts(
     promotions: promotionRows.map(promotionData),
     settings: pricingSettings(new Map(config.map((row) => [row.key, row.value]))),
   };
+}
+
+/**
+ * BR-RATE-19: gói dài ngày `LONGSTAY14` đang bán nhưng **chưa có giá riêng** — không `fixed_nightly_price`
+ * và không có dòng lịch giá `RATE_PLAN` nào gắn gói đó. Bề mặt lịch giá dùng để nhắc trên màn hình cấu
+ * hình; các bề mặt báo giá không cảnh báo.
+ *
+ * Cố ý **không** gộp vào `loadPricingFacts`: loader chuẩn giữ nguyên tập truy vấn cho mọi bề mặt báo giá
+ * (HB-198 AC3), nên helper đọc thêm này được export riêng cho adapter nào cần.
+ */
+export async function longstayWithoutOwnPrice(tx: Prisma.TransactionClient): Promise<boolean> {
+  const plan = await tx.rate_plans.findFirst({
+    where: { code: 'LONGSTAY14', status: 'ACTIVE' },
+    select: { id: true, fixed_nightly_price: true },
+  });
+  if (plan === null || plan.fixed_nightly_price !== null) return false;
+  return (
+    (await tx.rate_calendars.count({ where: { source: 'RATE_PLAN', rate_plan_id: plan.id } })) === 0
+  );
 }
