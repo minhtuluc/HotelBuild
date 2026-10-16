@@ -157,6 +157,7 @@ export const catalog = {
   'hold.invalid': 'Thiếu thông tin để xác nhận — quay lại màn chi tiết phòng.',
   'hold.issue.NAME': 'Nhập họ tên khách.',
   'hold.issue.PHONE': 'Số điện thoại phải là 0… hoặc +84…',
+  'hold.criteria': '{checkIn} → {checkOut} · {roomCount} phòng',
   'search.empty': 'Không có loại phòng nào cho kỳ đã chọn.',
   'search.failed': 'Không tải được kết quả: {code}',
   'journey.bookings.title': 'Đơn của tôi',
