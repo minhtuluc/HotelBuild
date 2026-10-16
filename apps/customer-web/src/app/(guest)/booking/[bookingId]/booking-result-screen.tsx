@@ -24,6 +24,7 @@ import {
   formatStayPeriod,
   type ScreenState,
 } from '@pinehill/ui-web';
+import { formatStaySpan } from '../../bookings/stay-format';
 import { t, type CustomerMessageKey } from '../../../../lib/i18n';
 import { fetchBooking } from '../booking-api';
 import {
@@ -91,7 +92,8 @@ function HoldLine({ hold }: { hold: HoldView }): ReactElement {
   );
 }
 
-function StayTable({ booking }: { booking: BookingSummary }): ReactElement {
+/** Kỳ ở hiển thị ở màn kết quả (SCR-07): ngày lịch dd/MM/yyyy qua helper dùng chung. */
+export function StayTable({ booking }: { booking: BookingSummary }): ReactElement {
   return (
     <table data-testid="booking-stay">
       <caption style={CAPTION}>{t('guest.booking.stay')}</caption>
@@ -101,8 +103,11 @@ function StayTable({ booking }: { booking: BookingSummary }): ReactElement {
             {t('guest.booking.stay.period')}
           </th>
           <td style={CELL}>
-            {booking.checkIn} → {booking.checkOut} ·{' '}
-            {formatStayPeriod(booking.nights, booking.adults, booking.children)}
+            {formatStaySpan(
+              booking.checkIn,
+              booking.checkOut,
+              formatStayPeriod(booking.nights, booking.adults, booking.children),
+            )}
           </td>
         </tr>
         <tr>
@@ -152,7 +157,11 @@ function FlagsList({ booking }: { booking: BookingSummary }): ReactElement | nul
   );
 }
 
-function ConfirmationBlock({ booking }: { booking: BookingSummary }): ReactElement {
+/**
+ * Khối xác nhận của màn kết quả (SCR-07): kỳ ở hiển thị ngày lịch dd/MM/yyyy qua helper dùng
+ * chung; các mốc thời điểm (giữ chỗ, tạo đơn) vẫn là timestamp có nhãn giờ VN.
+ */
+export function ConfirmationBlock({ booking }: { booking: BookingSummary }): ReactElement {
   return (
     <section
       data-testid="booking-confirmation"
@@ -166,8 +175,11 @@ function ConfirmationBlock({ booking }: { booking: BookingSummary }): ReactEleme
         </dd>
         <dt>{t('guest.booking.stay')}</dt>
         <dd style={{ margin: 0 }}>
-          {booking.checkIn} → {booking.checkOut} ·{' '}
-          {formatStayPeriod(booking.nights, booking.adults, booking.children)}
+          {formatStaySpan(
+            booking.checkIn,
+            booking.checkOut,
+            formatStayPeriod(booking.nights, booking.adults, booking.children),
+          )}
         </dd>
         <dt>{t('guest.booking.money.total')}</dt>
         <dd style={{ margin: 0 }}>{formatMoney(booking.totalAmount)}</dd>
