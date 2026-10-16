@@ -83,7 +83,7 @@ export default function GuestScreen(): ReactElement {
   if (!booted) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator accessibilityLabel="Đang khôi phục phiên" />
+        <ActivityIndicator accessibilityLabel={t('session.restoring')} />
       </View>
     );
   }
