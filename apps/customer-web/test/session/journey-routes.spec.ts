@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from 'vitest';
+// HB-200: trần tường minh 30 giây vì ca spawn tiến trình `tsx` dựng route Next rồi gọi HTTP thật,
+// không phải ca sai — mặc định 5 giây của vitest chỉ đủ khi máy rảnh.
 test('actual customer Next journey exports use live HTTP and the guest session', () => {
   const result = spawnSync(
     process.execPath,
@@ -26,4 +28,4 @@ test('actual customer Next journey exports use live HTTP and the guest session',
   });
   expect(result.stdout).not.toContain('synthetic-access');
   expect(result.stdout).not.toContain('synthetic-refresh');
-});
+}, 30_000);
