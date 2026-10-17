@@ -44,6 +44,7 @@ import { OperationsModule } from './modules/sys/operations/module.js';
 import { ReportExportModule } from './modules/rep/export/module.js';
 import { NotiModule } from './modules/noti/module.js';
 import { CancelModule } from './modules/book/cancel/module.js';
+import { HoldsModule } from './modules/book/holds/module.js';
 
 @Module({})
 export class AppModule {
@@ -93,6 +94,7 @@ export class AppModule {
         OperationsModule,
         NotiModule,
         CancelModule,
+        HoldsModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },

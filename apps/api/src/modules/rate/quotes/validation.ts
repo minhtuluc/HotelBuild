@@ -91,14 +91,22 @@ export function quoteInput(value: unknown): QuoteInput {
  * Đầu vào dùng để **đối chiếu** một quote đã phát hành (HB-076/HB-077 truyền thân lệnh giữ/đặt chỗ:
  * có thêm `quoteId`, `guest`, `note`… nên chỉ lấy đúng các trường thuộc fingerprint của api.md §3.1;
  * trường lạ bị bỏ qua chứ không làm lệnh hỏng).
+ *
+ * `ratePlanCode` là trường bắt buộc của `POST /quotes` nhưng **không** có trên thân lệnh `POST /holds`
+ * (`holdCreateRequestSchema` không nhận gói giá — HB-076/HB-151 lấy gói từ quote), nên caller truyền
+ * mã gói giá đọc từ **chính bản ghi quote** (`stored.input.ratePlanCode`): client không thể chèn gói
+ * giá khác vào fingerprint, và lệnh giữ chỗ vẫn đối chiếu đủ trường còn lại.
  */
-export function consumedInput(value: unknown): QuoteInput {
+export function consumedInput(value: unknown, storedRatePlanCode?: string): QuoteInput {
   const body = z.record(z.string(), z.unknown()).safeParse(value);
   if (!body.success) throw invalid();
   const record = body.data;
   const picked: Record<string, unknown> = {};
   for (const field of [...REQUIRED_FIELDS, 'childAges', 'promotionCodes'] as const)
-    picked[field] = record[field];
+    picked[field] =
+      field === 'ratePlanCode' && storedRatePlanCode !== undefined
+        ? storedRatePlanCode
+        : record[field];
   if (typeof record['quoteId'] !== 'string' || record['quoteId'].length === 0)
     throw missingField(['quoteId']);
   return quoteInput(picked);
