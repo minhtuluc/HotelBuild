@@ -14,7 +14,20 @@ allow:
 > Ticket nhỏ do người thay vai lead cấp. Nguồn: cổng `pnpm run ci` của nhánh HB-200 (chỉ đổi trần thời gian, **không** đụng
 > mã worker) đỏ ở `apps/worker test:coverage` với hai ca log — tức lỗi **không hermetic** có sẵn, không phải do nhánh đó.
 
-## Bằng chứng đỏ (lượt chạy trên nhánh HB-200, Redis `/16`)
+## Đính chính nguyên nhân (17/10/2026 — người thay vai lead, sau khi có bằng chứng)
+
+Lượt đỏ đầu tiên trên nhánh HB-200 **không phải** race giữa các ca: cổng chạy với `REDIS_URL=…/16`, mà Redis local
+(`redis-server` mặc định) chỉ có **16 DB (0–15)** ⇒ BullMQ probe lỗi `ERR DB index is out of range` (`code: undefined`
+⇒ `errorCode: 'UNKNOWN'`) và các record lạ lọt vào cửa sổ thu log. Với DB **hợp lệ** (`/15`), mã **chưa sửa** xanh 10/10.
+
+Vì vậy ticket giữ lại phần **gia cố test** (cửa sổ đồng bộ theo `mark` + bất biến trên toàn sink + lọc theo hàng đợi của
+chính ca) như **phòng vệ** — hữu ích khi ca chạy trên máy chậm hoặc khi có tiến trình khác cùng DB — nhưng **không** coi
+đây là bằng chứng “hai ca vốn không hermetic”.
+
+**Quy ước môi trường (bắt buộc cho mọi mẻ sau):** `REDIS_URL` của worktree chỉ dùng **DB 0–15**; đừng dùng `/16` trở lên.
+Ghi kèm `DATABASE_MIGRATION_URL` khi chạy suite worker (6 file tự tạo DB).
+
+## Bằng chứng đỏ ban đầu (lượt chạy trên nhánh HB-200, Redis `/16` — DB ngoài dải)
 
 ```
 FAIL test/redis.integration.spec.ts > HB-078 TD-01 — … log qua logger đã cấu hình, không đưa nội dung lỗi thô vào log
