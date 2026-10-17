@@ -1,7 +1,9 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from 'vitest';
-
+// HB-201 (cùng lớp ca với HB-200): trần tường minh 30 giây vì ca dựng hai tuyến BFF thật rồi gọi
+// API giả qua TCP bằng tiến trình `tsx`, không phải ca sai — mặc định 5 giây của vitest chỉ đủ khi
+// máy rảnh.
 test('actual availability/rate-plans route exports guard bearer/query and forward over TCP', () => {
   const result = spawnSync(
     process.execPath,
@@ -23,4 +25,4 @@ test('actual availability/rate-plans route exports guard bearer/query and forwar
     privateHeadersStripped: true,
   });
   expect(result.stdout).not.toContain('synthetic-private-upstream');
-});
+}, 30_000);
