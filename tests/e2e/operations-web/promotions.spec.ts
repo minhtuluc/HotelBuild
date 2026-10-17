@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { errorBody, fulfillJson, listBody } from './fake-api';
 import { operationsWebOnly } from './guard';
+import { loginRefundStaff } from './refund-fixture';
 
 const PROPERTY = {
   id: 'p1',
@@ -44,11 +45,14 @@ const PROMOTION = {
   version: 1,
 };
 
-const PROPERTIES = '**/api/v1/properties*';
-const ROOM_TYPES = '**/api/v1/room-types*';
-const PROMOTIONS = '**/api/v1/promotions';
+const PROPERTIES = '**/api/session/sys/properties*';
+const ROOM_TYPES = '**/api/session/sys/room-types*';
+const PROMOTIONS = '**/api/session/sys/promotions';
 
 operationsWebOnly();
+test.beforeEach(async ({ page, request }) => {
+  await loginRefundStaff(page, request, 'OWNER');
+});
 
 function backend(
   page: Page,
@@ -133,7 +137,7 @@ test.describe('SCR-29 khuyến mãi trên API giả (HB-061)', () => {
         message: 'Khuyến mãi làm giá dưới sàn',
         traceId: 't-floor',
         timestamp: '2026-10-05T00:00:00.000Z',
-        path: '/api/v1/promotions',
+        path: '/api/session/sys/promotions',
         details: [{ field: 'value', issue: 'BELOW_FLOOR' }],
       },
     });
@@ -155,7 +159,7 @@ test.describe('SCR-29 khuyến mãi trên API giả (HB-061)', () => {
         message: 'Mã đã hết lượt',
         traceId: 't-promo',
         timestamp: '2026-10-05T00:00:00.000Z',
-        path: '/api/v1/promotions',
+        path: '/api/session/sys/promotions',
         details: [{ field: 'code', issue: 'MAX_USES_REACHED' }],
       },
     });
@@ -188,7 +192,7 @@ test.describe('SCR-29 khuyến mãi trên API giả (HB-061)', () => {
       return fulfillJson(
         route,
         403,
-        errorBody('E_RBAC_FORBIDDEN', 'trace-403', '/api/v1/promotions'),
+        errorBody('E_RBAC_FORBIDDEN', 'trace-403', '/api/session/sys/promotions'),
       );
     });
     await page.goto('/promotions');

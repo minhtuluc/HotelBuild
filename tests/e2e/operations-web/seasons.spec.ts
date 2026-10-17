@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { errorBody, fulfillJson, listBody } from './fake-api';
 import { operationsWebOnly } from './guard';
+import { loginRefundStaff } from './refund-fixture';
 
 const PROPERTY = {
   id: 'p1',
@@ -73,12 +74,15 @@ const SEASON = {
   version: 2,
 };
 
-const PROPERTIES = '**/api/v1/properties*';
-const ROOM_TYPES = '**/api/v1/room-types*';
-const CALENDARS = '**/api/v1/room-types/*/rate-calendar*';
-const SEASONS = '**/api/v1/seasons**';
+const PROPERTIES = '**/api/session/sys/properties*';
+const ROOM_TYPES = '**/api/session/sys/room-types*';
+const CALENDARS = '**/api/session/sys/room-types/*/rate-calendar*';
+const SEASONS = '**/api/session/sys/seasons**';
 
 operationsWebOnly();
+test.beforeEach(async ({ page, request }) => {
+  await loginRefundStaff(page, request, 'OWNER');
+});
 
 function backend(page: Page, seasons: readonly unknown[] = [SEASON]): { created: () => string[] } {
   const created: string[] = [];
@@ -146,7 +150,11 @@ test.describe('SCR-27 mùa & hệ số trên API giả (HB-059)', () => {
     await page.route(PROPERTIES, (route) => fulfillJson(route, 200, listBody([PROPERTY])));
     await page.route(ROOM_TYPES, (route) => fulfillJson(route, 200, listBody([ROOM_TYPE])));
     await page.route(CALENDARS, (route) =>
-      fulfillJson(route, 403, errorBody('E_RBAC_FORBIDDEN', 'trace-403', '/api/v1/rate-calendar')),
+      fulfillJson(
+        route,
+        403,
+        errorBody('E_RBAC_FORBIDDEN', 'trace-403', '/api/session/sys/rate-calendar'),
+      ),
     );
     await page.goto('/seasons');
     await expect(page.getByText('Bạn không có quyền xem nội dung này')).toBeVisible();

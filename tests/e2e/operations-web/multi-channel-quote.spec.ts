@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { errorBody, fulfillJson, listBody } from './fake-api';
 import { operationsWebOnly } from './guard';
+import { loginRefundStaff } from './refund-fixture';
 
 const PROPERTY = {
   id: 'p1',
@@ -56,11 +57,14 @@ const QUOTE = {
   ],
 };
 
-const PROPERTIES = '**/api/v1/properties*';
-const ROOM_TYPES = '**/api/v1/room-types*';
-const QUOTES = '**/api/v1/quotes/multi-channel';
+const PROPERTIES = '**/api/session/sys/properties*';
+const ROOM_TYPES = '**/api/session/sys/room-types*';
+const QUOTES = '**/api/session/sys/quotes/multi-channel';
 
 operationsWebOnly();
+test.beforeEach(async ({ page, request }) => {
+  await loginRefundStaff(page, request, 'OWNER');
+});
 
 function backend(page: Page): { posts: () => string[] } {
   const posts: string[] = [];
@@ -74,6 +78,9 @@ function backend(page: Page): { posts: () => string[] } {
 }
 
 async function viewQuote(page: Page): Promise<void> {
+  // HB-201: cơ sở/loại phòng nay nạp qua phiên BFF (thêm vòng lấy token) nên phải đợi màn nạp xong
+  // loại phòng; màn không gửi lời gọi nào khi chưa có loại phòng để chọn.
+  await expect(page.getByLabel('Loại phòng')).toHaveValue('rt1');
   await page.getByLabel('Nhận phòng').fill('2026-12-24');
   await page.getByLabel('Trả phòng').fill('2026-12-27');
   await page.getByRole('button', { name: 'Xem báo giá' }).click();
@@ -150,7 +157,11 @@ test.describe('SCR-30 báo giá đa kênh trên API giả (HB-062)', () => {
     await page.route(PROPERTIES, (route) => fulfillJson(route, 200, listBody([PROPERTY])));
     await page.route(ROOM_TYPES, (route) => fulfillJson(route, 200, listBody([ROOM_TYPE])));
     await page.route(QUOTES, (route) =>
-      fulfillJson(route, 403, errorBody('E_RBAC_FORBIDDEN', 'trace-403', '/api/v1/quotes/multi-channel')),
+      fulfillJson(
+        route,
+        403,
+        errorBody('E_RBAC_FORBIDDEN', 'trace-403', '/api/session/sys/quotes/multi-channel'),
+      ),
     );
     await page.goto('/multi-channel-quote');
     await viewQuote(page);

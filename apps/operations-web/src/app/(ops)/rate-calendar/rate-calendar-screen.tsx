@@ -7,12 +7,12 @@
  * lệch quá ±20% so với giá đang áp dụng phải tick xác nhận của OWNER trước khi gửi.
  */
 import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
-import { createPropertyApi, createRateApi, isApiError } from '@pinehill/api-client';
+import { createPropertyApi, createRateApi, isApiError, type ApiClient } from '@pinehill/api-client';
 import type { PropertySummary, RoomTypeSummary } from '@pinehill/contracts';
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { useForcedState } from '../../../components/forced-state';
-import { opsApiClient } from '../../../lib/api';
+import { useOpsSession } from '../../../lib/ops-session';
 import { t } from '../../../lib/i18n';
 import { dayCount, defaultRange } from '../../../lib/inventory-grid';
 import { toMoney } from '../../../lib/money';
@@ -49,8 +49,7 @@ function initialFilters(): Filters {
  * Đọc cơ sở, loại phòng và lịch giá trong một khoảng. Không chọn gì thì chốt cơ sở/loại phòng đầu
  * tiên để màn hình luôn có dữ liệu xem được; số chọn được trả lại để bộ lọc khớp với dữ liệu đã tải.
  */
-async function fetchCalendar(baseUrl: string, target: Filters): Promise<LoadedCalendar> {
-  const client = opsApiClient(baseUrl);
+async function fetchCalendar(client: ApiClient, target: Filters): Promise<LoadedCalendar> {
   const propertyPage = await createPropertyApi(client).list();
   const properties = propertyPage.data.data;
   const propertyId = target.propertyId === '' ? (properties[0]?.id ?? '') : target.propertyId;
@@ -88,7 +87,7 @@ async function fetchCalendar(baseUrl: string, target: Filters): Promise<LoadedCa
   };
 }
 
-export function RateCalendarScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function RateCalendarScreen(): ReactElement {
   const forced = useForcedState();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [properties, setProperties] = useState<readonly PropertySummary[]>([]);
@@ -103,6 +102,9 @@ export function RateCalendarScreen({ baseUrl }: { baseUrl: string }): ReactEleme
   const [confirmLarge, setConfirmLarge] = useState(false);
   const [saved, setSaved] = useState<number | null>(null);
   const [readError, setReadError] = useState<unknown>(null);
+  const session = useOpsSession(['/properties', '/room-types'], {
+    onExpired: () => setState({ kind: 'forbidden' }),
+  });
 
   const load = useCallback(
     async (target: Filters): Promise<void> => {
@@ -112,7 +114,7 @@ export function RateCalendarScreen({ baseUrl }: { baseUrl: string }): ReactEleme
         return;
       }
       try {
-        const loaded = await fetchCalendar(baseUrl, target);
+        const loaded = await fetchCalendar(session.client, target);
         setProperties(loaded.properties);
         setRoomTypes(loaded.roomTypes);
         // Chỉ điền lựa chọn còn trống; không ghi đè khoảng ngày người dùng đang gõ.
@@ -140,7 +142,7 @@ export function RateCalendarScreen({ baseUrl }: { baseUrl: string }): ReactEleme
         setState({ kind: 'ready' });
       }
     },
-    [baseUrl],
+    [session],
   );
 
   useEffect(() => {
@@ -175,7 +177,7 @@ export function RateCalendarScreen({ baseUrl }: { baseUrl: string }): ReactEleme
       return;
     }
     const plan = planOverrides(edits);
-    const api = createRateApi(opsApiClient(baseUrl));
+    const api = createRateApi(session.client);
     const options = { priority: Number(priority), reason: reason.trim(), confirmLarge };
     try {
       // Ngày cùng giá đi chung một lệnh; ngày khác giá đi lệnh riêng, mỗi lệnh một khoá idempotency.

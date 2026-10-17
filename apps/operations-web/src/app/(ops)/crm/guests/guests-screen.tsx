@@ -6,12 +6,12 @@
  * Không có thao tác xoá cứng hồ sơ (§2.14); PII do máy chủ che theo vai trò trước khi trả về (NFR-SEC-03).
  */
 import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
-import { createGuestApi, isApiError } from '@pinehill/api-client';
+import { createGuestApi, isApiError, type ApiClient } from '@pinehill/api-client';
 import type { GuestSummary, LoyaltyTier } from '@pinehill/contracts';
 import { StateSurface, formatDateTimeVn, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
-import { opsApiClient } from '../../../../lib/api';
+import { useOpsSession } from '../../../../lib/ops-session';
 import { t } from '../../../../lib/i18n';
 import { readFailureState, writeFailureState } from '../../../../lib/screen-state';
 import {
@@ -61,11 +61,11 @@ function actionTitleKey(
 
 /** Gọi đúng tuyến theo hành động đã chọn, trả câu xác nhận đã lưu (không có đường xoá cứng). */
 async function performAction(
-  baseUrl: string,
+  client: ApiClient,
   action: PendingAction,
   reason: string,
 ): Promise<string> {
-  const api = createGuestApi(opsApiClient(baseUrl));
+  const api = createGuestApi(client);
   const { kind, guest } = action;
   if (kind === 'anonymize') {
     await api.anonymize(guest.id, anonymizeRequest(reason, new Date().toISOString()));
@@ -79,8 +79,11 @@ async function performAction(
   return t('crm.saved.released', { name: guest.fullName });
 }
 
-export function GuestsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function GuestsScreen(): ReactElement {
   const forced = useForcedState();
+  const session = useOpsSession(['/guests'], {
+    onExpired: () => setState({ kind: 'forbidden' }),
+  });
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [guests, setGuests] = useState<readonly GuestSummary[]>([]);
   const [draft, setDraft] = useState<GuestSearch>(EMPTY_SEARCH);
@@ -96,7 +99,7 @@ export function GuestsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
     async (filters: GuestSearch): Promise<void> => {
       setReadError(null);
       try {
-        const page = await createGuestApi(opsApiClient(baseUrl)).list(searchParams(filters));
+        const page = await createGuestApi(session.client).list(searchParams(filters));
         setGuests(page.data.data);
         setState(
           page.data.data.length === 0
@@ -113,7 +116,7 @@ export function GuestsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
         setState({ kind: 'ready' });
       }
     },
-    [baseUrl],
+    [session],
   );
 
   useEffect(() => {
@@ -138,7 +141,7 @@ export function GuestsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
       return;
     }
     try {
-      setSaved(await performAction(baseUrl, action, reason));
+      setSaved(await performAction(session.client, action, reason));
       setAction(null);
       await load(applied);
     } catch (caught) {

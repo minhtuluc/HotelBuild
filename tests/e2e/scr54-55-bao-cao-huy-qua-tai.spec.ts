@@ -1,8 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { OPERATION_STATUSES, installReportApi } from './fake-api/f8/reports';
 import { operationsWebOnly } from './operations-web/guard';
+import { loginRefundStaff } from './operations-web/refund-fixture';
 
 operationsWebOnly();
+
+test.beforeEach(async ({ page, request }) => {
+  await loginRefundStaff(page, request, 'OWNER');
+});
 
 test.describe('SCR-54/SCR-55 báo cáo huỷ & quá tải trên API giả (HB-165)', () => {
   test('SCR-54 hiện tỷ lệ huỷ, tiền hoàn theo bậc và công thức (AC1)', async ({ page }) => {
@@ -52,7 +57,7 @@ test.describe('SCR-54/SCR-55 báo cáo huỷ & quá tải trên API giả (HB-16
         message: 'Không có quyền',
         traceId: 'trace-403',
         timestamp: '2026-10-02T00:00:00.000Z',
-        path: '/api/v1/reports/cancellations',
+        path: '/api/session/sys/reports/cancellations',
       }),
     });
     await page.goto('/reports/cancellations');

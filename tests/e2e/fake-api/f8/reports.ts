@@ -100,7 +100,7 @@ export const OVERBOOKING_REPORT = {
 export const OPERATION_REF = {
   operationId: 'op-1',
   status: 'PENDING' as const,
-  statusUrl: '/api/v1/operations/op-1',
+  statusUrl: '/api/session/sys/operations/op-1',
 };
 
 export const OPERATION_STATUSES = {
@@ -145,17 +145,17 @@ export function installReportApi(page: Page, options: F8ReportOptions = {}): F8R
   const statuses = options.operationStatuses ?? [OPERATION_STATUSES.SUCCEEDED];
   const readStatus = options.readStatus ?? 200;
 
-  void page.route('**/api/v1/properties**', (route) => json(route, 200, JSON.stringify({
+  void page.route('**/api/session/sys/properties**', (route) => json(route, 200, JSON.stringify({
     data: [PROPERTY],
     meta: { limit: 20, nextCursor: null, hasMore: false, total: 1 },
   })));
 
   const reports: readonly [string, unknown][] = [
-    ['**/api/v1/reports/occupancy**', OCCUPANCY_REPORT],
-    ['**/api/v1/reports/adr-revpar**', ADR_REVPAR_REPORT],
-    ['**/api/v1/reports/revenue-by-channel**', REVENUE_REPORT],
-    ['**/api/v1/reports/cancellations**', CANCELLATIONS_REPORT],
-    ['**/api/v1/reports/overbooking**', OVERBOOKING_REPORT],
+    ['**/api/session/sys/reports/occupancy**', OCCUPANCY_REPORT],
+    ['**/api/session/sys/reports/adr-revpar**', ADR_REVPAR_REPORT],
+    ['**/api/session/sys/reports/revenue-by-channel**', REVENUE_REPORT],
+    ['**/api/session/sys/reports/cancellations**', CANCELLATIONS_REPORT],
+    ['**/api/session/sys/reports/overbooking**', OVERBOOKING_REPORT],
   ];
   for (const [pattern, body] of reports) {
     void page.route(pattern, (route) => {
@@ -167,12 +167,12 @@ export function installReportApi(page: Page, options: F8ReportOptions = {}): F8R
     });
   }
 
-  void page.route('**/api/v1/reports/export', async (route) => {
+  void page.route('**/api/session/sys/reports/export', async (route) => {
     exports.push(route.request().postData() ?? '');
     return json(route, 202, JSON.stringify(OPERATION_REF));
   });
 
-  void page.route('**/api/v1/operations/**', (route) => {
+  void page.route('**/api/session/sys/operations/**', (route) => {
     const view = statuses[Math.min(polls, statuses.length - 1)] ?? OPERATION_STATUSES.SUCCEEDED;
     polls += 1;
     return json(route, 200, JSON.stringify(view));

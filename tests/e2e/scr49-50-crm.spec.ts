@@ -1,8 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { installCrmApi } from './fake-api/f8/crm';
 import { operationsWebOnly } from './operations-web/guard';
+import { loginRefundStaff } from './operations-web/refund-fixture';
 
 operationsWebOnly();
+
+test.beforeEach(async ({ page, request }) => {
+  await loginRefundStaff(page, request, 'OWNER');
+});
 
 test.describe('SCR-49/SCR-50 CRM quản trị trên API giả (HB-167)', () => {
   test('SCR-49 hiện hồ sơ khách, hạng và trạng thái danh sách đen (AC2)', async ({ page }) => {
@@ -92,7 +97,7 @@ test.describe('SCR-49/SCR-50 CRM quản trị trên API giả (HB-167)', () => {
         message: 'Không có quyền',
         traceId: 'trace-403',
         timestamp: '2026-10-02T00:00:00.000Z',
-        path: '/api/v1/guests',
+        path: '/api/session/sys/guests',
       }),
     });
     await page.goto('/crm/guests');

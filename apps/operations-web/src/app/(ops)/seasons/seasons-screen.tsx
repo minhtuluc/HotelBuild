@@ -5,11 +5,11 @@
  * ngày** do máy chủ trả (`GET rate-calendar`, engine HB-052) — giao diện không tự so `priority`.
  * Mùa chồng nhau **được phép** (BR-RATE-05); cảnh báo chồng lấn chỉ để nhắc.
  *
- * Danh sách mùa (kèm phiên bản) cần tuyến đọc `GET /seasons` chưa có trong api.md §2.4 — phần đó
- * đang chờ lead chốt nên màn hình ghi rõ "chưa hỗ trợ", không bịa danh sách (xem PR: AC1 BLOCKED).
+ * Danh sách mùa (kèm phiên bản) đọc qua phiên nhân viên (`GET /seasons` → BFF `/api/session/sys/seasons`,
+ * HB-201); máy chủ là nơi quyết mùa thắng nên giao diện chỉ hiển thị.
  */
 import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
-import { createPropertyApi, createRateApi, isApiError } from '@pinehill/api-client';
+import { createPropertyApi, createRateApi, isApiError, type ApiClient } from '@pinehill/api-client';
 import type { PropertySummary, RoomTypeSummary, SeasonSummary } from '@pinehill/contracts';
 import {
   StateSurface,
@@ -20,7 +20,7 @@ import {
 } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { useForcedState } from '../../../components/forced-state';
-import { opsApiClient } from '../../../lib/api';
+import { useOpsSession } from '../../../lib/ops-session';
 import { t } from '../../../lib/i18n';
 import { defaultRange, type GridRange } from '../../../lib/inventory-grid';
 import { readFailureState, writeFailureState } from '../../../lib/screen-state';
@@ -50,11 +50,10 @@ function pickId(preferred: string, options: readonly { id: string }[]): string {
 }
 
 async function fetchCalendar(
-  baseUrl: string,
+  client: ApiClient,
   draft: SeasonTarget,
   range: GridRange,
 ): Promise<Loaded> {
-  const client = opsApiClient(baseUrl);
   const propertyApi = createPropertyApi(client);
   const properties = (await propertyApi.list()).data.data;
   const propertyId = pickId(draft.propertyId, properties);
@@ -178,7 +177,7 @@ function SeasonListTable({ seasons }: { seasons: readonly SeasonSummary[] }): Re
   );
 }
 
-export function SeasonsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function SeasonsScreen(): ReactElement {
   const forced = useForcedState();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [draft, setDraft] = useState<SeasonDraft>(EMPTY_SEASON_DRAFT);
@@ -190,12 +189,15 @@ export function SeasonsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
   const [seasons, setSeasons] = useState<readonly SeasonSummary[]>([]);
   const [savedName, setSavedName] = useState<string | null>(null);
   const [readError, setReadError] = useState<unknown>(null);
+  const session = useOpsSession(['/properties', '/room-types', '/seasons'], {
+    onExpired: () => setState({ kind: 'forbidden' }),
+  });
 
   const load = useCallback(
     async (target: SeasonTarget, targetRange: GridRange): Promise<void> => {
       setReadError(null);
       try {
-        const loaded = await fetchCalendar(baseUrl, target, targetRange);
+        const loaded = await fetchCalendar(session.client, target, targetRange);
         setProperties(loaded.properties);
         setRoomTypes(loaded.roomTypes);
         setEntries(loaded.entries);
@@ -220,7 +222,7 @@ export function SeasonsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
         setState({ kind: 'ready' });
       }
     },
-    [baseUrl],
+    [session],
   );
 
   const { propertyId: draftProperty, roomTypeId: draftRoomType } = draft;
@@ -237,7 +239,7 @@ export function SeasonsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
       return;
     }
     try {
-      await createRateApi(opsApiClient(baseUrl)).createSeason(
+      await createRateApi(session.client).createSeason(
         toCreateRequest({ ...draft, startDate: range.from, endDate: range.to }),
       );
       setSavedName(draft.name.trim());

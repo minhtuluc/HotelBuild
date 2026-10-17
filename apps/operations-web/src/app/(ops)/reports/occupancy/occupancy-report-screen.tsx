@@ -12,6 +12,7 @@ import {
   createReportApi,
   createSystemApi,
   isApiError,
+  type ApiClient,
 } from '@pinehill/api-client';
 import type {
   AdrRevparReport,
@@ -23,9 +24,9 @@ import type {
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
-import { opsApiClient } from '../../../../lib/api';
 import { t } from '../../../../lib/i18n';
 import { defaultRange } from '../../../../lib/inventory-grid';
+import { useOpsSession } from '../../../../lib/ops-session';
 import { readFailureState, writeFailureState } from '../../../../lib/screen-state';
 import { AdrRevparTable, OccupancyTable, OperationPanel } from '../report-tables';
 import {
@@ -68,8 +69,8 @@ interface Reports {
   adrRevpar: AdrRevparReport;
 }
 
-async function fetchReports(baseUrl: string, filters: ReportFilters): Promise<Reports> {
-  const api = createReportApi(opsApiClient(baseUrl));
+async function fetchReports(client: ApiClient, filters: ReportFilters): Promise<Reports> {
+  const api = createReportApi(client);
   const query = {
     from: filters.from,
     to: filters.to,
@@ -80,7 +81,7 @@ async function fetchReports(baseUrl: string, filters: ReportFilters): Promise<Re
   return { occupancy: occupancy.data, adrRevpar: adrRevpar.data };
 }
 
-export function OccupancyReportScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function OccupancyReportScreen(): ReactElement {
   const forced = useForcedState();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [properties, setProperties] = useState<readonly PropertySummary[]>([]);
@@ -91,6 +92,13 @@ export function OccupancyReportScreen({ baseUrl }: { baseUrl: string }): ReactEl
   const [operation, setOperation] = useState<OperationStatusView | null>(null);
   const [readError, setReadError] = useState<unknown>(null);
   const canExport = state.kind !== 'forbidden';
+  const session = useOpsSession(['/reports', '/properties', '/operations'], {
+    onExpired: () => {
+      setReports(null);
+      setOperation(null);
+      setState({ kind: 'forbidden' });
+    },
+  });
 
   const load = useCallback(
     async (filters: ReportFilters): Promise<void> => {
@@ -102,8 +110,8 @@ export function OccupancyReportScreen({ baseUrl }: { baseUrl: string }): ReactEl
       }
       try {
         const [loaded, propertiesPage] = await Promise.all([
-          fetchReports(baseUrl, filters),
-          createPropertyApi(opsApiClient(baseUrl)).list(),
+          fetchReports(session.client, filters),
+          createPropertyApi(session.client).list(),
         ]);
         setProperties(propertiesPage.data.data);
         setReports(loaded);
@@ -122,7 +130,7 @@ export function OccupancyReportScreen({ baseUrl }: { baseUrl: string }): ReactEl
         setState({ kind: 'ready' });
       }
     },
-    [baseUrl],
+    [session],
   );
 
   useEffect(() => {
@@ -133,7 +141,7 @@ export function OccupancyReportScreen({ baseUrl }: { baseUrl: string }): ReactEl
   /** Hỏi trạng thái tác vụ cho tới khi kết thúc (SLA xuất ≥ 100.000 dòng ≤ 60 s). */
   const poll = async (operationId: string): Promise<void> => {
     for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt += 1) {
-      const view = (await createSystemApi(opsApiClient(baseUrl)).operation(operationId)).data;
+      const view = (await createSystemApi(session.client).operation(operationId)).data;
       setOperation(view);
       if (isTerminal(view.status)) return;
       await delay(POLL_INTERVAL_MS);
@@ -146,7 +154,7 @@ export function OccupancyReportScreen({ baseUrl }: { baseUrl: string }): ReactEl
   ): Promise<void> => {
     setOperation(null);
     try {
-      const ref = await createReportApi(opsApiClient(baseUrl)).export(
+      const ref = await createReportApi(session.client).export(
         exportRequest(report, format, filtersToParams(applied)),
       );
       setOperation(ref.data);

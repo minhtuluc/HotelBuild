@@ -21,9 +21,9 @@ import type {
 import { StateSurface, formatMoney, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
-import { opsApiClient } from '../../../../lib/api';
 import { t } from '../../../../lib/i18n';
 import { defaultRange } from '../../../../lib/inventory-grid';
+import { useOpsSession } from '../../../../lib/ops-session';
 import { readFailureState, writeFailureState } from '../../../../lib/screen-state';
 import { OperationPanel, RevenueByChannelTable } from '../report-tables';
 import {
@@ -57,7 +57,7 @@ function delay(ms: number): Promise<void> {
   return promise;
 }
 
-export function RevenueByChannelScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function RevenueByChannelScreen(): ReactElement {
   const forced = useForcedState();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [properties, setProperties] = useState<readonly PropertySummary[]>([]);
@@ -68,6 +68,13 @@ export function RevenueByChannelScreen({ baseUrl }: { baseUrl: string }): ReactE
   const [operation, setOperation] = useState<OperationStatusView | null>(null);
   const [readError, setReadError] = useState<unknown>(null);
   const canExport = state.kind !== 'forbidden';
+  const session = useOpsSession(['/reports', '/properties', '/operations'], {
+    onExpired: () => {
+      setReport(null);
+      setOperation(null);
+      setState({ kind: 'forbidden' });
+    },
+  });
 
   const load = useCallback(
     async (filters: ReportFilters): Promise<void> => {
@@ -78,14 +85,14 @@ export function RevenueByChannelScreen({ baseUrl }: { baseUrl: string }): ReactE
         return;
       }
       try {
-        const api = createReportApi(opsApiClient(baseUrl));
+        const api = createReportApi(session.client);
         const [loaded, propertiesPage] = await Promise.all([
           api.revenueByChannel({
             from: filters.from,
             to: filters.to,
             ...(filters.propertyId === '' ? {} : { propertyId: filters.propertyId }),
           }),
-          createPropertyApi(opsApiClient(baseUrl)).list(),
+          createPropertyApi(session.client).list(),
         ]);
         setProperties(propertiesPage.data.data);
         setReport(loaded.data);
@@ -104,7 +111,7 @@ export function RevenueByChannelScreen({ baseUrl }: { baseUrl: string }): ReactE
         setState({ kind: 'ready' });
       }
     },
-    [baseUrl],
+    [session],
   );
 
   useEffect(() => {
@@ -115,7 +122,7 @@ export function RevenueByChannelScreen({ baseUrl }: { baseUrl: string }): ReactE
   /** Hỏi trạng thái tác vụ cho tới khi kết thúc (SLA xuất ≥ 100.000 dòng ≤ 60 s). */
   const poll = async (operationId: string): Promise<void> => {
     for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt += 1) {
-      const view = (await createSystemApi(opsApiClient(baseUrl)).operation(operationId)).data;
+      const view = (await createSystemApi(session.client).operation(operationId)).data;
       setOperation(view);
       if (isTerminal(view.status)) return;
       await delay(POLL_INTERVAL_MS);
@@ -125,7 +132,7 @@ export function RevenueByChannelScreen({ baseUrl }: { baseUrl: string }): ReactE
   const runExport = async (format: ReportExportRequest['format']): Promise<void> => {
     setOperation(null);
     try {
-      const ref = await createReportApi(opsApiClient(baseUrl)).export(
+      const ref = await createReportApi(session.client).export(
         exportRequest('revenue-by-channel', format, filtersToParams(applied)),
       );
       setOperation(ref.data);

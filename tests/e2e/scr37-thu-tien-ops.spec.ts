@@ -17,6 +17,8 @@ import {
 operationsWebOnly();
 
 const BOOKINGS = /\/api\/v1\/bookings/;
+/** SCR-32 (chi tiết booking) gọi qua phiên BFF từ HB-201 — cần chặn cho lối vào màn thu tiền. */
+const BOOKING_DETAIL = '**/api/session/sys/bookings/**';
 const PIN = /\/api\/v1\/auth\/pin\/verify/;
 const PAYMENTS = /\/api\/v1\/payments/;
 
@@ -80,6 +82,7 @@ async function stubCollect(
 ): Promise<Spy> {
   await loginCollectionStaff(page);
   const spy: Spy = { payments: [], pins: 0 };
+  await page.route(BOOKING_DETAIL, (route) => fulfillJson(route, 200, JSON.stringify(BOOKING)));
   await page.route(BOOKINGS, (route) => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith('/balance'))
@@ -630,10 +633,17 @@ test('SCR-37 retry sau khi rời màn không tạo lại session channel', async
   await expect(page.getByTestId('pin-verified')).toBeVisible();
   await page.getByTestId('collect-send').click();
   await expect.poll(() => calls).toBe(1);
+  const detailRead = page.waitForResponse((response) =>
+    response.url().includes('/api/session/sys/bookings/'),
+  );
   await page.getByTestId('collect-back').click();
   await expect(page.getByTestId('collect-screen')).toHaveCount(0);
-  expect(await page.evaluate(() => window.collectionChannels)).toEqual({ created: 1, closed: 1 });
+  await detailRead;
+  // HB-201: màn chi tiết booking (SCR-32, đích của nút quay lại) nay cũng mở phiên riêng nên tổng số
+  // kênh gồm cả kênh của màn đó; điều cần khoá là **lần gửi lại không mở thêm kênh nào**.
+  const afterLeave = await page.evaluate(() => ({ ...window.collectionChannels }));
+  expect(afterLeave.closed).toBeGreaterThanOrEqual(1);
   release();
   await expect.poll(() => calls).toBe(2);
-  expect(await page.evaluate(() => window.collectionChannels)).toEqual({ created: 1, closed: 1 });
+  expect(await page.evaluate(() => window.collectionChannels)).toEqual(afterLeave);
 });

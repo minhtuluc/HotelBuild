@@ -15,7 +15,7 @@ import type { BookingSummary, Quote } from '@pinehill/contracts';
 import { StateSurface, formatMoney, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../../components/screen-alert';
 import { useForcedState } from '../../../../../components/forced-state';
-import { opsApiClient } from '../../../../../lib/api';
+import { useOpsSession } from '../../../../../lib/ops-session';
 import { formatBusinessDate } from '../../../../../lib/business-date';
 import { t } from '../../../../../lib/i18n';
 import { writeFailureState } from '../../../../../lib/screen-state';
@@ -48,16 +48,19 @@ function Difference({ booking, quote }: { booking: BookingSummary; quote: Quote 
   );
 }
 
-export function RescheduleBookingScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function RescheduleBookingScreen(): ReactElement {
   const forced = useForcedState();
   const params = useParams<{ bookingId: string }>();
   const bookingId = typeof params.bookingId === 'string' ? params.bookingId : '';
+  const session = useOpsSession(['/bookings', '/quotes'], {
+    onExpired: () => setState({ kind: 'forbidden' }),
+  });
   const api = useMemo(
     () => ({
-      bookings: createBookingApi(opsApiClient(baseUrl)),
-      quotes: createQuoteApi(opsApiClient(baseUrl)),
+      bookings: createBookingApi(session.client),
+      quotes: createQuoteApi(session.client),
     }),
-    [baseUrl],
+    [session],
   );
 
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });

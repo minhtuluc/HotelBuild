@@ -2,17 +2,24 @@ import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { fulfillJson, listBody } from './operations-web/fake-api';
 import { operationsWebOnly } from './operations-web/guard';
+import { loginRefundStaff } from './operations-web/refund-fixture';
 
 /**
- * SCR-35/SCR-36 (HB-108) — back-office gọi API trực tiếp, nên ca này khoá ở `/api/v1/bookings/**`,
- * `/cancellation-policies`, `/quotes` và trả phản hồi đúng hợp đồng. Trọng tâm: huỷ **hai bước** (xem
- * trước rồi xác nhận), đổi số hoàn thì **buộc xem lại**, và ghi chú phần hợp đồng còn thiếu.
+ * SCR-35/SCR-36 (HB-108) — back-office gọi qua BFF phiên nhân viên, nên ca này khoá ở
+ * `/api/session/sys/bookings/**`, `/cancellation-policies`, `/quotes`; trả phản hồi đúng hợp đồng.
+ * Trọng tâm: huỷ **hai bước** (xem trước rồi xác nhận), đổi số hoàn thì **buộc xem lại**, và ghi
+ * chú phần hợp đồng còn thiếu.
  */
 operationsWebOnly();
 
-const BOOKINGS = /\/api\/v1\/bookings/;
-const POLICIES = /\/api\/v1\/cancellation-policies/;
-const QUOTES = /\/api\/v1\/quotes/;
+// Client phiên không gửi request nào khi chưa đăng nhập, nên mỗi ca phải có phiên nhân viên trước.
+test.beforeEach(async ({ page, request }) => {
+  await loginRefundStaff(page, request, 'OWNER');
+});
+
+const BOOKINGS = /\/api\/session\/sys\/bookings/;
+const POLICIES = /\/api\/session\/sys\/cancellation-policies/;
+const QUOTES = /\/api\/session\/sys\/quotes/;
 
 const BOOKING = {
   id: 'b1',

@@ -2,8 +2,13 @@ import { expect, test } from '@playwright/test';
 import { OPERATION_STATUSES, installReportApi } from './fake-api/f8/reports';
 import type { F8ReportSpy } from './fake-api/f8/reports';
 import { operationsWebOnly } from './operations-web/guard';
+import { loginRefundStaff } from './operations-web/refund-fixture';
 
 operationsWebOnly();
+
+test.beforeEach(async ({ page, request }) => {
+  await loginRefundStaff(page, request, 'OWNER');
+});
 
 test.describe('SCR-52/SCR-53 báo cáo F8 trên API giả (HB-164)', () => {
   test('SCR-52 hiện công suất và ADR/RevPAR nguyên số máy chủ trả (AC1)', async ({ page }) => {
@@ -83,7 +88,7 @@ test.describe('SCR-52/SCR-53 báo cáo F8 trên API giả (HB-164)', () => {
         message: 'Không có quyền',
         traceId: 'trace-403',
         timestamp: '2026-10-02T00:00:00.000Z',
-        path: '/api/v1/reports/occupancy',
+        path: '/api/session/sys/reports/occupancy',
       }),
     });
     await page.goto('/reports/revenue-by-channel');

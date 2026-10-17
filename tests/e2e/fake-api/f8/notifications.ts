@@ -73,7 +73,7 @@ export function installNotiApi(page: Page, options: NotiApiOptions = {}): NotiAp
   const urls: string[] = [];
   const readStatus = options.readStatus ?? 200;
 
-  void page.route('**/api/v1/notifications**', async (route) => {
+  void page.route('**/api/session/sys/notifications**', async (route) => {
     const request = route.request();
     urls.push(request.url());
     if (readStatus !== 200) return json(route, readStatus, options.readErrorBody ?? '{}');

@@ -19,7 +19,7 @@ import type {
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../../components/screen-alert';
 import { useForcedState } from '../../../../../components/forced-state';
-import { opsApiClient } from '../../../../../lib/api';
+import { useOpsSession } from '../../../../../lib/ops-session';
 import { formatBusinessDate } from '../../../../../lib/business-date';
 import { t } from '../../../../../lib/i18n';
 import { readFailureState, writeFailureState } from '../../../../../lib/screen-state';
@@ -74,14 +74,17 @@ function CancelBody({
   );
 }
 
-export function CancelScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function CancelScreen(): ReactElement {
   const forced = useForcedState();
   const params = useParams<{ bookingId: string }>();
   const bookingId = typeof params.bookingId === 'string' ? params.bookingId : '';
+  const session = useOpsSession(['/bookings', '/cancellation-policies'], {
+    onExpired: () => setState({ kind: 'forbidden' }),
+  });
   const api = useMemo(() => {
-    const client = opsApiClient(baseUrl);
+    const client = session.client;
     return { bookings: createBookingApi(client), rate: createRateApi(client) };
-  }, [baseUrl]);
+  }, [session]);
 
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [step, setStep] = useState<CancelStep>('choose');

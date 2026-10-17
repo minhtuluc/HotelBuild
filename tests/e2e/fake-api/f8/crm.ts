@@ -79,7 +79,7 @@ export function installCrmApi(page: Page, options: CrmApiOptions = {}): CrmApiSp
   const urls: string[] = [];
   const readStatus = options.readStatus ?? 200;
 
-  void page.route('**/api/v1/guests**', async (route) => {
+  void page.route('**/api/session/sys/guests**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     urls.push(request.url());
