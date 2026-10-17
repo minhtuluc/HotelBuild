@@ -45,7 +45,11 @@ test('real Redis preserves private job content without putting it into receipt l
     const job = await target.add(privateText, data, { jobId: id });
     await job.waitUntilFinished(events, 10_000);
     sink.assertSafe();
-    expect(sink.records()).toEqual([
+    // Sự kiện `error` của chính kết nối (blip mạng, hoặc `REDIS_URL` trỏ DB ngoài dải của máy chủ Redis)
+    // cũng ghi vào sink này; tên vận chuyển đã đặt tiền tố riêng của ca, nên bản ghi **của hàng đợi sản
+    // phẩm** là tập duy nhất phải khớp: đúng một bản ghi nhận job, không kèm nội dung job.
+    const records = logRecords(sink.records());
+    expect(records.filter((record) => record.queue === 'q.outbox-relay')).toEqual([
       expect.objectContaining({
         level: 30,
         service: 'worker',
@@ -53,6 +57,11 @@ test('real Redis preserves private job content without putting it into receipt l
         msg: 'nhận job',
       }),
     ]);
+    // Phần còn lại chỉ được là sự kiện lỗi vận chuyển của **chính ca này**: không lọt hàng đợi ca khác.
+    for (const record of records.filter((entry) => entry.queue !== 'q.outbox-relay')) {
+      expect(record.msg).toBe('BullMQ phát lỗi');
+      expect(record.queue.startsWith(prefix)).toBe(true);
+    }
     expect(received).toEqual([{ id, name: privateText, data, attemptsMade: 0, maxAttempts: 0 }]);
     const persisted = await target.getJob(id);
     expect(persisted?.name).toBe(privateText);
@@ -67,3 +76,26 @@ test('real Redis preserves private job content without putting it into receipt l
     }
   }
 }, 20_000);
+
+/** Bản ghi log của worker: JSON object có `queue`/`msg` dạng chuỗi. */
+type LogRecord = { queue: string; msg: string };
+
+function isLogRecord(record: unknown): record is LogRecord {
+  return (
+    typeof record === 'object' &&
+    record !== null &&
+    'queue' in record &&
+    typeof record.queue === 'string' &&
+    'msg' in record &&
+    typeof record.msg === 'string'
+  );
+}
+
+/** Giữ nguyên bản ghi (kể cả `level`/`time`/`service`); bản ghi lạ làm ca đỏ, không bị bỏ qua. */
+function logRecords(records: unknown[]): LogRecord[] {
+  return records.map((record) => {
+    if (!isLogRecord(record))
+      throw new Error('Bản ghi log của worker phải có queue/msg dạng chuỗi');
+    return record;
+  });
+}
