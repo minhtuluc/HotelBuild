@@ -15,6 +15,7 @@ import { expect, test } from 'vitest';
 import { z } from 'zod';
 import { errorBodySchema, holdSchema, tokenPairSchema } from '@pinehill/contracts';
 import { holdRecordSchema } from '../../src/modules/book/holds/projection.js';
+import type { Principal } from '../../src/common/idempotency/request.js';
 import { block } from '../room-blocks/inventory-seed.js';
 import {
   WEB_HOLD_MINUTES,
@@ -30,11 +31,13 @@ import {
   issueQuote,
   otherGuestToken,
   propertyId,
+  quoteService,
   releaseRequest,
   roomId,
   room2Id,
   rows,
   rowsOf,
+  seedPromotion,
   stay,
   typeId,
   userId,
@@ -42,6 +45,8 @@ import {
 
 const codeOf = (body: unknown): string => errorBodySchema.parse(body).code;
 const password = 'Synthetic-HB029-only!';
+/** Mã khuyến mãi của ca AC2 (`seedPromotion` bảo đảm nó tồn tại và còn lượt). */
+const PROMO_CODE = 'HB076-PROMO';
 
 test('AC1: giữ chỗ ⇒ booking HELD, hạn theo giờ CSDL + holdMinutes, một assignment cho đơn vị bán', async () => {
   const quote = await issueQuote();
@@ -189,6 +194,60 @@ test('AC2: quote lệch chủ thể/kỳ, mất cache hoặc hết hạn ⇒ đ�
   expect(await count('SELECT 1 FROM bookings')).toBe(0);
 });
 
+test('AC2: quote có mã khuyến mãi vẫn giữ chỗ được — gói giá và mã lấy từ bản ghi quote', async () => {
+  await seedPromotion(PROMO_CODE);
+  // Sàn giá của engine là `room_types.min_price × số đêm`; fixture seed `min_price = base_price` nên
+  // mọi ưu đãi đều bị cắt về 0 (`E_RATE_BELOW_FLOOR`). Hạ sàn để mã thật sự được áp, rồi trả lại.
+  await rows('UPDATE room_types SET min_price=50000 WHERE id=$1', [typeId]);
+  try {
+    const plain = await issueQuote();
+    const discounted = await issueQuote({ promotionCodes: [PROMO_CODE] });
+    // Mã phải thật sự được áp, nếu không ca này không chứng minh được gì.
+    expect(discounted.total).toBeLessThan(plain.total);
+
+    // Thân `POST /holds` là `strictObject` **không** khai `promotionCodes`/`ratePlanCode`; trước bản
+    // sửa, `consumedInput` băm `promotionCodes = []` nên quote này trả 409 dù hợp lệ.
+    const response = await holdRequest({ ...holdBody(), quoteId: discounted.quoteId });
+    expect(response.status).toBe(201);
+    const hold = holdSchema.parse(response.body);
+    expect(hold.quotedTotal).toBe(discounted.total);
+    expect(
+      await count('SELECT 1 FROM bookings WHERE id=$1 AND total_amount=$2', [
+        hold.bookingId,
+        String(discounted.total),
+      ]),
+    ).toBe(1);
+  } finally {
+    await rows('UPDATE room_types SET min_price=100000 WHERE id=$1', [typeId]);
+  }
+});
+
+test('AC2: khai mã khuyến mãi/gói giá khác bản ghi quote ⇒ 409 E_RATE_QUOTE_MISMATCH', async () => {
+  await seedPromotion(PROMO_CODE);
+  const discounted = await issueQuote({ promotionCodes: [PROMO_CODE] });
+  const principal: Principal = { type: 'GUEST', id: guestId };
+  const body = { ...holdBody(), quoteId: discounted.quoteId };
+
+  // Lệnh không khai hai trường đó ⇒ lấy từ bản ghi ⇒ khớp fingerprint.
+  await expect(quoteService().consume(discounted.quoteId, principal, body)).resolves.toBeTruthy();
+  // Khai giá trị khác bản ghi ⇒ fingerprint lệch ⇒ 409 (giữ nguyên hợp đồng HB-074).
+  await expect(
+    quoteService().consume(discounted.quoteId, principal, {
+      ...body,
+      promotionCodes: ['HB076-OTHER'],
+    }),
+  ).rejects.toMatchObject({ status: 409, code: 'E_RATE_QUOTE_MISMATCH' });
+  await expect(
+    quoteService().consume(discounted.quoteId, principal, { ...body, ratePlanCode: 'SAVER3' }),
+  ).rejects.toMatchObject({ status: 409, code: 'E_RATE_QUOTE_MISMATCH' });
+
+  // Quote không khuyến mãi: hành vi cũ không đổi.
+  const plain = await issueQuote();
+  await expect(
+    quoteService().consume(plain.quoteId, principal, { ...holdBody(), quoteId: plain.quoteId }),
+  ).resolves.toBeTruthy();
+});
+
 test('AC3: DELETE giải phóng ngay, trả phòng về tồn khả dụng và ghi audit cùng transaction', async () => {
   await block(room2Id, stay.checkIn, stay.checkOut);
   const first = await createHold();
@@ -324,7 +383,20 @@ test('AC4: 200 yêu cầu song song qua API (pool 50) ⇒ đúng 1 thành công,
   const quote = await issueQuote();
   const body = { ...holdBody(), quoteId: quote.quoteId };
 
-  const responses = await Promise.all(Array.from({ length: 200 }, () => holdRequest(body)));
+  // 200 lệnh **song song**, mỗi lệnh một `Idempotency-Key`. Với `connection_limit=50`, hàng đợi kết nối
+  // vượt ngân sách `maxWait` (1 giây) của `IdempotencyStore` (HB-029) nên một phần lệnh nhận
+  // `500 E_GEN_SERVICE_UNAVAILABLE` **trước khi use case chạy** — đo trên `HEAD 95997e8` (chưa có bản
+  // sửa P2) cho đúng phân bố đó (154 lệnh 500 / 45 lệnh 409), tức không liên quan mã của HB-076. Đấy là
+  // tín hiệu "tạm thời không sẵn sàng" mà client phải thử lại, nên harness gửi lại **bằng khoá mới**
+  // (đúng chính sách thử lại của client; lệnh 500 không để lại hold) cho tới khi có phán quyết nghiệp
+  // vụ. Nhờ vậy **mọi** lệnh đều phải trả lời, còn lỗi hệ thống thật (tái diễn ở mọi lần thử) vẫn đỏ.
+  const attempt = async () => {
+    for (let tries = 1; ; tries++) {
+      const response = await holdRequest(body);
+      if (response.status !== 500 || tries >= 8) return response;
+    }
+  };
+  const responses = await Promise.all(Array.from({ length: 200 }, attempt));
   const summary = new Map<string, number>();
   for (const response of responses) {
     const key = `${response.status}:${response.status === 201 ? 'OK' : codeOf(response.body)}`;
@@ -336,7 +408,7 @@ test('AC4: 200 yêu cầu song song qua API (pool 50) ⇒ đúng 1 thành công,
   expect(winners).toHaveLength(1);
   expect(losers).toHaveLength(199);
   for (const loser of losers) {
-    expect(loser.status).toBe(409);
+    expect(loser.status, `phản hồi thua: ${JSON.stringify(loser.body)}`).toBe(409);
     expect(['E_INV_NO_AVAILABILITY', 'E_INV_ROOM_TAKEN']).toContain(codeOf(loser.body));
   }
 

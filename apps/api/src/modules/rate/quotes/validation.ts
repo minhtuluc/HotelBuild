@@ -88,25 +88,39 @@ export function quoteInput(value: unknown): QuoteInput {
 }
 
 /**
+ * Hai trường của `POST /quotes` mà **thân lệnh giữ/đặt chỗ không khai**: `holdCreateRequestSchema` là
+ * `strictObject` chỉ có các trường của kỳ lưu trú + `quoteId`, nên `ratePlanCode` (gói giá) và
+ * `promotionCodes` (mã khuyến mãi) **luôn vắng mặt** trên lệnh — chúng chỉ tồn tại trong bản ghi quote.
+ *
+ * Kiểu ở đây theo đúng bản ghi (`StoredQuote.input`, chuỗi thô); `quoteInput` bên dưới mới là chỗ đối
+ * chiếu hợp đồng `quoteRequestSchema`.
+ */
+export interface QuoteRecordFields {
+  readonly ratePlanCode: string;
+  readonly promotionCodes: readonly string[];
+}
+
+/**
  * Đầu vào dùng để **đối chiếu** một quote đã phát hành (HB-076/HB-077 truyền thân lệnh giữ/đặt chỗ:
  * có thêm `quoteId`, `guest`, `note`… nên chỉ lấy đúng các trường thuộc fingerprint của api.md §3.1;
  * trường lạ bị bỏ qua chứ không làm lệnh hỏng).
  *
- * `ratePlanCode` là trường bắt buộc của `POST /quotes` nhưng **không** có trên thân lệnh `POST /holds`
- * (`holdCreateRequestSchema` không nhận gói giá — HB-076/HB-151 lấy gói từ quote), nên caller truyền
- * mã gói giá đọc từ **chính bản ghi quote** (`stored.input.ratePlanCode`): client không thể chèn gói
- * giá khác vào fingerprint, và lệnh giữ chỗ vẫn đối chiếu đủ trường còn lại.
+ * `stored` là đầu vào đã lưu của quote: nó cấp giá trị cho các trường **vắng mặt** trên thân lệnh
+ * (`QuoteRecordFields`). Bỏ bước này thì fingerprint băm `ratePlanCode = undefined` và
+ * `promotionCodes = []` ⇒ quote có khuyến mãi hợp lệ vẫn bị `409 E_RATE_QUOTE_MISMATCH`.
+ *
+ * Trường nào thân lệnh **có** (HB-077/HB-151 khai đủ gói giá/mã) thì giữ nguyên giá trị người gọi:
+ * khác bản ghi ⇒ fingerprint lệch ⇒ `409 E_RATE_QUOTE_MISMATCH` như hợp đồng.
  */
-export function consumedInput(value: unknown, storedRatePlanCode?: string): QuoteInput {
+export function consumedInput(value: unknown, stored?: QuoteRecordFields): QuoteInput {
   const body = z.record(z.string(), z.unknown()).safeParse(value);
   if (!body.success) throw invalid();
   const record = body.data;
   const picked: Record<string, unknown> = {};
   for (const field of [...REQUIRED_FIELDS, 'childAges', 'promotionCodes'] as const)
-    picked[field] =
-      field === 'ratePlanCode' && storedRatePlanCode !== undefined
-        ? storedRatePlanCode
-        : record[field];
+    picked[field] = record[field];
+  for (const field of ['ratePlanCode', 'promotionCodes'] as const)
+    if (record[field] === undefined && stored !== undefined) picked[field] = stored[field];
   if (typeof record['quoteId'] !== 'string' || record['quoteId'].length === 0)
     throw missingField(['quoteId']);
   return quoteInput(picked);

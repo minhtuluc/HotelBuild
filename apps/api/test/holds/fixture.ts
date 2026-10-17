@@ -27,6 +27,7 @@ import type { AccessTokenClaims, Hold, Quote } from '@pinehill/contracts';
 import { AppModule } from '../../src/app.module.js';
 import { CLOCK } from '../../src/infrastructure/ports.js';
 import { signAccessToken } from '../../src/infrastructure/crypto/access-tokens.js';
+import { RateQuoteService } from '../../src/modules/rate/quotes/service.js';
 import { databaseUrl } from '../idempotency/database.js';
 import {
   clock,
@@ -48,6 +49,8 @@ const secrets = {
 
 export const http = () => request(app.getHttpServer());
 export const holdRedis = () => redis;
+/** Dịch vụ quote của app thật — ca AC2 kiểm nhánh injected `promotionCodes`/`ratePlanCode` (HB-077/HB-151). */
+export const quoteService = () => app.get(RateQuoteService);
 export { clock, rows, propertyId, typeId, roomId, room2Id, stay, userId };
 
 /** `WEB.hold_minutes = 20` (prisma/seed/reference-data.ts); `WALKIN` giữ 0 để kiểm `E_BOOK_INVALID_STATE`. */
@@ -168,6 +171,20 @@ export async function createHold(
 
 export async function count(sql: string, values: unknown[] = []): Promise<number> {
   return Number((await rows(`SELECT count(*)::int AS total FROM (${sql}) t`, values))[0]?.total);
+}
+
+/**
+ * Mã khuyến mãi cho ca AC2 (quote có mã rồi mới giữ chỗ). `promotions` **không** nằm trong danh sách
+ * bảng mà fixture `beforeEach` dọn, nên seed theo khoá duy nhất (`code`) để chạy lại được nhiều lần.
+ */
+export async function seedPromotion(code: string): Promise<void> {
+  await rows(
+    `INSERT INTO promotions(code,name,type,value,stackable,valid_from,valid_to,max_uses,used_count)
+      VALUES($1,'Synthetic HB-076','PERCENT',10,true,'2026-01-01','2026-12-31',NULL,0)
+      ON CONFLICT (code) DO UPDATE SET used_count=0, max_uses=NULL, status='ACTIVE',
+        valid_from='2026-01-01', valid_to='2026-12-31'`,
+    [code],
+  );
 }
 
 /**
