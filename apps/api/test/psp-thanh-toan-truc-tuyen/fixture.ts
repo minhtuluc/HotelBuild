@@ -14,7 +14,7 @@
  */
 import 'reflect-metadata';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, expect } from 'vitest';
+import { afterAll, beforeAll, beforeEach, expect } from 'vitest';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Redis } from 'ioredis';
@@ -169,7 +169,7 @@ export const onlineBody = (bookingId: string, overrides: object = {}): Record<st
 export async function seedPayment(
   bookingId: string,
   amount: number | bigint,
-  options: { status?: string; type?: string } = {},
+  options: { status?: string; type?: string; key?: string } = {},
 ): Promise<string> {
   return String(
     (
@@ -178,7 +178,13 @@ export async function seedPayment(
          VALUES($1::uuid,$2,'BANK_TRANSFER',$3,$4,$5,
                 CASE WHEN $4='SUCCEEDED' THEN clock_timestamp() END)
          RETURNING id`,
-        [bookingId, options.type ?? 'DEPOSIT', amount, options.status ?? 'SUCCEEDED', randomUUID()],
+        [
+          bookingId,
+          options.type ?? 'DEPOSIT',
+          amount,
+          options.status ?? 'SUCCEEDED',
+          options.key ?? randomUUID(),
+        ],
       )
     )[0]!.id,
   );
@@ -252,7 +258,15 @@ export function pspSimulator() {
 export let appConfig: ApiConfig;
 export let guestId = '';
 export let guestToken = '';
+export let otherGuestId = '';
 export let otherGuestToken = '';
+
+/** Đồng hồ của `test/idempotency/database.ts` nhảy 61 giây mỗi ca ⇒ ký lại phiên khách, tránh hết hạn. */
+beforeEach(async () => {
+  if (guestId === '') return;
+  guestToken = await guestTokenFor(guestId);
+  otherGuestToken = await guestTokenFor(otherGuestId);
+});
 
 beforeAll(async () => {
   if (!process.env.REDIS_URL) throw new Error('HB-094 requires Redis7; no skip fallback');
@@ -271,6 +285,10 @@ beforeAll(async () => {
     LOG_LEVEL: 'error',
     HOST: '127.0.0.1',
     PORT: 0,
+    // Kiểm thử: cho phép bộ mô phỏng xác minh sự kiện (cờ này KHÔNG dùng ngoài test — xem psp/settings).
+    PSP_ALLOW_MOCK: 'true',
+    // Danh sách trắng `returnUrl` của khách (F4) — khớp origin dùng trong các ca test.
+    PAYMENT_RETURN_URL_ORIGINS: 'https://guest.app',
   };
   const module = AppModule.register(appConfig);
   app = await NestFactory.create<NestFastifyApplication>(
@@ -308,6 +326,7 @@ beforeAll(async () => {
   guestId = guest.id;
   guestToken = guest.token;
   const other = await issueGuest('+84900000095', 'HB-094 Other guest');
+  otherGuestId = other.id;
   otherGuestToken = other.token;
 }, 120000);
 

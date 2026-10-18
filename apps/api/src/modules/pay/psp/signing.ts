@@ -26,12 +26,21 @@ export function equalsHex(expected: string, actual: string): boolean {
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
-/** Cặp `k=v` sau sắp xếp khoá, bỏ giá trị rỗng — dạng canonical để ký. */
+/**
+ * Cặp `k=v` sau sắp xếp khoá, bỏ giá trị rỗng — dạng canonical để ký.
+ * Giá trị được **URL-encode** đúng như khi truyền trên query (VNPay ký dữ liệu đã encode; dùng cùng
+ * phép encode của `URLSearchParams` nên chuỗi ký luôn khớp URL phát ra — review vòng hai P1/F2).
+ */
 export function signaturePairs(params: Readonly<Record<string, string>>): string[] {
   return Object.keys(params)
     .filter((key) => params[key] !== '')
     .sort()
-    .map((key) => `${key}=${params[key] ?? ''}`);
+    .map((key) => `${key}=${encodeQueryValue(params[key] ?? '')}`);
+}
+
+/** Cùng quy tắc mã hoá với `URLSearchParams` khi dựng URL cổng (khoảng trắng thành `+`). */
+export function encodeQueryValue(value: string): string {
+  return new URLSearchParams({ v: value }).toString().slice(2);
 }
 
 export function signatureString(params: Readonly<Record<string, string>>): string {

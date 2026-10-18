@@ -32,6 +32,7 @@ import { ipnUrl } from '../psp/settings.js';
 import { requireOnlinePayment } from './principal.js';
 import {
   ENDED_BOOKING_STATUSES,
+  ORDER_REF_PREFIX,
   obligation,
   projectPayment,
   projectStatus,
@@ -42,9 +43,10 @@ import {
   gatewayError,
   invalidState,
   missing,
+  requireAllowedReturnUrl,
   type OnlinePaymentInput,
 } from './validation.js';
-import { insertOnlinePayment } from './writes.js';
+import { auditOnlinePayment, insertOnlinePayment } from './writes.js';
 
 type Tx = PrismaTypes.TransactionClient;
 
@@ -58,14 +60,16 @@ export class OnlinePaymentsService {
     @Inject(AuditWriter) private readonly audit: AuditWriter,
   ) {}
 
-  /** AC1–AC3: một Payment `PENDING` đúng nghĩa vụ, `orderRef` bền, audit cùng transaction. */
+  /** AC1–AC3: một Payment `PENDING` đúng nghĩa vụ, `orderRef` do máy chủ sinh, audit cùng transaction. */
   async init(
     tx: Tx,
     caller: BookingCaller,
     input: OnlinePaymentInput,
-    orderRef: string,
+    idempotencyKey: string,
   ): Promise<Payment> {
     try {
+      // F4: `returnUrl` chỉ được trỏ về origin đã khai (danh sách trắng / gốc callback), kiểm trước CSDL.
+      requireAllowedReturnUrl(this.gateways.settings, input.returnUrl);
       const booking = await lockBooking(tx, input.bookingId);
       requireOnlinePayment(this.permissions, caller, {
         guestId: booking.guestId,
@@ -90,18 +94,23 @@ export class OnlinePaymentsService {
         input.type,
       );
       if (input.amount !== due) throw amountMismatch();
-      const adapter = this.gateways.for(input.method);
-      const session = this.openSession(adapter, input, now, caller.ip, orderRef);
-      const row = await insertOnlinePayment(tx, this.audit, {
+      const write = {
         bookingId: input.bookingId,
         propertyId: booking.propertyId,
         type: input.type,
         method: input.method,
         amount: input.amount,
-        orderRef,
+        idempotencyKey,
         caller,
         now,
-      });
+      };
+      const row = await insertOnlinePayment(tx, write);
+      // F7: `orderRef` do **máy chủ** sinh từ định danh hàng `payments` (`PH-<uuid>`), không phải khoá khách
+      // gửi ⇒ HB-095 bỏ tiền tố `PH-` rồi tra theo khoá chính; duy nhất tuyệt đối, không đổi DDL.
+      const orderRef = `${ORDER_REF_PREFIX}${row.id}`;
+      const adapter = this.gateways.for(input.method);
+      const session = this.openSession(adapter, input, now, caller.ip, orderRef);
+      await auditOnlinePayment(tx, this.audit, write, { id: row.id, orderRef });
       return projectPayment(row, session.paymentUrl);
     } catch (error) {
       // Xung đột khoá/tuần tự (40P01/40001/55P03, P2034) ⇒ chạy lại **toàn bộ** transaction theo ADR-014.
@@ -141,7 +150,7 @@ export class OnlinePaymentsService {
         amount: input.amount,
         type: input.type,
         returnUrl: input.returnUrl,
-        ipnUrl: ipnUrl(this.gateways.settings, input.method, input.returnUrl),
+        ipnUrl: ipnUrl(this.gateways.settings, input.method),
         now,
         ip,
       });

@@ -101,16 +101,13 @@ export class VnpayAdapter implements PaymentGatewayAdapter {
   }
 
   verify(raw: string): PspResult | null {
+    // Hàng rào F1: khoá mô phỏng là công khai ⇒ chế độ `mock` KHÔNG xác nhận sự kiện nào, trừ khi kiểm
+    // thử bật `PSP_ALLOW_MOCK=true`. Không có đường nào để tiền được ghi bằng khoá giả.
+    if (this.settings.mode === 'mock' && !this.settings.allowMockEvents) return null;
     const params = Object.fromEntries(new URLSearchParams(raw));
-    const provided = params[HASH_FIELD];
     const orderRef = params['vnp_TxnRef'];
     const amount = vnpayAmount(params['vnp_Amount']);
-    // Chữ ký, `vnp_TmnCode` và hai trường dữ liệu tối thiểu phải cùng xác thực thì mới đọc kết quả.
-    const authentic =
-      provided !== undefined &&
-      params[TMN_FIELD] === this.settings.merchantCode &&
-      equalsHex(vnpaySignature(params, this.settings.secret), provided);
-    if (orderRef === undefined || amount === null || !authentic) return null;
+    if (orderRef === undefined || amount === null || !this.authentic(params)) return null;
     return {
       orderRef,
       providerTxnId: params['vnp_TransactionNo'] ?? null,
@@ -118,5 +115,15 @@ export class VnpayAdapter implements PaymentGatewayAdapter {
       outcome: vnpaySucceeded(params) ? 'SUCCEEDED' : 'FAILED',
       paidAt: parseVnTimestamp(params['vnp_PayDate'] ?? ''),
     };
+  }
+
+  /** Chữ ký hợp lệ **và** đúng merchant đang cấu hình — cổng khác không được ghi tiền (§5.2). */
+  private authentic(params: Readonly<Record<string, string>>): boolean {
+    const provided = params[HASH_FIELD];
+    return (
+      provided !== undefined &&
+      params[TMN_FIELD] === this.settings.merchantCode &&
+      equalsHex(vnpaySignature(params, this.settings.secret), provided)
+    );
   }
 }

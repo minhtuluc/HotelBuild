@@ -43,8 +43,16 @@ const apiEnvSchema = z.object({
   MOMO_SECRET_KEY: z.string().min(1).optional(),
   MOMO_PAYMENT_URL: urlWithProtocol('https:').optional(),
   // Gốc URL công khai mà PSP gọi về (`.../integrations/psp/{vnpay|momo}/callback`, HB-095). Bỏ trống ⇒
-  // suy từ `returnUrl` của lệnh khởi tạo (đủ cho local; deploy thật PHẢI khai).
+  // dev dùng gốc loopback cố định từ `HOST`/`PORT`; production **bắt buộc** (xem `pspSettings`).
   PAYMENT_PSP_CALLBACK_BASE_URL: urlWithProtocol('http:', 'https:').optional(),
+  // Danh sách trắng **origin** được phép làm `returnUrl` của khách (phẩy ngăn cách). Bỏ trống ⇒ dùng
+  // origin của `PAYMENT_PSP_CALLBACK_BASE_URL`; rỗng cả hai ⇒ chỉ dev/test mới cho qua (production dừng).
+  PAYMENT_RETURN_URL_ORIGINS: z.string().min(1).optional(),
+  // Cờ **chỉ dùng cho kiểm thử**: cho phép bộ mô phỏng PSP xác minh sự kiện. Thiếu cờ ⇒ `verify` của
+  // adapter `mock` từ chối mọi sự kiện (khoá mô phỏng là công khai, không được xác nhận tiền).
+  PSP_ALLOW_MOCK: z.enum(['true', 'false']).optional(),
+  // Chỉ để quyết định fail-fast (production không được chạy adapter mô phỏng). `loadConfig` đọc từ env.
+  NODE_ENV: z.enum(['development', 'test', 'production']).optional(),
   LOG_LEVEL: z.enum(logLevels).default('info'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   // Mặc định chỉ nghe loopback (dev); container đặt HOST=0.0.0.0 (AC6).

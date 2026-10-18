@@ -164,6 +164,8 @@ export class MomoAdapter implements PaymentGatewayAdapter {
   }
 
   verify(raw: string): PspResult | null {
+    // Hàng rào F1: chế độ `mock` từ chối mọi sự kiện trừ khi kiểm thử bật `PSP_ALLOW_MOCK=true`.
+    if (this.settings.mode === 'mock' && !this.settings.allowMockEvents) return null;
     const parsed = ipnSchema.safeParse(parseJson(raw));
     if (!parsed.success) return null;
     const ipn = parsed.data;

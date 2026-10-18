@@ -31,6 +31,11 @@ export interface LedgerSource {
   reserved: bigint;
   available: bigint;
 }
+/**
+ * Chiếu sổ cái. `paidByType` (HB-094, sửa P2 vòng hai, **theo yêu cầu của lead**) là trường **cộng thêm**
+ * để người tiêu thụ lấy đúng nghĩa vụ theo loại Payment thay vì bù trừ trên tổng thu mọi loại
+ * (BR-PAY-02/ADR-016); không thay đổi API hiện có của HB-093.
+ */
 export interface LedgerProjection {
   paidAmount: bigint;
   refundedAmount: bigint;

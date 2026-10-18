@@ -20,6 +20,9 @@ import type { OnlineType } from './validation.js';
 /** BR-PAY-05: một lần thanh toán quá 15 phút không có callback ⇒ FAILED cục bộ; cũng là `vnp_ExpireDate`. */
 export const PAYMENT_WINDOW_SECONDS = 900;
 
+/** Tiền tố `orderRef` **do máy chủ** sinh (F7): cổng thấy `PH-<payments.id>`; HB-095 bỏ tiền tố để tra. */
+export const ORDER_REF_PREFIX = 'PH-';
+
 /** Trạng thái đã kết thúc: không khởi tạo thanh toán mới (BR-PAY-11 giữ trạng thái kết thúc, không hồi sinh). */
 export const ENDED_BOOKING_STATUSES: Readonly<Record<string, true>> = {
   CANCELLED: true,
