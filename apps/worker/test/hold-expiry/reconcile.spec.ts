@@ -95,11 +95,19 @@ describe.skipIf(redisUrl === '')('HB-078 — đối chiếu projection Hold', ()
       900,
     );
     await redis.set('hold:hong', 'không-phải-json', 'EX', 900);
+    // `bookingId` không phải UUID: nếu lọt vào `WHERE id = ANY($1::uuid[])` thì Postgres trả `22P02` và
+    // **cả** lượt đối chiếu bị bỏ; bản ghi này phải chỉ được đếm là không đọc được.
+    await redis.set(
+      'hold:khong-uuid',
+      holdRecordJson({ bookingId: 'khong-phai-uuid', channelId: live.channelId, expiresAt: PAST }),
+      'EX',
+      900,
+    );
 
     const session = createHoldProjectionSession(isolated);
     try {
       const report = await reconcileHoldProjection(testDb.db, session.store, { maxKeys: 100 });
-      expect(report).toEqual({ scanned: 4, active: 3, repaired: 1, orphaned: 1, unreadable: 1 });
+      expect(report).toEqual({ scanned: 4, active: 3, repaired: 1, orphaned: 1, unreadable: 2 });
     } finally {
       await session.close();
     }
@@ -114,6 +122,7 @@ describe.skipIf(redisUrl === '')('HB-078 — đối chiếu projection Hold', ()
     expect((await readHoldRecord(redis, released.bookingId))?.status).toBe('RELEASED');
     expect(await redis.exists(`hold:${orphanId}`)).toBe(0);
     expect(await redis.get('hold:hong')).toBe('không-phải-json');
+    expect(await redis.get('hold:khong-uuid')).not.toBeNull();
   }, 60_000);
 
   it('không có khoá nào ⇒ lượt đối chiếu rỗng, không chạm CSDL', async () => {

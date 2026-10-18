@@ -31,7 +31,9 @@ export const HOLD_PROJECTION_STATUSES = ['ACTIVE', 'RELEASED', 'EXPIRED'] as con
  */
 export const holdProjectionSchema = z.object({
   id: z.string().min(1),
-  bookingId: z.string().min(1),
+  // Bản ghi lạ (không phải UUID) phải rơi vào `unreadable` thay vì đi thẳng vào `WHERE id = ANY($1::uuid[])`
+  // (Postgres `22P02` sẽ làm **cả** lượt đối chiếu 900 giây bị bỏ, trái chủ đích "bản ghi hỏng chỉ đếm").
+  bookingId: z.string().uuid(),
   channelId: z.string().min(1),
   expiresAt: z.string().min(1),
   status: z.enum(HOLD_PROJECTION_STATUSES),

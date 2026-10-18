@@ -161,18 +161,22 @@ describe('HB-078 — đối chiếu projection: nhánh thoát sớm', () => {
     });
   });
 
-  it('khoá hết TTL, JSON hỏng và bản ghi sai hình dạng chỉ được ĐẾM, không bị sửa mù', async () => {
+  it('khoá hết TTL, JSON hỏng, bản ghi sai hình dạng và `bookingId` không phải UUID chỉ được ĐẾM, không bị sửa mù', async () => {
     const store = fakeStore([
       ['hold:mat-ttl', null],
       ['hold:hong', 'không-phải-json'],
       ['hold:thieu-truong', '{"status":"ACTIVE"}'],
+      [
+        'hold:khong-uuid',
+        '{"id":"x","bookingId":"khong-phai-uuid","channelId":"c","expiresAt":"2026-10-18T00:00:00.000Z","status":"ACTIVE","releasedAt":null,"createdAt":"2026-10-18T00:00:00.000Z","quotedTotal":1}',
+      ],
     ]);
     expect(await reconcileHoldProjection(db, store, { maxKeys: 10 })).toEqual({
       scanned: 0,
       active: 0,
       repaired: 0,
       orphaned: 0,
-      unreadable: 2,
+      unreadable: 3,
     });
   });
 });
