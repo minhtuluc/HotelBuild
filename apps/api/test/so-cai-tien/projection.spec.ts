@@ -71,6 +71,14 @@ test('BR-PAY-02 counts only successful collections and never compensation or ref
     refundReserved: 0n,
     balanceDue: 0n,
   });
+  // Thu theo **từng loại** (BR-PAY-02): người tiêu thụ đúng nghĩa vụ lấy đúng loại, không bù trừ toàn cục.
+  expect(projectLedger(f).paidByType).toEqual({
+    DEPOSIT: 1000n,
+    BALANCE: 2000n,
+    EXTRA_SERVICE: 100n,
+    PENALTY: 200n,
+    RESCHEDULE_FEE: 300n,
+  });
 });
 
 test('room debts do not net across rooms and released funds cannot pay retained room twice', () => {

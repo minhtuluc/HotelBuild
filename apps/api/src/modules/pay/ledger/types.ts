@@ -36,6 +36,9 @@ export interface LedgerProjection {
   refundedAmount: bigint;
   refundReserved: bigint;
   balanceDue: bigint;
+  /** Tổng thu SUCCEEDED **theo từng loại** Payment (VND nguyên) — đúng BR-PAY-02/ADR-016: người tiêu
+   * thụ lấy đúng nghĩa vụ mình cần (vd. cọc), **không** dùng tổng thu mọi loại để bù trừ toàn cục. */
+  paidByType: Readonly<Record<string, bigint>>;
   sources: LedgerSource[];
   charges: { id: string; outstanding: bigint }[];
 }

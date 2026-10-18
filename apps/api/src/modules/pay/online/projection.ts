@@ -3,9 +3,10 @@
  *
  * Nguồn số là sổ cái (`BookingLedger.read`, HB-093) + snapshot bất biến của booking, không cột
  * `bookings.balance_due` đã biết lệch (TD-18) và **không** tính lại giá/chính sách ở đây:
- * - `DEPOSIT`: `depositAmount − paidAmount` (BR-PAY-01/02 theo `paidAmount` = tổng thu SUCCEEDED), chỉ khi
- *   booking còn ở giai đoạn trước xác nhận **và** hold còn hạn — hết hạn thì nghĩa vụ bằng 0 (AC2:
- *   bắt đầu thanh toán không gia hạn hold; tiền thu muộn đi vào đường hoàn BR-BOOK-18, HB-095).
+ * - `DEPOSIT`: `depositAmount − paidByType['DEPOSIT']` (api.md §3.5 "amount PHẢI khớp depositAmount";
+ *   BR-PAY-02/ADR-016 cấm dùng **tổng thu mọi loại** để bù trừ toàn cục — chỉ loại SUCCEEDED đúng loại),
+ *   chỉ khi booking còn ở giai đoạn trước xác nhận **và** hold còn hạn — hết hạn thì nghĩa vụ bằng 0
+ *   (AC2: bắt đầu thanh toán không gia hạn hold; tiền thu muộn đi vào đường hoàn BR-BOOK-18, HB-095).
  * - `BALANCE`: `balanceDue` của sổ cái (đã gồm phạt/phí/dịch vụ chưa trả, BR-PAY-02).
  * Nghĩa vụ `0n` ⇒ **mọi** số tiền đều là `422 E_PAY_AMOUNT_MISMATCH`: không có gì để thu thì không có
  * lệnh khởi tạo hợp lệ. Cùng công thức này là nguồn cho `onlineDepositAmount` của `GET /bookings/{id}/balance`
@@ -38,8 +39,8 @@ export interface ObligationFacts {
   readonly status: string;
   /** Snapshot bất biến từ booking (HB-077), không suy lại từ `totalAmount × percent`. */
   readonly depositAmount: bigint;
-  /** `LedgerProjection.paidAmount` — tổng thu SUCCEEDED. */
-  readonly paidAmount: bigint;
+  /** `LedgerProjection.paidByType['DEPOSIT']` — tổng thu SUCCEEDED **đúng loại** (BR-PAY-02/ADR-016). */
+  readonly depositPaid: bigint;
   /** `LedgerProjection.balanceDue` — tổng nghĩa vụ còn phải thu. */
   readonly balanceDue: bigint;
   readonly holdExpiresAt: Date | null;
@@ -52,7 +53,7 @@ export function obligation(facts: ObligationFacts, type: OnlineType): bigint {
   if (PRE_CONFIRMATION_STATUSES[facts.status] !== true) return 0n;
   if (facts.holdExpiresAt !== null && facts.holdExpiresAt.getTime() <= facts.now.getTime())
     return 0n;
-  const remaining = facts.depositAmount - facts.paidAmount;
+  const remaining = facts.depositAmount - facts.depositPaid;
   return remaining > 0n ? remaining : 0n;
 }
 

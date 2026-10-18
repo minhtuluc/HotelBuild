@@ -16,11 +16,12 @@ import {
   createBooking,
   guestToken,
   otherGuestToken,
-  otherPropertyId,
   onlineBody,
   onlineRequest,
+  otherPropertyId,
   rows,
   seedBooking,
+  seedPayment,
   staffToken,
   userId,
 } from './fixture.js';
@@ -103,6 +104,46 @@ test('AC1/BR-PAY-02: nghĩa vụ BALANCE đọc từ sổ cái — cọc chưa �
   );
   expect(bad.status, JSON.stringify(bad.body)).toBe(422);
   expect(codeOf(bad.body)).toBe('E_PAY_AMOUNT_MISMATCH');
+});
+
+test('BR-PAY-02/ADR-016: thu RESCHEDULE_FEE song song không hạ obligation cọc (cấm bù trừ toàn cục)', async () => {
+  const booking = await createdBooking();
+  // HB-096/HB-098 có thể thu loại khác khi booking vẫn PENDING_PAYMENT; chỉ type=DEPOSIT được trừ cọc.
+  await seedPayment(booking.id, 100000, { type: 'RESCHEDULE_FEE' });
+  const response = await onlineRequest(onlineBody(booking.id, { amount: booking.depositAmount }), {
+    key: nextKey(),
+  });
+  expect(response.status, JSON.stringify(response.body)).toBe(201);
+  expect(paymentSchema.parse(response.body).amount).toBe(Number(booking.depositAmount));
+  // Tổng thu mọi loại có RESCHEDULE_FEE nhưng nghĩa vụ cọc vẫn nguyên (chỉ type=DEPOSIT được trừ).
+  const ledgerRows = await rows(
+    'SELECT paid_amount::text AS paid FROM bookings WHERE id=$1::uuid',
+    [String(booking.id)],
+  );
+  expect(BigInt(String(ledgerRows[0]?.['paid'] ?? '0'))).toBe(0n);
+});
+
+test('BR-PAY-02: cọc thu một phần bằng type=DEPOSIT ⇒ obligation cọc chỉ còn phần thiếu', async () => {
+  const booking = await createdBooking();
+  // Cọc của booking chuẩn thường < 200.000 ⇒ thu trước một nửa, obligation còn lại đúng phần thiếu.
+  const partial = Number(booking.depositAmount) - Math.floor(Number(booking.depositAmount) / 2);
+  await seedPayment(booking.id, BigInt(Math.round(partial)), { type: 'DEPOSIT' });
+  const right = await onlineRequest(
+    onlineBody(booking.id, { amount: Number(booking.depositAmount) / 2 }),
+    { key: nextKey() },
+  );
+  expect(right.status, JSON.stringify(right.body)).toBe(201);
+  expect(paymentSchema.parse(right.body).amount).toBe(Number(booking.depositAmount) / 2);
+});
+
+test('BR-PAY-02: cọc thu đủ bằng type=DEPOSIT ⇒ obligation cọc về 0, mọi số tiền đều lệch', async () => {
+  const booking = await createdBooking();
+  await seedPayment(booking.id, booking.depositAmount, { type: 'DEPOSIT' });
+  const response = await onlineRequest(onlineBody(booking.id, { amount: booking.depositAmount }), {
+    key: nextKey(),
+  });
+  expect(response.status).toBe(422);
+  expect(codeOf(response.body)).toBe('E_PAY_AMOUNT_MISMATCH');
 });
 
 test('AC2: hold đã hết hạn theo giờ CSDL ⇒ không còn nghĩa vụ cọc để khởi tạo', async () => {

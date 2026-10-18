@@ -1,13 +1,17 @@
 import type { LedgerFacts, LedgerProjection, LedgerSource } from './types.js';
-import { groupLedger, requireLedger, type LedgerGroups } from './validation.js';
+import { groupLedger, requireLedger, isCollection, type LedgerGroups } from './validation.js';
 import { collectedSources, appliedCharges, settleRefunds } from './allocations.js';
 export { LedgerError, requireLedger } from './validation.js';
-function totals(sources: Map<string, LedgerSource>): LedgerProjection {
+function totals(
+  sources: Map<string, LedgerSource>,
+  paidByType: Readonly<Record<string, bigint>>,
+): LedgerProjection {
   const projection: LedgerProjection = {
     paidAmount: 0n,
     refundedAmount: 0n,
     refundReserved: 0n,
     balanceDue: 0n,
+    paidByType,
     sources: [],
     charges: [],
   };
@@ -47,13 +51,23 @@ function debts(
     projection.balanceDue += due;
   }
 }
+function paidByType(groups: LedgerGroups): Record<string, bigint> {
+  const totals: Record<string, bigint> = {};
+  for (const payment of groups.payments.values()) {
+    // Chỉ dòng thu SUCCEEDED mới cộng nghĩa vụ (BR-PAY-02); REFUND/COMPENSATION chi ra không thuộc đây.
+    if (payment.status !== 'SUCCEEDED' || !isCollection(payment.type)) continue;
+    totals[payment.type] = (totals[payment.type] ?? 0n) + payment.amount;
+  }
+  return totals;
+}
+
 /** BR-PAY-02 / ADR-016: integer VND, per-obligation allocation, no global netting or policy evaluation. */
 export function projectLedger(facts: LedgerFacts): LedgerProjection {
   const groups = groupLedger(facts),
     sources = collectedSources(groups);
   const applied = appliedCharges(facts, groups, sources);
   settleRefunds(facts, groups, sources);
-  const projection = totals(sources);
+  const projection = totals(sources, paidByType(groups));
   debts(groups, applied, facts.booking.status, projection);
   return projection;
 }

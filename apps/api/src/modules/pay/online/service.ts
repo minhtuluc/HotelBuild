@@ -80,7 +80,9 @@ export class OnlinePaymentsService {
         {
           status: booking.status,
           depositAmount: booking.depositAmount,
-          paidAmount: projection.paidAmount,
+          // Tổng thu **đúng loại** (BR-PAY-02/ADR-016): khoản PENALTY/EXTRA_SERVICE thu song song không
+          // được hạ obligation cọc đi — bù trừ toàn cục bị cấm (api.md §3.5, csdl.md §3).
+          depositPaid: projection.paidByType['DEPOSIT'] ?? 0n,
           balanceDue: projection.balanceDue,
           holdExpiresAt: booking.holdExpiresAt,
           now,

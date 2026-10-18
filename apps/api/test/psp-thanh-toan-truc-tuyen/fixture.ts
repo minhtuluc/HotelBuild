@@ -29,7 +29,9 @@ import { pspSettings } from '../../src/modules/pay/psp/settings.js';
 import { PspSimulator } from '../../src/modules/pay/psp/simulator.js';
 import type { ApiConfig } from '../../src/config/env.js';
 import { databaseUrl, password } from '../idempotency/database.js';
-import { clock, rows, propertyId, typeId, stay, userId } from '../room-blocks/inventory-seed.js';
+import { clock, propertyId, typeId, stay, userId } from '../room-blocks/inventory-seed.js';
+import { rows } from '../idempotency/database.js';
+export { rows };
 
 let app: NestFastifyApplication;
 let redis: Redis;
@@ -41,14 +43,14 @@ const secrets = {
 export const http = () => request(app.getHttpServer());
 export {
   clock,
-  rows,
-  propertyId,
+  /** Cơ sở khác của seed dùng chung (H029-B) cho ca kiểm phạm vi ngoài. */
   otherPropertyId,
+  propertyId,
   typeId,
-  otherTypeId,
   stay,
   userId,
 } from '../room-blocks/inventory-seed.js';
+
 const GUEST_ROLE = z.custom<AccessTokenClaims['role']>((value) => value === 'GUEST').parse('GUEST');
 
 async function issueGuest(phone: string, fullName: string): Promise<{ id: string; token: string }> {
