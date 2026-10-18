@@ -86,6 +86,13 @@ function independentOracle(): Record<string, Expected> {
     status: 404,
     method: RequestMethod.DELETE,
   };
+  // HB-096 / api.md §2.6, §6.1: thu tiền tại quầy là tuyến 🔒 PIN của FRONT_DESK/RESERVATION_AGENT
+  // (chỉ cọc)/ACCOUNTANT; thân oracle không hợp lệ → 400 trước khi chạm pinToken.
+  expected['payments'] = {
+    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'ACCOUNTANT'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
   // Sources: HB-034 AC2, BR-INV-06 and api.md §2.2; independent of module permissions.
   const keyed = Object.fromEntries(
     Object.entries(expected).map(([path, rule]) => [`${rule.method}:${path}`, rule]),

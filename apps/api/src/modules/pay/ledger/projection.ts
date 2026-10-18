@@ -12,6 +12,7 @@ function totals(
     refundReserved: 0n,
     balanceDue: 0n,
     paidByType,
+    outstandingByKind: {},
     sources: [],
     charges: [],
   };
@@ -48,6 +49,8 @@ function debts(
   for (const charge of groups.charges.values()) {
     const due = chargeDebt(charge, applied.get(charge.id) ?? 0n, status);
     projection.charges.push({ id: charge.id, outstanding: due });
+    projection.outstandingByKind[charge.kind] =
+      (projection.outstandingByKind[charge.kind] ?? 0n) + due;
     projection.balanceDue += due;
   }
 }

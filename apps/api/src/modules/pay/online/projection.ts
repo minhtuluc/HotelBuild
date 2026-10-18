@@ -15,7 +15,6 @@
 import type { Prisma } from '@prisma/client';
 import { paymentSchema, paymentStatusViewSchema } from '@pinehill/contracts';
 import type { Payment, PaymentStatusView } from '@pinehill/contracts';
-import type { OnlineType } from './validation.js';
 
 /** BR-PAY-05: một lần thanh toán quá 15 phút không có callback ⇒ FAILED cục bộ; cũng là `vnp_ExpireDate`. */
 export const PAYMENT_WINDOW_SECONDS = 900;
@@ -28,34 +27,11 @@ export const ENDED_BOOKING_STATUSES: Readonly<Record<string, true>> = {
   CHECKED_OUT: true,
 };
 
-/** Giai đoạn trước xác nhận: cọc là nghĩa vụ của khách (BR-BOOK-09). */
-const PRE_CONFIRMATION_STATUSES: Readonly<Record<string, true>> = {
-  DRAFT: true,
-  HELD: true,
-  PENDING_PAYMENT: true,
-};
-
-export interface ObligationFacts {
-  readonly status: string;
-  /** Snapshot bất biến từ booking (HB-077), không suy lại từ `totalAmount × percent`. */
-  readonly depositAmount: bigint;
-  /** `LedgerProjection.paidByType['DEPOSIT']` — tổng thu SUCCEEDED **đúng loại** (BR-PAY-02/ADR-016). */
-  readonly depositPaid: bigint;
-  /** `LedgerProjection.balanceDue` — tổng nghĩa vụ còn phải thu. */
-  readonly balanceDue: bigint;
-  readonly holdExpiresAt: Date | null;
-  /** Giờ CSDL đọc sau khi khoá (ADR-014). */
-  readonly now: Date;
-}
-
-export function obligation(facts: ObligationFacts, type: OnlineType): bigint {
-  if (type === 'BALANCE') return facts.balanceDue;
-  if (PRE_CONFIRMATION_STATUSES[facts.status] !== true) return 0n;
-  if (facts.holdExpiresAt !== null && facts.holdExpiresAt.getTime() <= facts.now.getTime())
-    return 0n;
-  const remaining = facts.depositAmount - facts.depositPaid;
-  return remaining > 0n ? remaining : 0n;
-}
+/**
+ * Nghĩa vụ thanh toán được định nghĩa **một chỗ** ở `pay/ledger/obligation.ts` (hàm thuần dùng chung
+ * với lệnh thu tại quầy HB-096 và `GET /bookings/{id}/balance`). Đường trực tuyến gọi thẳng
+ * `obligationDue` với `roomOutstanding` từ projection sổ cái.
+ */
 
 /** Cột dùng cho chiếu `Payment`; không chọn và không trả bất kỳ dữ liệu thẻ/PII nào (BR-PAY-04). */
 export const paymentSelect = {

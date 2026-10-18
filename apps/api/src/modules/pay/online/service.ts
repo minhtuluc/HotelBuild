@@ -30,9 +30,9 @@ import type { PaymentGateways } from '../psp/gateways.js';
 import type { PaymentGatewayAdapter, PspInit } from '../psp/port.js';
 import { ipnUrl } from '../psp/settings.js';
 import { requireOnlinePayment } from './principal.js';
+import { obligationDue } from '../ledger/obligation.js';
 import {
   ENDED_BOOKING_STATUSES,
-  obligation,
   projectPayment,
   projectStatus,
   statusSelect,
@@ -76,7 +76,9 @@ export class OnlinePaymentsService {
       // Giờ CSDL là nguồn thời gian của tiền và hold (ADR-014, BR-BOOK-18), không phải đồng hồ tiến trình.
       const now = (await tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`)[0]!.now;
       const projection = await this.ledger.read(tx, input.bookingId);
-      const due = obligation(
+      // Nghĩa vụ dùng **cùng** hàm thuần với lệnh thu tại quầy (pay/ledger/obligation.ts):
+      // cọc chặn bởi nghĩa vụ ROOM còn lại, không bù trừ toàn cục (BR-PAY-02/ADR-016).
+      const due = obligationDue(
         {
           status: booking.status,
           depositAmount: booking.depositAmount,
@@ -84,6 +86,7 @@ export class OnlinePaymentsService {
           // được hạ obligation cọc đi — bù trừ toàn cục bị cấm (api.md §3.5, csdl.md §3).
           depositPaid: projection.paidByType['DEPOSIT'] ?? 0n,
           balanceDue: projection.balanceDue,
+          roomOutstanding: projection.outstandingByKind['ROOM'] ?? 0n,
           holdExpiresAt: booking.holdExpiresAt,
           now,
         },
