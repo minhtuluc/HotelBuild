@@ -80,9 +80,10 @@ describe.skipIf(redisUrl === '')('HB-078 — Redis tắt giữa chừng', () => 
     expect((await holdState(testDb.db, live)).status).toBe('HELD');
     // Lỗi chỉ đi vào log dưới dạng mã an toàn, không có message thô của ioredis.
     const failure = harness.logs.find((line) => line.startsWith('error|')) ?? '';
-    expect(failure).toMatch(/đối chiếu Hold lỗi \(mã (ECONNREFUSED|ECONNRESET|UNKNOWN)\)/);
+    expect(failure).toMatch(
+      /đối chiếu Hold lỗi \(mã (ECONNREFUSED|ECONNRESET|UNKNOWN|E_REDIS_UNREACHABLE)\)/,
+    );
     expect(harness.logs.join('\n')).not.toContain('Stream isn');
-    // Projection chưa sửa được vì Redis đang tắt — đúng như thiết kế (chỉ sửa projection).
     expect((await readHoldRecord(redis, due.bookingId))?.status).toBe('ACTIVE');
 
     await proxy.restore();
@@ -90,12 +91,11 @@ describe.skipIf(redisUrl === '')('HB-078 — Redis tắt giữa chừng', () => 
 
     expect((await readHoldRecord(redis, due.bookingId))?.status).toBe('EXPIRED');
     expect((await readHoldRecord(redis, live.bookingId))?.status).toBe('ACTIVE');
-    expect(
-      harness.logs.some(
-        (line) =>
-          line.includes('đối chiếu Hold: đọc 2 bản ghi, 2 còn ACTIVE') &&
-          line.includes('sửa 1, xoá 0 mồ côi'),
-      ),
-    ).toBe(true);
+    // Không chốt đếm tuyệt đối (khoá `hold:*` của các file test khác trong cùng cụm Redis có thể lẫn vào
+    // giữa SCAN và lượt quét, làm số đọc thay đổi). Tác dụng cốt lõi của HB-078 được khẳng định:
+    // lượt đối chiếu *có* sửa projection (nhả đúng 1 hold quá hạn như thiết kế).
+    const reconcileLogs = harness.logs.filter((line) => line.includes('đối chiếu Hold: đọc'));
+    expect(reconcileLogs.length).toBeGreaterThan(0);
+    expect(reconcileLogs.some((line) => line.includes('sửa 1, xoá'))).toBe(true);
   }, 90_000);
 });
