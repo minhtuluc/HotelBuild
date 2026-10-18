@@ -1,8 +1,18 @@
 import { createConnection, createServer } from 'node:net';
 import type { Socket } from 'node:net';
 
+export interface RedisProxy {
+  /** URL trỏ vào proxy (cùng DB/hostname mật khẩu với Redis thật). */
+  readonly url: string;
+  /** Đóng cổng và cắt mọi socket đang mở (mô phỏng Redis chết giữa chừng). */
+  cut(): Promise<void>;
+  /** Mở lại đúng cổng đã dùng — client cũ kết nối lại được. */
+  restore(): Promise<void>;
+  close(): Promise<void>;
+}
+
 /** Cắt đúng đường TCP của ca thử; Redis thật và các client khác không bị dừng. */
-export async function redisProxy(redisUrl: string) {
+export async function redisProxy(redisUrl: string): Promise<RedisProxy> {
   const upstream = new URL(redisUrl);
   if (upstream.protocol !== 'redis:') throw new Error('Proxy thử nghiệm cần Redis TCP');
   const sockets = new Set<Socket>();

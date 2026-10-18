@@ -85,12 +85,13 @@ describe('JOB_HANDLERS', () => {
   test('chỉ đăng ký handler cho hàng đợi đã có nghiệp vụ', () => {
     expect(Object.keys(JOB_HANDLERS).sort()).toEqual([
       'q.export-cleanup',
+      'q.hold-expiry',
       'q.notification-send',
       'q.outbox-relay',
       'q.report-export',
     ]);
     for (const name of Object.keys(JOB_HANDLERS)) expect(QUEUE_NAMES).toContain(name);
-    expect(JOB_HANDLERS['q.hold-expiry']).toBeUndefined();
+    expect(typeof JOB_HANDLERS['q.hold-expiry']).toBe('function');
   });
 
   test('handler q.notification-send dựng theo WorkerConfig và từ chối payload sai trước khi chạm CSDL', async () => {

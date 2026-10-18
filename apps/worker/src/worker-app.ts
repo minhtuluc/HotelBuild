@@ -1,11 +1,28 @@
-import { isRepeatableQueue, QUEUE_NAMES } from './queues.js';
+import {
+  EXPORT_CLEANUP_JOB,
+  HOLD_EXPIRY_JOB,
+  HOLD_RECONCILE_JOB,
+  isRepeatableQueue,
+  OUTBOX_RELAY_JOB,
+  QUEUE_NAMES,
+} from './queues.js';
 import type { QueueName } from './queues.js';
+import { HOLD_EXPIRY_RECONCILE, HOLD_EXPIRY_SWEEP } from './jobs/hold-expiry/hold-expiry.job.js';
 import type { WorkerConfig } from './config/env.js';
 import type { WorkerLogger } from './logger.js';
 
+export interface JobTemplate {
+  readonly name: string;
+  readonly data: unknown;
+}
+
 export interface QueueLike {
   add(name: string, data: unknown): Promise<unknown>;
-  upsertJobScheduler(id: string, repeat: { every: number }): Promise<unknown>;
+  upsertJobScheduler(
+    id: string,
+    repeat: { every: number },
+    template?: JobTemplate,
+  ): Promise<unknown>;
   close(): Promise<void>;
 }
 
@@ -35,16 +52,59 @@ export interface WorkerApp {
   stop(): Promise<void>;
 }
 
-function repeatIntervalSeconds(config: WorkerConfig, name: QueueName): number | undefined {
-  if (name === 'q.hold-expiry') return config.HOLD_EXPIRY_INTERVAL_SECONDS;
-  if (name === 'q.outbox-relay') return config.OUTBOX_RELAY_INTERVAL_SECONDS;
-  if (name === 'q.export-cleanup') return config.EXPORT_CLEANUP_INTERVAL_SECONDS;
-  return undefined;
+export interface RepeatSchedule {
+  readonly id: string;
+  readonly everySeconds: number;
+  readonly jobName: string;
+  readonly data: unknown;
 }
 
 /**
- * Đăng ký đủ 5 hàng đợi; handler hiện chỉ log (nghiệp vụ thật ngoài phạm vi HB-006).
- * `stop()` ngừng nhận job, chờ job đang chạy tối đa `SHUTDOWN_TIMEOUT_SECONDS`, rồi đóng kết nối.
+ * Nhịp lặp của từng hàng đợi. Một hàng đợi có thể có **nhiều** nhịp: `q.hold-expiry` vừa quét 30 giây
+ * (`HOLD_EXPIRY_INTERVAL_SECONDS`) vừa đối chiếu 900 giây (`HOLD_RECONCILE_INTERVAL_SECONDS`, BR-BOOK-18).
+ * `data.mode` cho handler biết nhịp nào đang chạy — BullMQ không chuyển tên job vào handler.
+ */
+export function repeatSchedules(config: WorkerConfig, name: QueueName): readonly RepeatSchedule[] {
+  if (name === 'q.hold-expiry')
+    return [
+      {
+        id: 'q.hold-expiry-scheduler',
+        everySeconds: config.HOLD_EXPIRY_INTERVAL_SECONDS,
+        jobName: HOLD_EXPIRY_JOB,
+        data: { mode: HOLD_EXPIRY_SWEEP },
+      },
+      {
+        id: 'q.hold-expiry-reconcile-scheduler',
+        everySeconds: config.HOLD_RECONCILE_INTERVAL_SECONDS,
+        jobName: HOLD_RECONCILE_JOB,
+        data: { mode: HOLD_EXPIRY_RECONCILE },
+      },
+    ];
+  if (name === 'q.outbox-relay')
+    return [
+      {
+        id: 'q.outbox-relay-scheduler',
+        everySeconds: config.OUTBOX_RELAY_INTERVAL_SECONDS,
+        jobName: OUTBOX_RELAY_JOB,
+        data: {},
+      },
+    ];
+  if (name === 'q.export-cleanup')
+    return [
+      {
+        id: 'q.export-cleanup-scheduler',
+        everySeconds: config.EXPORT_CLEANUP_INTERVAL_SECONDS,
+        jobName: EXPORT_CLEANUP_JOB,
+        data: {},
+      },
+    ];
+  return [];
+}
+
+/**
+ * Đăng ký mọi hàng đợi trong `QUEUE_NAMES`; handler thật nằm ở `jobs/registry.ts` (hàng đợi chưa có
+ * nghiệp vụ rơi về handler log). `stop()` ngừng nhận job, chờ job đang chạy tối đa
+ * `SHUTDOWN_TIMEOUT_SECONDS`, rồi đóng kết nối.
  */
 export function createWorkerApp(config: WorkerConfig, deps: WorkerDeps): WorkerApp {
   const queues: QueueLike[] = [];
@@ -58,9 +118,14 @@ export function createWorkerApp(config: WorkerConfig, deps: WorkerDeps): WorkerA
         workers.push(
           deps.createWorker(name, async () => deps.log({ queue: name, msg: 'nhận job' })),
         );
-        const every = repeatIntervalSeconds(config, name);
-        if (config.ENABLE_REPEATABLE_SCHEDULERS && isRepeatableQueue(name) && every !== undefined) {
-          await queue.upsertJobScheduler(`${name}-scheduler`, { every: every * 1000 });
+        if (config.ENABLE_REPEATABLE_SCHEDULERS && isRepeatableQueue(name)) {
+          for (const schedule of repeatSchedules(config, name)) {
+            await queue.upsertJobScheduler(
+              schedule.id,
+              { every: schedule.everySeconds * 1000 },
+              { name: schedule.jobName, data: schedule.data },
+            );
+          }
         }
       }
     },

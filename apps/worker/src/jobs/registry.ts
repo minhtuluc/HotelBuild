@@ -1,5 +1,6 @@
 import { exportCleanupJob } from '../export/cleanup.job.js';
 import { reportExportJob } from '../export/report-export.job.js';
+import { holdExpiryJob } from './hold-expiry/hold-expiry.job.js';
 import { outboxRelayJob } from './outbox-relay/outbox-relay.job.js';
 import { channelSenders } from '../noti/channels.js';
 import { createNotificationSendJob } from '../noti/send.job.js';
@@ -12,6 +13,7 @@ import type { JobRegistry } from './types.js';
  * mặc định của `worker-app`.
  */
 export const JOB_HANDLERS: JobRegistry = {
+  'q.hold-expiry': holdExpiryJob,
   'q.report-export': reportExportJob,
   'q.export-cleanup': exportCleanupJob,
   'q.outbox-relay': outboxRelayJob,

@@ -23,13 +23,14 @@ export function createJobRuntime(
       db,
       config,
       clock: { now },
-      log: ({ queue, msg, jobId }) => {
-        // Log chỉ mang định danh hàng đợi và id job — không bao giờ log payload (NFR-SEC-04).
-        if (jobId === undefined) {
-          logger.info({ queue }, msg);
+      log: ({ queue, msg, jobId, errorCode }) => {
+        // Log chỉ mang định danh hàng đợi, id job và mã lỗi ổn định — không bao giờ log payload (NFR-SEC-04).
+        const text = jobId === undefined ? msg : `${msg} (job ${jobId})`;
+        if (errorCode !== undefined) {
+          logger.error({ queue, component: 'job', errorCode }, text);
           return;
         }
-        logger.info({ queue }, `${msg} (job ${jobId})`);
+        logger.info({ queue }, text);
       },
     },
     close: async () => {
