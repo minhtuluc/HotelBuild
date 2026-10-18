@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from 'vitest';
+// HB-202: trần tường minh 30 giây vì ca dựng cả chuỗi client → BFF → TCP thật bằng tiến trình `tsx`,
+// không phải ca sai — mặc định 5 giây của vitest chỉ đủ khi máy rảnh.
 test('actual rate BFF and TCP preserve typed commands/privacy/errors with pretransport guards', () => {
   const result = spawnSync(
     process.execPath,
@@ -25,4 +27,4 @@ test('actual rate BFF and TCP preserve typed commands/privacy/errors with pretra
     boundedPolicy: true,
   });
   expect(result.stdout).not.toContain('SYNTHETIC_PRIVATE');
-});
+}, 30_000);

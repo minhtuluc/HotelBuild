@@ -1,7 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from 'vitest';
-
+// HB-202: trần tường minh 30 giây vì ca spawn tiến trình `tsx` dựng route Next rồi gọi HTTP thật,
+// không phải ca sai — mặc định 5 giây của vitest chỉ đủ khi máy rảnh.
 test('actual server route exports pass HTTP login/refresh/logout and CSRF in a server process', () => {
   const result = spawnSync(
     process.execPath,
@@ -23,4 +24,4 @@ test('actual server route exports pass HTTP login/refresh/logout and CSRF in a s
     secretsFiltered: true,
   });
   expect(result.stdout).not.toContain('synthetic-refresh-token');
-});
+}, 30_000);
