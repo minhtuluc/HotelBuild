@@ -39,6 +39,8 @@ import { PinModule } from './modules/auth/pin/module.js';
 import { SysModule } from './modules/sys/sys.module.js';
 import { IdempotencyModule } from './modules/sys/idempotency/idempotency.module.js';
 import { IdempotencyInterceptor } from './common/idempotency/interceptor.js';
+import { PayCounterModule } from './modules/pay/counter/module.js';
+import { PayBalanceModule } from './modules/pay/balance/module.js';
 import { ReportsModule } from './modules/rep/reports/module.js';
 import { GuestsModule } from './modules/crm/guests/module.js';
 import { OperationsModule } from './modules/sys/operations/module.js';
@@ -94,6 +96,8 @@ export class AppModule {
         HousekeepingModule,
         AuditLogsModule,
         SettingsModule,
+        PayCounterModule,
+        PayBalanceModule,
         ReportsModule,
         ReportExportModule,
         GuestsModule,
