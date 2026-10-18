@@ -45,10 +45,7 @@ test('AC3: chủ booking đọc lại bằng lệnh GET thuần — không chạ
   expect(response.headers['idempotency-replayed']).toBeUndefined();
   // Lệnh GET không đi qua interceptor idempotency: không claim/khóa nào cho đường dẫn status.
   expect(
-    await rows(
-      'SELECT 1 FROM idempotency_keys WHERE path=$1',
-      ['payments/:paymentId/status'],
-    ),
+    await rows('SELECT 1 FROM idempotency_keys WHERE path=$1', ['payments/:paymentId/status']),
   ).toEqual([]);
 });
 
