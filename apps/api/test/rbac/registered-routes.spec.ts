@@ -238,6 +238,13 @@ function independentOracle(): Record<string, Expected> {
     status: 400,
     method: RequestMethod.POST,
   };
+  // HB-077 / api.md §2.5, §6.3: xác nhận booking là tuyến FRONT_DESK trở lên, đúng cơ sở;
+  // thân oracle thiếu `paymentId` → 400 trước khi tra tài nguyên.
+  keyed[`${RequestMethod.POST}:bookings/:bookingId/confirm`] = {
+    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
   // HB-168 / api.md §2.11: danh sách và gửi lại thông báo (lý do bắt buộc ở thân lệnh).
   keyed[`${RequestMethod.GET}:notifications`] = {
     roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
