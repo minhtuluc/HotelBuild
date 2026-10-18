@@ -46,6 +46,7 @@ import { NotiModule } from './modules/noti/module.js';
 import { CancelModule } from './modules/book/cancel/module.js';
 import { HoldsModule } from './modules/book/holds/module.js';
 import { BookingsModule } from './modules/book/bookings/module.js';
+import { RescheduleModule } from './modules/book/reschedule/module.js';
 
 @Module({})
 export class AppModule {
@@ -97,6 +98,7 @@ export class AppModule {
         CancelModule,
         HoldsModule,
         BookingsModule,
+        RescheduleModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },
