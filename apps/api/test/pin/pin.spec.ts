@@ -1,135 +1,20 @@
 /**
- * HB-015 — PIN: `POST /auth/pin/verify` (một lần, TTL 5 phút, gắn purpose/booking),
- * `PUT /auth/pin`, `DELETE /users/{userId}/pin`, và hàm dùng chung `requirePinToken`.
- *
- * Test tích hợp thật trên PostgreSQL16 + Redis7 (DB `/9`) dùng lại seed dùng chung
- * `test/idempotency/database.ts` + `test/room-blocks/inventory-seed.ts` (không dựng bộ seed thứ hai).
- * Clock đóng băng qua `CLOCK` để kiểm TTL và khoá 15 phút.
- *
- * Ticket HB-015 khai `locked: apps/api/test/pin/pin.locked.spec.ts` nhưng **thiếu `locked_sha`** và
- * giai đoạn A (Codex viết test khoá) chưa bàn giao — nên đây là spec thường, không giả làm test khoá.
+ * HB-015 — endpoint PIN: `POST /auth/pin/verify`, `PUT /auth/pin`, `DELETE /users/{userId}/pin`.
+ * Hàm dùng chung `requirePinToken` kiểm riêng ở `consume.spec.ts`.
  */
-import 'reflect-metadata';
-import { randomBytes } from 'node:crypto';
-import type { PrismaClient } from '@prisma/client';
-import { NestFactory } from '@nestjs/core';
-import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
-import { Redis } from 'ioredis';
-import request from 'supertest';
-import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest';
-import { errorBodySchema, pinTokenSchema, tokenPairSchema } from '@pinehill/contracts';
-import { AppModule } from '../../src/app.module.js';
-import { CLOCK } from '../../src/infrastructure/ports.js';
-import { PRISMA } from '../../src/infrastructure/prisma/prisma.module.js';
-import { requirePinToken, PIN_PURPOSE_FINANCIAL } from '../../src/modules/auth/pin/consume.js';
-import { hashPinToken } from '../../src/modules/auth/pin/token.js';
+import { expect, test } from 'vitest';
+import { errorBodySchema, pinTokenSchema } from '@pinehill/contracts';
+import { serializeSafeRequest } from '../../src/common/safe-request.js';
 import {
   clock,
-  databaseUrl,
   otherPropertyId,
   password,
-  propertyId,
   rows,
   secondUserId,
   userId,
 } from '../idempotency/database.js';
 import { booking, otherTypeId } from '../room-blocks/inventory-seed.js';
-
-const PIN = '123456';
-const UNKNOWN_ID = '00000000-0000-4000-8000-000000000000';
-let app: NestFastifyApplication;
-let redis: Redis;
-
-beforeAll(async () => {
-  if (!process.env.REDIS_URL)
-    throw new Error('HB-015 requires PostgreSQL16 + Redis7; no skip fallback');
-  const redisUrl = new URL(process.env.REDIS_URL);
-  redisUrl.pathname = '/9';
-  redis = new Redis(redisUrl.href);
-  await redis.ping();
-  const registered = AppModule.register({
-    DATABASE_URL: new URL(databaseUrl).href,
-    REDIS_URL: redisUrl.href,
-    JWT_ACCESS_SECRET: randomBytes(32).toString('hex'),
-    JWT_REFRESH_SECRET: randomBytes(32).toString('hex'),
-    BUSINESS_TIMEZONE: 'Asia/Ho_Chi_Minh',
-    IDEMPOTENCY_TTL_HOURS: 24,
-    LOG_LEVEL: 'error',
-    HOST: '127.0.0.1',
-    PORT: 0,
-  });
-  app = await NestFactory.create<NestFastifyApplication>(
-    {
-      ...registered,
-      providers: [
-        ...(registered.providers ?? []).filter(
-          (provider) =>
-            typeof provider !== 'object' ||
-            provider === null ||
-            !('provide' in provider) ||
-            provider.provide !== CLOCK,
-        ),
-        { provide: CLOCK, useValue: clock },
-      ],
-    },
-    new FastifyAdapter(),
-    { logger: false, abortOnError: false },
-  );
-  app.setGlobalPrefix('api/v1');
-  await app.listen(0, '127.0.0.1');
-}, 60000);
-
-afterAll(async () => {
-  await app?.close();
-  await redis?.quit();
-}, 30000);
-
-beforeEach(async () => {
-  await rows('DELETE FROM user_pins');
-  await rows('DELETE FROM pin_grants');
-  await rows('DELETE FROM user_property_scopes WHERE user_id=ANY($1::uuid[])', [
-    [userId, secondUserId],
-  ]);
-  await rows(
-    'INSERT INTO user_property_scopes(user_id,property_id) VALUES($1::uuid,$3::uuid),($2::uuid,$3::uuid)',
-    [userId, secondUserId, propertyId],
-  );
-});
-
-const http = () => request(app.getHttpServer());
-const businessDb = () => app.get<PrismaClient>(PRISMA);
-const errorCode = (response: { body: unknown }) => errorBodySchema.parse(response.body).code;
-
-async function staffToken(username = 'h029-first', role = 'FRONT_DESK'): Promise<string> {
-  const id = username === 'h029-first' ? userId : secondUserId;
-  await rows('UPDATE users SET role=$1 WHERE id=$2::uuid', [role, id]);
-  const response = await http().post('/api/v1/auth/login').send({ username, password });
-  expect(response.status).toBe(200);
-  return tokenPairSchema.parse(response.body).accessToken;
-}
-
-function setPin(token: string, pin = PIN, currentPassword = password) {
-  return http()
-    .put('/api/v1/auth/pin')
-    .set('Authorization', `Bearer ${token}`)
-    .send({ pin, currentPassword });
-}
-
-function verify(token: string, body: object = { pin: PIN }) {
-  return http().post('/api/v1/auth/pin/verify').set('Authorization', `Bearer ${token}`).send(body);
-}
-
-function consume(pinToken: unknown, bookingId: string | null, actingUser = userId) {
-  return businessDb().$transaction((tx) =>
-    requirePinToken(tx, {
-      userId: actingUser,
-      token: pinToken,
-      purpose: PIN_PURPOSE_FINANCIAL,
-      bookingId,
-      now: clock.now(),
-    }),
-  );
-}
+import { PIN, UNKNOWN_ID, errorCode, http, setPin, staffToken, verify } from './fixture.js';
 
 test('PIN chưa đặt → verify trả E_AUTH_PIN_REQUIRED', async () => {
   const response = await verify(await staffToken());
@@ -176,15 +61,13 @@ test('sai PIN 3 lần → E_AUTH_PIN_LOCKED + retryAfterSeconds; mở lại sau 
   const me = await http().get('/api/v1/auth/me').set('Authorization', `Bearer ${token}`);
   expect(me.status).toBe(200);
 
-  // Đúng PIN vẫn bị khoá tới khi hết hạn.
   const stillLocked = await verify(token, { pin: PIN });
   expect(stillLocked.status).toBe(403);
   expect(errorCode(stillLocked)).toBe('E_AUTH_PIN_LOCKED');
 
   clock.value += 16 * 60_000;
   token = await staffToken();
-  const reopened = await verify(token, { pin: PIN });
-  expect(reopened.status).toBe(200);
+  expect((await verify(token, { pin: PIN })).status).toBe(200);
 });
 
 test('PIN không xuất hiện trong audit_logs', async () => {
@@ -194,7 +77,20 @@ test('PIN không xuất hiện trong audit_logs', async () => {
   const leaked = await rows(
     "SELECT count(*)::int AS n FROM audit_logs WHERE after_json::text LIKE '%123456%' OR before_json::text LIKE '%123456%'",
   );
-  expect(leaked[0]!.n).toBe(0);
+  expect(Number(leaked[0]!.n)).toBe(0);
+});
+
+test('bộ tuần tự hoá log chỉ giữ method/url/id — không có PIN hay pinToken', () => {
+  const serialized = serializeSafeRequest({
+    method: 'POST',
+    url: '/api/v1/auth/pin/verify?token=secret',
+    id: 'trace-1',
+    headers: { authorization: 'Bearer synthetic' },
+    body: { pin: PIN, pinToken: 'sensitive-pin-token-value' },
+  });
+  expect(serialized).toEqual({ method: 'POST', url: '/api/v1/auth/pin/verify', id: 'trace-1' });
+  expect(JSON.stringify(serialized)).not.toContain(PIN);
+  expect(JSON.stringify(serialized)).not.toContain('sensitive-pin-token-value');
 });
 
 test('HOUSEKEEPING và SYSADMIN bị 403 ở pin/verify', async () => {
@@ -221,61 +117,53 @@ test('verify gắn booking trong cơ sở; booking ngoài cơ sở 403; booking 
 });
 
 test('PUT /auth/pin: thân sai → 400', async () => {
-  const token = await staffToken();
-  const response = await setPin(token, '12', password);
+  const response = await setPin(await staffToken(), '12', 'x');
   expect(response.status).toBe(400);
   expect(errorCode(response)).toBe('E_GEN_VALIDATION_FAILED');
 });
 
-test('requirePinToken: dùng một lần, đúng booking, đúng người, token lạ bị từ chối', async () => {
+test('PUT /auth/pin: sai currentPassword đếm vào khoá đăng nhập, khoá chặn cả mật khẩu đúng', async () => {
   const token = await staffToken();
-  await setPin(token);
-  const first = await booking();
-  const second = await booking();
-  const issued = pinTokenSchema.parse(
-    (await verify(token, { pin: PIN, bookingId: first.id })).body,
-  );
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const rejected = await setPin(token, '654321', 'Wrong-password-123');
+    expect(rejected.status).toBe(401);
+    expect(errorCode(rejected)).toBe('E_AUTH_INVALID_CREDENTIALS');
+  }
+  const locked = await setPin(token, '654321', password);
+  expect(locked.status).toBe(401);
+  const body = errorBodySchema.parse(locked.body);
+  expect(body.code).toBe('E_AUTH_ACCOUNT_LOCKED');
+  expect(body.retryAfterSeconds).toBeGreaterThan(0);
 
-  // Token cấp cho booking A không tiêu thụ được cho booking B.
-  await expect(consume(issued.pinToken, second.id)).rejects.toMatchObject({
-    code: 'E_AUTH_PIN_REQUIRED',
-  });
-  // Không phải chủ token.
-  await expect(consume(issued.pinToken, first.id, secondUserId)).rejects.toMatchObject({
-    code: 'E_AUTH_PIN_REQUIRED',
-  });
-  // Token rác.
-  await expect(consume('not-a-real-pin-token-000000000000', first.id)).rejects.toMatchObject({
-    code: 'E_AUTH_PIN_REQUIRED',
-  });
-  // Lần đầu thành công, lần hai cùng token phải hỏng.
-  await consume(issued.pinToken, first.id);
-  await expect(consume(issued.pinToken, first.id)).rejects.toMatchObject({
-    code: 'E_AUTH_PIN_REQUIRED',
-  });
+  clock.value += 16 * 60_000;
+  const fresh = await staffToken();
+  expect((await setPin(fresh)).status).toBe(204);
 });
 
-test('requirePinToken: token hết hạn bị từ chối', async () => {
-  await staffToken();
-  const sessionId = String(
-    (
-      await rows(
-        'SELECT id FROM auth_sessions WHERE user_id=$1::uuid ORDER BY created_at DESC, id LIMIT 1',
-        [userId],
-      )
-    )[0]!.id,
-  );
-  const expired = 'expired-pin-token-0000000000000000';
-  const created = new Date(clock.now().getTime() - 10 * 60_000);
-  const expires = new Date(clock.now().getTime() - 5 * 60_000);
-  await rows(
-    `INSERT INTO pin_grants(token_hash,user_id,session_id,purpose,booking_id,created_at,expires_at)
-     VALUES($1,$2::uuid,$3::uuid,'FINANCIAL',NULL,$4,$5)`,
-    [hashPinToken(expired), userId, sessionId, created, expires],
-  );
-  await expect(consume(expired, null)).rejects.toMatchObject({
-    code: 'E_AUTH_PIN_REQUIRED',
-  });
+test('PUT /auth/pin: đổi PIN không xoá khoá PIN còn hiệu lực', async () => {
+  let token = await staffToken();
+  expect((await setPin(token)).status).toBe(204);
+  for (let attempt = 0; attempt < 3; attempt++) await verify(token, { pin: '000000' });
+  expect((await verify(token, { pin: PIN })).status).toBe(403);
+
+  expect((await setPin(token, '654321')).status).toBe(204);
+  const stillLocked = await verify(token, { pin: '654321' });
+  expect(stillLocked.status).toBe(403);
+  expect(errorCode(stillLocked)).toBe('E_AUTH_PIN_LOCKED');
+
+  clock.value += 16 * 60_000;
+  token = await staffToken();
+  expect((await verify(token, { pin: '654321' })).status).toBe(200);
+});
+
+test('khoá PIN của người này không ảnh hưởng người khác', async () => {
+  const first = await staffToken('h029-first', 'FRONT_DESK');
+  await setPin(first);
+  const second = await staffToken('h029-second', 'FRONT_DESK');
+  await setPin(second);
+  for (let attempt = 0; attempt < 3; attempt++) await verify(first, { pin: '000000' });
+  expect((await verify(first, { pin: PIN })).status).toBe(403);
+  expect((await verify(second, { pin: PIN })).status).toBe(200);
 });
 
 test('DELETE /users/{id}/pin: MANAGER cùng cơ sở xoá được, audit ghi', async () => {
@@ -293,7 +181,7 @@ test('DELETE /users/{id}/pin: MANAGER cùng cơ sở xoá được, audit ghi', 
     "SELECT count(*)::int AS n FROM audit_logs WHERE action='AUTH_PIN_DELETED' AND entity_id=$1::uuid",
     [secondUserId],
   );
-  expect(audited[0]!.n).toBeGreaterThan(0);
+  expect(Number(audited[0]!.n)).toBeGreaterThan(0);
 });
 
 test('DELETE /users/{id}/pin: MANAGER cơ sở khác → 403 E_AUTH_OUT_OF_SCOPE', async () => {

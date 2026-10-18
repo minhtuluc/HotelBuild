@@ -23,6 +23,7 @@ import { CLOCK, ID_GENERATOR } from '../../../infrastructure/ports.js';
 import { hashPassword, verifyPassword } from '../../../infrastructure/crypto/passwords.js';
 import { PRISMA } from '../../../infrastructure/prisma/prisma.module.js';
 import type { DatabaseClient } from '../../../infrastructure/prisma/prisma.module.js';
+import { LOCK_MS, LOCK_THRESHOLD } from '../auth.service.js';
 import { createPinToken, hashPinToken, PIN_TOKEN_TTL_MS } from './token.js';
 import { PIN_PURPOSE_FINANCIAL, pinRequired } from './consume.js';
 
@@ -48,6 +49,60 @@ export interface VerifyPinInput {
 
 function pinLocked(retryAfterSeconds: number): AppError {
   return new AppError(403, 'E_AUTH_PIN_LOCKED', 'PIN đang tạm khoá.', retryAfterSeconds);
+}
+
+/** Khoá tài khoản do sai mật khẩu liên tiếp — cùng cơ chế và mã lỗi với đăng nhập (BR-RBAC-06). */
+function accountLocked(until: Date, now: Date): AppError {
+  return new AppError(
+    401,
+    'E_AUTH_ACCOUNT_LOCKED',
+    'Tài khoản đang bị khoá tạm thời.',
+    Math.max(1, Math.ceil((until.getTime() - now.getTime()) / 1000)),
+  );
+}
+
+/** Trường `users` cần cho cơ chế khoá mật khẩu dùng chung với đăng nhập. */
+interface PasswordUser {
+  readonly id: string;
+  readonly failed_login_count: number;
+  readonly locked_until: Date | null;
+}
+
+async function clearPasswordFailures(
+  tx: Prisma.TransactionClient,
+  user: PasswordUser,
+): Promise<void> {
+  if (user.failed_login_count === 0 && user.locked_until === null) return;
+  await tx.users.update({
+    where: { id: user.id },
+    data: { failed_login_count: 0, locked_until: null },
+  });
+}
+
+/** Ghi một lần sai mật khẩu hiện tại; chạm ngưỡng thì khoá 15 phút như đăng nhập (BR-RBAC-06). */
+async function recordPasswordFailure(
+  tx: Prisma.TransactionClient,
+  audit: AuditWriter,
+  actor: ActorContext,
+  user: PasswordUser,
+  now: Date,
+): Promise<void> {
+  const failures = user.locked_until !== null ? 1 : user.failed_login_count + 1;
+  const locked = failures >= LOCK_THRESHOLD ? new Date(now.getTime() + LOCK_MS) : null;
+  await tx.users.update({
+    where: { id: user.id },
+    data: { failed_login_count: failures, locked_until: locked },
+  });
+  if (locked !== null)
+    await audit.record(tx, {
+      actor,
+      action: 'AUTH_LOGIN_LOCKED',
+      entityType: 'User',
+      entityId: user.id,
+      beforeJson: null,
+      afterJson: null,
+      reason: null,
+    });
 }
 
 function validationError(): AppError {
@@ -84,15 +139,20 @@ export class PinService {
     };
   }
 
-  /** Đặt/thay PIN của chính mình; xác nhận `currentPassword`; thu hồi mọi grant chưa dùng. */
+  /**
+   * Đặt/thay PIN của chính mình; xác nhận `currentPassword` theo **cùng cơ chế khoá đăng nhập**
+   * (`users.failed_login_count`/`locked_until`, BR-RBAC-06) nên không thành oracle mật khẩu.
+   * Chỉ ghi lại `pin_hash`/`set_at`, **không** xoá khoá PIN đang hiệu lực; thu hồi grant chưa dùng.
+   *
+   * Lỗi mật khẩu được **trả ra rồi mới ném** (như `AuthService.login`): ném trong transaction sẽ
+   * rollback luôn bộ đếm sai vừa ghi, khiến cơ chế khoá vô hiệu.
+   */
   async set(actor: AuthorizedActor, input: SetPinInput): Promise<void> {
-    const user = await this.prisma.users.findUnique({ where: { id: actor.id } });
-    if (user === null || !user.is_active) throw invalidCredentials();
-    if (!(await verifyPassword(user.password_hash, input.currentPassword)))
-      throw invalidCredentials();
-    const pinHash = await hashPassword(input.pin);
     const now = this.clock.now();
-    await this.prisma.$transaction(async (tx) => {
+    const pinHash = await hashPassword(input.pin);
+    const failure = await this.prisma.$transaction(async (tx) => {
+      const rejected = await this.checkCurrentPassword(tx, actor, input.currentPassword, now);
+      if (rejected !== null) return rejected;
       await tx.user_pins.upsert({
         where: { user_id: actor.id },
         create: {
@@ -102,7 +162,7 @@ export class PinService {
           locked_until: null,
           set_at: now,
         },
-        update: { pin_hash: pinHash, failed_count: 0, locked_until: null, set_at: now },
+        update: { pin_hash: pinHash, set_at: now },
       });
       await tx.pin_grants.updateMany({
         where: { user_id: actor.id, consumed_at: null },
@@ -112,7 +172,33 @@ export class PinService {
         tx,
         this.auditEntry(actor, 'AUTH_PIN_SET', actor.id, { hasPin: true }),
       );
+      return null;
     });
+    if (failure !== null) throw failure;
+  }
+
+  /**
+   * Kiểm mật khẩu hiện tại dưới khoá hàng `users`; khoá tài khoản **trước** khi so mật khẩu, đếm sai
+   * bằng `failed_login_count`/`locked_until` giống `AuthService.login`. Trả lỗi để caller ném sau khi
+   * transaction đã commit bộ đếm (ném trong transaction sẽ rollback).
+   */
+  private async checkCurrentPassword(
+    tx: Prisma.TransactionClient,
+    actor: AuthorizedActor,
+    currentPassword: string,
+    now: Date,
+  ): Promise<AppError | null> {
+    await tx.$queryRaw`SELECT id FROM users WHERE id = CAST(${actor.id} AS uuid) FOR UPDATE`;
+    const user = await tx.users.findUnique({ where: { id: actor.id } });
+    if (user === null || !user.is_active) return invalidCredentials();
+    if (user.locked_until !== null && user.locked_until.getTime() > now.getTime())
+      return accountLocked(user.locked_until, now);
+    if (await verifyPassword(user.password_hash, currentPassword)) {
+      await clearPasswordFailures(tx, user);
+      return null;
+    }
+    await recordPasswordFailure(tx, this.audit, actor, user, now);
+    return invalidCredentials();
   }
 
   /** Xác thực PIN, trả `pinToken` một lần gắn người/purpose/booking. */

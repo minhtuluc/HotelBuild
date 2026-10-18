@@ -8,7 +8,8 @@
  *
  * Gắn chặt `user_id` (token cấp cho ai), `purpose` (loại thao tác) và `booking_id`
  * (`IS NOT DISTINCT FROM` nên `NULL` cũng là một ràng buộc — token cấp cho booking A không dùng
- * được cho booking B).
+ * được cho booking B). Phiên cấp token phải còn sống: logout thu hồi phiên thì grant chưa dùng
+ * cũng bị từ chối (api.md §2.1 — logout hết quyền trên mọi client của phiên).
  */
 import type { Prisma } from '@prisma/client';
 import { AppError } from '../../../common/app-error.js';
@@ -56,6 +57,10 @@ export async function requirePinToken(
       AND expires_at > ${check.now}
       AND user_id = CAST(${check.userId} AS uuid)
       AND purpose = ${check.purpose}
-      AND booking_id IS NOT DISTINCT FROM CAST(${bookingId} AS uuid)`;
+      AND booking_id IS NOT DISTINCT FROM CAST(${bookingId} AS uuid)
+      AND EXISTS (
+        SELECT 1 FROM auth_sessions s
+        WHERE s.id = pin_grants.session_id AND s.revoked_at IS NULL
+      )`;
   if (consumed !== 1) throw pinRequired();
 }
