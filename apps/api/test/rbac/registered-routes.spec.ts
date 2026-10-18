@@ -73,6 +73,19 @@ function independentOracle(): Record<string, Expected> {
   expected['auth/logout'] = { roles, status: 204, method: RequestMethod.POST };
   // Valid authentication/permission must reach input validation; password behavior has locked tests.
   expected['auth/password'] = { roles, status: 400, method: RequestMethod.POST };
+  // HB-015 / api.md §2.1, §6.3: PIN — mở khoá (nhân viên tài chính), đặt PIN của mình (mọi nhân viên),
+  // xoá PIN theo cơ sở của MANAGER/SYSADMIN. Thân oracle không hợp lệ → 400; người dùng không tồn tại → 404.
+  expected['auth/pin/verify'] = {
+    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER', 'ACCOUNTANT'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
+  expected['auth/pin'] = { roles, status: 400, method: RequestMethod.PUT };
+  expected['users/:userId/pin'] = {
+    roles: ['MANAGER', 'SYSADMIN'],
+    status: 404,
+    method: RequestMethod.DELETE,
+  };
   // Sources: HB-034 AC2, BR-INV-06 and api.md §2.2; independent of module permissions.
   const keyed = Object.fromEntries(
     Object.entries(expected).map(([path, rule]) => [`${rule.method}:${path}`, rule]),
@@ -359,7 +372,7 @@ test('every discovered protected HTTP route has an independent oracle and runs a
     for (const role of roles) {
       clock.value += 61000;
       const token = await login(role);
-      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':operationId', roomId).replace(':notificationId', roomId).replace(':guestId', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId).replace(':taskId', roomId).replace(':key', 'refund.feeAmount').replace(':propertyId', roomId).replace(':bookingId', roomId).replace(':roomTypeId', roomId).replace(':roomId', roomId)}`;
+      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':operationId', roomId).replace(':notificationId', roomId).replace(':guestId', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId).replace(':taskId', roomId).replace(':key', 'refund.feeAmount').replace(':propertyId', roomId).replace(':bookingId', roomId).replace(':roomTypeId', roomId).replace(':roomId', roomId).replace(':userId', roomId)}`;
       const pending = routeRequest(route.method, path);
       const result = await pending
         .set('Authorization', `Bearer ${token}`)
