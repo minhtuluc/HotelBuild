@@ -16,3 +16,12 @@ export const REPEATABLE_QUEUES = ['q.hold-expiry', 'q.outbox-relay', 'q.export-c
 
 export const isRepeatableQueue = (name: QueueName): boolean =>
   REPEATABLE_QUEUES.some((queue) => queue === name);
+
+/**
+ * Tên job BullMQ của các nhịp lặp — handler nhận **payload**, không nhận tên job (xem `bullmq.factory`),
+ * nên nhịp nào cần phân biệt thì khai chế độ trong `data` (`data.mode`) và tên ở đây chỉ để tra vết.
+ */
+export const HOLD_EXPIRY_JOB = 'hold-expiry';
+export const HOLD_RECONCILE_JOB = 'hold-reconcile';
+export const OUTBOX_RELAY_JOB = 'outbox-relay';
+export const EXPORT_CLEANUP_JOB = 'export-cleanup';

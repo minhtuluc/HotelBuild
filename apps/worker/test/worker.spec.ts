@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ConfigError, loadWorkerConfig } from '../src/config/env.js';
 import type { WorkerConfig } from '../src/config/env.js';
-import { QUEUE_NAMES, REPEATABLE_QUEUES } from '../src/queues.js';
+import { QUEUE_NAMES } from '../src/queues.js';
 import { createWorkerApp, installSignalHandlers } from '../src/worker-app.js';
 import type { JobLike, QueueLike, WorkerLike } from '../src/worker-app.js';
 import { run } from '../src/main.js';
@@ -38,8 +38,12 @@ function harness(close: () => Promise<void> = () => Promise.resolve()) {
   const deps = {
     createQueue: (name: string): QueueLike => ({
       add: () => Promise.resolve({}),
-      upsertJobScheduler: (id: string) => {
-        schedulers.push(`${name}:${id}`);
+      upsertJobScheduler: (
+        id: string,
+        repeat: { every: number },
+        template?: { name: string; data: unknown },
+      ) => {
+        schedulers.push(`${name}:${id}:${repeat.every}:${JSON.stringify(template)}`);
         return Promise.resolve({});
       },
       close: () => {
@@ -104,10 +108,30 @@ describe('createWorkerApp', () => {
     expect([...h.handlers.keys()]).toEqual([...QUEUE_NAMES]);
     expect(h.schedulers).toEqual([]);
   });
-  it('bật scheduler cho đúng các hàng đợi lặp', async () => {
+  it('bật scheduler cho đúng nhịp: hold-expiry 30 giây + đối chiếu 900 giây, outbox 5 giây, dọn tệp 900 giây', async () => {
     const h = harness();
     await createWorkerApp(config({ ENABLE_REPEATABLE_SCHEDULERS: true }), h.deps).start();
-    expect(h.schedulers).toEqual(REPEATABLE_QUEUES.map((name) => `${name}:${name}-scheduler`));
+    expect(h.schedulers).toEqual([
+      'q.hold-expiry:q.hold-expiry-scheduler:30000:{"name":"hold-expiry","data":{"mode":"SWEEP"}}',
+      'q.hold-expiry:q.hold-expiry-reconcile-scheduler:900000:{"name":"hold-reconcile","data":{"mode":"RECONCILE"}}',
+      'q.outbox-relay:q.outbox-relay-scheduler:5000:{"name":"outbox-relay","data":{}}',
+      'q.export-cleanup:q.export-cleanup-scheduler:900000:{"name":"export-cleanup","data":{}}',
+    ]);
+  });
+  it('nhịp lặp lấy từ cấu hình (không hằng số hoá 30/900 giây)', async () => {
+    const h = harness();
+    await createWorkerApp(
+      config({
+        ENABLE_REPEATABLE_SCHEDULERS: true,
+        HOLD_EXPIRY_INTERVAL_SECONDS: 12,
+        HOLD_RECONCILE_INTERVAL_SECONDS: 7,
+      }),
+      h.deps,
+    ).start();
+    expect(h.schedulers.slice(0, 2)).toEqual([
+      'q.hold-expiry:q.hold-expiry-scheduler:12000:{"name":"hold-expiry","data":{"mode":"SWEEP"}}',
+      'q.hold-expiry:q.hold-expiry-reconcile-scheduler:7000:{"name":"hold-reconcile","data":{"mode":"RECONCILE"}}',
+    ]);
   });
   it('handler chỉ log rồi trả về', async () => {
     const h = harness();

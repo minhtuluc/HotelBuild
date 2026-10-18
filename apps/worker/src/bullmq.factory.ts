@@ -1,5 +1,6 @@
 import { Queue, Worker } from 'bullmq';
 import type { ConnectionOptions } from 'bullmq';
+import type { RedisOptions } from 'ioredis';
 import type { WorkerConfig } from './config/env.js';
 import type { WorkerLogger } from './logger.js';
 import type { JobAttempt, JobContext, JobRegistry } from './jobs/types.js';
@@ -33,8 +34,12 @@ function reportBullmqError(
   logger.error({ queue, component, errorCode }, 'BullMQ phát lỗi');
 }
 
-/** `REDIS_URL` → tuỳ chọn kết nối (không kèm khoá nào bằng `undefined`). */
-export function redisOptions(url: string): ConnectionOptions {
+/**
+ * `REDIS_URL` → tuỳ chọn kết nối (không kèm khoá nào bằng `undefined`). Kiểu ioredis để dùng chung cho cả
+ * BullMQ (nhận `RedisOptions` trong `ConnectionOptions`) và phiên Redis của lượt đối chiếu Hold (HB-078) —
+ * một chỗ duy nhất phân tích URL.
+ */
+export function redisOptions(url: string): RedisOptions {
   const parsed = new URL(url);
   const db = parsed.pathname.length > 1 ? Number(parsed.pathname.slice(1)) : 0;
   return {

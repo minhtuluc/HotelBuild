@@ -12,7 +12,16 @@ export interface JobContext {
   /** Cấu hình đã kiểm của tiến trình (handler không tự đọc `process.env`). */
   readonly config: WorkerConfig;
   readonly clock: { now(): Date };
-  readonly log: (entry: { queue: QueueName; msg: string; jobId?: string }) => void;
+  /**
+   * Log của handler: `errorCode` (nếu có) đẩy dòng log sang mức `error` với mã ổn định — không bao giờ
+   * nhận message/stack thô (NFR-SEC-04).
+   */
+  readonly log: (entry: {
+    queue: QueueName;
+    msg: string;
+    jobId?: string;
+    errorCode?: string;
+  }) => void;
 }
 
 /**

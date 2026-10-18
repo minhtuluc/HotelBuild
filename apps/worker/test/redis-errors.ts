@@ -7,6 +7,7 @@ import { loadWorkerConfig } from '../src/config/env.js';
 import type { WorkerLogger } from '../src/logger.js';
 import type { QueueLike, WorkerLike } from '../src/worker-app.js';
 import { redisProxy } from './redis-proxy.js';
+import type { RedisProxy } from './redis-proxy.js';
 
 function logSink() {
   const errors: { context: unknown; message: string }[] = [];
@@ -26,7 +27,7 @@ function requiredRedisUrl(): string {
 }
 
 async function closeProbe(
-  proxy: Awaited<ReturnType<typeof redisProxy>>,
+  proxy: RedisProxy,
   queue: QueueLike,
   worker: WorkerLike,
   admin: Queue,
@@ -50,7 +51,7 @@ async function closeProbe(
 }
 
 async function closeQueues(
-  proxy: Awaited<ReturnType<typeof redisProxy>>,
+  proxy: RedisProxy,
   queue: QueueLike,
   admin: Queue,
   restored: boolean,
@@ -69,7 +70,7 @@ async function closeQueues(
 async function closeQueuesAndBlocker(
   queue: QueueLike,
   admin: QueueLike,
-  proxy: Awaited<ReturnType<typeof redisProxy>>,
+  proxy: RedisProxy,
   blocker: ReturnType<typeof createServer>,
 ): Promise<void> {
   try {

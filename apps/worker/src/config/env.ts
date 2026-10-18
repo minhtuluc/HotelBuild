@@ -30,6 +30,11 @@ const workerEnvSchema = z.object({
     .default('false')
     .transform((value) => value === 'true'),
   HOLD_EXPIRY_INTERVAL_SECONDS: z.coerce.number().positive().default(30),
+  // HB-078: trần booking mỗi trang quét hết hạn (nhịp 30 giây phải ngắn) và nhịp đối chiếu 900 giây
+  // (`job.holdReconcile.intervalSeconds`, BR-BOOK-18) cùng trần số bản ghi Hold đọc mỗi lượt đối chiếu.
+  HOLD_EXPIRY_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(100),
+  HOLD_RECONCILE_INTERVAL_SECONDS: z.coerce.number().positive().default(900),
+  HOLD_RECONCILE_MAX_KEYS: z.coerce.number().int().min(1).max(10_000).default(1000),
   OUTBOX_RELAY_INTERVAL_SECONDS: z.coerce.number().positive().default(5),
   // Vận chuyển outbox (HB-130): kích thước lô mỗi lượt, thời gian giữ lease một lượt và backoff thử lại.
   // Trần 5 lượt vận chuyển thất bại trước dead letter là hằng nghiệp vụ BR-CHAN-07 (không cấu hình được).
