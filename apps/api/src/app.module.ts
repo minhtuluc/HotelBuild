@@ -50,6 +50,7 @@ import { BookingsModule } from './modules/book/bookings/module.js';
 import { RescheduleModule } from './modules/book/reschedule/module.js';
 import { PspModule } from './modules/pay/psp/module.js';
 import { OnlinePaymentsModule } from './modules/pay/online/module.js';
+import { PspWebhooksModule } from './modules/pay/webhooks/module.js';
 
 @Module({})
 export class AppModule {
@@ -105,6 +106,7 @@ export class AppModule {
         RescheduleModule,
         PspModule,
         OnlinePaymentsModule,
+        PspWebhooksModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },
