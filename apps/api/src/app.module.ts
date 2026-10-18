@@ -49,6 +49,7 @@ import { NotiModule } from './modules/noti/module.js';
 import { CancelModule } from './modules/book/cancel/module.js';
 import { HoldsModule } from './modules/book/holds/module.js';
 import { BookingsModule } from './modules/book/bookings/module.js';
+import { RefundModule } from './modules/pay/refunds/module.js';
 import { RescheduleModule } from './modules/book/reschedule/module.js';
 import { PspModule } from './modules/pay/psp/module.js';
 import { OnlinePaymentsModule } from './modules/pay/online/module.js';
@@ -111,6 +112,7 @@ export class AppModule {
         PspModule,
         OnlinePaymentsModule,
         PspWebhooksModule,
+        RefundModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },

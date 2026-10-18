@@ -277,6 +277,25 @@ function independentOracle(): Record<string, Expected> {
     status: 400,
     method: RequestMethod.POST,
   };
+  // HB-099 / api.md §3.6-3.7 + §6.3: hoàn tiền — lập cho quầy/điều phối, quyết định cho MANAGER+,
+  // rút cho người tạo/MANAGER+. Thân oracle không hợp lệ → 400 trước khi tra tài nguyên.
+  keyed[`${RequestMethod.POST}:refund-requests`] = {
+    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
+  for (const action of ['approve', 'reject']) {
+    keyed[`${RequestMethod.POST}:refund-requests/:refundRequestId/${action}`] = {
+      roles: ['MANAGER', 'OWNER'],
+      status: 400,
+      method: RequestMethod.POST,
+    };
+  }
+  keyed[`${RequestMethod.POST}:refund-requests/:refundRequestId/cancel`] = {
+    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
   // HB-168 / api.md §2.11: danh sách và gửi lại thông báo (lý do bắt buộc ở thân lệnh).
   keyed[`${RequestMethod.GET}:notifications`] = {
     roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
@@ -379,7 +398,7 @@ test('every discovered protected HTTP route has an independent oracle and runs a
     for (const role of roles) {
       clock.value += 61000;
       const token = await login(role);
-      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':operationId', roomId).replace(':notificationId', roomId).replace(':guestId', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId).replace(':taskId', roomId).replace(':key', 'refund.feeAmount').replace(':propertyId', roomId).replace(':bookingId', roomId).replace(':roomTypeId', roomId).replace(':roomId', roomId).replace(':userId', roomId)}`;
+      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':operationId', roomId).replace(':notificationId', roomId).replace(':guestId', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId).replace(':taskId', roomId).replace(':key', 'refund.feeAmount').replace(':propertyId', roomId).replace(':refundRequestId', roomId).replace(':bookingId', roomId).replace(':roomTypeId', roomId).replace(':roomId', roomId).replace(':userId', roomId)}`;
       const pending = routeRequest(route.method, path);
       const result = await pending
         .set('Authorization', `Bearer ${token}`)
