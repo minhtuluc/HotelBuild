@@ -26,7 +26,7 @@ describe('HB-078 — quét hết hạn giữ chỗ', () => {
 
   afterAll(async () => {
     await testDb.close();
-  });
+  }, 30_000);
 
   it('hold quá hạn → EXPIRED + nhả phân công/allotment + history + audit + outbox trong một transaction', async () => {
     const fixture = await seedHold(testDb.db, {
