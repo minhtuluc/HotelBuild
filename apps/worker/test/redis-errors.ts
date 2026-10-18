@@ -8,8 +8,11 @@ import type { WorkerLogger } from '../src/logger.js';
 import type { QueueLike, WorkerLike } from '../src/worker-app.js';
 import { redisProxy } from './redis-proxy.js';
 
+/** Record đã qua cổng log của worker: đúng khoá mà `WorkerLogger.error` nhận. */
+type ErrorRecord = { context: Parameters<WorkerLogger['error']>[0]; message: string };
+
 function logSink() {
-  const errors: { context: unknown; message: string }[] = [];
+  const errors: ErrorRecord[] = [];
   const logger: WorkerLogger = {
     info: () => undefined,
     error: (context, message) => {
@@ -178,7 +181,16 @@ export async function checkRestoreFailureCleanup(): Promise<void> {
   }
 }
 
-/** Event thật trên các client thật; sink logger không thay adapter/hạ tầng đang kiểm. */
+/**
+ * Event thật trên các client thật; sink logger không thay adapter/hạ tầng đang kiểm.
+ *
+ * Sink chỉ thu record, không thu *nguồn* record: kết nối thật của chính ca này vẫn có thể bắn `error`
+ * (blip mạng lúc khởi động, hoặc `ERR DB index is out of range` khi `REDIS_URL` trỏ DB ngoài dải của
+ * máy chủ Redis) trước cửa sổ phát lỗi tổng hợp. Vì vậy ca khẳng định **đúng cửa sổ đồng bộ** của 4
+ * sự kiện do chính nó phát (`emit` gọi listener ngay, không await ⇒ không sự kiện nào chen vào giữa),
+ * cộng thêm hai bất biến trên **toàn bộ** sink: mọi record đều thuộc tên hàng đợi của chính ca (không
+ * lọt sự kiện của ca khác) và không record nào mang nội dung lỗi thô (NFR-SEC-04).
+ */
 export async function checkSafeErrorsAndDefaultWiring(): Promise<void> {
   const { logger, errors } = logSink();
   const config = loadWorkerConfig({
@@ -202,11 +214,14 @@ export async function checkSafeErrorsAndDefaultWiring(): Promise<void> {
     await Promise.all([queue.waitUntilReady(), worker.waitUntilReady()]);
     const secret = 'fixture-token-guest@example.test-redis://user:password@fixture';
     const error = Object.assign(new Error(secret), { code: 'ECONNRESET', payload: secret });
+    // Mốc lấy ngay trước 4 `emit`: listener của BullMQ chạy đồng bộ nên `errors.slice(mark)` chỉ chứa
+    // record của 4 sự kiện này, dù trước đó kết nối thật đã kịp ghi sự kiện lỗi của nó.
+    const mark = errors.length;
     queue.emit('error', error);
     worker.emit('error', error);
     worker.emit('error', Object.assign(new Error(secret), { code: secret }));
     queue.emit('error', new Error(secret));
-    expect(errors).toEqual([
+    expect(errors.slice(mark)).toEqual([
       {
         context: { queue: 'q.hold-expiry', component: 'queue', errorCode: 'ECONNRESET' },
         message: 'BullMQ phát lỗi',
@@ -224,6 +239,13 @@ export async function checkSafeErrorsAndDefaultWiring(): Promise<void> {
         message: 'BullMQ phát lỗi',
       },
     ]);
+    // Hermetic + an toàn cho **mọi** record, kể cả sự kiện lỗi thật của kết nối: chỉ sự kiện của chính
+    // ca này, chỉ message an toàn, chỉ 3 khoá ngữ cảnh (không message/stack/payload thô lọt vào).
+    for (const entry of errors) {
+      expect(['q.hold-expiry', workerName]).toContain(entry.context.queue);
+      expect(entry.message).toBe('BullMQ phát lỗi');
+      expect(Object.keys(entry.context).sort()).toEqual(['component', 'errorCode', 'queue']);
+    }
     expect(JSON.stringify(errors)).not.toContain(secret);
   } finally {
     try {
