@@ -237,6 +237,8 @@ test('lỗi sau khi bị tiếp quản không ghi đè chủ mới', async () =>
   });
 });
 
+// HB-200: trần tường minh 30 giây vì ca ghi 65 sự kiện (60 không-consumer + 5 có consumer) xuống
+// PostgreSQL thật rồi chạy 4 lượt relay — mặc định 5 giây của vitest chỉ đủ khi máy rảnh.
 test('lô đầy sự kiện không-consumer không làm đói sự kiện có consumer', async () => {
   const clock = fakeClock('2026-11-05T03:00:00Z');
   const { context } = makeContext(h.db, clock, h.ownerUrl);
@@ -285,4 +287,4 @@ test('lô đầy sự kiện không-consumer không làm đói sự kiện có c
       unroutableType,
     ]),
   ).toEqual([{ status: 'PUBLISHED' }]);
-});
+}, 30_000);
