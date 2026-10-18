@@ -27,7 +27,7 @@ describe('HB-078 — đua tranh callback ↔ job hết hạn', () => {
 
   afterAll(async () => {
     await testDb.close();
-  });
+  }, 30_000);
 
   it('callback giữ khoá Booking trước ⇒ lượt hết hạn chờ rồi bỏ qua, không nhả phòng của booking đã xác nhận', async () => {
     const fixture = await seedHold(testDb.db, {

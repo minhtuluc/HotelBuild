@@ -55,7 +55,7 @@ describe.skipIf(redisUrl === '')('HB-078 — đối chiếu projection Hold', ()
   afterAll(async () => {
     await redis.quit();
     await testDb.close();
-  });
+  }, 30_000);
 
   it('sửa bản ghi ACTIVE mất hiệu lực, xoá mồ côi, giữ bản ghi còn hiệu lực, đếm bản ghi không đọc được', async () => {
     const stale = await seedHold(testDb.db, { label: 'stale', expiresInSeconds: -300 });

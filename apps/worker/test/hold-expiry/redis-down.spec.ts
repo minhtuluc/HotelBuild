@@ -49,7 +49,7 @@ describe.skipIf(redisUrl === '')('HB-078 — Redis tắt giữa chừng', () => 
     await proxy.close();
     await redis.quit();
     await testDb.close();
-  });
+  }, 30_000);
 
   it('Redis chết giữa chừng: hold quá hạn vẫn được nhả; Redis sống lại: projection được sửa', async () => {
     const due = await seedHold(testDb.db, { label: 'due', expiresInSeconds: -120 });
