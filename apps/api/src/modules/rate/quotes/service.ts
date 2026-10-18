@@ -173,13 +173,19 @@ export class RateQuoteService {
    * Tiêu thụ quote đã phát hành (HB-076 giữ chỗ, HB-077 đặt phòng): trả **nguyên** bản ghi đã lưu để
    * caller dùng tiếp (`quote.total`, `quote.nights[]`, `quoteId`) mà không tính lại giá.
    *
+   * Thứ tự kiểm: đọc bản ghi (mất cache/TTL ⇒ 410) → cú pháp thân lệnh (thiếu trường ⇒ 400) → chủ thể
+   * (409) → fingerprint (409) → hạn dùng (410). `consumedInput` nhận `stored.input`: các trường mà
+   * thân lệnh giữ/đặt chỗ không khai (`ratePlanCode`, `promotionCodes` — xem `validation.ts`) lấy từ
+   * bản ghi, nên quote có gói giá/mã khuyến mãi vẫn tiêu thụ được mà client không chèn được giá trị
+   * khác vào fingerprint.
+   *
    * @throws AppError `410 E_RATE_QUOTE_EXPIRED` — không có khoá (mất cache/TTL) hoặc quá `expiresAt`.
    * @throws AppError `409 E_RATE_QUOTE_MISMATCH` — khác principal, hoặc fingerprint lệch.
    */
   async consume(quoteId: string, principal: Principal, body: unknown): Promise<StoredQuote> {
-    const input = consumedInput(body);
     const stored = await this.store.find(quoteId);
     if (stored === null) throw expired();
+    const input = consumedInput(body, stored.input);
     if (stored.principal !== principalKey(principal)) throw mismatched();
     if (quoteFingerprint(input, stored.principal, stored.engineVersion) !== stored.fingerprint)
       throw mismatched();
