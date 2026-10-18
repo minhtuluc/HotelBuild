@@ -2,16 +2,23 @@ import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { errorBody, fulfillJson, listBody } from './operations-web/fake-api';
 import { operationsWebOnly } from './operations-web/guard';
+import { loginRefundStaff } from './operations-web/refund-fixture';
 
 /**
- * SCR-31/SCR-32 (HB-106) — back-office gọi API trực tiếp (`/api/v1/bookings`), nên ca này khoá ở tầng đó
- * và trả phản hồi đúng `listResponseSchema`/`bookingSummarySchema`. Đồng thời khẳng định **tham số lọc
- * màn hình gửi lên** (lọc/phân trang do máy chủ làm) và quy tắc hiện lối "xoá cứng".
+ * SCR-31/SCR-32 (HB-106) — back-office gọi qua BFF phiên nhân viên
+ * (`/api/session/sys/bookings`), nên ca này khoá ở tầng đó và trả phản hồi đúng
+ * `listResponseSchema`/`bookingSummarySchema`. Đồng thời khẳng định **tham số lọc màn hình
+ * gửi lên** (lọc/phân trang do máy chủ làm) và quy tắc hiện lối "xoá cứng".
  */
 operationsWebOnly();
 
+// Client phiên không gửi request nào khi chưa đăng nhập, nên mỗi ca phải có phiên nhân viên trước.
+test.beforeEach(async ({ page, request }) => {
+  await loginRefundStaff(page, request, 'OWNER');
+});
+
 /** Regex (không phải glob) vì đường dẫn chi tiết/xoá có thêm `/` — glob `*` không vượt qua dấu `/`. */
-const LIST = /\/api\/v1\/bookings/;
+const LIST = /\/api\/session\/sys\/bookings/;
 
 function booking(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {

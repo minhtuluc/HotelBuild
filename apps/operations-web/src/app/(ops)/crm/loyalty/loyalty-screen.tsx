@@ -12,7 +12,7 @@ import type { GuestLoyalty, GuestSummary } from '@pinehill/contracts';
 import { StateSurface, formatDateTimeVn, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
-import { opsApiClient } from '../../../../lib/api';
+import { useOpsSession } from '../../../../lib/ops-session';
 import { t } from '../../../../lib/i18n';
 import { readFailureState } from '../../../../lib/screen-state';
 import { EMPTY_SEARCH, searchParams, TIER_LABEL_KEY } from '../crm-shared';
@@ -25,8 +25,11 @@ interface Loaded {
   loyalty: GuestLoyalty;
 }
 
-export function LoyaltyScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function LoyaltyScreen(): ReactElement {
   const forced = useForcedState();
+  const session = useOpsSession(['/guests'], {
+    onExpired: () => setState({ kind: 'forbidden' }),
+  });
   const params = useSearchParams();
   const wanted = params.get('guestId') ?? '';
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
@@ -39,7 +42,7 @@ export function LoyaltyScreen({ baseUrl }: { baseUrl: string }): ReactElement {
     async (chosen: string): Promise<void> => {
       setReadError(null);
       try {
-        const api = createGuestApi(opsApiClient(baseUrl));
+        const api = createGuestApi(session.client);
         const guestPage = await api.list(searchParams(EMPTY_SEARCH));
         const list = guestPage.data.data;
         const target = chosen === '' ? (list[0]?.id ?? '') : chosen;
@@ -67,7 +70,7 @@ export function LoyaltyScreen({ baseUrl }: { baseUrl: string }): ReactElement {
         setState({ kind: 'ready' });
       }
     },
-    [baseUrl],
+    [session],
   );
 
   useEffect(() => {

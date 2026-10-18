@@ -17,7 +17,7 @@ import type {
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { useForcedState } from '../../../components/forced-state';
-import { opsApiClient } from '../../../lib/api';
+import { useOpsSession } from '../../../lib/ops-session';
 import { t } from '../../../lib/i18n';
 import {
   EMPTY_OVERRIDE_DRAFT,
@@ -40,7 +40,7 @@ const ROW_STYLE = {
   alignItems: 'end',
 } as const;
 
-export function ChannelsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function ChannelsScreen(): ReactElement {
   const forced = useForcedState();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [channels, setChannels] = useState<readonly ChannelSummary[]>([]);
@@ -50,11 +50,14 @@ export function ChannelsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
   const [override, setOverride] = useState<OverrideDraft>(EMPTY_OVERRIDE_DRAFT);
   const [saved, setSaved] = useState(false);
   const [readError, setReadError] = useState<unknown>(null);
+  const session = useOpsSession(['/channels', '/properties'], {
+    onExpired: () => setState({ kind: 'forbidden' }),
+  });
 
   const load = useCallback(
     async (channelId: string | null): Promise<void> => {
       setReadError(null);
-      const client = opsApiClient(baseUrl);
+      const client = session.client;
       try {
         const rateApi = createRateApi(client);
         const [channelPage, propertyPage] = await Promise.all([
@@ -83,7 +86,7 @@ export function ChannelsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
         setState({ kind: 'ready' });
       }
     },
-    [baseUrl],
+    [session],
   );
 
   useEffect(() => {
@@ -95,7 +98,7 @@ export function ChannelsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
   const patch = async (input: ChannelUpdateRequest): Promise<void> => {
     if (selected === null) return;
     try {
-      await createRateApi(opsApiClient(baseUrl)).updateChannel(
+      await createRateApi(session.client).updateChannel(
         selected.id,
         input,
         ifMatchOf(selected.version),

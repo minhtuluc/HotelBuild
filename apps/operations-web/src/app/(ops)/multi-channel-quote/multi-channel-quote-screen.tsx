@@ -8,7 +8,7 @@
  * không tạo quote/snapshot; mọi con số in nguyên giá trị máy chủ trả (không làm tròn lại, không nhân hệ số).
  */
 import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
-import { createPropertyApi, createRateApi, isApiError } from '@pinehill/api-client';
+import { createPropertyApi, createRateApi, isApiError, type ApiClient } from '@pinehill/api-client';
 import type {
   ChannelCode,
   MultiChannelQuote,
@@ -23,7 +23,7 @@ import {
 } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { useForcedState } from '../../../components/forced-state';
-import { opsApiClient } from '../../../lib/api';
+import { useOpsSession } from '../../../lib/ops-session';
 import { t } from '../../../lib/i18n';
 import { defaultRange } from '../../../lib/inventory-grid';
 import {
@@ -42,8 +42,8 @@ interface Options {
   propertyId: string;
 }
 
-async function fetchOptions(baseUrl: string): Promise<Options> {
-  const api = createPropertyApi(opsApiClient(baseUrl));
+async function fetchOptions(client: ApiClient): Promise<Options> {
+  const api = createPropertyApi(client);
   const properties = (await api.list()).data.data;
   const propertyId = properties[0]?.id ?? '';
   const roomTypes = propertyId === '' ? [] : (await api.listRoomTypes({ propertyId })).data.data;
@@ -109,7 +109,7 @@ function QuoteTable({ quote }: { quote: MultiChannelQuote }): ReactElement {
   );
 }
 
-export function MultiChannelQuoteScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function MultiChannelQuoteScreen(): ReactElement {
   const forced = useForcedState();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [options, setOptions] = useState<Options>({
@@ -122,11 +122,14 @@ export function MultiChannelQuoteScreen({ baseUrl }: { baseUrl: string }): React
   const [selected, setSelected] = useState<readonly ChannelCode[]>([]);
   const [quote, setQuote] = useState<MultiChannelQuote | null>(null);
   const [readError, setReadError] = useState<unknown>(null);
+  const session = useOpsSession(['/properties', '/room-types', '/quotes'], {
+    onExpired: () => setState({ kind: 'forbidden' }),
+  });
 
   const load = useCallback(async (): Promise<void> => {
     setReadError(null);
     try {
-      const loaded = await fetchOptions(baseUrl);
+      const loaded = await fetchOptions(session.client);
       setOptions(loaded);
       setRoomTypeId((current) =>
         loaded.roomTypes.some((type) => type.id === current)
@@ -143,7 +146,7 @@ export function MultiChannelQuoteScreen({ baseUrl }: { baseUrl: string }): React
       setReadError(caught);
       setState({ kind: 'ready' });
     }
-  }, [baseUrl]);
+  }, [session]);
 
   useEffect(() => {
     if (forced !== undefined) return;
@@ -162,7 +165,7 @@ export function MultiChannelQuoteScreen({ baseUrl }: { baseUrl: string }): React
     }
     try {
       // Đúng **một** lời gọi cho mỗi lần xem; không tạo quote/snapshot (màn chỉ đọc).
-      const result = await createRateApi(opsApiClient(baseUrl)).quoteMultiChannel(
+      const result = await createRateApi(session.client).quoteMultiChannel(
         buildRequest({
           roomTypeId,
           checkIn: range.from,
@@ -215,7 +218,7 @@ export function MultiChannelQuoteScreen({ baseUrl }: { baseUrl: string }): React
             value={options.propertyId}
             onChange={(event) => {
               void (async () => {
-                const api = createPropertyApi(opsApiClient(baseUrl));
+                const api = createPropertyApi(session.client);
                 const types = (await api.listRoomTypes({ propertyId: event.target.value })).data
                   .data;
                 setOptions({ ...options, propertyId: event.target.value, roomTypes: types });

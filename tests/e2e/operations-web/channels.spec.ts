@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { errorBody, fulfillJson, listBody } from './fake-api';
 import { operationsWebOnly } from './guard';
+import { loginRefundStaff } from './refund-fixture';
 
 const PROPERTY = {
   id: 'p1',
@@ -53,11 +54,14 @@ const DETAIL_WITH_OVERRIDE = {
   propertyOverrides: [{ propertyId: 'p1', multiplier: 1.1, effectiveFrom: '2026-11-01' }],
 };
 
-const CHANNELS = '**/api/v1/channels';
-const CHANNEL_DETAIL = '**/api/v1/channels/c1';
-const PROPERTIES = '**/api/v1/properties*';
+const CHANNELS = '**/api/session/sys/channels';
+const CHANNEL_DETAIL = '**/api/session/sys/channels/c1';
+const PROPERTIES = '**/api/session/sys/properties*';
 
 operationsWebOnly();
+test.beforeEach(async ({ page, request }) => {
+  await loginRefundStaff(page, request, 'OWNER');
+});
 
 function backend(
   page: Page,
@@ -155,7 +159,7 @@ test.describe('SCR-28 kênh trên API giả (HB-060)', () => {
         return fulfillJson(
           route,
           412,
-          errorBody('E_GEN_VERSION_CONFLICT', 'trace-412', '/api/v1/channels/c1'),
+          errorBody('E_GEN_VERSION_CONFLICT', 'trace-412', '/api/session/sys/channels/c1'),
         );
       }
       return fulfillJson(route, 200, JSON.stringify(DETAIL));
@@ -172,7 +176,11 @@ test.describe('SCR-28 kênh trên API giả (HB-060)', () => {
     await expect(page.getByRole('button', { name: 'Tải lại và so sánh' })).toBeVisible();
 
     await page.route(CHANNELS, (route) =>
-      fulfillJson(route, 403, errorBody('E_RBAC_FORBIDDEN', 'trace-403', '/api/v1/channels')),
+      fulfillJson(
+        route,
+        403,
+        errorBody('E_RBAC_FORBIDDEN', 'trace-403', '/api/session/sys/channels'),
+      ),
     );
     await page.goto('/channels');
     await expect(page.getByText('Bạn không có quyền xem nội dung này')).toBeVisible();

@@ -27,7 +27,7 @@ import type {
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
-import { opsApiClient } from '../../../../lib/api';
+import { useOpsSession } from '../../../../lib/ops-session';
 import { t } from '../../../../lib/i18n';
 import { writeFailureState } from '../../../../lib/screen-state';
 import { ChannelStep, ConfirmStep, DoneStep, GuestStep, RoomStep } from './new-booking-steps';
@@ -113,10 +113,14 @@ function StepBody(props: StepBodyProps): ReactElement {
   );
 }
 
-export function NewBookingScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function NewBookingScreen(): ReactElement {
   const forced = useForcedState();
+  const session = useOpsSession(
+    ['/bookings', '/channels', '/guests', '/inventory', '/quotes', '/rate-plans'],
+    { onExpired: () => setState({ kind: 'forbidden' }) },
+  );
   const api = useMemo(() => {
-    const client = opsApiClient(baseUrl);
+    const client = session.client;
     return {
       rate: createRateApi(client),
       inventory: createInventoryApi(client),
@@ -124,7 +128,7 @@ export function NewBookingScreen({ baseUrl }: { baseUrl: string }): ReactElement
       guests: createGuestApi(client),
       bookings: createBookingApi(client),
     };
-  }, [baseUrl]);
+  }, [session]);
 
   const [state, setState] = useState<ScreenState>({ kind: 'ready' });
   const [step, setStep] = useState<Step>('channel');

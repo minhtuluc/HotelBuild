@@ -12,7 +12,7 @@ import type { PromotionSummary, RoomTypeSummary } from '@pinehill/contracts';
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { useForcedState } from '../../../components/forced-state';
-import { opsApiClient } from '../../../lib/api';
+import { useOpsSession } from '../../../lib/ops-session';
 import { t } from '../../../lib/i18n';
 import {
   CHANNEL_CODES,
@@ -41,7 +41,7 @@ const ROW_STYLE = {
   alignItems: 'end',
 } as const;
 
-export function PromotionsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function PromotionsScreen(): ReactElement {
   const forced = useForcedState();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [rows, setRows] = useState<readonly PromotionSummary[]>([]);
@@ -53,10 +53,13 @@ export function PromotionsScreen({ baseUrl }: { baseUrl: string }): ReactElement
     details: readonly FieldIssue[];
   } | null>(null);
   const [readError, setReadError] = useState<unknown>(null);
+  const session = useOpsSession(['/properties', '/room-types', '/promotions'], {
+    onExpired: () => setState({ kind: 'forbidden' }),
+  });
 
   const load = useCallback(async (): Promise<void> => {
     setReadError(null);
-    const client = opsApiClient(baseUrl);
+    const client = session.client;
     try {
       const propertyPage = await createPropertyApi(client).list();
       const propertyId = propertyPage.data.data[0]?.id;
@@ -82,7 +85,7 @@ export function PromotionsScreen({ baseUrl }: { baseUrl: string }): ReactElement
       setReadError(caught);
       setState({ kind: 'ready' });
     }
-  }, [baseUrl]);
+  }, [session]);
 
   useEffect(() => {
     if (forced !== undefined) return;
@@ -98,7 +101,7 @@ export function PromotionsScreen({ baseUrl }: { baseUrl: string }): ReactElement
     }
     setConfigIssue(null);
     try {
-      await createRateApi(opsApiClient(baseUrl)).createPromotion(toCreateRequest(draft));
+      await createRateApi(session.client).createPromotion(toCreateRequest(draft));
       setSaved(draft.code.trim().toUpperCase());
       setDraft(EMPTY_PROMOTION_DRAFT);
       await load();

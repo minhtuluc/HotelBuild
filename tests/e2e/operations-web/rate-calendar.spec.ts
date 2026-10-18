@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { errorBody, fulfillJson, listBody } from './fake-api';
 import { operationsWebOnly } from './guard';
+import { loginRefundStaff } from './refund-fixture';
 
 const PROPERTY = {
   id: 'p1',
@@ -50,7 +51,7 @@ interface CalendarMock {
   range: { from: string; to: string };
 }
 
-const RATE_CALENDAR = /\/api\/v1\/room-types\/[^/]+\/rate-calendar/;
+const RATE_CALENDAR = /\/api\/session\/sys\/room-types\/[^/]+\/rate-calendar/;
 
 function datesBetween(from: string, to: string): readonly string[] {
   const start = Date.parse(`${from}T00:00:00Z`);
@@ -97,8 +98,10 @@ function mockApi(page: Page): CalendarMock {
     range: { from: '', to: '' },
   };
   // Biểu thức chính quy để tuyến danh sách `room-types` không nuốt tuyến lịch giá của một loại phòng.
-  page.route(/\/api\/v1\/properties/, (route) => fulfillJson(route, 200, listBody([PROPERTY])));
-  page.route(/\/api\/v1\/room-types(\?|$)/, (route) =>
+  page.route(/\/api\/session\/sys\/properties/, (route) =>
+    fulfillJson(route, 200, listBody([PROPERTY])),
+  );
+  page.route(/\/api\/session\/sys\/room-types(\?|$)/, (route) =>
     fulfillJson(route, 200, listBody([ROOM_TYPE])),
   );
   page.route(RATE_CALENDAR, async (route) => {
@@ -146,6 +149,9 @@ async function openRange(page: Page, from = FROM, to = TO): Promise<void> {
 }
 
 operationsWebOnly();
+test.beforeEach(async ({ page, request }) => {
+  await loginRefundStaff(page, request, 'OWNER');
+});
 
 test.describe('SCR-26 lịch giá & giá cơ bản (HB-058)', () => {
   test('hiện lịch giá kèm nguồn và mùa', async ({ page }) => {
@@ -243,7 +249,7 @@ test.describe('SCR-26 lịch giá & giá cơ bản (HB-058)', () => {
         message: 'Dưới sàn',
         traceId: 'trace-422',
         timestamp: '2026-12-24T00:00:00.000Z',
-        path: '/api/v1/room-types/rt1/rate-calendar',
+        path: '/api/session/sys/room-types/rt1/rate-calendar',
         details: [{ field: '2026-12-24', issue: 'BELOW_FLOOR' }],
       }),
     };
@@ -278,7 +284,11 @@ test.describe('SCR-26 lịch giá & giá cơ bản (HB-058)', () => {
     // 412 khi ghi: hiện xung đột để tải lại và so sánh, không tự ghi đè.
     mock.reply = {
       status: 412,
-      body: errorBody('E_GEN_VERSION_CONFLICT', 'trace-412', '/api/v1/room-types/rt1/rate-calendar'),
+      body: errorBody(
+        'E_GEN_VERSION_CONFLICT',
+        'trace-412',
+        '/api/session/sys/room-types/rt1/rate-calendar',
+      ),
     };
     await page.getByTestId('rate-price-2026-12-24').fill('1000000');
     await page.getByLabel('Lý do thay đổi').fill('Khách đoàn');

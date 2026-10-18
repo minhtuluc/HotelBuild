@@ -5,6 +5,7 @@ import { installCrmApi } from '../fake-api/f8/crm';
 import { installNotiApi } from '../fake-api/f8/notifications';
 import { installReportApi } from '../fake-api/f8/reports';
 import { operationsWebOnly } from '../operations-web/guard';
+import { loginRefundStaff } from '../operations-web/refund-fixture';
 
 /**
  * HB-172 — axe trên **các màn F8** (báo cáo REP, thông báo, CRM) của operations-web. Bổ sung cho
@@ -14,6 +15,10 @@ import { operationsWebOnly } from '../operations-web/guard';
  * Cổng: **0 vi phạm serious/critical** (NFR-USE-04/TC-A11Y).
  */
 operationsWebOnly();
+
+test.beforeEach(async ({ page, request }) => {
+  await loginRefundStaff(page, request, 'OWNER');
+});
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 

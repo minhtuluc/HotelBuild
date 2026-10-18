@@ -14,7 +14,7 @@ import type { BookingSummary } from '@pinehill/contracts';
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { useForcedState } from '../../../components/forced-state';
-import { opsApiClient } from '../../../lib/api';
+import { useOpsSession } from '../../../lib/ops-session';
 import { t } from '../../../lib/i18n';
 import { readFailureState, writeFailureState } from '../../../lib/screen-state';
 import { BookingsTable, DeletePanel, FilterForm } from './bookings-parts';
@@ -30,13 +30,16 @@ import {
 
 const PAGE_SIZE = 20;
 
-export function BookingsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function BookingsScreen(): ReactElement {
   const forced = useForcedState();
   const router = useRouter();
   const searchParams = useSearchParams();
   const filters = filtersFrom(searchParams);
 
-  const api = useMemo(() => createBookingApi(opsApiClient(baseUrl)), [baseUrl]);
+  const session = useOpsSession(['/bookings'], {
+    onExpired: () => setState({ kind: 'forbidden' }),
+  });
+  const api = useMemo(() => createBookingApi(session.client), [session]);
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [bookings, setBookings] = useState<readonly BookingSummary[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);

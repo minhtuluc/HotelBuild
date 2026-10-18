@@ -15,7 +15,7 @@ import type { BookingSummary } from '@pinehill/contracts';
 import { StateSurface, formatDateTimeVn, formatMoney, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
-import { opsApiClient } from '../../../../lib/api';
+import { useOpsSession } from '../../../../lib/ops-session';
 import { t } from '../../../../lib/i18n';
 import { readFailureState } from '../../../../lib/screen-state';
 import { balanceRows, stayOf } from '../bookings-model';
@@ -90,12 +90,15 @@ function Summary({ booking }: { booking: BookingSummary }): ReactElement {
   );
 }
 
-export function BookingScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function BookingScreen(): ReactElement {
   const forced = useForcedState();
   const params = useParams<{ bookingId: string }>();
   const bookingId = typeof params.bookingId === 'string' ? params.bookingId : '';
 
-  const api = useMemo(() => createBookingApi(opsApiClient(baseUrl)), [baseUrl]);
+  const session = useOpsSession(['/bookings'], {
+    onExpired: () => setState({ kind: 'forbidden' }),
+  });
+  const api = useMemo(() => createBookingApi(session.client), [session]);
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [booking, setBooking] = useState<BookingSummary | null>(null);
   const [error, setError] = useState<unknown>(null);

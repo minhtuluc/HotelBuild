@@ -1,8 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { installNotiApi } from './fake-api/f8/notifications';
 import { operationsWebOnly } from './operations-web/guard';
+import { loginRefundStaff } from './operations-web/refund-fixture';
 
 operationsWebOnly();
+
+test.beforeEach(async ({ page, request }) => {
+  await loginRefundStaff(page, request, 'OWNER');
+});
 
 test.describe('SCR-51 hàng đợi thông báo trên API giả (HB-169)', () => {
   test('hiện trạng thái, số lần thử, lỗi và người nhận đã che (AC1)', async ({ page }) => {
@@ -67,7 +72,7 @@ test.describe('SCR-51 hàng đợi thông báo trên API giả (HB-169)', () => 
         message: 'Không có quyền',
         traceId: 'trace-403',
         timestamp: '2026-10-02T00:00:00.000Z',
-        path: '/api/v1/notifications',
+        path: '/api/session/sys/notifications',
       }),
     });
     await page.goto('/noti/notifications');

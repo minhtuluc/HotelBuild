@@ -2,19 +2,26 @@ import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { errorBody, fulfillJson, listBody } from './operations-web/fake-api';
 import { operationsWebOnly } from './operations-web/guard';
+import { loginRefundStaff } from './operations-web/refund-fixture';
 
 /**
- * SCR-33/SCR-34 (HB-107) — back-office gọi API trực tiếp nên ca này khoá ở `/api/v1/...` và trả phản hồi
- * đúng hợp đồng. Trọng tâm: luồng ≤ 5 bước, **holdMinutes lấy từ cấu hình kênh**, và **giá theo báo giá**.
+ * SCR-33/SCR-34 (HB-107) — back-office gọi qua BFF phiên nhân viên nên ca này khoá ở
+ * `/api/session/sys/...` và trả phản hồi đúng hợp đồng. Trọng tâm: luồng ≤ 5 bước,
+ * **holdMinutes lấy từ cấu hình kênh**, và **giá theo báo giá**.
  */
 operationsWebOnly();
 
-const CHANNELS = /\/api\/v1\/channels/;
-const AVAILABILITY = /\/api\/v1\/inventory\/availability/;
-const RATE_PLANS = /\/api\/v1\/rate-plans/;
-const QUOTES = /\/api\/v1\/quotes/;
-const BOOKINGS = /\/api\/v1\/bookings/;
-const GUESTS = /\/api\/v1\/guests/;
+// Client phiên không gửi request nào khi chưa đăng nhập, nên mỗi ca phải có phiên nhân viên trước.
+test.beforeEach(async ({ page, request }) => {
+  await loginRefundStaff(page, request, 'OWNER');
+});
+
+const CHANNELS = /\/api\/session\/sys\/channels/;
+const AVAILABILITY = /\/api\/session\/sys\/inventory\/availability/;
+const RATE_PLANS = /\/api\/session\/sys\/rate-plans/;
+const QUOTES = /\/api\/session\/sys\/quotes/;
+const BOOKINGS = /\/api\/session\/sys\/bookings/;
+const GUESTS = /\/api\/session\/sys\/guests/;
 
 const channel = (code: string, holdMinutes: number) => ({
   id: `c-${code}`,

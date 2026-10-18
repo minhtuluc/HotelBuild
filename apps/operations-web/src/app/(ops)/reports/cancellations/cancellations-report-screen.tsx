@@ -22,9 +22,9 @@ import type {
 import { StateSurface, formatMoney, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
-import { opsApiClient } from '../../../../lib/api';
 import { t } from '../../../../lib/i18n';
 import { defaultRange } from '../../../../lib/inventory-grid';
+import { useOpsSession } from '../../../../lib/ops-session';
 import { readFailureState, writeFailureState } from '../../../../lib/screen-state';
 import { CancellationsTable, OperationPanel } from '../report-tables';
 import {
@@ -63,7 +63,7 @@ function ratePlanOf(value: string): RatePlanCode | '' {
   return RATE_PLANS.find((code) => code === value) ?? '';
 }
 
-export function CancellationsReportScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function CancellationsReportScreen(): ReactElement {
   const forced = useForcedState();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [properties, setProperties] = useState<readonly PropertySummary[]>([]);
@@ -76,6 +76,13 @@ export function CancellationsReportScreen({ baseUrl }: { baseUrl: string }): Rea
   const [operation, setOperation] = useState<OperationStatusView | null>(null);
   const [readError, setReadError] = useState<unknown>(null);
   const canExport = state.kind !== 'forbidden';
+  const session = useOpsSession(['/reports', '/properties', '/operations'], {
+    onExpired: () => {
+      setReport(null);
+      setOperation(null);
+      setState({ kind: 'forbidden' });
+    },
+  });
 
   const load = useCallback(
     async (filters: ReportFilters, plan: RatePlanCode | ''): Promise<void> => {
@@ -87,13 +94,13 @@ export function CancellationsReportScreen({ baseUrl }: { baseUrl: string }): Rea
       }
       try {
         const [loaded, propertiesPage] = await Promise.all([
-          createReportApi(opsApiClient(baseUrl)).cancellations({
+          createReportApi(session.client).cancellations({
             from: filters.from,
             to: filters.to,
             ...(filters.propertyId === '' ? {} : { propertyId: filters.propertyId }),
             ...(plan === '' ? {} : { ratePlanCode: plan }),
           }),
-          createPropertyApi(opsApiClient(baseUrl)).list(),
+          createPropertyApi(session.client).list(),
         ]);
         setProperties(propertiesPage.data.data);
         setReport(loaded.data);
@@ -112,7 +119,7 @@ export function CancellationsReportScreen({ baseUrl }: { baseUrl: string }): Rea
         setState({ kind: 'ready' });
       }
     },
-    [baseUrl],
+    [session],
   );
 
   useEffect(() => {
@@ -123,7 +130,7 @@ export function CancellationsReportScreen({ baseUrl }: { baseUrl: string }): Rea
   /** Hỏi trạng thái tác vụ cho tới khi kết thúc (SLA xuất ≥ 100.000 dòng ≤ 60 s). */
   const poll = async (operationId: string): Promise<void> => {
     for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt += 1) {
-      const view = (await createSystemApi(opsApiClient(baseUrl)).operation(operationId)).data;
+      const view = (await createSystemApi(session.client).operation(operationId)).data;
       setOperation(view);
       if (isTerminal(view.status)) return;
       await delay(POLL_INTERVAL_MS);
@@ -135,7 +142,7 @@ export function CancellationsReportScreen({ baseUrl }: { baseUrl: string }): Rea
     try {
       const params = filtersToParams(applied);
       if (appliedRatePlan !== '') params.ratePlanCode = appliedRatePlan;
-      const ref = await createReportApi(opsApiClient(baseUrl)).export(
+      const ref = await createReportApi(session.client).export(
         exportRequest('cancellations', format, params),
       );
       setOperation(ref.data);

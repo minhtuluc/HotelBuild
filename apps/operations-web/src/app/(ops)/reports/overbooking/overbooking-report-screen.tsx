@@ -11,9 +11,9 @@ import type { OverbookingReport, PropertySummary } from '@pinehill/contracts';
 import { StateSurface, formatMoney, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
-import { opsApiClient } from '../../../../lib/api';
 import { t } from '../../../../lib/i18n';
 import { defaultRange } from '../../../../lib/inventory-grid';
+import { useOpsSession } from '../../../../lib/ops-session';
 import { readFailureState } from '../../../../lib/screen-state';
 import { OverbookingTable } from '../report-tables';
 import { overbookingTotals, rangeIssue, type ReportFilters } from '../report-shared';
@@ -39,7 +39,7 @@ function statusOf(value: string): OverbookingStatus | '' {
   return STATUSES.find((status) => status === value) ?? '';
 }
 
-export function OverbookingReportScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function OverbookingReportScreen(): ReactElement {
   const forced = useForcedState();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [properties, setProperties] = useState<readonly PropertySummary[]>([]);
@@ -50,6 +50,12 @@ export function OverbookingReportScreen({ baseUrl }: { baseUrl: string }): React
   const [appliedStatus, setAppliedStatus] = useState<OverbookingStatus | ''>('');
   const [report, setReport] = useState<OverbookingReport | null>(null);
   const [readError, setReadError] = useState<unknown>(null);
+  const session = useOpsSession(['/reports', '/properties'], {
+    onExpired: () => {
+      setReport(null);
+      setState({ kind: 'forbidden' });
+    },
+  });
 
   const load = useCallback(
     async (filters: ReportFilters, wanted: OverbookingStatus | ''): Promise<void> => {
@@ -61,13 +67,13 @@ export function OverbookingReportScreen({ baseUrl }: { baseUrl: string }): React
       }
       try {
         const [loaded, propertiesPage] = await Promise.all([
-          createReportApi(opsApiClient(baseUrl)).overbooking({
+          createReportApi(session.client).overbooking({
             from: filters.from,
             to: filters.to,
             ...(filters.propertyId === '' ? {} : { propertyId: filters.propertyId }),
             ...(wanted === '' ? {} : { status: wanted }),
           }),
-          createPropertyApi(opsApiClient(baseUrl)).list(),
+          createPropertyApi(session.client).list(),
         ]);
         setProperties(propertiesPage.data.data);
         setReport(loaded.data);
@@ -86,7 +92,7 @@ export function OverbookingReportScreen({ baseUrl }: { baseUrl: string }): React
         setState({ kind: 'ready' });
       }
     },
-    [baseUrl],
+    [session],
   );
 
   useEffect(() => {

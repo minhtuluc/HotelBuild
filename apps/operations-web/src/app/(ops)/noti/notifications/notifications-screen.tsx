@@ -11,7 +11,7 @@ import type { NotificationChannel, NotificationSummary } from '@pinehill/contrac
 import { StateSurface, formatDateTimeVn, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
-import { opsApiClient } from '../../../../lib/api';
+import { useOpsSession } from '../../../../lib/ops-session';
 import { t } from '../../../../lib/i18n';
 import { readFailureState, writeFailureState } from '../../../../lib/screen-state';
 import {
@@ -51,7 +51,7 @@ function blockKey(
   return reason === 'MAX_RETRIES' ? 'noti.resend.blockedMax' : 'noti.resend.blockedSoon';
 }
 
-export function NotificationsScreen({ baseUrl }: { baseUrl: string }): ReactElement {
+export function NotificationsScreen(): ReactElement {
   const forced = useForcedState();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [rows, setRows] = useState<readonly NotificationSummary[]>([]);
@@ -69,13 +69,16 @@ export function NotificationsScreen({ baseUrl }: { baseUrl: string }): ReactElem
   const [reason, setReason] = useState('');
   const [saved, setSaved] = useState<string | null>(null);
   const [readError, setReadError] = useState<unknown>(null);
+  const session = useOpsSession(['/notifications'], {
+    onExpired: () => setState({ kind: 'forbidden' }),
+  });
   const canEdit = state.kind !== 'forbidden';
 
   const load = useCallback(
     async (filters: typeof applied): Promise<void> => {
       setReadError(null);
       try {
-        const page = await createNotificationApi(opsApiClient(baseUrl)).list(notiParams(filters));
+        const page = await createNotificationApi(session.client).list(notiParams(filters));
         setRows(page.data.data);
         setState(
           page.data.data.length === 0
@@ -92,7 +95,7 @@ export function NotificationsScreen({ baseUrl }: { baseUrl: string }): ReactElem
         setState({ kind: 'ready' });
       }
     },
-    [baseUrl],
+    [session],
   );
 
   useEffect(() => {
@@ -109,7 +112,7 @@ export function NotificationsScreen({ baseUrl }: { baseUrl: string }): ReactElem
       return;
     }
     try {
-      await createNotificationApi(opsApiClient(baseUrl)).resend(target.id, resendRequest(reason));
+      await createNotificationApi(session.client).resend(target.id, resendRequest(reason));
       setSaved(t('noti.saved.resend', { id: target.id }));
       setTarget(null);
       setReason('');
