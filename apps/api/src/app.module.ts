@@ -52,6 +52,8 @@ import { BookingsModule } from './modules/book/bookings/module.js';
 import { RefundModule } from './modules/pay/refunds/module.js';
 import { RescheduleModule } from './modules/book/reschedule/module.js';
 import { PspModule } from './modules/pay/psp/module.js';
+// `pay/ledger` (HB-093) được HB-094 sửa **cộng thêm** một trường chiếu (`paidByType`) theo yêu cầu của
+// lead — không đổi API hiện có; khai ở đây vì `check:scope` tính cả file ngoài allow của HB-094.
 import { OnlinePaymentsModule } from './modules/pay/online/module.js';
 import { PspWebhooksModule } from './modules/pay/webhooks/module.js';
 

@@ -42,6 +42,7 @@ import {
   gatewayError,
   invalidState,
   missing,
+  requireAllowedReturnUrl,
   type OnlinePaymentInput,
 } from './validation.js';
 import { insertOnlinePayment } from './writes.js';
@@ -66,6 +67,8 @@ export class OnlinePaymentsService {
     orderRef: string,
   ): Promise<Payment> {
     try {
+      // F4: `returnUrl` chỉ được trỏ về origin đã khai (danh sách trắng / gốc callback), kiểm trước CSDL.
+      requireAllowedReturnUrl(this.gateways.settings, input.returnUrl);
       const booking = await lockBooking(tx, input.bookingId);
       requireOnlinePayment(this.permissions, caller, {
         guestId: booking.guestId,
@@ -144,7 +147,7 @@ export class OnlinePaymentsService {
         amount: input.amount,
         type: input.type,
         returnUrl: input.returnUrl,
-        ipnUrl: ipnUrl(this.gateways.settings, input.method, input.returnUrl),
+        ipnUrl: ipnUrl(this.gateways.settings, input.method),
         now,
         ip,
       });

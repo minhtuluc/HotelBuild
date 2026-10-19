@@ -146,6 +146,20 @@ test('BR-PAY-02: cọc thu đủ bằng type=DEPOSIT ⇒ obligation cọc về 0
   expect(codeOf(response.body)).toBe('E_PAY_AMOUNT_MISMATCH');
 });
 
+test('P2/F4: `returnUrl` khác origin đã khai ⇒ 400, không tạo Payment', async () => {
+  const booking = await createdBooking();
+  const response = await onlineRequest(
+    onlineBody(booking.id, {
+      amount: booking.depositAmount,
+      returnUrl: 'https://evil.example/steal',
+    }),
+    { key: nextKey() },
+  );
+  expect(response.status, JSON.stringify(response.body)).toBe(400);
+  expect(codeOf(response.body)).toBe('E_GEN_VALIDATION_FAILED');
+  expect(await rows('SELECT 1 FROM payments WHERE booking_id=$1::uuid', [booking.id])).toEqual([]);
+});
+
 test('AC2: hold đã hết hạn theo giờ CSDL ⇒ không còn nghĩa vụ cọc để khởi tạo', async () => {
   const booking = await createdBooking();
   await rows(

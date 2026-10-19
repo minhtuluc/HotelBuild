@@ -11,6 +11,8 @@ import { onlinePaymentCreateRequestSchema } from '@pinehill/contracts';
 import { AppError } from '../../../common/app-error.js';
 import { uuid } from '../../rate/calendar/support.js';
 import type { PspMethod } from '../psp/port.js';
+import { allowedReturnUrl } from '../psp/settings.js';
+import type { PspSettings } from '../psp/settings.js';
 
 /** Khoản khách tự trả trực tuyến: cọc và số dư. Phạt/phí/hoàn có đường riêng (BR-PAY-06…09). */
 export type OnlineType = 'DEPOSIT' | 'BALANCE';
@@ -35,6 +37,19 @@ export const outOfScope = () =>
 /** §4.3: lỗi từ adapter ngoài ⇒ `502 E_PAY_GATEWAY_ERROR`, không lộ chi tiết cổng ra ngoài. */
 export const gatewayError = () =>
   new AppError(502, 'E_PAY_GATEWAY_ERROR', 'Cổng thanh toán không sẵn sàng.');
+
+/** Trùng khoá nghiệp vụ `(booking_id, type, idempotency_key)` ⇒ 409 đúng mã api.md §4.2 (F7). */
+export const duplicateCommand = () =>
+  new AppError(
+    409,
+    'E_SYS_IDEMPOTENCY_KEY_REUSED',
+    'Khoá chống trùng đã dùng cho một yêu cầu khác.',
+  );
+
+/** F4: `returnUrl` chỉ được trỏ về origin đã khai (danh sách trắng hoặc gốc callback). */
+export function requireAllowedReturnUrl(settings: PspSettings, returnUrl: string): void {
+  if (!allowedReturnUrl(settings, returnUrl)) throw invalid();
+}
 
 function isOnlineType(value: string): value is OnlineType {
   return value === 'DEPOSIT' || value === 'BALANCE';
