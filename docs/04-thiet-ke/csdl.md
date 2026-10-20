@@ -1354,6 +1354,63 @@ CREATE TABLE operations (
 CREATE INDEX idx_operations_requested_by ON operations (requested_by, created_at DESC);
 ```
 
+**`refund_payout_operations` — thao tác chi hoàn bền (migration `0007_refund_payout_operations`, HB-100).**
+ADR-016 tách trạng thái **kỹ thuật** của một leg chi khỏi `refund_requests.status`: hồ sơ vẫn `APPROVED`
+(tiền còn giữ hạn mức) cho tới khi PSP xác nhận; timeout để operation ở `UNKNOWN` để đối soát, không trả
+reservation. Mỗi dòng ứng với **một** `refund_allocations` (UNIQUE `refund_allocation_id`/`refund_payment_id`)
+nên không thể sinh leg hay chứng từ chi thứ hai cho cùng request+receipt. `psp_key` là khoá idempotency bền
+của PSP; chỉ thay sau khi PSP xác nhận lần trước thất bại dứt điểm. `lease_token`+`lease_expires_at`+`version`
+là hàng rào để worker đã mất lease không commit kết quả. Bảng đọc/ghi bằng SQL thô trong
+`modules/pay/payouts` và `apps/worker/src/jobs/refund-payout` (có model Prisma để client khớp lược đồ).
+
+```sql
+CREATE TABLE refund_payout_operations (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  refund_request_id   uuid NOT NULL REFERENCES refund_requests(id) ON DELETE RESTRICT,
+  refund_allocation_id uuid NOT NULL UNIQUE REFERENCES refund_allocations(id) ON DELETE RESTRICT,
+  original_payment_id uuid NOT NULL REFERENCES payments(id) ON DELETE RESTRICT,
+  refund_payment_id   uuid NOT NULL UNIQUE REFERENCES payments(id) ON DELETE RESTRICT,
+  method              text NOT NULL CHECK (method IN ('VNPAY','MOMO','BANK_TRANSFER')),
+  amount              bigint NOT NULL CHECK (amount > 0),
+  bank_note           text,
+  status              text NOT NULL DEFAULT 'READY'
+                      CHECK (status IN ('READY','IN_FLIGHT','UNKNOWN','SUCCEEDED','FAILED_FINAL')),
+  psp_key             text NOT NULL UNIQUE CHECK (length(btrim(psp_key)) > 0),
+  provider_txn_id     text,
+  attempts            integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+  lease_token         uuid,
+  lease_expires_at    timestamptz,
+  version             bigint NOT NULL DEFAULT 1 CHECK (version > 0),
+  last_error          text,
+  started_at          timestamptz,
+  finished_at         timestamptz,
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  updated_at          timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT ck_refund_payout_lease CHECK (
+    status <> 'IN_FLIGHT' OR (lease_token IS NOT NULL AND lease_expires_at IS NOT NULL)),
+  CONSTRAINT ck_refund_payout_succeeded CHECK (
+    status <> 'SUCCEEDED' OR (provider_txn_id IS NOT NULL AND finished_at IS NOT NULL)),
+  CONSTRAINT ck_refund_payout_failed CHECK (
+    status <> 'FAILED_FINAL' OR last_error IS NOT NULL)
+);
+
+CREATE INDEX idx_refund_payout_ready
+  ON refund_payout_operations (created_at)
+  WHERE status IN ('READY','IN_FLIGHT','UNKNOWN');
+
+-- Chỉ dùng khi REFUND_PAYOUT_SIMULATOR=true (dev/test): sổ phía PSP mô phỏng, ghi bằng kết nối riêng để
+-- mô phỏng "PSP đã chi trước khi DB nghiệp vụ commit".
+CREATE TABLE refund_payout_simulator_transfers (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  psp_key         text NOT NULL UNIQUE CHECK (length(btrim(psp_key)) > 0),
+  method          text NOT NULL CHECK (method IN ('VNPAY','MOMO')),
+  amount          bigint NOT NULL CHECK (amount > 0),
+  status          text NOT NULL CHECK (status IN ('SUCCEEDED','FAILED')),
+  provider_txn_id text NOT NULL UNIQUE,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+```
+
 ### 3.3. Ràng buộc loại trừ, trigger bảo vệ bất biến
 
 ```sql
@@ -1381,10 +1438,18 @@ DECLARE t record;
 BEGIN
   FOR t IN SELECT table_name FROM information_schema.columns
     WHERE table_schema = 'public' AND column_name = 'version'
+      -- Bảng mới tự khai trigger version tên prefixed (xem block ngay dưới); vòng lặp này chỉ phục vụ
+      -- các bảng của baseline để catalog khớp migration 0001.
+      AND table_name <> 'refund_payout_operations'
   LOOP
     EXECUTE format('CREATE TRIGGER trg_version BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION fn_increment_version()', t.table_name);
   END LOOP;
 END $$;
+
+-- HB-100: `trg_refund_payout_operations_version` là tên khai trong migration 0007 (cùng lối
+-- `trg_refund_requests_guard`); trigger `updated_at` vẫn do vòng lặp chung cuối §3.3 sinh ra.
+CREATE TRIGGER trg_refund_payout_operations_version BEFORE UPDATE ON refund_payout_operations
+  FOR EACH ROW EXECUTE FUNCTION fn_increment_version();
 
 CREATE FUNCTION fn_immutable_record() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
@@ -2467,6 +2532,15 @@ Bảng `operations` (§3.2) ghi vết thao tác nền: loại, trạng thái, ng
 tham số, ảnh chụp kết quả cho worker, và tệp xuất tạm kèm hạn. Migration tiến thuần (bảng mới, một chỉ mục);
 không sửa cột/trigger của bảng cũ, không đổi Prisma model (module đọc/ghi bằng SQL thô). HB-179 (sao lưu) dùng
 lại bảng này nên `kind` là enum mở rộng được khi thêm loại thao tác mới.
+
+## 10.3. Migration 0007 — thao tác chi hoàn bền (HB-100)
+
+Bảng `refund_payout_operations` (§3.2) là trạng thái **kỹ thuật** của từng leg chi hoàn theo ADR-016:
+`READY/IN_FLIGHT/UNKNOWN/SUCCEEDED/FAILED_FINAL`, khoá PSP bền, lease/version cho worker và unique
+`refund_allocation_id`/`refund_payment_id` (một leg cho mỗi request+receipt). `refund_payout_simulator_transfers`
+là sổ PSP mô phỏng chỉ dùng ở dev/test. Migration tiến thuần: hai bảng mới, một chỉ mục bộ phận, trigger
+`updated_at`/`version`; không sửa bảng cũ, không đổi trạng thái nghiệp vụ `RefundStatus`. `schema.prisma` được
+sinh lại bằng `prisma db pull` cho hai bảng này.
 
 ## 11. Đề xuất bổ sung
 

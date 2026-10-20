@@ -7,12 +7,18 @@ export const QUEUE_NAMES = [
   'q.report-export',
   'q.export-cleanup',
   'q.notification-send',
+  'q.refund-payout',
 ] as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[number];
 
-/** Ba hàng đợi chạy lặp theo nhịp; chỉ bật khi cấu hình cho phép. */
-export const REPEATABLE_QUEUES = ['q.hold-expiry', 'q.outbox-relay', 'q.export-cleanup'] as const;
+/** Các hàng đợi chạy lặp theo nhịp; chỉ bật khi cấu hình cho phép. */
+export const REPEATABLE_QUEUES = [
+  'q.hold-expiry',
+  'q.outbox-relay',
+  'q.export-cleanup',
+  'q.refund-payout',
+] as const;
 
 export const isRepeatableQueue = (name: QueueName): boolean =>
   REPEATABLE_QUEUES.some((queue) => queue === name);
@@ -25,3 +31,4 @@ export const HOLD_EXPIRY_JOB = 'hold-expiry';
 export const HOLD_RECONCILE_JOB = 'hold-reconcile';
 export const OUTBOX_RELAY_JOB = 'outbox-relay';
 export const EXPORT_CLEANUP_JOB = 'export-cleanup';
+export const REFUND_PAYOUT_JOB = 'refund-payout';

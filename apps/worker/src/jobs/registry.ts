@@ -5,6 +5,7 @@ import { outboxRelayJob } from './outbox-relay/outbox-relay.job.js';
 import { channelSenders } from '../noti/channels.js';
 import { createNotificationSendJob } from '../noti/send.job.js';
 import { smtpSettings } from '../noti/smtp.js';
+import { refundPayoutJob } from './refund-payout/refund-payout.job.js';
 import type { JobRegistry } from './types.js';
 
 /**
@@ -17,6 +18,7 @@ export const JOB_HANDLERS: JobRegistry = {
   'q.report-export': reportExportJob,
   'q.export-cleanup': exportCleanupJob,
   'q.outbox-relay': outboxRelayJob,
+  'q.refund-payout': refundPayoutJob,
   'q.notification-send': (data, context) =>
     createNotificationSendJob(channelSenders(smtpSettings(context.config)))(data, context),
 };
