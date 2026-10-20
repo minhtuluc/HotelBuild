@@ -19,12 +19,7 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import { Redis } from 'ioredis';
 import request from 'supertest';
 import { z } from 'zod';
-import {
-  bookingSummarySchema,
-  pinTokenSchema,
-  quoteSchema,
-  tokenPairSchema,
-} from '@pinehill/contracts';
+import { pinTokenSchema, tokenPairSchema, walkInResultSchema } from '@pinehill/contracts';
 import { AppModule } from '../../src/app.module.js';
 import { CLOCK } from '../../src/infrastructure/ports.js';
 import {
@@ -46,13 +41,9 @@ export { clock, databaseUrl, otherPropertyId, rows, userId, propertyId, typeId }
 /** PIN tổng hợp cho mọi ca — không phải PIN thật của người dùng nào. */
 export const PIN = '123456';
 
-/** Hình dạng phản hồi `POST /walk-in` (oracle của test, không import schema của module). */
-export const walkInResponseSchema = z.object({
-  created: z.boolean(),
-  quote: quoteSchema,
-  booking: bookingSummarySchema,
-});
-export type WalkInResponse = z.infer<typeof walkInResponseSchema>;
+/** Hình dạng phản hồi `POST /walk-in` lấy từ hợp đồng phát hành (ADR-008) — một định nghĩa duy nhất. */
+export const walkInResponseSchema = walkInResultSchema;
+export type WalkInResponse = z.infer<typeof walkInResultSchema>;
 
 const civil = (value: number | Date): string => new Date(value).toISOString().slice(0, 10);
 
