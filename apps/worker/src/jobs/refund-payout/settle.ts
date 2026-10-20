@@ -45,12 +45,30 @@ async function lockForSettlement(tx: Tx, op: ClaimedPayout): Promise<string> {
   return bookingId;
 }
 
+/** `RefundPaid` phải đối soát được **toàn hồ sơ**: tổng `net_refund` + mọi leg đã chi. */
+async function paidPayload(
+  tx: Tx,
+  op: ClaimedPayout,
+): Promise<{
+  amount: bigint;
+  legs: { amount: bigint; method: string; provider_txn_id: string | null }[];
+}> {
+  const request = await tx.$queryRaw<{ net_refund: bigint | null }[]>`
+    SELECT net_refund FROM refund_requests WHERE id = ${op.refundRequestId}::uuid`;
+  const legs = await tx.$queryRaw<
+    { amount: bigint; method: string; provider_txn_id: string | null }[]
+  >`
+    SELECT amount, method, provider_txn_id FROM refund_payout_operations
+     WHERE refund_request_id = ${op.refundRequestId}::uuid AND status = 'SUCCEEDED'
+     ORDER BY created_at, id`;
+  return { amount: BigInt(request[0]?.net_refund ?? 0n), legs };
+}
+
 /** Chỉ `PAID` khi mọi allocation của hồ sơ đã có chứng từ SUCCEEDED (trigger DB cũng kiểm lại). */
 async function markPaidIfComplete(
   tx: Tx,
   op: ClaimedPayout,
   bookingId: string,
-  transfer: TransferEvidence,
   now: Date,
 ): Promise<string> {
   const remaining = await tx.$queryRaw<{ pending: bigint }[]>`
@@ -62,16 +80,22 @@ async function markPaidIfComplete(
     UPDATE refund_requests SET status = 'PAID', paid_at = ${now}::timestamptz,
            updated_at = ${now}::timestamptz
      WHERE id = ${op.refundRequestId}::uuid AND status = 'APPROVED'`;
-  if (updated === 1)
+  if (updated === 1) {
+    const payload = await paidPayload(tx, op);
     await tx.$executeRaw`
       INSERT INTO outbox_events(event_type, aggregate_type, aggregate_id, payload_json)
       VALUES ('RefundPaid', 'RefundRequest', ${op.refundRequestId}::uuid,
         ${JSON.stringify({
           refundRequestId: op.refundRequestId,
           bookingId,
-          amount: op.amount.toString(),
-          providerTxnId: transfer.providerTxnId,
+          amount: payload.amount.toString(),
+          legs: payload.legs.map((leg) => ({
+            amount: leg.amount.toString(),
+            method: leg.method,
+            providerTxnId: leg.provider_txn_id,
+          })),
         })}::jsonb)`;
+  }
   const current = await tx.$queryRaw<{ status: string }[]>`
     SELECT status FROM refund_requests WHERE id = ${op.refundRequestId}::uuid`;
   return current[0]?.status ?? 'PAID';
@@ -135,7 +159,7 @@ export async function settlePayout(
              last_error = NULL, updated_at = ${now}::timestamptz
        WHERE id = ${op.id}::uuid AND lease_token = ${op.leaseToken}::uuid AND version = ${op.version}`;
     if (settled !== 1) throw new StalePayoutLease();
-    const status = await markPaidIfComplete(tx, op, bookingId, transfer, now);
+    const status = await markPaidIfComplete(tx, op, bookingId, now);
     await syncRefundedAmount(tx, bookingId, now);
     await recordSettled(tx, op, transfer, status, now);
   });

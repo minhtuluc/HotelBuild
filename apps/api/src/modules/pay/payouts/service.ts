@@ -14,7 +14,7 @@ import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import { PIN_PURPOSE_FINANCIAL, requirePinToken } from '../../auth/pin/consume.js';
 import { BookingLedger } from '../ledger/service.js';
 import { lockRefund } from '../refunds/writes.js';
-import { checkMethod, payoutError } from './validation.js';
+import { checkIntent, legMethods, payoutError } from './validation.js';
 import { payoutView, type RefundPayoutView } from './view.js';
 import {
   insertPayoutLeg,
@@ -22,8 +22,15 @@ import {
   payoutOperations,
   refundFailure,
   type PayoutRow,
+  type RefundLegRow,
   type Tx,
 } from './writes.js';
+
+/** Leg đã có chứng từ chi nhưng chưa có operation là dữ liệu lệch — đối soát tay, không tạo leg mới. */
+function assertNoOrphanLegs(legs: readonly RefundLegRow[]): void {
+  if (legs.some((leg) => leg.refund_payment_id !== null))
+    throw payoutError('gateway', 'Hồ sơ đã có chứng từ chi chưa gắn thao tác; cần đối soát.');
+}
 
 export class PayoutService {
   private readonly ledger: BookingLedger;
@@ -72,15 +79,14 @@ export class PayoutService {
       await this.ledger.read(tx, found.booking_id);
       const row = await lockRefund(tx, refundRequestId);
       const existing = await payoutOperations(tx, refundRequestId);
-      const reused = this.existingView(existing, row.status);
-      if (reused !== null) return reused;
+      if (row.status === 'PAID') return payoutView(row.id, row.status, existing);
       if (row.status !== 'APPROVED') throw payoutError('notApproved');
       const legs = await legsOf(tx, refundRequestId);
-      const method = checkMethod(
-        input,
-        legs.map((leg) => leg.original_method),
-      );
+      const methods = legMethods(legs.map((leg) => leg.original_method));
+      checkIntent(input, methods);
       // Một `pinToken` dùng một lần cho toàn bộ lệnh chi (mọi leg) — BR-RBAC-05, api.md §2.6.
+      // Tiêu thụ **trước** khi trả lại operation đã có: lệnh 🔒 không được trả số tiền/khoá PSP khi
+      // thiếu PIN (replay cùng `Idempotency-Key` do interceptor phục vụ, không vào nhánh này).
       await requirePinToken(tx, {
         userId: actor.id,
         token: input.pinToken,
@@ -88,18 +94,19 @@ export class PayoutService {
         bookingId: row.booking_id,
         now: this.clock.now(),
       });
-      if (legs.some((leg) => leg.refund_payment_id !== null))
-        throw payoutError('gateway', 'Hồ sơ đã có chứng từ chi chưa gắn thao tác; cần đối soát.');
+      const reused = this.existingView(existing);
+      if (reused !== null) return reused;
+      assertNoOrphanLegs(legs);
       const now = this.clock.now();
       const created: PayoutRow[] = [];
-      for (const leg of legs)
+      for (const [index, leg] of legs.entries())
         created.push(
           await insertPayoutLeg(tx, {
             bookingId: row.booking_id,
             refundRequestId: row.id,
             allocationId: leg.id,
             originalPaymentId: leg.original_payment_id,
-            method,
+            method: methods[index]!,
             amount: leg.amount,
             bankNote: input.bankNote?.trim() ?? null,
             actorId: actor.id,
@@ -115,10 +122,11 @@ export class PayoutService {
         afterJson: {
           bookingId: row.booking_id,
           status: row.status,
-          method,
+          methods,
           operations: created.map((operation) => ({
             id: operation.id,
             amount: operation.amount.toString(),
+            method: operation.method,
             originalPaymentId: operation.original_payment_id,
             refundPaymentId: operation.refund_payment_id,
             pspKey: operation.psp_key,
@@ -136,10 +144,10 @@ export class PayoutService {
    * Lệnh đã tạo leg trước đó: trả lại trạng thái kỹ thuật, **không** sinh chứng từ/khoá thứ hai. Chỉ
    * khi một leg đã `FAILED_FINAL` mới từ chối để kế toán đối soát tay (api.md §2.6).
    */
-  private existingView(rows: readonly PayoutRow[], status: string): RefundPayoutView | null {
+  private existingView(rows: readonly PayoutRow[]): RefundPayoutView | null {
     if (rows.length === 0) return null;
     if (rows.some((operation) => operation.status === 'FAILED_FINAL')) throw payoutError('gateway');
-    return payoutView(rows[0]!.refund_request_id, status, rows);
+    return payoutView(rows[0]!.refund_request_id, 'APPROVED', rows);
   }
 
   /**

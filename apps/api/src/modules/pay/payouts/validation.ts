@@ -28,28 +28,49 @@ export function payInput(value: unknown): RefundPayRequest {
 }
 
 /** Phương thức chi suy từ **phương thức gốc** (BR-PAY-08): tiền mặt → chuyển khoản, OTA giữ tiền thì không tự chi. */
-export function payoutMethodOf(originalMethod: string): 'VNPAY' | 'MOMO' | 'BANK_TRANSFER' | null {
+export type PayoutMethod = 'VNPAY' | 'MOMO' | 'BANK_TRANSFER';
+
+export function payoutMethodOf(originalMethod: string): PayoutMethod | null {
   if (originalMethod === 'CASH' || originalMethod === 'BANK_TRANSFER') return 'BANK_TRANSFER';
   if (originalMethod === 'VNPAY' || originalMethod === 'MOMO') return originalMethod;
   return null;
 }
 
-/** Một lệnh chi chỉ nhận **một** phương thức; khoản chuyển khoản phải có ghi chú tài khoản (BR-PAY-08). */
-export function checkMethod(
-  input: RefundPayRequest,
-  originals: readonly string[],
-): 'VNPAY' | 'MOMO' | 'BANK_TRANSFER' {
+/**
+ * Mỗi leg chi theo **phương thức gốc của receipt của nó** (ADR-016: "Một yêu cầu có thể chi qua nhiều
+ * phương thức"), không ép cả hồ sơ về một phương thức. Chỉ khoản OTA giữ tiền là không tự chi.
+ */
+export function legMethods(originals: readonly string[]): PayoutMethod[] {
   if (originals.length === 0) throw payoutError('invalid', 'Hồ sơ hoàn chưa có phân bổ nguồn thu.');
-  const required = originals.map(payoutMethodOf);
-  const only = required[0];
-  if (only === undefined || only === null)
-    throw payoutError(
-      'invalid',
-      'Khoản thu OTA do OTA giữ tiền phải đối soát qua OTA, không chi từ cổng nội bộ.',
-    );
-  if (required.some((method) => method !== only) || only !== input.method)
-    throw payoutError('invalid', 'Phương thức chi phải khớp phương thức gốc của mọi nguồn hoàn.');
-  if (only === 'BANK_TRANSFER' && (input.bankNote ?? '').trim().length === 0)
+  return originals.map((original) => {
+    const method = payoutMethodOf(original);
+    if (method === null)
+      throw payoutError(
+        'invalid',
+        'Khoản thu OTA do OTA giữ tiền phải đối soát qua OTA, không chi từ cổng nội bộ.',
+      );
+    return method;
+  });
+}
+
+/**
+ * `method` trong thân lệnh là **ý định** của kế toán, không phải phương thức duy nhất của mọi leg:
+ * - mọi leg cùng một phương thức ⇒ phải khai đúng phương thức đó;
+ * - nhiều phương thức ⇒ phải khai một trong các phương thức thực tế (không tự tách lệnh chi).
+ * Có leg chuyển khoản ⇒ bắt buộc `bankNote` (BR-PAY-08).
+ */
+export function checkIntent(input: RefundPayRequest, methods: readonly PayoutMethod[]): void {
+  const first = methods[0];
+  if (first === undefined) throw payoutError('invalid', 'Hồ sơ hoàn chưa có phân bổ nguồn thu.');
+  const single = methods.every((method) => method === first);
+  const declared = single
+    ? input.method === first
+    : methods.some((method) => method === input.method);
+  if (!declared)
+    throw payoutError('invalid', 'Phương thức chi phải khớp phương thức gốc của nguồn hoàn.');
+  if (
+    methods.some((method) => method === 'BANK_TRANSFER') &&
+    (input.bankNote ?? '').trim().length === 0
+  )
     throw payoutError('invalid', 'Chuyển khoản hoàn tiền cần ghi chú số tài khoản (BR-PAY-08).');
-  return only;
 }

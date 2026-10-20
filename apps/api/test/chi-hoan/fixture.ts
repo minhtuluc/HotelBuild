@@ -182,6 +182,64 @@ export async function openRefund(amount = 2_000_000, method: 'VNPAY' | 'MOMO' | 
   return { ...src, refundId: view.id, netRefund: view.netRefund ?? 0 };
 }
 
+export interface Receipt {
+  readonly method: 'VNPAY' | 'MOMO' | 'CASH';
+  readonly amount: number;
+}
+
+/**
+ * Booking thanh toán bằng **nhiều chứng từ khác phương thức** (ADR-016: một yêu cầu hoàn có thể chi qua
+ * nhiều phương thức). Hồ sơ hoàn được lập từ chứng từ đầu tiên, nhưng engine phân bổ cho mọi receipt
+ * SUCCEEDED của booking.
+ */
+export async function approvedRefundFrom(receipts: readonly Receipt[]) {
+  await flexPolicy();
+  await setTier(100);
+  const total = receipts.reduce((sum, receipt) => sum + receipt.amount, 0);
+  const created = await booking({ status: 'CONFIRMED', price: total, nights: 3 });
+  const paymentIds: string[] = [];
+  for (const receipt of receipts)
+    paymentIds.push(
+      String(
+        (
+          await rows(
+            `INSERT INTO payments(booking_id,type,method,amount,status,idempotency_key,paid_at,created_by)
+             VALUES($1::uuid,'DEPOSIT',$2,$3,'SUCCEEDED',$4,clock_timestamp(),$5::uuid)
+             RETURNING id`,
+            [created.id, receipt.method, receipt.amount, randomBytes(16).toString('hex'), userId],
+          )
+        )[0]!.id,
+      ),
+    );
+  const makerToken = await login(maker, 'FRONT_DESK');
+  const opened = await http()
+    .post('/api/v1/refund-requests')
+    .set('Authorization', `Bearer ${makerToken}`)
+    .set('Idempotency-Key', randomUUID())
+    .send({
+      bookingId: created.id,
+      paymentId: paymentIds[0],
+      reason: 'GUEST_REQUEST',
+      isForceMajeure: false,
+    });
+  expect(opened.status).toBe(201);
+  const view = refundRequestSchema.parse(opened.body);
+  const checkerToken = await login(checker, 'MANAGER');
+  const approvePin = await pinToken(checkerToken, created.id);
+  const approved = await http()
+    .post(`/api/v1/refund-requests/${view.id}/approve`)
+    .set('Authorization', `Bearer ${checkerToken}`)
+    .set('Idempotency-Key', randomUUID())
+    .send({ approvedAmount: view.requestedAmount, pinToken: approvePin });
+  expect(approved.status).toBe(200);
+  return {
+    bookingId: created.id,
+    paymentIds,
+    refundId: view.id,
+    netRefund: view.netRefund ?? 0,
+  };
+}
+
 /** Lập + duyệt hồ sơ hoàn tới `APPROVED` bằng HTTP thật (maker–checker khác người). */
 export async function approvedRefund(
   amount = 2_000_000,

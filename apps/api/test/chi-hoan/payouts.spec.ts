@@ -6,14 +6,21 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test } from 'vitest';
 import { z } from 'zod';
+import type { PrismaClient } from '@prisma/client';
 import { claimPayouts } from '../../../../apps/worker/src/jobs/refund-payout/claim.js';
+import { simulatedPayoutGateway } from '../../../../apps/worker/src/jobs/refund-payout/psp.js';
 import {
   settlePayout,
   StalePayoutLease,
 } from '../../../../apps/worker/src/jobs/refund-payout/settle.js';
-import type { PayoutGateway } from '../../../../apps/worker/src/jobs/refund-payout/types.js';
+import type {
+  PayoutGateway,
+  TransferResult,
+} from '../../../../apps/worker/src/jobs/refund-payout/types.js';
+import type { WorkerConfig } from '../../../../apps/worker/src/config/env.js';
 import {
   approvedRefund,
+  approvedRefundFrom,
   cashierFor,
   db,
   errorCode,
@@ -33,13 +40,46 @@ import {
 const vnpay = { method: 'VNPAY' } as const;
 /** Hợp đồng trả về của lệnh chi: chỉ đọc các trường test cần, parse ở biên thay vì cast. */
 const payoutBody = z.object({
-  operations: z.array(z.object({ id: z.string(), status: z.string(), amount: z.number().int() })),
+  operations: z.array(
+    z.object({ id: z.string(), status: z.string(), method: z.string(), amount: z.number().int() }),
+  ),
+});
+const outboxPayload = z.object({
+  amount: z.string(),
+  legs: z.array(z.object({ amount: z.string(), method: z.string(), providerTxnId: z.string() })),
 });
 const bookingRefunded = async (id: string) =>
   String(
     (await rows('SELECT refunded_amount FROM bookings WHERE id=$1::uuid', [id]))[0]!
       .refunded_amount,
   );
+
+/**
+ * PSP mô phỏng cho VNPAY/MOMO + rail ngân hàng trong bộ nhớ cho leg BANK_TRANSFER của test: production
+ * cố ý không tự chi chuyển khoản (chờ kế toán xác nhận), test cần cả hai leg chốt để chứng minh PAID
+ * chỉ xảy ra sau khi mọi leg xong.
+ */
+function hybridGateway() {
+  const bank = new Map<string, string>();
+  const gateway = (db: PrismaClient, _config: WorkerConfig, method: string): PayoutGateway =>
+    method === 'BANK_TRANSFER'
+      ? {
+          automatic: true,
+          query: async (pspKey): Promise<TransferResult> => {
+            const txn = bank.get(pspKey);
+            return txn === undefined
+              ? { state: 'NOT_FOUND' }
+              : { state: 'SUCCEEDED', providerTxnId: txn };
+          },
+          submit: async ({ pspKey }): Promise<TransferResult> => {
+            const txn = `BANK-${randomUUID()}`;
+            bank.set(pspKey, txn);
+            return { state: 'SUCCEEDED', providerTxnId: txn };
+          },
+        }
+      : simulatedPayoutGateway(db);
+  return { gateway, bank };
+}
 
 /** Dựng hồ sơ đã APPROVED + chứng từ chi PENDING (lệnh HTTP thật của kế toán). */
 async function prepared() {
@@ -80,6 +120,11 @@ test('kế toán tạo chứng từ chi PENDING đúng một lần; trạng thá
     method: 'VNPAY',
     amount: String(-refund.netRefund),
   });
+
+  // Lệnh mới (khoá khác) trên hồ sơ đã có operation vẫn phải có PIN hợp lệ (route 🔒).
+  const noPinAgain = await pay(cashier.token, refund.refundId, vnpay);
+  expect(noPinAgain.status).toBe(401);
+  expect(errorCode(noPinAgain.body)).toBe('E_AUTH_PIN_REQUIRED');
 
   // Khoá chống trùng khác vẫn không sinh leg/khoá PSP thứ hai (UNIQUE request+receipt là hàng rào cuối).
   const freshPin = await cashierFor(refund.bookingId);
@@ -136,6 +181,53 @@ test('tiền mặt hoàn bằng chuyển khoản: bắt buộc bankNote; worker 
   expect((await refundRow(refund.refundId)).status).toBe('APPROVED');
   expect(await heldAmount(refund.bookingId)).toBe(String(refund.netRefund));
   expect(await simulatorTransfers()).toHaveLength(0);
+});
+
+test('hoàn nhiều nguồn khác phương thức: mỗi leg theo nguồn gốc; chỉ PAID sau khi cả hai xong', async () => {
+  const refund = await approvedRefundFrom([
+    { method: 'VNPAY', amount: 1_200_000 },
+    { method: 'CASH', amount: 800_000 },
+  ]);
+  const cashier = await cashierFor(refund.bookingId);
+  // Có leg tiền mặt → chuyển khoản nên bắt buộc `bankNote` dù ý định khai VNPAY.
+  const missingNote = await pay(cashier.token, refund.refundId, {
+    method: 'VNPAY',
+    pinToken: cashier.pin,
+  });
+  expect(missingNote.status).toBe(400);
+
+  const created = await pay(cashier.token, refund.refundId, {
+    method: 'VNPAY',
+    bankNote: 'STK 0123456789 — NGUYEN VAN A',
+    pinToken: cashier.pin,
+  });
+  expect(created.status).toBe(202);
+  const ops = await operations(refund.refundId);
+  expect(ops).toHaveLength(2);
+  expect(ops.map((operation) => operation.method).sort()).toEqual(['BANK_TRANSFER', 'VNPAY']);
+  expect(ops.map((operation) => String(operation.amount)).sort()).toEqual(['1200000', '800000']);
+  expect((await refundRow(refund.refundId)).status).toBe('APPROVED');
+  expect(await heldAmount(refund.bookingId)).toBe(String(refund.netRefund));
+
+  const { gateway, bank } = hybridGateway();
+  await runPayoutJob({ gateway });
+  const settled = await operations(refund.refundId);
+  expect(settled.map((operation) => operation.status)).toEqual(['SUCCEEDED', 'SUCCEEDED']);
+  expect(bank.size).toBe(1);
+  expect((await refundRow(refund.refundId)).status).toBe('PAID');
+  expect(await bookingRefunded(refund.bookingId)).toBe(String(refund.netRefund));
+
+  // `RefundPaid` phải đối soát được toàn hồ sơ: tổng net + mọi leg, không phải một leg.
+  const [event] = await rows(
+    "SELECT payload_json FROM outbox_events WHERE aggregate_id=$1::uuid AND event_type='RefundPaid'",
+    [refund.refundId],
+  );
+  const payload = outboxPayload.parse(event!.payload_json);
+  expect(payload.amount).toBe(String(refund.netRefund));
+  expect(payload.legs.map((leg) => leg.method).sort()).toEqual(['BANK_TRANSFER', 'VNPAY']);
+  expect(payload.legs.reduce((sum, leg) => sum + BigInt(leg.amount), 0n)).toBe(
+    BigInt(refund.netRefund),
+  );
 });
 
 test('worker chi thành công: PAID, chứng từ SUCCEEDED, sổ booking và audit/outbox cùng transaction', async () => {

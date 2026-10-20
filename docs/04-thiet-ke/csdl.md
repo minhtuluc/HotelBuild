@@ -1438,10 +1438,18 @@ DECLARE t record;
 BEGIN
   FOR t IN SELECT table_name FROM information_schema.columns
     WHERE table_schema = 'public' AND column_name = 'version'
+      -- Bảng mới tự khai trigger version tên prefixed (xem block ngay dưới); vòng lặp này chỉ phục vụ
+      -- các bảng của baseline để catalog khớp migration 0001.
+      AND table_name <> 'refund_payout_operations'
   LOOP
     EXECUTE format('CREATE TRIGGER trg_version BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION fn_increment_version()', t.table_name);
   END LOOP;
 END $$;
+
+-- HB-100: `trg_refund_payout_operations_version` là tên khai trong migration 0007 (cùng lối
+-- `trg_refund_requests_guard`); trigger `updated_at` vẫn do vòng lặp chung cuối §3.3 sinh ra.
+CREATE TRIGGER trg_refund_payout_operations_version BEFORE UPDATE ON refund_payout_operations
+  FOR EACH ROW EXECUTE FUNCTION fn_increment_version();
 
 CREATE FUNCTION fn_immutable_record() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
