@@ -45,6 +45,20 @@ const workerEnvSchema = z.object({
   // Chu kỳ dọn tệp xuất hết hạn (HB-163 AC2). Tệp chỉ sống `EXPORT_TTL_SECONDS` = 15 phút nên quét
   // mỗi 15 phút là đủ; đây là chu kỳ chạy, không phải hạn sống của tệp.
   EXPORT_CLEANUP_INTERVAL_SECONDS: z.coerce.number().positive().default(900),
+  // HB-100: worker chi hoàn. Nhịp quét, trần lô, thời gian giữ lease (worker chết thì lease hết và
+  // lượt sau đối soát lại), thời gian chờ trước khi đối soát lại kết quả không rõ, hẹn đối soát tay
+  // cho chuyển khoản, và trần số lần gửi PSP trước FAILED_FINAL.
+  REFUND_PAYOUT_INTERVAL_SECONDS: z.coerce.number().positive().default(30),
+  REFUND_PAYOUT_BATCH_SIZE: z.coerce.number().int().min(1).max(200).default(20),
+  REFUND_PAYOUT_LEASE_SECONDS: z.coerce.number().positive().max(3600).default(60),
+  REFUND_PAYOUT_RETRY_SECONDS: z.coerce.number().positive().max(86_400).default(300),
+  REFUND_PAYOUT_MANUAL_POLL_SECONDS: z.coerce.number().positive().max(86_400).default(900),
+  REFUND_PAYOUT_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
+  // Chỉ bật ở dev/test: chưa có adapter API hoàn tiền của VNPay/MoMo, mặc định KHÔNG tự chi.
+  REFUND_PAYOUT_SIMULATOR: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
 });
 
 export type WorkerConfig = z.output<typeof workerEnvSchema>;

@@ -88,6 +88,7 @@ describe('JOB_HANDLERS', () => {
       'q.hold-expiry',
       'q.notification-send',
       'q.outbox-relay',
+      'q.refund-payout',
       'q.report-export',
     ]);
     for (const name of Object.keys(JOB_HANDLERS)) expect(QUEUE_NAMES).toContain(name);

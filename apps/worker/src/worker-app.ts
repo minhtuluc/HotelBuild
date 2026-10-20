@@ -5,6 +5,7 @@ import {
   isRepeatableQueue,
   OUTBOX_RELAY_JOB,
   QUEUE_NAMES,
+  REFUND_PAYOUT_JOB,
 } from './queues.js';
 import type { QueueName } from './queues.js';
 import { HOLD_EXPIRY_RECONCILE, HOLD_EXPIRY_SWEEP } from './jobs/hold-expiry/hold-expiry.job.js';
@@ -95,6 +96,15 @@ export function repeatSchedules(config: WorkerConfig, name: QueueName): readonly
         id: 'q.export-cleanup-scheduler',
         everySeconds: config.EXPORT_CLEANUP_INTERVAL_SECONDS,
         jobName: EXPORT_CLEANUP_JOB,
+        data: {},
+      },
+    ];
+  if (name === 'q.refund-payout')
+    return [
+      {
+        id: 'q.refund-payout-scheduler',
+        everySeconds: config.REFUND_PAYOUT_INTERVAL_SECONDS,
+        jobName: REFUND_PAYOUT_JOB,
         data: {},
       },
     ];
