@@ -8,6 +8,7 @@
  */
 import { Body, Controller, HttpCode, Inject, Post, Req, UseInterceptors } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
+import type { WalkInResult } from '@pinehill/contracts';
 import { isAuthorizedActor } from '../../../common/actor/authorized-actor.js';
 import { IdempotencyContext } from '../../../common/idempotency/context.js';
 import { Idempotent } from '../../../common/idempotency/decorators.js';
@@ -16,7 +17,6 @@ import { WalkInAccess } from './access.js';
 import { WalkInCreatedInterceptor } from './created-interceptor.js';
 import { WalkInService } from './service.js';
 import { unauthorized, walkInInput } from './validation.js';
-import type { WalkInResult } from './validation.js';
 
 @Controller('walk-in')
 export class WalkInController {

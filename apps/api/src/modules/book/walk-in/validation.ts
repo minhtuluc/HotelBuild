@@ -1,24 +1,18 @@
 /**
- * Đầu vào/đầu ra của lệnh điều phối walk-in (HB-151; UC-BOOK-02, FR-BOOK-02; api.md §2.5, §3.2).
+ * Chuẩn hoá đầu vào của lệnh điều phối walk-in (HB-151; UC-BOOK-02, FR-BOOK-02; api.md §2.5, §3.2).
+ *
+ * Hình dạng dây (`walkInRequestSchema`/`walkInResultSchema`) nằm ở `@pinehill/contracts` — ADR-008 coi
+ * spec sinh từ zod là hợp đồng, nên tuyến mới phải có schema ở đó. Lớp này chỉ:
+ * - parse + chuẩn hoá (UUID hạ chữ thường, mảng luôn có mặt, gói giá đúng kiểu);
+ * - dựng hai hình chiếu **thuần** `quoteRequestBody`/`bookingRequestBody` cho hai use case F4
+ *   (HB-074/HB-077), chỉ **chọn trường**, không thêm/bớt giá trị — nhờ vậy fingerprint quote của bước
+ *   sau khớp tuyệt đối với bước trước (BR-RATE-17, ADR-015 §2).
  *
  * Thân lệnh **không** có `channelCode`: kênh do cấu hình quyết (bảng `channels`, mã `WALKIN`), client
- * không được tự khai kênh để đổi hệ số giá (BR-RATE-07). Các trường còn lại trùng đúng hợp đồng báo
- * giá/đặt phòng — lớp này chỉ kiểm hình dạng, không tính giá và không quyết trạng thái.
- *
- * `quoteRequestBody`/`bookingRequestBody` là hai hình chiếu thuần của cùng đầu vào: chúng chỉ **chọn
- * trường** cho hai use case F4 (HB-074/HB-077), không thêm/bớt giá trị nào. Nhờ vậy fingerprint quote
- * của bước sau khớp tuyệt đối với bước trước (BR-RATE-17, ADR-015 §2).
+ * không được tự khai kênh để đổi hệ số giá (BR-RATE-07).
  */
-import {
-  bookingSummarySchema,
-  businessDateSchema,
-  channelCodeSchema,
-  guestContactSchema,
-  quoteSchema,
-  ratePlanCodeSchema,
-} from '@pinehill/contracts';
+import { channelCodeSchema, walkInRequestSchema } from '@pinehill/contracts';
 import type { ChannelCode, RatePlanCode } from '@pinehill/contracts';
-import { z } from 'zod';
 import { AppError } from '../../../common/app-error.js';
 import { uuid } from '../../rate/calendar/support.js';
 
@@ -42,32 +36,6 @@ export const missing = () => new AppError(404, 'E_GEN_NOT_FOUND', 'Không tìm t
 /** BR-BOOK-07 + api.md §2.5: kênh đang `INACTIVE` thì không bán walk-in. */
 export const channelInactive = () =>
   new AppError(409, 'E_BOOK_INVALID_STATE', 'Kênh khách vãng lai đang ngừng bán.');
-
-const childAgesSchema = z.array(z.number().int().min(0).max(17));
-
-/**
- * Thân `POST /walk-in` — **strict** (trường lạ, kể cả `channelCode`, là lệnh hỏng). Thiếu/sai trường
- * rơi về `400 E_GEN_VALIDATION_FAILED`; các mã `E_BOOK_*` sâu hơn do use case F4 trả sau khi khoá tồn.
- */
-const walkInRequestSchema = z
-  .strictObject({
-    propertyId: z.string().min(1),
-    roomTypeId: z.string().min(1),
-    ratePlanCode: ratePlanCodeSchema,
-    checkIn: businessDateSchema,
-    checkOut: businessDateSchema,
-    adults: z.number().int().min(1).max(20),
-    children: z.number().int().min(0).max(20),
-    childAges: childAgesSchema.optional(),
-    roomCount: z.number().int().min(1).max(10),
-    promotionCodes: z.array(z.string().min(1).max(40)).optional(),
-    guest: guestContactSchema,
-    note: z.string().max(500).optional(),
-  })
-  .refine((value) => value.childAges === undefined || value.childAges.length === value.children, {
-    message: '`childAges` phải có đúng `children` phần tử',
-    path: ['childAges'],
-  });
 
 /** Đầu vào đã chuẩn hoá (UUID hạ chữ thường, mảng luôn có mặt) — dùng cho cả hai bước con F4. */
 export interface WalkInInput {
@@ -132,11 +100,3 @@ export function bookingRequestBody(input: WalkInInput, quoteId: string, channelC
     ...(input.note === null ? {} : { note: input.note }),
   };
 }
-
-/** Kết quả điều phối: quote đã phát hành, booking (mới hoặc cũ theo BR-BOOK-16), cờ `created`. */
-export const walkInResultSchema = z.object({
-  created: z.boolean(),
-  quote: quoteSchema,
-  booking: bookingSummarySchema,
-});
-export type WalkInResult = z.infer<typeof walkInResultSchema>;

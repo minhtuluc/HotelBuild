@@ -9581,6 +9581,1140 @@
         }
       }
     },
+    "/api/v1/walk-in": {
+      "post": {
+        "operationId": "walkInCreate",
+        "summary": "Walk-in: quote → booking kênh WALKIN trong một lệnh (UC-BOOK-02, BR-BOOK-07)",
+        "tags": [
+          "booking"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "propertyId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "roomTypeId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "ratePlanCode": {
+                    "type": "string",
+                    "enum": [
+                      "FLEX7",
+                      "SAVER3",
+                      "NONREF",
+                      "LONGSTAY14"
+                    ]
+                  },
+                  "checkIn": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "checkOut": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "adults": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20
+                  },
+                  "children": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 20
+                  },
+                  "childAges": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 17
+                    }
+                  },
+                  "roomCount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10
+                  },
+                  "promotionCodes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40
+                    }
+                  },
+                  "guest": {
+                    "type": "object",
+                    "properties": {
+                      "fullName": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                      },
+                      "phone": {
+                        "type": "string",
+                        "pattern": "^(?:\\+84|0)\\d{9}$"
+                      }
+                    },
+                    "required": [
+                      "fullName",
+                      "phone"
+                    ]
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "propertyId",
+                  "roomTypeId",
+                  "ratePlanCode",
+                  "checkIn",
+                  "checkOut",
+                  "adults",
+                  "children",
+                  "roomCount",
+                  "guest"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Booking đã có — BR-BOOK-16 trả bản cũ kèm cờ duplicateSuspected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "created": {
+                      "type": "boolean"
+                    },
+                    "quote": {
+                      "type": "object",
+                      "properties": {
+                        "quoteId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "channelCode": {
+                          "type": "string",
+                          "enum": [
+                            "WEB",
+                            "PHONE",
+                            "WALKIN",
+                            "OTA_BOOKING",
+                            "OTA_AGODA",
+                            "OTA_AIRBNB",
+                            "AGENCY"
+                          ]
+                        },
+                        "ratePlanCode": {
+                          "type": "string",
+                          "enum": [
+                            "FLEX7",
+                            "SAVER3",
+                            "NONREF",
+                            "LONGSTAY14"
+                          ]
+                        },
+                        "checkIn": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "checkOut": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "nights": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "date": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                              },
+                              "basePrice": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "seasonMultiplier": {
+                                "type": "number",
+                                "minimum": 0.1,
+                                "maximum": 5
+                              },
+                              "weekendMultiplier": {
+                                "type": "number",
+                                "minimum": 0.1,
+                                "maximum": 5
+                              },
+                              "occupancyMultiplier": {
+                                "type": "number",
+                                "minimum": 0.1,
+                                "maximum": 5
+                              },
+                              "losMultiplier": {
+                                "type": "number",
+                                "minimum": 0.1,
+                                "maximum": 5
+                              },
+                              "channelMultiplier": {
+                                "type": "number",
+                                "minimum": 0.1,
+                                "maximum": 5
+                              },
+                              "clamped": {
+                                "type": "boolean"
+                              },
+                              "nightlyPrice": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              }
+                            },
+                            "required": [
+                              "date",
+                              "basePrice",
+                              "seasonMultiplier",
+                              "weekendMultiplier",
+                              "occupancyMultiplier",
+                              "losMultiplier",
+                              "channelMultiplier",
+                              "clamped",
+                              "nightlyPrice"
+                            ]
+                          }
+                        },
+                        "subtotal": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "discountAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "VND"
+                          ]
+                        },
+                        "warnings": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "depositPercent": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "depositAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "engineVersion": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "quotedAt": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                        }
+                      },
+                      "required": [
+                        "quoteId",
+                        "channelCode",
+                        "ratePlanCode",
+                        "checkIn",
+                        "checkOut",
+                        "nights",
+                        "subtotal",
+                        "discountAmount",
+                        "total",
+                        "currency",
+                        "warnings",
+                        "depositPercent",
+                        "depositAmount",
+                        "engineVersion",
+                        "quotedAt",
+                        "expiresAt"
+                      ]
+                    },
+                    "booking": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "code": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "seq": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "DRAFT",
+                            "HELD",
+                            "PENDING_PAYMENT",
+                            "CONFIRMED",
+                            "CHECKED_IN",
+                            "CHECKED_OUT",
+                            "CANCELLED",
+                            "NO_SHOW",
+                            "EXPIRED"
+                          ]
+                        },
+                        "guestId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "propertyId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "roomTypeId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "ratePlanId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "channelId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "checkIn": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "checkOut": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "nights": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "adults": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "children": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "roomCount": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "totalAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "depositPercent": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "depositAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "paidAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "refundedAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "balanceDue": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "penaltyAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "VND"
+                          ]
+                        },
+                        "rescheduleCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "holdExpiresAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                        },
+                        "oversold": {
+                          "type": "boolean"
+                        },
+                        "priceLocked": {
+                          "type": "boolean"
+                        },
+                        "duplicateSuspected": {
+                          "type": "boolean"
+                        },
+                        "channelPolicyCode": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "minLength": 1
+                        },
+                        "note": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "maxLength": 500
+                        },
+                        "createdBy": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "payments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "paymentId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "bookingId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "DEPOSIT",
+                                  "BALANCE",
+                                  "REFUND",
+                                  "PENALTY",
+                                  "EXTRA_SERVICE",
+                                  "COMPENSATION",
+                                  "RESCHEDULE_FEE"
+                                ]
+                              },
+                              "method": {
+                                "type": "string",
+                                "enum": [
+                                  "VNPAY",
+                                  "MOMO",
+                                  "CASH",
+                                  "BANK_TRANSFER",
+                                  "OTA_COLLECT"
+                                ]
+                              },
+                              "amount": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PENDING",
+                                  "SUCCEEDED",
+                                  "FAILED",
+                                  "REVERSED"
+                                ]
+                              },
+                              "providerTxnId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "paymentUrl": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "expiresAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "paidAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdBy": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "paymentId",
+                              "bookingId",
+                              "type",
+                              "method",
+                              "amount",
+                              "status",
+                              "providerTxnId",
+                              "paymentUrl",
+                              "expiresAt",
+                              "paidAt",
+                              "createdAt"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "code",
+                        "seq",
+                        "status",
+                        "guestId",
+                        "propertyId",
+                        "roomTypeId",
+                        "ratePlanId",
+                        "channelId",
+                        "checkIn",
+                        "checkOut",
+                        "nights",
+                        "adults",
+                        "children",
+                        "roomCount",
+                        "totalAmount",
+                        "depositPercent",
+                        "depositAmount",
+                        "paidAmount",
+                        "refundedAmount",
+                        "balanceDue",
+                        "penaltyAmount",
+                        "currency",
+                        "rescheduleCount",
+                        "holdExpiresAt",
+                        "oversold",
+                        "priceLocked",
+                        "duplicateSuspected",
+                        "channelPolicyCode",
+                        "note",
+                        "createdBy",
+                        "createdAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "created",
+                    "quote",
+                    "booking"
+                  ]
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Booking walk-in đã tạo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "created": {
+                      "type": "boolean"
+                    },
+                    "quote": {
+                      "type": "object",
+                      "properties": {
+                        "quoteId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "channelCode": {
+                          "type": "string",
+                          "enum": [
+                            "WEB",
+                            "PHONE",
+                            "WALKIN",
+                            "OTA_BOOKING",
+                            "OTA_AGODA",
+                            "OTA_AIRBNB",
+                            "AGENCY"
+                          ]
+                        },
+                        "ratePlanCode": {
+                          "type": "string",
+                          "enum": [
+                            "FLEX7",
+                            "SAVER3",
+                            "NONREF",
+                            "LONGSTAY14"
+                          ]
+                        },
+                        "checkIn": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "checkOut": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "nights": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "date": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                              },
+                              "basePrice": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "seasonMultiplier": {
+                                "type": "number",
+                                "minimum": 0.1,
+                                "maximum": 5
+                              },
+                              "weekendMultiplier": {
+                                "type": "number",
+                                "minimum": 0.1,
+                                "maximum": 5
+                              },
+                              "occupancyMultiplier": {
+                                "type": "number",
+                                "minimum": 0.1,
+                                "maximum": 5
+                              },
+                              "losMultiplier": {
+                                "type": "number",
+                                "minimum": 0.1,
+                                "maximum": 5
+                              },
+                              "channelMultiplier": {
+                                "type": "number",
+                                "minimum": 0.1,
+                                "maximum": 5
+                              },
+                              "clamped": {
+                                "type": "boolean"
+                              },
+                              "nightlyPrice": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              }
+                            },
+                            "required": [
+                              "date",
+                              "basePrice",
+                              "seasonMultiplier",
+                              "weekendMultiplier",
+                              "occupancyMultiplier",
+                              "losMultiplier",
+                              "channelMultiplier",
+                              "clamped",
+                              "nightlyPrice"
+                            ]
+                          }
+                        },
+                        "subtotal": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "discountAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "VND"
+                          ]
+                        },
+                        "warnings": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "depositPercent": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "depositAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "engineVersion": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "quotedAt": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                        }
+                      },
+                      "required": [
+                        "quoteId",
+                        "channelCode",
+                        "ratePlanCode",
+                        "checkIn",
+                        "checkOut",
+                        "nights",
+                        "subtotal",
+                        "discountAmount",
+                        "total",
+                        "currency",
+                        "warnings",
+                        "depositPercent",
+                        "depositAmount",
+                        "engineVersion",
+                        "quotedAt",
+                        "expiresAt"
+                      ]
+                    },
+                    "booking": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "code": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "seq": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "DRAFT",
+                            "HELD",
+                            "PENDING_PAYMENT",
+                            "CONFIRMED",
+                            "CHECKED_IN",
+                            "CHECKED_OUT",
+                            "CANCELLED",
+                            "NO_SHOW",
+                            "EXPIRED"
+                          ]
+                        },
+                        "guestId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "propertyId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "roomTypeId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "ratePlanId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "channelId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "checkIn": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "checkOut": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "nights": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "adults": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "children": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "roomCount": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "totalAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "depositPercent": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "depositAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "paidAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "refundedAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "balanceDue": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "penaltyAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "currency": {
+                          "type": "string",
+                          "enum": [
+                            "VND"
+                          ]
+                        },
+                        "rescheduleCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "holdExpiresAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                        },
+                        "oversold": {
+                          "type": "boolean"
+                        },
+                        "priceLocked": {
+                          "type": "boolean"
+                        },
+                        "duplicateSuspected": {
+                          "type": "boolean"
+                        },
+                        "channelPolicyCode": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "minLength": 1
+                        },
+                        "note": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "maxLength": 500
+                        },
+                        "createdBy": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "payments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "paymentId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "bookingId": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "DEPOSIT",
+                                  "BALANCE",
+                                  "REFUND",
+                                  "PENALTY",
+                                  "EXTRA_SERVICE",
+                                  "COMPENSATION",
+                                  "RESCHEDULE_FEE"
+                                ]
+                              },
+                              "method": {
+                                "type": "string",
+                                "enum": [
+                                  "VNPAY",
+                                  "MOMO",
+                                  "CASH",
+                                  "BANK_TRANSFER",
+                                  "OTA_COLLECT"
+                                ]
+                              },
+                              "amount": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PENDING",
+                                  "SUCCEEDED",
+                                  "FAILED",
+                                  "REVERSED"
+                                ]
+                              },
+                              "providerTxnId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "paymentUrl": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              },
+                              "expiresAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "paidAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "createdBy": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "paymentId",
+                              "bookingId",
+                              "type",
+                              "method",
+                              "amount",
+                              "status",
+                              "providerTxnId",
+                              "paymentUrl",
+                              "expiresAt",
+                              "paidAt",
+                              "createdAt"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "code",
+                        "seq",
+                        "status",
+                        "guestId",
+                        "propertyId",
+                        "roomTypeId",
+                        "ratePlanId",
+                        "channelId",
+                        "checkIn",
+                        "checkOut",
+                        "nights",
+                        "adults",
+                        "children",
+                        "roomCount",
+                        "totalAmount",
+                        "depositPercent",
+                        "depositAmount",
+                        "paidAmount",
+                        "refundedAmount",
+                        "balanceDue",
+                        "penaltyAmount",
+                        "currency",
+                        "rescheduleCount",
+                        "holdExpiresAt",
+                        "oversold",
+                        "priceLocked",
+                        "duplicateSuspected",
+                        "channelPolicyCode",
+                        "note",
+                        "createdBy",
+                        "createdAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "created",
+                    "quote",
+                    "booking"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "E_GEN_VALIDATION_FAILED, E_BOOK_MISSING_FIELD",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE, E_BOOK_BLACKLISTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_BOOK_INVALID_STATE, E_INV_NO_AVAILABILITY, E_INV_ROOM_TAKEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "E_BOOK_OVER_CAPACITY, E_BOOK_MIN_NIGHTS, E_BOOK_INVALID_DATES",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/bookings/{bookingId}": {
       "get": {
         "operationId": "bookingsGet",

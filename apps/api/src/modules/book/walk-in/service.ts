@@ -26,12 +26,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { channelCodeSchema } from '@pinehill/contracts';
+import type { WalkInResult } from '@pinehill/contracts';
 import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
 import { RateQuoteService } from '../../rate/quotes/service.js';
 import { BookingsService } from '../bookings/service.js';
 import type { BookingCaller } from '../bookings/principal.js';
 import { channelInactive, missing, WALK_IN_CHANNEL } from './validation.js';
-import type { WalkInInput, WalkInResult } from './validation.js';
+import type { WalkInInput } from './validation.js';
 import { bookingRequestBody, quoteRequestBody } from './validation.js';
 
 type Tx = Prisma.TransactionClient;

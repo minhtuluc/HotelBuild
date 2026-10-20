@@ -12,7 +12,7 @@ import { Injectable } from '@nestjs/common';
 import type { CallHandler, ExecutionContext, NestInterceptor } from '@nestjs/common';
 import type { FastifyReply } from 'fastify';
 import { map } from 'rxjs';
-import { walkInResultSchema } from './validation.js';
+import { walkInResultSchema } from '@pinehill/contracts';
 
 @Injectable()
 export class WalkInCreatedInterceptor implements NestInterceptor {

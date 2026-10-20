@@ -241,6 +241,7 @@ theo `tiers[i].hoursBeforeCheckIn/refundPercent/chargeFirstNight` chỉ ra dòng
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |
 |--------|-----------|-------|-------------------|---------------|----|----|
 | POST | `/api/v1/bookings` | **Tạo booking** (web/quầy/điện thoại) — §3.2 | GUEST | `propertyId`, `roomTypeId`, `ratePlanCode`, `channelCode`, `quoteId`, `guest`, `checkIn`, `checkOut`, `adults`, `children`, `roomCount`, `promotionCodes[]` | UC-BOOK-01, UC-BOOK-02, UC-BOOK-03 | BR-BOOK-01…16 |
+| POST | `/api/v1/walk-in` | **Tạo booking khách vãng lai** — gộp quote → booking trên kênh cấu hình `WALKIN` trong một lệnh; thu cọc kế tiếp bằng `POST /payments` | FRONT_DESK | `propertyId`, `roomTypeId`, `ratePlanCode`, `checkIn`, `checkOut`, `adults`, `children`, `roomCount`, `guest`, `promotionCodes[]`, `note` | UC-BOOK-02 | BR-BOOK-01,07,16 |
 | GET | `/api/v1/bookings` | Tra cứu booking (khách chỉ booking của mình), lọc/phân trang tại DB | GUEST hoặc tập quyền §6.3 | `propertyId`, `status`, `channelCode`, `from`, `to`, `q` | UC-BOOK-07 | BR-RBAC-02 |
 | GET | `/api/v1/bookings/{bookingId}` | Chi tiết theo quyền, snapshot điều khoản và version; không cấp HOUSEKEEPING | GUEST hoặc tập quyền §6.3 | — | UC-BOOK-07 | BR-RBAC-02,03 |
 | DELETE | `/api/v1/bookings/{bookingId}` | Xoá cứng **chỉ** `DRAFT`/`HELD` chưa phát sinh thanh toán; **PHẢI** ghi `AuditLog.beforeJson` trước khi xoá (204) | FRONT_DESK | `reason` | UC-BOOK-05 | BR-BOOK-14, BR-BOOK-17 |
