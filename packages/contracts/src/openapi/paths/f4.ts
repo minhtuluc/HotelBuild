@@ -18,6 +18,7 @@ import {
   holdSchema,
 } from '../../booking.js';
 import { quoteRequestSchema, quoteSchema } from '../../quote.js';
+import { walkInRequestSchema, walkInResultSchema } from '../../walk-in.js';
 import {
   bearerWrite,
   idempotencyHeaders,
@@ -78,6 +79,27 @@ export function registerF4Paths(registry: OpenAPIRegistry, errorBodyComponent: z
       409: errorResponse('E_INV_NO_AVAILABILITY', 'E_INV_ROOM_TAKEN', 'E_OVER_LIMIT_EXCEEDED'),
       410: errorResponse('E_RATE_QUOTE_EXPIRED'),
       422: errorResponse('E_BOOK_OVER_CAPACITY', 'E_BOOK_MIN_NIGHTS'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/walk-in',
+    operationId: 'walkInCreate',
+    summary: 'Walk-in: quote → booking kênh WALKIN trong một lệnh (UC-BOOK-02, BR-BOOK-07)',
+    ...bearerWrite(['booking']),
+    request: { body: jsonBody(walkInRequestSchema) },
+    responses: {
+      201: { description: 'Booking walk-in đã tạo', ...jsonBody(walkInResultSchema) },
+      200: {
+        description: 'Booking đã có — BR-BOOK-16 trả bản cũ kèm cờ duplicateSuspected',
+        ...jsonBody(walkInResultSchema),
+      },
+      400: errorResponse('E_GEN_VALIDATION_FAILED', 'E_BOOK_MISSING_FIELD'),
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE', 'E_BOOK_BLACKLISTED'),
+      404: errorResponse('E_GEN_NOT_FOUND'),
+      409: errorResponse('E_BOOK_INVALID_STATE', 'E_INV_NO_AVAILABILITY', 'E_INV_ROOM_TAKEN'),
+      422: errorResponse('E_BOOK_OVER_CAPACITY', 'E_BOOK_MIN_NIGHTS', 'E_BOOK_INVALID_DATES'),
     },
   });
 

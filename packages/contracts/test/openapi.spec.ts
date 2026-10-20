@@ -102,6 +102,7 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['get', '/api/v1/bookings', 'bearer'],
   ['get', '/api/v1/bookings/{bookingId}', 'bearer'],
   ['post', '/api/v1/bookings/{bookingId}/confirm', 'bearer'],
+  ['post', '/api/v1/walk-in', 'bearer'],
   ['post', '/api/v1/holds', 'bearer'],
   ['delete', '/api/v1/holds/{holdId}', 'bearer'],
   // F5 (HB-090): vòng đời booking, thanh toán và hoàn tiền đều cần Bearer.
@@ -163,7 +164,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 88 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3 và tuyến self của HB-105)', () => {
+  it('có đủ 89 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3, tuyến self HB-105 và walk-in HB-151)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -217,6 +218,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/bookings',
         '/api/v1/bookings/{bookingId}',
         '/api/v1/bookings/{bookingId}/confirm',
+        '/api/v1/walk-in',
         '/api/v1/holds',
         '/api/v1/holds/{holdId}',
         '/api/v1/bookings/{bookingId}/cancel-preview',

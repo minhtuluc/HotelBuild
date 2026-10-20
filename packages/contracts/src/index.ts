@@ -8,6 +8,7 @@ export * from './system.js';
 export * from './rate.js';
 export * from './quote.js';
 export * from './booking.js';
+export * from './walk-in.js';
 export * from './payment.js';
 export * from './front-office.js';
 export * from './housekeeping.js';
