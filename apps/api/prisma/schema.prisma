@@ -488,25 +488,27 @@ model payment_allocations {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model payments {
-  id                                                                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  booking_id                                                          String                @db.Uuid
-  type                                                                String
-  method                                                              String
-  amount                                                              BigInt
-  status                                                              String                @default("PENDING")
-  provider_txn_id                                                     String?
-  idempotency_key                                                     String
-  paid_at                                                             DateTime?             @db.Timestamptz(6)
-  created_by                                                          String?               @db.Uuid
-  note                                                                String?
-  created_at                                                          DateTime              @default(now()) @db.Timestamptz(6)
-  updated_at                                                          DateTime              @default(now()) @db.Timestamptz(6)
-  payment_allocations                                                 payment_allocations[]
-  bookings                                                            bookings              @relation(fields: [booking_id], references: [id], onUpdate: NoAction)
-  users                                                               users?                @relation(fields: [created_by], references: [id], onUpdate: NoAction)
-  refund_allocations_refund_allocations_original_payment_idTopayments refund_allocations[]  @relation("refund_allocations_original_payment_idTopayments")
-  refund_allocations_refund_allocations_refund_payment_idTopayments   refund_allocations?   @relation("refund_allocations_refund_payment_idTopayments")
-  refund_requests                                                     refund_requests[]
+  id                                                                              String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  booking_id                                                                      String                     @db.Uuid
+  type                                                                            String
+  method                                                                          String
+  amount                                                                          BigInt
+  status                                                                          String                     @default("PENDING")
+  provider_txn_id                                                                 String?
+  idempotency_key                                                                 String
+  paid_at                                                                         DateTime?                  @db.Timestamptz(6)
+  created_by                                                                      String?                    @db.Uuid
+  note                                                                            String?
+  created_at                                                                      DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at                                                                      DateTime                   @default(now()) @db.Timestamptz(6)
+  payment_allocations                                                             payment_allocations[]
+  bookings                                                                        bookings                   @relation(fields: [booking_id], references: [id], onUpdate: NoAction)
+  users                                                                           users?                     @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+  refund_allocations_refund_allocations_original_payment_idTopayments             refund_allocations[]       @relation("refund_allocations_original_payment_idTopayments")
+  refund_allocations_refund_allocations_refund_payment_idTopayments               refund_allocations?        @relation("refund_allocations_refund_payment_idTopayments")
+  refund_requests                                                                 refund_requests[]
+  refund_payout_operations_refund_payout_operations_original_payment_idTopayments refund_payout_operations[] @relation("refund_payout_operations_original_payment_idTopayments")
+  refund_payout_operations_refund_payout_operations_refund_payment_idTopayments   refund_payout_operations?  @relation("refund_payout_operations_refund_payment_idTopayments")
 
   @@unique([booking_id, type, idempotency_key], map: "uq_payments_idempotency")
   @@unique([method, provider_txn_id], map: "uq_payments_provider_txn")
@@ -641,19 +643,59 @@ model rate_plans {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model refund_allocations {
-  id                                                        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  refund_request_id                                         String          @db.Uuid
-  original_payment_id                                       String          @db.Uuid
-  refund_payment_id                                         String?         @unique @db.Uuid
+  id                                                        String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  refund_request_id                                         String                    @db.Uuid
+  original_payment_id                                       String                    @db.Uuid
+  refund_payment_id                                         String?                   @unique @db.Uuid
   amount                                                    BigInt
-  created_at                                                DateTime        @default(now()) @db.Timestamptz(6)
-  updated_at                                                DateTime        @default(now()) @db.Timestamptz(6)
-  payments_refund_allocations_original_payment_idTopayments payments        @relation("refund_allocations_original_payment_idTopayments", fields: [original_payment_id], references: [id], onUpdate: NoAction)
-  payments_refund_allocations_refund_payment_idTopayments   payments?       @relation("refund_allocations_refund_payment_idTopayments", fields: [refund_payment_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  refund_requests                                           refund_requests @relation(fields: [refund_request_id], references: [id], onUpdate: NoAction)
+  created_at                                                DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at                                                DateTime                  @default(now()) @db.Timestamptz(6)
+  payments_refund_allocations_original_payment_idTopayments payments                  @relation("refund_allocations_original_payment_idTopayments", fields: [original_payment_id], references: [id], onUpdate: NoAction)
+  payments_refund_allocations_refund_payment_idTopayments   payments?                 @relation("refund_allocations_refund_payment_idTopayments", fields: [refund_payment_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  refund_requests                                           refund_requests           @relation(fields: [refund_request_id], references: [id], onUpdate: NoAction)
+  refund_payout_operations                                  refund_payout_operations?
 
   @@unique([refund_request_id, original_payment_id])
   @@index([original_payment_id], map: "idx_refund_allocations_source")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model refund_payout_operations {
+  id                                                              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  refund_request_id                                               String             @db.Uuid
+  refund_allocation_id                                            String             @unique @db.Uuid
+  original_payment_id                                             String             @db.Uuid
+  refund_payment_id                                               String             @unique @db.Uuid
+  method                                                          String
+  amount                                                          BigInt
+  bank_note                                                       String?
+  status                                                          String             @default("READY")
+  psp_key                                                         String             @unique
+  provider_txn_id                                                 String?
+  attempts                                                        Int                @default(0)
+  lease_token                                                     String?            @db.Uuid
+  lease_expires_at                                                DateTime?          @db.Timestamptz(6)
+  version                                                         BigInt             @default(1)
+  last_error                                                      String?
+  started_at                                                      DateTime?          @db.Timestamptz(6)
+  finished_at                                                     DateTime?          @db.Timestamptz(6)
+  created_at                                                      DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at                                                      DateTime           @default(now()) @db.Timestamptz(6)
+  payments_refund_payout_operations_original_payment_idTopayments payments           @relation("refund_payout_operations_original_payment_idTopayments", fields: [original_payment_id], references: [id], onUpdate: NoAction)
+  refund_allocations                                              refund_allocations @relation(fields: [refund_allocation_id], references: [id], onUpdate: NoAction)
+  payments_refund_payout_operations_refund_payment_idTopayments   payments           @relation("refund_payout_operations_refund_payment_idTopayments", fields: [refund_payment_id], references: [id], onUpdate: NoAction)
+  refund_requests                                                 refund_requests    @relation(fields: [refund_request_id], references: [id], onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model refund_payout_simulator_transfers {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  psp_key         String   @unique
+  method          String
+  amount          BigInt
+  status          String
+  provider_txn_id String   @unique
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -677,40 +719,41 @@ model refund_approvals {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model refund_requests {
-  id                                        String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  booking_id                                String                @db.Uuid
+  id                                        String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  booking_id                                String                     @db.Uuid
   event_key                                 String
-  payment_id                                String?               @db.Uuid
-  policy_id                                 String                @db.Uuid
-  hours_before_check_in                     Decimal               @db.Decimal(10, 2)
-  applied_tier_id                           String?               @db.Uuid
-  refund_percent                            Decimal               @db.Decimal(5, 2)
+  payment_id                                String?                    @db.Uuid
+  policy_id                                 String                     @db.Uuid
+  hours_before_check_in                     Decimal                    @db.Decimal(10, 2)
+  applied_tier_id                           String?                    @db.Uuid
+  refund_percent                            Decimal                    @db.Decimal(5, 2)
   requested_amount                          BigInt
   approved_amount                           BigInt?
-  refund_fee                                BigInt                @default(0)
-  net_refund                                BigInt?               @default(dbgenerated("GREATEST((0)::bigint, (COALESCE(approved_amount, requested_amount) - refund_fee))"))
-  status                                    String                @default("PENDING")
-  is_force_majeure                          Boolean               @default(false)
-  evidence_refs                             String[]              @default([])
+  refund_fee                                BigInt                     @default(0)
+  net_refund                                BigInt?                    @default(dbgenerated("GREATEST((0)::bigint, (COALESCE(approved_amount, requested_amount) - refund_fee))"))
+  status                                    String                     @default("PENDING")
+  is_force_majeure                          Boolean                    @default(false)
+  evidence_refs                             String[]                   @default([])
   reason                                    String
-  requested_by                              String?               @db.Uuid
+  requested_by                              String?                    @db.Uuid
   requester_type                            String
   requester_id                              String
-  approved_by                               String?               @db.Uuid
-  decided_at                                DateTime?             @db.Timestamptz(6)
-  cancelled_at                              DateTime?             @db.Timestamptz(6)
-  paid_at                                   DateTime?             @db.Timestamptz(6)
-  created_at                                DateTime              @default(now()) @db.Timestamptz(6)
-  updated_at                                DateTime              @default(now()) @db.Timestamptz(6)
-  version                                   BigInt                @default(1)
+  approved_by                               String?                    @db.Uuid
+  decided_at                                DateTime?                  @db.Timestamptz(6)
+  cancelled_at                              DateTime?                  @db.Timestamptz(6)
+  paid_at                                   DateTime?                  @db.Timestamptz(6)
+  created_at                                DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at                                DateTime                   @default(now()) @db.Timestamptz(6)
+  version                                   BigInt                     @default(1)
   refund_allocations                        refund_allocations[]
+  refund_payout_operations                  refund_payout_operations[]
   refund_approvals                          refund_approvals[]
-  cancellation_tiers                        cancellation_tiers?   @relation(fields: [applied_tier_id], references: [id], onUpdate: NoAction)
-  users_refund_requests_approved_byTousers  users?                @relation("refund_requests_approved_byTousers", fields: [approved_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  bookings                                  bookings              @relation(fields: [booking_id], references: [id], onUpdate: NoAction)
-  payments                                  payments?             @relation(fields: [payment_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  cancellation_policies                     cancellation_policies @relation(fields: [policy_id], references: [id], onUpdate: NoAction)
-  users_refund_requests_requested_byTousers users?                @relation("refund_requests_requested_byTousers", fields: [requested_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  cancellation_tiers                        cancellation_tiers?        @relation(fields: [applied_tier_id], references: [id], onUpdate: NoAction)
+  users_refund_requests_approved_byTousers  users?                     @relation("refund_requests_approved_byTousers", fields: [approved_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  bookings                                  bookings                   @relation(fields: [booking_id], references: [id], onUpdate: NoAction)
+  payments                                  payments?                  @relation(fields: [payment_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  cancellation_policies                     cancellation_policies      @relation(fields: [policy_id], references: [id], onUpdate: NoAction)
+  users_refund_requests_requested_byTousers users?                     @relation("refund_requests_requested_byTousers", fields: [requested_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
 
   @@unique([booking_id, event_key], map: "uq_refund_event")
   @@index([status, created_at(sort: Desc)], map: "idx_refund_requests_status")

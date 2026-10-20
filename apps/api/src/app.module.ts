@@ -50,6 +50,7 @@ import { CancelModule } from './modules/book/cancel/module.js';
 import { HoldsModule } from './modules/book/holds/module.js';
 import { BookingsModule } from './modules/book/bookings/module.js';
 import { RefundModule } from './modules/pay/refunds/module.js';
+import { PayoutModule } from './modules/pay/payouts/module.js';
 import { RescheduleModule } from './modules/book/reschedule/module.js';
 import { PspModule } from './modules/pay/psp/module.js';
 // `pay/ledger` (HB-093) được HB-094 sửa **cộng thêm** một trường chiếu (`paidByType`) theo yêu cầu của
@@ -115,6 +116,7 @@ export class AppModule {
         OnlinePaymentsModule,
         PspWebhooksModule,
         RefundModule,
+        PayoutModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },

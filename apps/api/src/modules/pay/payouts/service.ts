@@ -1,0 +1,175 @@
+/**
+ * HB-100 — chuẩn bị chi hoàn: chỉ hồ sơ `APPROVED`, đúng cơ sở, đúng phương thức gốc (BR-CANCEL-16,
+ * BR-PAY-08/09; ADR-016). Lệnh này **không gọi PSP**: nó ghi chứng từ `Payment REFUND PENDING`, operation
+ * kỹ thuật READY và khoá PSP bền trong cùng transaction, rồi worker `q.refund-payout` mới chi.
+ *
+ * Vì sao tách khỏi `pay/refunds`: hợp đồng `/refund-requests/{id}/pay` là tác vụ của ACCOUNTANT và có
+ * vòng đời lease/đối soát riêng; module hoàn tiền HB-099 giữ maker–checker, không bị đổi quyền hay mã lỗi.
+ */
+import type { PrismaClient } from '@prisma/client';
+import type { Clock } from '@pinehill/domain';
+import type { RefundPayRequest } from '@pinehill/contracts';
+import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
+import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
+import { PIN_PURPOSE_FINANCIAL, requirePinToken } from '../../auth/pin/consume.js';
+import { BookingLedger } from '../ledger/service.js';
+import { lockRefund } from '../refunds/writes.js';
+import { checkMethod, payoutError } from './validation.js';
+import { payoutView, type RefundPayoutView } from './view.js';
+import {
+  insertPayoutLeg,
+  legsOf,
+  payoutOperations,
+  refundFailure,
+  type PayoutRow,
+  type Tx,
+} from './writes.js';
+
+export class PayoutService {
+  private readonly ledger: BookingLedger;
+
+  constructor(
+    readonly db: PrismaClient,
+    readonly clock: Clock,
+    readonly audit: AuditWriter,
+  ) {
+    this.ledger = new BookingLedger(clock);
+  }
+
+  /** Cổng `@Idempotent` chạy trước transaction: kiểm phiên, role và phạm vi cơ sở sớm. */
+  async authorizeRefundFor(
+    db: PrismaClient,
+    actor: AuthorizedActor,
+    refundRequestId: string,
+  ): Promise<void> {
+    const found = await db.refund_requests.findUnique({
+      where: { id: refundRequestId },
+      select: { booking_id: true },
+    });
+    if (!found) throw payoutError('missing');
+    await this.authorize(db, actor, found.booking_id);
+  }
+
+  /**
+   * Ghi đủ leg cho hồ sơ `APPROVED` rồi trả trạng thái kỹ thuật. Gọi lặp (kể cả khoá chống trùng khác)
+   * **không** tạo chứng từ hay khoá PSP thứ hai — UNIQUE `refund_allocation_id`/`refund_payment_id` là
+   * hàng rào cuối, còn ở đây trả lại operation đã có để lệnh là idempotent theo nghiệp vụ.
+   */
+  async pay(
+    tx: Tx,
+    actor: AuthorizedActor,
+    refundRequestId: string,
+    input: RefundPayRequest,
+  ): Promise<RefundPayoutView> {
+    try {
+      const found = await tx.refund_requests.findUnique({
+        where: { id: refundRequestId },
+        select: { booking_id: true },
+      });
+      if (!found) throw payoutError('missing');
+      await this.authorize(tx, actor, found.booking_id);
+      // Khoá booking/payments/refund theo đúng thứ tự ADR-014 trước khi gắn chứng từ chi.
+      await this.ledger.read(tx, found.booking_id);
+      const row = await lockRefund(tx, refundRequestId);
+      const existing = await payoutOperations(tx, refundRequestId);
+      const reused = this.existingView(existing, row.status);
+      if (reused !== null) return reused;
+      if (row.status !== 'APPROVED') throw payoutError('notApproved');
+      const legs = await legsOf(tx, refundRequestId);
+      const method = checkMethod(
+        input,
+        legs.map((leg) => leg.original_method),
+      );
+      // Một `pinToken` dùng một lần cho toàn bộ lệnh chi (mọi leg) — BR-RBAC-05, api.md §2.6.
+      await requirePinToken(tx, {
+        userId: actor.id,
+        token: input.pinToken,
+        purpose: PIN_PURPOSE_FINANCIAL,
+        bookingId: row.booking_id,
+        now: this.clock.now(),
+      });
+      if (legs.some((leg) => leg.refund_payment_id !== null))
+        throw payoutError('gateway', 'Hồ sơ đã có chứng từ chi chưa gắn thao tác; cần đối soát.');
+      const now = this.clock.now();
+      const created: PayoutRow[] = [];
+      for (const leg of legs)
+        created.push(
+          await insertPayoutLeg(tx, {
+            bookingId: row.booking_id,
+            refundRequestId: row.id,
+            allocationId: leg.id,
+            originalPaymentId: leg.original_payment_id,
+            method,
+            amount: leg.amount,
+            bankNote: input.bankNote?.trim() ?? null,
+            actorId: actor.id,
+            now,
+          }),
+        );
+      await this.audit.record(tx, {
+        actor,
+        action: 'REFUND_PAYOUT_STARTED',
+        entityType: 'RefundRequest',
+        entityId: row.id,
+        beforeJson: { status: row.status },
+        afterJson: {
+          bookingId: row.booking_id,
+          status: row.status,
+          method,
+          operations: created.map((operation) => ({
+            id: operation.id,
+            amount: operation.amount.toString(),
+            originalPaymentId: operation.original_payment_id,
+            refundPaymentId: operation.refund_payment_id,
+            pspKey: operation.psp_key,
+          })),
+        },
+        reason: 'Chuẩn bị chi hoàn',
+      });
+      return payoutView(row.id, row.status, created);
+    } catch (error) {
+      return refundFailure(error);
+    }
+  }
+
+  /**
+   * Lệnh đã tạo leg trước đó: trả lại trạng thái kỹ thuật, **không** sinh chứng từ/khoá thứ hai. Chỉ
+   * khi một leg đã `FAILED_FINAL` mới từ chối để kế toán đối soát tay (api.md §2.6).
+   */
+  private existingView(rows: readonly PayoutRow[], status: string): RefundPayoutView | null {
+    if (rows.length === 0) return null;
+    if (rows.some((operation) => operation.status === 'FAILED_FINAL')) throw payoutError('gateway');
+    return payoutView(rows[0]!.refund_request_id, status, rows);
+  }
+
+  /**
+   * Phiên còn hiệu lực và còn phạm vi cơ sở của booking (BR-RBAC-02, OWNER toàn chuỗi). Cùng phép kiểm
+   * với `RefundService.authorize` — hàm đó private và module giữ ranh giới, nên bản này giữ đúng SQL/luật.
+   */
+  private async authorize(
+    tx: Tx | PrismaClient,
+    actor: AuthorizedActor,
+    bookingId: string,
+  ): Promise<void> {
+    await tx.$queryRaw`SELECT id FROM users WHERE id = ${actor.id}::uuid FOR SHARE`;
+    const user = await tx.users.findUnique({
+      where: { id: actor.id },
+      select: {
+        role: true,
+        is_active: true,
+        user_property_scopes: { select: { property_id: true } },
+      },
+    });
+    if (!user?.is_active || user.role !== actor.role)
+      throw payoutError('forbidden', 'Phiên làm việc đã thay đổi.');
+    const booking = await tx.bookings.findUnique({
+      where: { id: bookingId },
+      select: { property_id: true },
+    });
+    if (!booking) throw payoutError('missing');
+    const scoped =
+      user.role === 'OWNER' ||
+      user.user_property_scopes.some((scope) => scope.property_id === booking.property_id);
+    if (!scoped) throw payoutError('forbidden', 'Hồ sơ ngoài phạm vi cơ sở.');
+  }
+}
