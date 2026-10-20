@@ -53,11 +53,8 @@ export const errorCode = (response: { body: unknown }) => errorBodySchema.parse(
 export function guardRoute(response: { status: number; body: unknown }, route: string): void {
   if (response.status !== 404) return;
   const parsed = errorBodySchema.safeParse(response.body);
-  throw new Error(
-    `GIAI ĐOẠN A ĐỎ CÓ CHỦ ĐÍCH: POST ${route} chưa được hiện thực (404 ${
-      parsed.success ? parsed.data.code : 'E_GEN_NOT_FOUND'
-    }). Tuyến do HB-144/HB-145/HB-147 dựng; test khoá chỉ xanh khi có endpoint thật.`,
-  );
+  const code = parsed.success ? parsed.data.code : 'E_GEN_NOT_FOUND';
+  throw new Error(`GIAI ĐOẠN A ĐỎ CÓ CHỦ ĐÍCH: POST ${route} chưa được hiện thực (404 ${code}).`);
 }
 
 export async function insert(sql: string, values: unknown[] = []): Promise<string> {
@@ -260,6 +257,9 @@ export async function seedBooking(options: BookingOptions = {}): Promise<SeededB
   return { id, bookingRoomId, checkIn, checkOut };
 }
 
+export const checkedIn = (room: string, paid = NIGHTLY) =>
+  seedBooking({ status: 'CHECKED_IN', checkIn: day(D, -1), checkOut: D, paid, assign: room });
+
 export const bookingRow = async (id: string) => {
   const found = await rows(
     'SELECT status,total_amount,paid_amount,balance_due,penalty_amount FROM bookings WHERE id=$1',
@@ -296,8 +296,13 @@ export const chargeIds = (bookingId: string, kind?: string) =>
     kind ? [bookingId, kind] : [bookingId],
   );
 
-export const paymentIds = (bookingId: string) =>
-  rows('SELECT id FROM payments WHERE booking_id=$1', [bookingId]);
+export const paymentRows = (bookingId: string) =>
+  rows('SELECT id,type,status,amount FROM payments WHERE booking_id=$1 ORDER BY id', [bookingId]);
+
+export const succeededPaymentIds = (bookingId: string) =>
+  rows("SELECT id FROM payments WHERE booking_id=$1 AND status='SUCCEEDED' ORDER BY id", [
+    bookingId,
+  ]);
 
 export const releaseRow = async (bookingRoomId: string) =>
   (

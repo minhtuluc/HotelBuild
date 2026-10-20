@@ -12,7 +12,9 @@
  *
  * Mốc giờ nghiệp vụ (ngày VN, 23:59, 12:00/18:00) đi qua cổng `CLOCK` — app bị thay bằng clock giả
  * như mọi harness F1/F7. ADR-014 vẫn bắt buộc đọc `clock_timestamp()` dưới khoá khi so hạn/giành
- * tài nguyên; file này không ghim thứ tự khoá.
+ * tài nguyên; file này không ghim thứ tự khoá. Riêng no-show thủ công chỉ được ghi từ mốc
+ * BR-CANCEL-10 (23:59 ngày nhận phòng), nên mọi ca no-show thành công đặt clock 23:59 và có một ca
+ * riêng khẳng định trước mốc thì bị từ chối.
  */
 import { describe, expect, test } from 'vitest';
 import {
@@ -30,6 +32,7 @@ import {
   chargeIds,
   checkInBody,
   checkOutBody,
+  checkedIn,
   clock,
   completedKeys,
   day,
@@ -38,18 +41,20 @@ import {
   history,
   housekeeping,
   mintPin,
-  paymentIds,
+  paymentRows,
   post,
   r1,
   r2,
   r3,
   r4,
+  r5,
   refusedCheckIn,
   releaseRow,
   roomTasks,
   rows,
   seedBooking,
   staffToken,
+  succeededPaymentIds,
   unreleased,
   userId,
   vn,
@@ -64,24 +69,24 @@ describe('HB-143 · check-in (BR-FO-01/02/07)', () => {
     expect(await bookingRow(seed.id)).toMatchObject({ status: 'HELD' });
   });
 
-  test('nợ vượt ngưỡng: FRONT_DESK/MANAGER bị chặn, chỉ OWNER cho qua', async () => {
-    // 8 đêm × 1.000.000 = 8.000.000; đã thu 2.000.000 ⇒ nợ 6.000.000 (>5.000.000 và 75%).
-    const seed = await seedBooking({ nightly: 1_000_000, checkOut: day(D, 8), paid: 2_000_000 });
-    await housekeeping(r2);
-    await refusedCheckIn(seed, r2, 'FRONT_DESK');
-    await refusedCheckIn(seed, r2, 'MANAGER');
-    expect(await bookingRow(seed.id)).toMatchObject({ status: 'CONFIRMED' });
-
-    const owner = await post(CHECK_IN, await staffToken('OWNER'), checkInBody(seed, r2));
-    expect(owner.status).toBe(201);
-    expect(checkInResponseSchema.parse(owner.body)).toMatchObject({
-      bookingId: seed.id,
-      status: 'CHECKED_IN',
-      roomIds: [r2],
-      earlyCheckInFee: 0,
-    });
-    expect(await bookingRow(seed.id)).toMatchObject({ status: 'CHECKED_IN' });
-    expect(await unreleased(seed.bookingRoomId)).toHaveLength(1);
+  test('ngưỡng nợ: vượt 5.000.000 hoặc vượt 50% đều phải có OWNER', async () => {
+    const cases = [
+      // 8 đêm × 1.000.000 = 8.000.000; nợ 6.000.000 (75%) — vượt cả hai ngưỡng.
+      { paid: 2_000_000, room: r2 },
+      // 8.000.000; nợ 4.500.000 (56,25%) — chỉ vượt ngưỡng 50%, vẫn ≤ 5.000.000.
+      { paid: 3_500_000, room: r5 },
+    ];
+    for (const { paid, room } of cases) {
+      const seed = await seedBooking({ nightly: 1_000_000, checkOut: day(D, 8), paid });
+      await housekeeping(room);
+      await refusedCheckIn(seed, room, 'FRONT_DESK');
+      await refusedCheckIn(seed, room, 'MANAGER');
+      expect(await bookingRow(seed.id)).toMatchObject({ status: 'CONFIRMED' });
+      const owner = await post(CHECK_IN, await staffToken('OWNER'), checkInBody(seed, room));
+      expect(owner.status).toBe(201);
+      expect(await bookingRow(seed.id)).toMatchObject({ status: 'CHECKED_IN' });
+      expect(await unreleased(seed.bookingRoomId)).toHaveLength(1);
+    }
   });
 
   test('MANAGER cho nợ trong ngưỡng (≤5.000.000 và ≤50%) → CHECKED_IN + audit lý do/hạn thu', async () => {
@@ -161,13 +166,7 @@ describe('HB-143 · check-in (BR-FO-01/02/07)', () => {
 
 describe('HB-143 · check-out (BR-FO-03/05/06)', () => {
   test('thiếu hoặc sai pinToken → E_AUTH_PIN_REQUIRED, không giải phóng phòng', async () => {
-    const seed = await seedBooking({
-      status: 'CHECKED_IN',
-      checkIn: day(D, -1),
-      checkOut: D,
-      paid: NIGHTLY,
-      assign: r1,
-    });
+    const seed = await checkedIn(r1);
     clock.value = vn(D, '11:30:00');
     const token = await staffToken('FRONT_DESK');
     for (const body of [checkOutBody(seed), checkOutBody(seed, '0'.repeat(32))]) {
@@ -183,13 +182,7 @@ describe('HB-143 · check-out (BR-FO-03/05/06)', () => {
 
   test('còn nợ → không hoá đơn, không giải phóng, không sinh việc dọn', async () => {
     // Nghĩa vụ ROOM 1.100.000, đã thu 900.000 ⇒ còn nợ 200.000 (BR-FO-05).
-    const seed = await seedBooking({
-      status: 'CHECKED_IN',
-      checkIn: day(D, -1),
-      checkOut: D,
-      paid: 900_000,
-      assign: r1,
-    });
+    const seed = await checkedIn(r1, 900_000);
     clock.value = vn(D, '11:30:00');
     const token = await staffToken('FRONT_DESK');
     const response = await post(
@@ -216,13 +209,7 @@ describe('HB-143 · check-out (BR-FO-03/05/06)', () => {
   });
 
   test('thu đủ → CHECKED_OUT, giải phóng assignment, sinh HousekeepingTask ngày trả phòng', async () => {
-    const seed = await seedBooking({
-      status: 'CHECKED_IN',
-      checkIn: day(D, -1),
-      checkOut: D,
-      paid: NIGHTLY,
-      assign: r1,
-    });
+    const seed = await checkedIn(r1);
     clock.value = vn(D, '11:30:00');
     const token = await staffToken('FRONT_DESK');
     const response = await post(
@@ -234,17 +221,13 @@ describe('HB-143 · check-out (BR-FO-03/05/06)', () => {
     expect(response.status).toBe(200);
     const body = checkOutResponseSchema.parse(response.body);
     expect(body).toMatchObject({
-      bookingId: seed.id,
       status: 'CHECKED_OUT',
       extrasAmount: 0,
       feeAmount: 0,
       balanceDue: 0,
     });
     expect(body.housekeepingTaskIds).toHaveLength(1);
-    expect(await bookingRow(seed.id)).toMatchObject({
-      status: 'CHECKED_OUT',
-      balance_due: '0',
-    });
+    expect(await bookingRow(seed.id)).toMatchObject({ status: 'CHECKED_OUT', balance_due: '0' });
 
     const released = await releaseRow(seed.bookingRoomId);
     expect(released.released_at).not.toBeNull();
@@ -270,13 +253,7 @@ describe('HB-143 · check-out (BR-FO-03/05/06)', () => {
     ] as const;
     for (const [index, [time, expected]] of tiers.entries()) {
       clock.value = vn(D, time);
-      const seed = await seedBooking({
-        status: 'CHECKED_IN',
-        checkIn: day(D, -1),
-        checkOut: D,
-        paid: NIGHTLY,
-        assign: [r2, r3, r4][index]!,
-      });
+      const seed = await checkedIn([r2, r3, r4][index]!);
       const token = await staffToken('FRONT_DESK');
       const response = await post(
         CHECK_OUT,
@@ -285,15 +262,29 @@ describe('HB-143 · check-out (BR-FO-03/05/06)', () => {
       );
       guardRoute(response, `${CHECK_OUT} (mốc ${time})`);
       expect(response.status, `check-out lúc ${time}`).toBe(200);
-      expect(checkOutResponseSchema.parse(response.body).feeAmount, `phụ thu lúc ${time}`).toBe(
-        expected,
-      );
+      const body = checkOutResponseSchema.parse(response.body);
+      expect(body.feeAmount, `phụ thu lúc ${time}`).toBe(expected);
+      // BR-FO-03: phụ thu được ghi thành nghĩa vụ thật; chưa có khoản thu nào phân bổ vào nó
+      // nên balance_due = phụ thu (BR-FO-05: chỉ giải phóng khi số dư về 0 — HB-145 chọn cách thu).
+      if (expected > 0) {
+        expect(
+          await rows("SELECT amount FROM booking_charges WHERE booking_id=$1 AND kind<>'ROOM'", [
+            seed.id,
+          ]),
+          `nghĩa vụ phụ thu lúc ${time}`,
+        ).toEqual([{ amount: String(expected) }]);
+        expect(await bookingRow(seed.id)).toMatchObject({ balance_due: String(expected) });
+      } else {
+        expect(await chargeIds(seed.id)).toHaveLength(1);
+        expect(await bookingRow(seed.id)).toMatchObject({ balance_due: '0' });
+      }
     }
   });
 });
 
 describe('HB-143 · no-show (BR-CANCEL-10)', () => {
   test('chỉ CONFIRMED chưa check-in mới ghi được; trạng thái khác trả E_BOOK_INVALID_STATE', async () => {
+    clock.value = vn(D, '23:59:00');
     const confirmed = await seedBooking();
     const others = [
       await seedBooking({ status: 'CHECKED_IN', assign: r2 }),
@@ -317,12 +308,26 @@ describe('HB-143 · no-show (BR-CANCEL-10)', () => {
     }
   });
 
+  test('trước 23:59 ngày nhận phòng → chưa được ghi no-show', async () => {
+    const seed = await seedBooking();
+    const response = await post(NO_SHOW, await staffToken('FRONT_DESK'), {
+      bookingId: seed.id,
+      reason: 'Quá sớm',
+    });
+    guardRoute(response, NO_SHOW);
+    expect(response.status).toBe(409);
+    expect(errorCode(response)).toBe('E_BOOK_INVALID_STATE');
+    expect(await bookingRow(seed.id)).toMatchObject({ status: 'CONFIRMED', penalty_amount: '0' });
+    expect(await chargeIds(seed.id, 'PENALTY')).toEqual([]);
+    expect(await succeededPaymentIds(seed.id)).toEqual([]);
+  });
+
   test('áp bậc cuối + phụ thu đêm đầu theo snapshot; không tự thu tiền', async () => {
     // 2 đêm × 1.100.000, đã thu 300.000 ⇒ phạt = max(0, 1.100.000 − 300.000) = 800.000.
     const seed = await seedBooking({ paid: 300_000, assign: r3 });
     clock.value = vn(D, '23:59:00');
     const token = await staffToken('FRONT_DESK');
-    const paymentsBefore = await paymentIds(seed.id);
+    const succeededBefore = await succeededPaymentIds(seed.id);
     const response = await post(NO_SHOW, token, {
       bookingId: seed.id,
       reason: 'Không đến, đã quá 23:59',
@@ -346,11 +351,18 @@ describe('HB-143 · no-show (BR-CANCEL-10)', () => {
       ]),
     ).toEqual([{ amount: '800000' }]);
     expect(await rows('SELECT id FROM refund_requests WHERE booking_id=$1', [seed.id])).toEqual([]);
-    expect(await paymentIds(seed.id)).toEqual(paymentsBefore);
+    // BR-CANCEL-06: phụ thu đêm đầu ghi công nợ PENALTY PENDING, không tự thu.
+    expect(await succeededPaymentIds(seed.id)).toEqual(succeededBefore);
+    expect(
+      await rows("SELECT type,status,amount FROM payments WHERE booking_id=$1 AND type='PENALTY'", [
+        seed.id,
+      ]),
+    ).toEqual([{ type: 'PENALTY', status: 'PENDING', amount: '800000' }]);
     expect((await releaseRow(seed.bookingRoomId)).released_at).not.toBeNull();
   });
 
   test('sau khi xác nhận no-show, chạy lại không thu thêm (TC-FO-07)', async () => {
+    clock.value = vn(D, '23:59:00');
     const seed = await seedBooking({ paid: 300_000 });
     const token = await staffToken('FRONT_DESK');
     const body = { bookingId: seed.id, reason: 'Khách không đến' };
@@ -359,15 +371,20 @@ describe('HB-143 · no-show (BR-CANCEL-10)', () => {
     expect(first.status).toBe(200);
     const after = await bookingRow(seed.id);
     const charges = await chargeIds(seed.id);
-    const payments = await paymentIds(seed.id);
+    const payments = await paymentRows(seed.id);
+    const succeeded = await succeededPaymentIds(seed.id);
 
     const second = await post(NO_SHOW, token, body);
     expect(second.status).toBe(409);
     expect(errorCode(second)).toBe('E_BOOK_INVALID_STATE');
     expect(await bookingRow(seed.id)).toEqual(after);
     expect(await chargeIds(seed.id)).toEqual(charges);
-    expect(await paymentIds(seed.id)).toEqual(payments);
+    expect(await paymentRows(seed.id)).toEqual(payments);
+    expect(await succeededPaymentIds(seed.id)).toEqual(succeeded);
     expect(await chargeIds(seed.id, 'PENALTY')).toHaveLength(1);
+    expect(
+      await rows("SELECT status FROM payments WHERE booking_id=$1 AND type='PENALTY'", [seed.id]),
+    ).toEqual([{ status: 'PENDING' }]);
   });
 });
 
@@ -388,13 +405,7 @@ describe('HB-143 · audit cùng transaction (BR-GEN-07)', () => {
   });
 
   test('check-out rollback toàn bộ khi audit không ghi được', async () => {
-    const seed = await seedBooking({
-      status: 'CHECKED_IN',
-      checkIn: day(D, -1),
-      checkOut: D,
-      paid: NIGHTLY,
-      assign: r1,
-    });
+    const seed = await checkedIn(r1);
     clock.value = vn(D, '11:30:00');
     const token = await staffToken('FRONT_DESK');
     const pin = await mintPin(token, seed.id);
@@ -410,6 +421,7 @@ describe('HB-143 · audit cùng transaction (BR-GEN-07)', () => {
   });
 
   test('no-show rollback toàn bộ khi audit không ghi được', async () => {
+    clock.value = vn(D, '23:59:00');
     const seed = await seedBooking({ paid: 300_000 });
     const token = await staffToken('FRONT_DESK');
     await withFailingAudit(async () => {
