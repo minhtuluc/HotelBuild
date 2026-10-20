@@ -277,6 +277,13 @@ function independentOracle(): Record<string, Expected> {
     status: 400,
     method: RequestMethod.POST,
   };
+  // HB-151 / UC-BOOK-02 + api.md §2.5, §6.3: walk-in tạo booking kênh WALKIN là tuyến nhân viên
+  // (`bookings.create`); thân oracle không hợp lệ ⇒ 400 sau khi qua quyền, trước khi chạm dữ liệu.
+  keyed[`${RequestMethod.POST}:walk-in`] = {
+    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
   // HB-099 / api.md §3.6-3.7 + §6.3: hoàn tiền — lập cho quầy/điều phối, quyết định cho MANAGER+,
   // rút cho người tạo/MANAGER+. Thân oracle không hợp lệ → 400 trước khi tra tài nguyên.
   keyed[`${RequestMethod.POST}:refund-requests`] = {

@@ -49,6 +49,8 @@ import { NotiModule } from './modules/noti/module.js';
 import { CancelModule } from './modules/book/cancel/module.js';
 import { HoldsModule } from './modules/book/holds/module.js';
 import { BookingsModule } from './modules/book/bookings/module.js';
+// HB-151: lệnh điều phối khách vãng lai dùng lại quote/booking F4; bước thu cọc kế tiếp là HB-096.
+import { WalkInModule } from './modules/book/walk-in/module.js';
 import { RefundModule } from './modules/pay/refunds/module.js';
 import { PayoutModule } from './modules/pay/payouts/module.js';
 import { RescheduleModule } from './modules/book/reschedule/module.js';
@@ -111,6 +113,7 @@ export class AppModule {
         CancelModule,
         HoldsModule,
         BookingsModule,
+        WalkInModule,
         RescheduleModule,
         PspModule,
         OnlinePaymentsModule,
