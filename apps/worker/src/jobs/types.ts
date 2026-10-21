@@ -2,6 +2,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { WorkerConfig } from '../config/env.js';
 import type { WorkerLogger } from '../logger.js';
 import type { QueueName } from '../queues.js';
+import type { Tracing } from '../tracing/tracing.js';
 
 /**
  * Ngữ cảnh dùng chung cho mọi handler job: kết nối CSDL, đồng hồ và log đã lọc PII.
@@ -22,6 +23,8 @@ export interface JobContext {
     jobId?: string;
     errorCode?: string;
   }) => void;
+  /** Quan sát (HB-181): dựng span cho việc tiêu thụ outbox; vắng thì chỉ lan truyền ngữ cảnh trace. */
+  readonly tracing?: Tracing;
 }
 
 /**

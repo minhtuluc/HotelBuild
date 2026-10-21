@@ -1,0 +1,26 @@
+# Định tuyến cảnh báo SLO tới kênh kỹ thuật (HB-181 AC3). Không có bí mật trong repo: URL webhook nằm ở
+# tệp do nơi triển khai gắn vào (NFR-SEC-06). Chưa nạp ở đâu — cần staging HB-175 (README §6).
+route:
+  receiver: tech-oncall
+  group_by: [alertname, service, slo]
+  group_wait: 30s
+  group_interval: 5m
+  # 4 giờ: đủ để người trực xử lý mà không lặp lại quá dày (NFR-OBS-02: 0 cảnh báo trùng theo nhãn).
+  repeat_interval: 4h
+  routes:
+    - matchers: ['channel="tech"']
+      receiver: tech-oncall
+
+receivers:
+  - name: tech-oncall
+    webhook_configs:
+      # Tệp chứa **một dòng** URL webhook (Slack/Teams/Zalo tuỳ nơi triển khai), quyền 0400, do secret mount.
+      - url_file: /etc/alertmanager/secrets/tech-webhook-url
+        send_resolved: true
+        max_alerts: 0
+
+# Cảnh báo mức critical che cảnh báo warning cùng SLO/dịch vụ để không gọi hai lần cho một sự cố.
+inhibit_rules:
+  - source_matchers: ['severity="critical"']
+    target_matchers: ['severity="warning"']
+    equal: [alertname, service]

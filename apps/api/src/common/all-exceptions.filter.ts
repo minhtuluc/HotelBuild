@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Catch, HttpException, Inject } from '@nestjs/common';
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
 import { errorBodySchema } from '@pinehill/contracts';
@@ -8,6 +9,7 @@ import { InjectPinoLogger } from 'nestjs-pino';
 import { CLOCK, ID_GENERATOR } from '../infrastructure/ports.js';
 import { requestPath } from './safe-request.js';
 import { AppError } from './app-error.js';
+import { parseTraceparent } from '../infrastructure/tracing/trace-context.js';
 import { resolveCorrelationId } from './request-id.js';
 
 /** Cổng log tối thiểu của filter; pino thật tiêm qua `@InjectPinoLogger`. */
@@ -17,6 +19,8 @@ export interface ErrorLogger {
 
 interface FailureLogContext {
   correlationId: string;
+  /** Mã W3C của request (HB-181) — cùng giá trị với dòng log do interceptor/middleware phát ra. */
+  traceId: string;
   path: string;
   outcome: 'error';
   errorCode: ErrorCode;
@@ -52,8 +56,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const path = requestPath(request.url);
     // Log the framework route template, never client path parameters or query values.
     // The response keeps its original path projection; request.url is not mutated.
+    // Dùng lại `traceparent` mà middleware pino đã chốt cho request; chỉ sinh mới khi filter chạy ngoài
+    // đường HTTP thật (test/CLI) để dòng log vẫn có `traceId`.
+    const traceId =
+      parseTraceparent(request.headers.traceparent)?.traceId ?? randomUUID().replaceAll('-', '');
     const diagnostic: FailureLogContext = {
       correlationId,
+      traceId,
       path: request.routeOptions?.url ?? '/[unmatched]',
       outcome: 'error',
       errorCode: UNAVAILABLE.code,

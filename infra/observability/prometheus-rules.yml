@@ -1,0 +1,255 @@
+# Luật SLO + cảnh báo burn-rate (HB-181 AC3, NFR-OBS-02).
+# Số liệu `traces_spanmetrics_*` do connector `spanmetrics` của OTel Collector sinh từ **toàn bộ** span của
+# api/worker — pipeline này KHÔNG lấy mẫu (xem otel-collector.yml): lấy mẫu chỉ xảy ra ở pipeline Tempo.
+# `status_code="STATUS_CODE_ERROR"` chỉ gồm 5xx: interceptor của API chỉ đánh dấu ERROR khi lỗi >= 500;
+# 4xx (validate/không thấy/xung đột) là kết quả nghiệp vụ và không tính vào SLI lỗi.
+# Ba nguồn còn thiếu (BullMQ, hold-release lag, outbox lag) được khai ở README §2 và chỉ có sau khi HB-175
+# dựng staging — luật dưới đây sẽ không có dữ liệu cho tới lúc đó.
+groups:
+  - name: pinehill-slo-recording
+    interval: 30s
+    rules:
+      # ── SLO 1: tỉ lệ lỗi 5xx (mục tiêu 99,9 %) ────────────────────────────────
+      - record: slo:api_error_ratio:5m
+        expr: |
+          sum(rate(traces_spanmetrics_calls_total{service_name="api",span_kind="SPAN_KIND_SERVER",status_code="STATUS_CODE_ERROR"}[5m]))
+            /
+          sum(rate(traces_spanmetrics_calls_total{service_name="api",span_kind="SPAN_KIND_SERVER"}[5m]))
+      - record: slo:api_error_ratio:30m
+        expr: |
+          sum(rate(traces_spanmetrics_calls_total{service_name="api",span_kind="SPAN_KIND_SERVER",status_code="STATUS_CODE_ERROR"}[30m]))
+            /
+          sum(rate(traces_spanmetrics_calls_total{service_name="api",span_kind="SPAN_KIND_SERVER"}[30m]))
+      - record: slo:api_error_ratio:1h
+        expr: |
+          sum(rate(traces_spanmetrics_calls_total{service_name="api",span_kind="SPAN_KIND_SERVER",status_code="STATUS_CODE_ERROR"}[1h]))
+            /
+          sum(rate(traces_spanmetrics_calls_total{service_name="api",span_kind="SPAN_KIND_SERVER"}[1h]))
+      - record: slo:api_error_ratio:6h
+        expr: |
+          sum(rate(traces_spanmetrics_calls_total{service_name="api",span_kind="SPAN_KIND_SERVER",status_code="STATUS_CODE_ERROR"}[6h]))
+            /
+          sum(rate(traces_spanmetrics_calls_total{service_name="api",span_kind="SPAN_KIND_SERVER"}[6h]))
+      # burn = tỉ lệ vi phạm / ngân sách lỗi (0,001)
+      - record: slo:api_error_burn:5m
+        expr: slo:api_error_ratio:5m / 0.001
+      - record: slo:api_error_burn:30m
+        expr: slo:api_error_ratio:30m / 0.001
+      - record: slo:api_error_burn:1h
+        expr: slo:api_error_ratio:1h / 0.001
+      - record: slo:api_error_burn:6h
+        expr: slo:api_error_ratio:6h / 0.001
+
+      # ── SLO 2: độ trễ p95 < 400 ms (ngân sách 5 %) ────────────────────────────
+      # `le="400"` tính bằng ms — otel-collector.yml khai bucket theo ms.
+      - record: slo:api_slow_ratio:5m
+        expr: |
+          1 - (
+            sum(rate(traces_spanmetrics_latency_bucket{service_name="api",span_kind="SPAN_KIND_SERVER",le="400"}[5m]))
+              /
+            sum(rate(traces_spanmetrics_latency_count{service_name="api",span_kind="SPAN_KIND_SERVER"}[5m]))
+          )
+      - record: slo:api_slow_ratio:30m
+        expr: |
+          1 - (
+            sum(rate(traces_spanmetrics_latency_bucket{service_name="api",span_kind="SPAN_KIND_SERVER",le="400"}[30m]))
+              /
+            sum(rate(traces_spanmetrics_latency_count{service_name="api",span_kind="SPAN_KIND_SERVER"}[30m]))
+          )
+      - record: slo:api_slow_ratio:1h
+        expr: |
+          1 - (
+            sum(rate(traces_spanmetrics_latency_bucket{service_name="api",span_kind="SPAN_KIND_SERVER",le="400"}[1h]))
+              /
+            sum(rate(traces_spanmetrics_latency_count{service_name="api",span_kind="SPAN_KIND_SERVER"}[1h]))
+          )
+      - record: slo:api_slow_ratio:6h
+        expr: |
+          1 - (
+            sum(rate(traces_spanmetrics_latency_bucket{service_name="api",span_kind="SPAN_KIND_SERVER",le="400"}[6h]))
+              /
+            sum(rate(traces_spanmetrics_latency_count{service_name="api",span_kind="SPAN_KIND_SERVER"}[6h]))
+          )
+      - record: slo:api_latency_burn:5m
+        expr: slo:api_slow_ratio:5m / 0.05
+      - record: slo:api_latency_burn:30m
+        expr: slo:api_slow_ratio:30m / 0.05
+      - record: slo:api_latency_burn:1h
+        expr: slo:api_slow_ratio:1h / 0.05
+      - record: slo:api_latency_burn:6h
+        expr: slo:api_slow_ratio:6h / 0.05
+
+      # ── SLO 4: giữ chỗ hết hạn được nhả trong 60 s (mục tiêu 99 %) ────────────
+      # Nguồn: worker phát histogram `inventory_hold_release_lag_seconds` (README §2) — chưa có ở staging.
+      - record: slo:hold_release_late_ratio:5m
+        expr: |
+          1 - (
+            sum(rate(inventory_hold_release_lag_seconds_bucket{le="60"}[5m]))
+              /
+            sum(rate(inventory_hold_release_lag_seconds_count[5m]))
+          )
+      - record: slo:hold_release_late_ratio:30m
+        expr: |
+          1 - (
+            sum(rate(inventory_hold_release_lag_seconds_bucket{le="60"}[30m]))
+              /
+            sum(rate(inventory_hold_release_lag_seconds_count[30m]))
+          )
+      - record: slo:hold_release_late_ratio:1h
+        expr: |
+          1 - (
+            sum(rate(inventory_hold_release_lag_seconds_bucket{le="60"}[1h]))
+              /
+            sum(rate(inventory_hold_release_lag_seconds_count[1h]))
+          )
+      - record: slo:hold_release_late_ratio:6h
+        expr: |
+          1 - (
+            sum(rate(inventory_hold_release_lag_seconds_bucket{le="60"}[6h]))
+              /
+            sum(rate(inventory_hold_release_lag_seconds_count[6h]))
+          )
+      - record: slo:hold_release_burn:5m
+        expr: slo:hold_release_late_ratio:5m / 0.01
+      - record: slo:hold_release_burn:30m
+        expr: slo:hold_release_late_ratio:30m / 0.01
+      - record: slo:hold_release_burn:1h
+        expr: slo:hold_release_late_ratio:1h / 0.01
+      - record: slo:hold_release_burn:6h
+        expr: slo:hold_release_late_ratio:6h / 0.01
+
+      # ── SLO 5: sự kiện outbox tới worker trong 60 s (mục tiêu 99,5 %) ──────────
+      - record: slo:outbox_late_ratio:5m
+        expr: |
+          1 - (
+            sum(rate(outbox_lag_seconds_bucket{le="60"}[5m]))
+              /
+            sum(rate(outbox_lag_seconds_count[5m]))
+          )
+      - record: slo:outbox_late_ratio:30m
+        expr: |
+          1 - (
+            sum(rate(outbox_lag_seconds_bucket{le="60"}[30m]))
+              /
+            sum(rate(outbox_lag_seconds_count[30m]))
+          )
+      - record: slo:outbox_late_ratio:1h
+        expr: |
+          1 - (
+            sum(rate(outbox_lag_seconds_bucket{le="60"}[1h]))
+              /
+            sum(rate(outbox_lag_seconds_count[1h]))
+          )
+      - record: slo:outbox_late_ratio:6h
+        expr: |
+          1 - (
+            sum(rate(outbox_lag_seconds_bucket{le="60"}[6h]))
+              /
+            sum(rate(outbox_lag_seconds_count[6h]))
+          )
+      - record: slo:outbox_burn:5m
+        expr: slo:outbox_late_ratio:5m / 0.005
+      - record: slo:outbox_burn:30m
+        expr: slo:outbox_late_ratio:30m / 0.005
+      - record: slo:outbox_burn:1h
+        expr: slo:outbox_late_ratio:1h / 0.005
+      - record: slo:outbox_burn:6h
+        expr: slo:outbox_late_ratio:6h / 0.005
+
+  - name: pinehill-slo-alerts
+    interval: 30s
+    rules:
+      - alert: slo.availability.burnrate
+        # Đa cửa sổ: 14,4×/1h (kèm 5m) hoặc 6×/6h (kèm 30m) — SRE workbook, NFR-OBS-02.
+        expr: |
+          (slo:api_error_burn:1h > 14.4 and slo:api_error_burn:5m > 14.4)
+            or
+          (slo:api_error_burn:6h > 6 and slo:api_error_burn:30m > 6)
+        for: 2m
+        labels:
+          severity: critical
+          channel: tech
+          slo: api_availability
+        annotations:
+          summary: 'Đốt ngân sách lỗi API quá nhanh (SLO 99,9 %)'
+          description: 'burn 1h={{ $value | humanize }} — xem bảng điều khiển SLO/P95 và log theo traceId.'
+          dashboard_url: '${GRAFANA_BASE_URL}/d/pinehill-slo/api-availability'
+          runbook_url: '${GRAFANA_BASE_URL}/d/pinehill-runbook/on-call'
+
+      - alert: slo.latency.burnrate
+        expr: |
+          (slo:api_latency_burn:1h > 14.4 and slo:api_latency_burn:5m > 14.4)
+            or
+          (slo:api_latency_burn:6h > 6 and slo:api_latency_burn:30m > 6)
+        for: 2m
+        labels:
+          severity: critical
+          channel: tech
+          slo: api_latency
+        annotations:
+          summary: 'p95 vượt 400 ms quá ngân sách 5 %'
+          description: 'Tỉ lệ request chậm hơn 400 ms: 1h={{ $value | humanizePercentage }}.'
+          dashboard_url: '${GRAFANA_BASE_URL}/d/pinehill-slo/api-latency'
+          runbook_url: '${GRAFANA_BASE_URL}/d/pinehill-runbook/on-call'
+
+      - alert: slo.hold_expiry.burnrate
+        expr: |
+          (slo:hold_release_burn:1h > 14.4 and slo:hold_release_burn:5m > 14.4)
+            or
+          (slo:hold_release_burn:6h > 6 and slo:hold_release_burn:30m > 6)
+        for: 2m
+        labels:
+          severity: critical
+          channel: tech
+          slo: hold_expiry_timeliness
+        annotations:
+          summary: 'Giữ chỗ hết hạn không được nhả trong 60 s'
+          description: 'Tỉ lệ nhả muộn: 1h={{ $value | humanizePercentage }} — kiểm job q.hold-expiry và span chậm.'
+          dashboard_url: '${GRAFANA_BASE_URL}/d/pinehill-slo/hold-expiry'
+          runbook_url: '${GRAFANA_BASE_URL}/d/pinehill-runbook/on-call'
+
+      - alert: slo.outbox_lag.burnrate
+        expr: |
+          (slo:outbox_burn:1h > 14.4 and slo:outbox_burn:5m > 14.4)
+            or
+          (slo:outbox_burn:6h > 6 and slo:outbox_burn:30m > 6)
+        for: 2m
+        labels:
+          severity: critical
+          channel: tech
+          slo: outbox_lag
+        annotations:
+          summary: 'Sự kiện outbox tới worker quá 60 s'
+          description: 'Tỉ lệ trễ: 1h={{ $value | humanizePercentage }} — kiểm q.outbox-relay và dead letter.'
+          dashboard_url: '${GRAFANA_BASE_URL}/d/pinehill-slo/outbox-lag'
+          runbook_url: '${GRAFANA_BASE_URL}/d/pinehill-runbook/on-call'
+
+      - alert: slo.queue_depth.high
+        # Gauge: độ sâu hàng đợi là giá trị hiện tại, `max_over_time` để bỏ dao động ngắn.
+        expr: 'max by (queue) (max_over_time(bullmq_queue_jobs_count{state="waiting"}[10m])) > 100'
+        for: 5m
+        labels:
+          severity: warning
+          channel: tech
+          slo: queue_depth
+        annotations:
+          summary: 'Hàng đợi {{ $labels.queue }} còn hơn 100 job chờ'
+          description: 'Độ sâu quan sát: {{ $value }} — kiểm worker sống, Redis và job lỗi.'
+          dashboard_url: '${GRAFANA_BASE_URL}/d/pinehill-slo/queue-depth'
+          runbook_url: '${GRAFANA_BASE_URL}/d/pinehill-runbook/on-call'
+
+      - alert: slo.queue_failures.high
+        # Counter đơn điệu (`bullmq_jobs_failed_total`), không dùng `increase()` trên gauge
+        # `bullmq_queue_jobs_count{state="failed"}`: gauge giảm khi job được dọn/thử lại nên `increase()`
+        # cho số vô nghĩa (HB-181 review P2).
+        expr: 'sum by (queue) (rate(bullmq_jobs_failed_total[15m])) * 900 > 10'
+        for: 5m
+        labels:
+          severity: warning
+          channel: tech
+          slo: queue_failures
+        annotations:
+          summary: 'Hơn 10 job lỗi trong 15 phút ở {{ $labels.queue }}'
+          description: 'Tra traceId của job lỗi trên Tempo trước khi xử lý lại.'
+          dashboard_url: '${GRAFANA_BASE_URL}/d/pinehill-slo/queue-depth'
+          runbook_url: '${GRAFANA_BASE_URL}/d/pinehill-runbook/on-call'

@@ -21,6 +21,11 @@ export interface OutboxEnvelope {
   readonly occurredAt: Date;
   readonly correlationId: string | null;
   readonly causationId: string | null;
+  /**
+   * Ngữ cảnh W3C mà **producer ở API** đã gắn vào payload khi commit (HB-181). `null` với sự kiện cũ chưa
+   * có mã — khi đó consumer mở trace riêng thay vì đoán.
+   */
+  readonly traceparent: string | null;
   readonly channelId: string | null;
   /** Payload gốc đã commit; relay không sửa, không log nội dung này (NFR-SEC-04). */
   readonly payload: unknown;
@@ -59,6 +64,12 @@ const envelopeFields = z.looseObject({
     .refine((value) => value.trim() !== '')
     .nullable()
     .catch(null),
+  traceparent: z
+    .string()
+    .max(128)
+    .refine((value) => value.trim() !== '')
+    .nullable()
+    .catch(null),
   causationId: z
     .string()
     .refine((value) => value.trim() !== '')
@@ -77,6 +88,7 @@ export function envelopeOf(row: OutboxEventRow): OutboxEnvelope {
         aggregateVersion: null,
         correlationId: null,
         causationId: null,
+        traceparent: null,
       };
   return {
     eventId: row.id,
@@ -88,6 +100,7 @@ export function envelopeOf(row: OutboxEventRow): OutboxEnvelope {
     occurredAt: row.created_at,
     correlationId: fields.correlationId,
     causationId: fields.causationId,
+    traceparent: fields.traceparent,
     channelId: row.channel_id,
     payload: row.payload_json,
   };

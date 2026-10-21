@@ -1,0 +1,88 @@
+# OTel Collector cho api/worker (HB-181 AC1/AC3).
+#
+# **Một điểm lấy mẫu duy nhất** — ở đây, không ở ứng dụng (HB-181 review P1). Ứng dụng xuất **đủ** span:
+#   • `traces/spanmetrics` KHÔNG lấy mẫu → metric SLO (tỉ lệ lỗi/p95) đúng trên toàn bộ lưu lượng.
+#   • `traces/tempo` lấy mẫu đuôi → giữ 100 % trace lỗi, trace thanh toán và span > 1 s; còn lại 10 %
+#     (NFR-OBS-03). Nếu lọc mẫu ở cả hai nơi, lưu lượng lành còn ~1 % và tỉ lệ lỗi bị khuếch đại.
+#
+# Chưa chạy ở đâu: cần staging HB-175 (xem README §6).
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 2s
+    limit_percentage: 75
+    spike_limit_percentage: 20
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+  tail_sampling:
+    # 10 s đủ để span cuối của request tới; đây là phần lớn nhất của độ trễ phát hiện (README §4).
+    decision_wait: 10s
+    num_traces: 100000
+    expected_new_traces_per_sec: 200
+    policies:
+      # Thứ tự quyết định: khớp luật đầu tiên là giữ.
+      - name: errors
+        type: status_code
+        status_code:
+          status_codes: [ERROR]
+      - name: payments
+        type: string_attribute
+        string_attribute:
+          key: pinehill.sampling.critical
+          values: [PAYMENT]
+      - name: slow-spans
+        type: latency
+        latency:
+          threshold_ms: 1000
+      - name: baseline
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: 10
+
+connectors:
+  spanmetrics:
+    histogram:
+      explicit:
+        # Đơn vị ms — luật p95 dùng bucket `le="400"` / `le="900"`.
+        buckets: [5ms, 10ms, 25ms, 50ms, 100ms, 200ms, 400ms, 900ms, 1s, 2s, 5s]
+    dimensions:
+      - name: http.route
+      - name: http.response.status_code
+      - name: pinehill.sampling.critical
+    metrics_flush_interval: 15s
+
+exporters:
+  otlphttp/tempo:
+    endpoint: ${env:TEMPO_OTLP_HTTP_ENDPOINT}
+    # Chính sách lưu (7 ngày; span > 1 s giữ 30 ngày) thuộc Tempo, không phải collector (README §6.4).
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion:
+      enabled: true
+
+service:
+  pipelines:
+    # Đường số liệu: KHÔNG lấy mẫu — SLO phải đếm trên 100 % lưu lượng.
+    traces/spanmetrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [spanmetrics]
+    # Đường lưu trace: lấy mẫu đuôi duy nhất ở đây.
+    traces/tempo:
+      receivers: [otlp]
+      processors: [memory_limiter, tail_sampling, batch]
+      exporters: [otlphttp/tempo]
+    metrics:
+      receivers: [spanmetrics]
+      exporters: [prometheus]
+  telemetry:
+    logs:
+      level: info

@@ -5,6 +5,7 @@ import { createJobRuntime } from './jobs/context.js';
 import { JOB_HANDLERS } from './jobs/registry.js';
 import { createLogger } from './pino.logger.js';
 import { QUEUE_NAMES } from './queues.js';
+import { tracingFromConfig } from './tracing/tracing.js';
 import { createWorkerApp, installSignalHandlers, type WorkerApp } from './worker-app.js';
 
 /**
@@ -14,12 +15,15 @@ import { createWorkerApp, installSignalHandlers, type WorkerApp } from './worker
  */
 export function defaultWorkerApp(config: WorkerConfig): WorkerApp {
   const logger = createLogger(config.LOG_LEVEL);
+  // Endpoint trống ⇒ tracing ở chế độ "chỉ lan truyền": vẫn có traceId trong log, không xuất span.
+  const tracing = tracingFromConfig(config);
   const runtime = createJobRuntime(config, logger);
   const app = createWorkerApp(
     config,
     createBullmqDeps(config, logger, undefined, {
       handlers: JOB_HANDLERS,
-      context: runtime.context,
+      context: { ...runtime.context, tracing },
+      tracing,
     }),
   );
   return {
@@ -27,6 +31,7 @@ export function defaultWorkerApp(config: WorkerConfig): WorkerApp {
     stop: async () => {
       await app.stop();
       await runtime.close();
+      await tracing.shutdown();
     },
   };
 }

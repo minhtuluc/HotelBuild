@@ -6,6 +6,9 @@ import type { WorkerLogger } from './logger.js';
 import type { JobAttempt, JobContext, JobRegistry } from './jobs/types.js';
 import type { JobLike, QueueLike, WorkerDeps, WorkerLike } from './worker-app.js';
 import { createLogger } from './pino.logger.js';
+import { CRITICAL_ATTRIBUTE, CRITICAL_PAYMENT, isPaymentQueue } from './tracing/sampling.js';
+import { withJobTrace } from './tracing/tracing.js';
+import type { Tracing } from './tracing/tracing.js';
 
 const connectionErrorCodes = new Set([
   'ECONNREFUSED',
@@ -97,6 +100,8 @@ export function bullmqConstructors(
 export interface JobDispatch {
   readonly handlers: JobRegistry;
   readonly context: JobContext;
+  /** Quan sát (HB-181); vắng thì chỉ lan truyền ngữ cảnh trace, không xuất span. */
+  readonly tracing?: Tracing;
 }
 
 /**
@@ -122,11 +127,26 @@ export function createBullmqDeps(
     createWorker: (name, handler) =>
       ctors.createWorker(name, connection, config.WORKER_CONCURRENCY, async (job) => {
         const real = dispatch === undefined ? undefined : dispatch.handlers[name];
-        if (real === undefined || dispatch === undefined) {
-          await handler(job);
-          return;
-        }
-        await real(job.data, dispatch.context, jobAttempt(job));
+        const attempt = jobAttempt(job);
+        // Mọi lượt chạy — kể cả lượt thử lại của BullMQ (giữ nguyên `data`) — nằm trong cùng trace.
+        await withJobTrace(
+          dispatch?.tracing,
+          job.data,
+          `job ${name}`,
+          {
+            'messaging.system': 'bullmq',
+            'messaging.destination.name': name,
+            'job.attempt': attempt.attempt,
+            ...(isPaymentQueue(name) ? { [CRITICAL_ATTRIBUTE]: CRITICAL_PAYMENT } : {}),
+          },
+          async () => {
+            if (real === undefined || dispatch === undefined) {
+              await handler(job);
+              return;
+            }
+            await real(job.data, dispatch.context, attempt);
+          },
+        );
       }),
     log: ({ queue, msg }) => logger.info({ queue }, msg),
   };

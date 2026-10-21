@@ -23,6 +23,13 @@ const workerEnvSchema = z.object({
   NOTI_SMTP_URL: urlWithProtocol('smtp:', 'smtps:').optional(),
   NOTI_SMTP_FROM: z.string().min(3).max(200).optional(),
   LOG_LEVEL: z.enum(logLevels).default('info'),
+  // Quan sát (HB-181): endpoint OTLP bỏ trống ⇒ không bật exporter (mặc định dev). Worker xuất **đủ**
+  // span; lấy mẫu (≥ 10%, giữ 100% việc lỗi/tiền) là việc của collector — xem `infra/observability`.
+  OTEL_EXPORTER_OTLP_ENDPOINT: z
+    .string()
+    .optional()
+    .transform((value) => (value === undefined || value.trim() === '' ? undefined : value))
+    .pipe(urlWithProtocol('http:', 'https:').optional()),
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(5),
   SHUTDOWN_TIMEOUT_SECONDS: z.coerce.number().positive().default(15),
   ENABLE_REPEATABLE_SCHEDULERS: z

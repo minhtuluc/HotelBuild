@@ -20,6 +20,7 @@
  * transaction riêng nên một booking hỏng không kéo cả lượt quét xuống (lượt sau nhặt lại).
  */
 import type { PrismaClient } from '@prisma/client';
+import { currentTraceFields } from '../../tracing/trace-context.js';
 import type { JobContext } from '../types.js';
 
 /** Hàng đợi khai ở `queues.ts`; chạy lặp theo `HOLD_EXPIRY_INTERVAL_SECONDS`. */
@@ -198,6 +199,9 @@ export async function expireHold(db: PrismaClient, bookingId: string): Promise<E
                 releasedAllotments,
               })}::jsonb,
               ${HOLD_EXPIRED_REASON}, 'pending-database-trigger', ${now.now}::timestamptz)`;
+    // Client Prisma của worker không có extension trace của API ⇒ job tự mang ngữ cảnh trace của lượt
+    // quét sang sự kiện, để relay/consumer nối tiếp đúng trace (HB-181 review P2).
+    const trace = currentTraceFields();
     await tx.outbox_events.create({
       data: {
         event_type: HOLD_EXPIRED_EVENT,
@@ -210,6 +214,12 @@ export async function expireHold(db: PrismaClient, bookingId: string): Promise<E
           endDate: booking.check_out.toISOString().slice(0, 10),
           roomIds: assignments.map((row) => row.room_id),
           operation: HOLD_EXPIRED_REASON,
+          ...(trace === null
+            ? {}
+            : {
+                traceparent: trace.traceparent,
+                ...(trace.correlationId === null ? {} : { correlationId: trace.correlationId }),
+              }),
         },
       },
     });
