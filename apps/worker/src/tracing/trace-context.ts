@@ -83,8 +83,15 @@ export function currentCorrelationId(): string | null {
   return storage.getStore()?.correlationId ?? null;
 }
 
-/** Mã để chuyển tiếp sang job kế tiếp (retry hoặc job do handler đẩy). */
-export function currentTraceparent(): string | null {
+/** Hai mã ghi kèm bản ghi đi ra (payload outbox do worker phát) — `null` khi ngoài job. */
+export interface TraceFields {
+  readonly traceparent: string;
+  readonly correlationId: string | null;
+}
+
+export function currentTraceFields(): TraceFields | null {
   const trace = storage.getStore();
-  return trace === undefined ? null : traceparentOf(trace);
+  return trace === undefined
+    ? null
+    : { traceparent: traceparentOf(trace), correlationId: trace.correlationId };
 }

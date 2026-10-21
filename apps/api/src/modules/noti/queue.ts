@@ -3,7 +3,7 @@ import { Queue } from 'bullmq';
 import type { ConnectionOptions } from 'bullmq';
 import { NOTIFICATION_MAX_RESENDS } from '@pinehill/contracts';
 import { CONFIG } from '../../config/env.js';
-import { currentTraceparent } from '../../infrastructure/tracing/trace-context.js';
+import { currentTraceFields } from '../../infrastructure/tracing/trace-context.js';
 import type { ApiConfig } from '../../config/env.js';
 
 /**
@@ -30,8 +30,9 @@ export const NOTIFICATION_RESEND_DELAY_MS = 5 * 60 * 1000;
 /** Dữ liệu job gửi thông báo — gương với `apps/worker/src/noti/payload.ts` (không dùng chung được). */
 export interface NotificationJobData {
   readonly notificationId: string;
-  /** Ngữ cảnh W3C nối trace sang worker (HB-181); lượt gửi lại dùng lại đúng giá trị này. */
+  /** Ngữ cảnh quan sát (HB-181) nối trace/mã tương quan sang worker; lượt gửi lại dùng lại đúng giá trị. */
   readonly traceparent?: string;
+  readonly correlationId?: string;
 }
 
 export interface NotificationQueuePort {
@@ -58,10 +59,12 @@ export class BullNotificationQueue implements NotificationQueuePort, OnApplicati
   }
 
   async enqueue(notificationId: string): Promise<void> {
-    const traceparent = currentTraceparent();
+    const trace = currentTraceFields();
     const data: NotificationJobData = {
       notificationId,
-      ...(traceparent === null ? {} : { traceparent }),
+      ...(trace === null
+        ? {}
+        : { traceparent: trace.traceparent, correlationId: trace.correlationId }),
     };
     await this.queue.add(NOTIFICATION_JOB_NAME, data, {
       attempts: NOTIFICATION_MAX_ATTEMPTS,

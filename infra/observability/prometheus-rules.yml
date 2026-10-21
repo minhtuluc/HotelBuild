@@ -1,7 +1,10 @@
 # Luật SLO + cảnh báo burn-rate (HB-181 AC3, NFR-OBS-02).
-# Số liệu `traces_spanmetrics_*` do connector `spanmetrics` của OTel Collector sinh từ span của api/worker
-# (xem otel-collector.yml). Ba nguồn còn thiếu (BullMQ, hold-release lag, outbox lag) được khai ở README §2
-# và chỉ có sau khi HB-175 dựng staging — luật dưới đây sẽ không có dữ liệu cho tới lúc đó.
+# Số liệu `traces_spanmetrics_*` do connector `spanmetrics` của OTel Collector sinh từ **toàn bộ** span của
+# api/worker — pipeline này KHÔNG lấy mẫu (xem otel-collector.yml): lấy mẫu chỉ xảy ra ở pipeline Tempo.
+# `status_code="STATUS_CODE_ERROR"` chỉ gồm 5xx: interceptor của API chỉ đánh dấu ERROR khi lỗi >= 500;
+# 4xx (validate/không thấy/xung đột) là kết quả nghiệp vụ và không tính vào SLI lỗi.
+# Ba nguồn còn thiếu (BullMQ, hold-release lag, outbox lag) được khai ở README §2 và chỉ có sau khi HB-175
+# dựng staging — luật dưới đây sẽ không có dữ liệu cho tới lúc đó.
 groups:
   - name: pinehill-slo-recording
     interval: 30s
@@ -222,6 +225,7 @@ groups:
           runbook_url: '${GRAFANA_BASE_URL}/d/pinehill-runbook/on-call'
 
       - alert: slo.queue_depth.high
+        # Gauge: độ sâu hàng đợi là giá trị hiện tại, `max_over_time` để bỏ dao động ngắn.
         expr: 'max by (queue) (max_over_time(bullmq_queue_jobs_count{state="waiting"}[10m])) > 100'
         for: 5m
         labels:
@@ -234,13 +238,16 @@ groups:
           dashboard_url: '${GRAFANA_BASE_URL}/d/pinehill-slo/queue-depth'
           runbook_url: '${GRAFANA_BASE_URL}/d/pinehill-runbook/on-call'
 
-      - alert: slo.queue_failed.high
-        expr: 'sum by (queue) (increase(bullmq_queue_jobs_count{state="failed"}[15m])) > 10'
+      - alert: slo.queue_failures.high
+        # Counter đơn điệu (`bullmq_jobs_failed_total`), không dùng `increase()` trên gauge
+        # `bullmq_queue_jobs_count{state="failed"}`: gauge giảm khi job được dọn/thử lại nên `increase()`
+        # cho số vô nghĩa (HB-181 review P2).
+        expr: 'sum by (queue) (rate(bullmq_jobs_failed_total[15m])) * 900 > 10'
         for: 5m
         labels:
           severity: warning
           channel: tech
-          slo: queue_depth
+          slo: queue_failures
         annotations:
           summary: 'Hơn 10 job lỗi trong 15 phút ở {{ $labels.queue }}'
           description: 'Tra traceId của job lỗi trên Tempo trước khi xử lý lại.'

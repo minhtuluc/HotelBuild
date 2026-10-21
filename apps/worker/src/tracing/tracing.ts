@@ -6,8 +6,6 @@ import { resourceFromAttributes } from '@opentelemetry/resources';
 import { AlwaysOnSampler, BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
 import type { WorkerConfig } from '../config/env.js';
-import { DEFAULT_SAMPLE_RATIO } from './sampling.js';
-import { TailSamplingExporter } from './tail-sampling.exporter.js';
 import {
   TRACEPARENT_HEADER,
   newTrace,
@@ -24,7 +22,6 @@ export interface TracingOptions {
   readonly serviceName: string;
   /** Bỏ trống ⇒ không bật SDK (mặc định dev), chỉ lan truyền `traceparent` qua log/dữ liệu job. */
   readonly endpoint: string | undefined;
-  readonly sampleRatio: number;
 }
 
 export interface JobSpan {
@@ -68,8 +65,9 @@ function disabledTracing(): Tracing {
 }
 
 /**
- * Bật OpenTelemetry cho worker. Cấu hình lấy từ `WorkerConfig` (nơi duy nhất đọc `process.env`); endpoint
- * trống ⇒ không có span nào được ghi. Bọc `try` để cấu hình collector sai không làm worker chết (fail-open).
+ * Bật OpenTelemetry cho worker. Ứng dụng **xuất đủ span**; lấy mẫu là việc của collector
+ * (`tail_sampling`) — xem `infra/observability/README.md`. Bọc `try` để cấu hình collector sai không làm
+ * worker chết (fail-open).
  */
 export function startTracing(options: TracingOptions): Tracing {
   if (options.endpoint === undefined || options.endpoint.trim() === '') return disabledTracing();
@@ -78,12 +76,7 @@ export function startTracing(options: TracingOptions): Tracing {
       resource: resourceFromAttributes({ 'service.name': options.serviceName }),
       sampler: new AlwaysOnSampler(),
       spanProcessors: [
-        new BatchSpanProcessor(
-          new TailSamplingExporter(
-            new OTLPTraceExporter({ url: tracesUrl(options.endpoint) }),
-            options.sampleRatio,
-          ),
-        ),
+        new BatchSpanProcessor(new OTLPTraceExporter({ url: tracesUrl(options.endpoint) })),
       ],
     });
     provider.register();
@@ -129,7 +122,6 @@ export function tracingFromConfig(config: WorkerConfig): Tracing {
   return startTracing({
     serviceName: 'worker',
     endpoint: config.OTEL_EXPORTER_OTLP_ENDPOINT,
-    sampleRatio: config.OTEL_SAMPLE_RATIO ?? DEFAULT_SAMPLE_RATIO,
   });
 }
 

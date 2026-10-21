@@ -37,7 +37,7 @@ describe.skipIf(databaseUrl === undefined)('traceparent trong payload outbox (HB
     await db.$disconnect();
   });
 
-  it('transaction nghiệp vụ ghi kèm traceparent của request', async () => {
+  it('transaction nghiệp vụ ghi kèm traceparent + correlationId của request', async () => {
     const trace = newTrace('hb181-outbox', true);
     const row = await runWithTrace(trace, () =>
       // Ghi qua `tx` của transaction để chứng minh extension áp **bên trong** transaction nghiệp vụ.
@@ -55,6 +55,7 @@ describe.skipIf(databaseUrl === undefined)('traceparent trong payload outbox (HB
     expect(await payloadOf(row.id)).toMatchObject({
       operation: 'OUTBOX_TRACE',
       traceparent: traceparentOf(trace),
+      correlationId: 'hb181-outbox',
     });
   });
 
@@ -63,21 +64,25 @@ describe.skipIf(databaseUrl === undefined)('traceparent trong payload outbox (HB
     expect(await payloadOf(row.id)).toStrictEqual({ operation: 'NO_REQUEST' });
   });
 
-  it('payload đã có traceparent thì không ghi đè', async () => {
+  it('mã đã có trong payload thì không ghi đè', async () => {
     const trace = newTrace('hb181-existing', true);
-    const row = await runWithTrace(trace, () =>
-      db.outbox_events.create({
-        data: {
-          event_type: 'InventoryChanged',
-          aggregate_type: 'Booking',
-          aggregate_id: aggregateId,
-          payload_json: { operation: 'EXISTING', traceparent: '00-giu-nguyen' },
-        },
-      }),
+    // Prisma trả promise "lười": phải `await` **bên trong** khung ALS thì truy vấn mới chạy trong ngữ cảnh.
+    const row = await runWithTrace(
+      trace,
+      async () =>
+        await db.outbox_events.create({
+          data: {
+            event_type: 'InventoryChanged',
+            aggregate_type: 'Booking',
+            aggregate_id: aggregateId,
+            payload_json: { operation: 'EXISTING', traceparent: '00-giu-nguyen' },
+          },
+        }),
     );
     expect(await payloadOf(row.id)).toMatchObject({
       operation: 'EXISTING',
       traceparent: '00-giu-nguyen',
+      correlationId: 'hb181-existing',
     });
   });
 });

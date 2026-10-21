@@ -17,6 +17,7 @@ const EXPORT_FAILED_ACTION = 'REPORT_EXPORT_FAILED';
 const payloadSchema = z.strictObject({
   operationId: z.uuid(),
   traceparent: z.string().max(128).optional(),
+  correlationId: z.string().max(128).optional(),
 });
 const storedPayloadSchema = z.object({
   report: z.enum(['occupancy', 'adr-revpar', 'revenue-by-channel', 'cancellations']),

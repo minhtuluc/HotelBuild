@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import type { WorkerConfig } from '../../config/env.js';
 import type { JobContext } from '../types.js';
+import { CRITICAL_ATTRIBUTE, CRITICAL_PAYMENT, isPaymentEvent } from '../../tracing/sampling.js';
 import { resolveTrace } from '../../tracing/trace-context.js';
 import { withTrace } from '../../tracing/tracing.js';
 import { outboxErrorCode, type OutboxConsumer } from './consumer.js';
@@ -373,6 +374,8 @@ async function runDelivery(
         'messaging.system': 'outbox',
         'outbox.consumer': row.consumer,
         'outbox.event_type': envelope.eventType,
+        // Sự kiện tiền tệ luôn được collector giữ 100% kể cả khi mọi thứ thành công.
+        ...(isPaymentEvent(envelope.eventType) ? { [CRITICAL_ATTRIBUTE]: CRITICAL_PAYMENT } : {}),
       },
       () => consumer.handle(envelope, context),
     );

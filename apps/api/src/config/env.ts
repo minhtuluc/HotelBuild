@@ -56,15 +56,16 @@ const apiEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).optional(),
   LOG_LEVEL: z.enum(logLevels).default('info'),
   // Quan sát (HB-181): endpoint OTLP bỏ trống ⇒ **không** bật exporter (mặc định dev); trace vẫn lan
-  // truyền qua `traceparent`. Tỉ lệ lấy mẫu tối thiểu 10% (NFR-OBS-03); trace lỗi và thanh toán luôn
-  // được giữ 100% bất kể giá trị này.
+  // truyền qua `traceparent`. Ứng dụng xuất **đủ** span — lấy mẫu (≥ 10%, giữ 100% lỗi/thanh toán) là việc
+  // của collector (`infra/observability/otel-collector.yml`). `OTEL_SAMPLE_RATIO` chỉ đặt cờ sampled của
+  // W3C cho dịch vụ nhận, **không** bỏ span nào ở đây (đặt mẫu hai nơi làm số liệu SLO sai).
   OTEL_EXPORTER_OTLP_ENDPOINT: z
     .string()
     .optional()
     .transform((value) => (value === undefined || value.trim() === '' ? undefined : value))
     .pipe(urlWithProtocol('http:', 'https:').optional()),
-  // Bỏ trống ⇒ `DEFAULT_SAMPLE_RATIO`; nơi dùng áp mặc định để kiểu cấu hình vẫn tuỳ chọn (test dựng
-  // `ApiConfig` trực tiếp). Giá trị khai báo phải nằm trong `[0.1, 1]` (NFR-OBS-03).
+  // Bỏ trống ⇒ `DEFAULT_SAMPLE_RATIO` (cờ W3C, xem ghi chú trên); nơi dùng áp mặc định để kiểu cấu hình
+  // vẫn tuỳ chọn (test dựng `ApiConfig` trực tiếp). Giá trị khai báo phải nằm trong `[0.1, 1]`.
   OTEL_SAMPLE_RATIO: z
     .string()
     .optional()

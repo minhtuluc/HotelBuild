@@ -85,12 +85,22 @@ export function currentTraceId(): string | null {
   return storage.getStore()?.traceId ?? null;
 }
 
-export function currentCorrelationId(): string | null {
-  return storage.getStore()?.correlationId ?? null;
-}
-
 /** Mã để ghi vào bản ghi đi ra (`outbox_events.payload_json`, dữ liệu job BullMQ). */
 export function currentTraceparent(): string | null {
   const trace = storage.getStore();
   return trace === undefined ? null : traceparentOf(trace);
+}
+
+/** Hai mã đi cùng một bản ghi đi ra: `traceparent` để nối trace, `correlationId` để nối hợp đồng lỗi. */
+export interface TraceFields {
+  readonly traceparent: string;
+  readonly correlationId: string;
+}
+
+/** `null` khi ngoài request (seed/CLI) — nơi gọi không được bịa mã thay producer. */
+export function currentTraceFields(): TraceFields | null {
+  const trace = storage.getStore();
+  return trace === undefined
+    ? null
+    : { traceparent: traceparentOf(trace), correlationId: trace.correlationId };
 }

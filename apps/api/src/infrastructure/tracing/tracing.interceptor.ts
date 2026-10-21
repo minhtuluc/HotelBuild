@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { CallHandler, ExecutionContext, NestInterceptor } from '@nestjs/common';
 import type { IdGenerator } from '@pinehill/domain';
-import type { FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import { Observable, catchError, finalize, throwError } from 'rxjs';
 import type { Subscription } from 'rxjs';
 import { AppError } from '../../common/app-error.js';
@@ -42,12 +42,14 @@ export class TracingInterceptor implements NestInterceptor {
       sampleRatio: this.config.OTEL_SAMPLE_RATIO ?? DEFAULT_SAMPLE_RATIO,
     });
     const route = request.routeOptions?.url ?? '/[unmatched]';
+    const reply = context.switchToHttp().getResponse<FastifyReply>();
     const span = this.tracing.startServerSpan(trace, `HTTP ${request.method} ${route}`, {
       'http.request.method': request.method,
       'http.route': route,
       correlationId: trace.correlationId,
       ...(isPaymentPath(request.url) ? { [CRITICAL_ATTRIBUTE]: CRITICAL_PAYMENT } : {}),
     });
+    let failed = false;
 
     return new Observable<unknown>((subscriber) => {
       let inner: Subscription | undefined;
@@ -58,10 +60,20 @@ export class TracingInterceptor implements NestInterceptor {
       return () => inner?.unsubscribe();
     }).pipe(
       catchError((error: unknown) => {
-        span.fail(error instanceof AppError ? error.code : null);
+        failed = true;
+        // 4xx là kết quả nghiệp vụ (validate/không thấy/xung đột), **không** phải lỗi server: chỉ 5xx mới
+        // mang `ERROR`, nếu không SLI "không 5xx" sẽ báo động vì lưu lượng 4xx bình thường.
+        span.fail(
+          error instanceof AppError ? error.status : 500,
+          error instanceof AppError ? error.code : null,
+        );
         return throwError(() => error);
       }),
-      finalize(() => span.end()),
+      // Filter lỗi chạy **sau** interceptor nên mã response lúc này chưa phải mã lỗi; chỉ ghi khi thành công.
+      finalize(() => {
+        if (!failed) span.respond(reply.statusCode);
+        span.end();
+      }),
     );
   }
 }

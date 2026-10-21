@@ -2,7 +2,6 @@ import { Global, Inject, Injectable, Module } from '@nestjs/common';
 import type { DynamicModule } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import type { ApiConfig } from '../../config/env.js';
-import { DEFAULT_SAMPLE_RATIO } from './sampling.js';
 import { TRACING } from './tokens.js';
 import { startTracing } from './tracing.js';
 import type { Tracing } from './tracing.js';
@@ -36,7 +35,6 @@ export class TracingModule {
               serviceName: 'api',
               environment: config.NODE_ENV ?? 'development',
               endpoint: config.OTEL_EXPORTER_OTLP_ENDPOINT,
-              sampleRatio: config.OTEL_SAMPLE_RATIO ?? DEFAULT_SAMPLE_RATIO,
             }),
         },
         TracingLifecycle,

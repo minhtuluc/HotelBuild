@@ -14,12 +14,14 @@ import { AppModule } from '../../src/app.module.js';
 import { AllExceptionsFilter } from '../../src/common/all-exceptions.filter.js';
 import type { ErrorLogger } from '../../src/common/all-exceptions.filter.js';
 import { loadConfig } from '../../src/config/env.js';
+import { AppError } from '../../src/common/app-error.js';
 import { SystemClock, UuidGenerator } from '../../src/infrastructure/ports.js';
 import {
   currentTraceId,
   currentTraceparent,
 } from '../../src/infrastructure/tracing/trace-context.js';
 import { startTracing } from '../../src/infrastructure/tracing/tracing.js';
+import type { Tracing } from '../../src/infrastructure/tracing/tracing.js';
 import { createLogger } from '../../../worker/src/pino.logger.js';
 import {
   newTrace as newWorkerTrace,
@@ -59,6 +61,12 @@ class ProbeController {
     this.logger.info({ route: 'probe.fail' }, 'bắt đầu xử lý');
     // Lỗi không lường trước ⇒ filter ghi log lỗi (lỗi đã biết như `AppError` trả về im lặng).
     throw new Error('boom');
+  }
+
+  @Get('not-found')
+  notFound(): never {
+    // 4xx: kết quả nghiệp vụ, không được đánh dấu span ERROR (HB-181 review P2).
+    throw new AppError(404, 'E_GEN_NOT_FOUND', 'Không tìm thấy tài nguyên.');
   }
 }
 
@@ -109,18 +117,29 @@ it('mọi dòng log mang traceId/correlationId và không lộ PII/token', async
   try {
     const logger = app.get<ErrorLogger>(getLoggerToken(AllExceptionsFilter.name));
     app.useGlobalFilters(new AllExceptionsFilter(new SystemClock(), new UuidGenerator(), logger));
-    // SDK tắt (endpoint trống) ⇒ chỉ kiểm phần lan truyền + log, đúng mặc định của dev.
+    // SDK tắt (endpoint trống) ⇒ chỉ kiểm phần lan truyền + log, đúng mặc định của dev. Ghi lại mọi
+    // `fail(status, errorCode)` để chứng minh 4xx không bị đánh dấu lỗi server.
+    const failures: { status: number; errorCode: string | null }[] = [];
+    const tracing = startTracing({
+      serviceName: 'api',
+      environment: 'test',
+      endpoint: undefined,
+    });
+    const recordingTracing: Tracing = {
+      ...tracing,
+      startServerSpan: (trace, name, attributes) => {
+        const span = tracing.startServerSpan(trace, name, attributes);
+        return {
+          ...span,
+          fail: (status, errorCode) => {
+            failures.push({ status, errorCode });
+            span.fail(status, errorCode);
+          },
+        };
+      },
+    };
     app.useGlobalInterceptors(
-      new TracingInterceptor(
-        startTracing({
-          serviceName: 'api',
-          environment: 'test',
-          endpoint: undefined,
-          sampleRatio: 0.1,
-        }),
-        new UuidGenerator(),
-        config,
-      ),
+      new TracingInterceptor(recordingTracing, new UuidGenerator(), config),
     );
     await app.listen({ port: 0, host: '127.0.0.1' });
     const baseUrl = await app.getUrl();
@@ -142,6 +161,16 @@ it('mọi dòng log mang traceId/correlationId và không lộ PII/token', async
       .set('X-Correlation-Id', CORRELATION_ID)
       .set('traceparent', INCOMING_TRACEPARENT);
     expect(failed.status).toBe(500);
+
+    const notFound = await request(baseUrl)
+      .get('/probe/not-found')
+      .set('X-Correlation-Id', CORRELATION_ID)
+      .set('traceparent', INCOMING_TRACEPARENT);
+    expect(notFound.status).toBe(404);
+    expect(failures).toEqual([
+      { status: 500, errorCode: null },
+      { status: 404, errorCode: 'E_GEN_NOT_FOUND' },
+    ]);
 
     // Chờ dòng log hoàn tất của pino-http (ghi ở sự kiện `finish` của response).
     const flushed = Promise.withResolvers<void>();

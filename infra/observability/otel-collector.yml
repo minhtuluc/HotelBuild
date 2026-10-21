@@ -1,6 +1,9 @@
-# OTel Collector cho api/worker (HB-181 AC1/AC3). Nhận OTLP, lấy mẫu **đuôi** rồi mới lưu: trace lỗi,
-# trace thanh toán và span chậm > 1 s được giữ 100 %, phần còn lại 10 % (NFR-OBS-03). Connector
-# `spanmetrics` sinh số liệu cho luật SLO trong prometheus-rules.yml.
+# OTel Collector cho api/worker (HB-181 AC1/AC3).
+#
+# **Một điểm lấy mẫu duy nhất** — ở đây, không ở ứng dụng (HB-181 review P1). Ứng dụng xuất **đủ** span:
+#   • `traces/spanmetrics` KHÔNG lấy mẫu → metric SLO (tỉ lệ lỗi/p95) đúng trên toàn bộ lưu lượng.
+#   • `traces/tempo` lấy mẫu đuôi → giữ 100 % trace lỗi, trace thanh toán và span > 1 s; còn lại 10 %
+#     (NFR-OBS-03). Nếu lọc mẫu ở cả hai nơi, lưu lượng lành còn ~1 % và tỉ lệ lỗi bị khuếch đại.
 #
 # Chưa chạy ở đâu: cần staging HB-175 (xem README §6).
 receivers:
@@ -52,6 +55,7 @@ connectors:
         buckets: [5ms, 10ms, 25ms, 50ms, 100ms, 200ms, 400ms, 900ms, 1s, 2s, 5s]
     dimensions:
       - name: http.route
+      - name: http.response.status_code
       - name: pinehill.sampling.critical
     metrics_flush_interval: 15s
 
@@ -66,10 +70,16 @@ exporters:
 
 service:
   pipelines:
-    traces:
+    # Đường số liệu: KHÔNG lấy mẫu — SLO phải đếm trên 100 % lưu lượng.
+    traces/spanmetrics:
       receivers: [otlp]
-      processors: [memory_limiter, batch, tail_sampling]
-      exporters: [spanmetrics, otlphttp/tempo]
+      processors: [memory_limiter, batch]
+      exporters: [spanmetrics]
+    # Đường lưu trace: lấy mẫu đuôi duy nhất ở đây.
+    traces/tempo:
+      receivers: [otlp]
+      processors: [memory_limiter, tail_sampling, batch]
+      exporters: [otlphttp/tempo]
     metrics:
       receivers: [spanmetrics]
       exporters: [prometheus]

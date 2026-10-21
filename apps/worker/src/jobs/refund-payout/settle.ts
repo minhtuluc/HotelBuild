@@ -11,6 +11,7 @@
  */
 import type { PrismaClient } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
+import { currentTraceFields } from '../../tracing/trace-context.js';
 import type { ClaimedPayout } from './types.js';
 
 export const STALE_PAYOUT_LEASE = 'STALE_PAYOUT_LEASE';
@@ -82,6 +83,9 @@ async function markPaidIfComplete(
      WHERE id = ${op.refundRequestId}::uuid AND status = 'APPROVED'`;
   if (updated === 1) {
     const payload = await paidPayload(tx, op);
+    // Câu ghi SQL thô không đi qua extension Prisma của API ⇒ tự mang ngữ cảnh trace của job chi hoàn
+    // sang outbox, để consumer/relay nối tiếp đúng trace thay vì mở trace mới (HB-181 review P2).
+    const trace = currentTraceFields();
     await tx.$executeRaw`
       INSERT INTO outbox_events(event_type, aggregate_type, aggregate_id, payload_json)
       VALUES ('RefundPaid', 'RefundRequest', ${op.refundRequestId}::uuid,
@@ -94,6 +98,12 @@ async function markPaidIfComplete(
             method: leg.method,
             providerTxnId: leg.provider_txn_id,
           })),
+          ...(trace === null
+            ? {}
+            : {
+                traceparent: trace.traceparent,
+                ...(trace.correlationId === null ? {} : { correlationId: trace.correlationId }),
+              }),
         })}::jsonb)`;
   }
   const current = await tx.$queryRaw<{ status: string }[]>`

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { DEFAULT_SAMPLE_RATIO } from '../tracing/sampling.js';
 
 const logLevels = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
 
@@ -24,25 +23,13 @@ const workerEnvSchema = z.object({
   NOTI_SMTP_URL: urlWithProtocol('smtp:', 'smtps:').optional(),
   NOTI_SMTP_FROM: z.string().min(3).max(200).optional(),
   LOG_LEVEL: z.enum(logLevels).default('info'),
-  // Quan sát (HB-181): endpoint OTLP bỏ trống ⇒ không bật exporter (mặc định dev). Tỉ lệ lấy mẫu tối
-  // thiểu 10%; việc lỗi và việc chạm tiền luôn được giữ 100% bất kể giá trị này.
+  // Quan sát (HB-181): endpoint OTLP bỏ trống ⇒ không bật exporter (mặc định dev). Worker xuất **đủ**
+  // span; lấy mẫu (≥ 10%, giữ 100% việc lỗi/tiền) là việc của collector — xem `infra/observability`.
   OTEL_EXPORTER_OTLP_ENDPOINT: z
     .string()
     .optional()
     .transform((value) => (value === undefined || value.trim() === '' ? undefined : value))
     .pipe(urlWithProtocol('http:', 'https:').optional()),
-  OTEL_SAMPLE_RATIO: z
-    .string()
-    .optional()
-    .transform((value) => (value === undefined || value.trim() === '' ? undefined : Number(value)))
-    .refine(
-      (value) =>
-        value === undefined ||
-        (Number.isFinite(value) && value >= DEFAULT_SAMPLE_RATIO && value <= 1),
-      { message: 'OTEL_SAMPLE_RATIO phải trong khoảng 0.1..1' },
-    )
-    // `optional()` ngoài cùng: khoá vắng ⇒ mặc định ở nơi dùng, kiểu cấu hình vẫn dựng được trong test.
-    .optional(),
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(5),
   SHUTDOWN_TIMEOUT_SECONDS: z.coerce.number().positive().default(15),
   ENABLE_REPEATABLE_SCHEDULERS: z

@@ -1,14 +1,12 @@
-import { SpanStatusCode } from '@opentelemetry/api';
 import { describe, expect, it } from 'vitest';
 import { withOutboxTrace } from '../../src/infrastructure/prisma/outbox-trace.extension.js';
 import {
   DEFAULT_SAMPLE_RATIO,
   isPaymentPath,
-  keepTrace,
   traceIdSamples,
 } from '../../src/infrastructure/tracing/sampling.js';
-import { selectSampled } from '../../src/infrastructure/tracing/tail-sampling.exporter.js';
 import {
+  currentTraceFields,
   currentTraceId,
   currentTraceparent,
   newTrace,
@@ -81,44 +79,12 @@ describe('chính sách lấy mẫu (HB-181 AC1)', () => {
     expect(isPaymentPath('/api/v1/bookings/abc')).toBe(false);
     expect(isPaymentPath('/api/v1/payments-history')).toBe(false);
   });
-
-  it('trace lỗi và trace thanh toán được giữ 100% dù tỉ lệ bằng 0', () => {
-    // Trace id cố định có 8 ký tự cuối lớn ⇒ chắc chắn **không** trúng tỉ lệ 10%.
-    const traceId = `${'a'.repeat(24)}ffffffff`;
-    const healthy = [{ status: { code: SpanStatusCode.OK }, attributes: {} }];
-    const failed = [{ status: { code: SpanStatusCode.ERROR }, attributes: {} }];
-    const payment = [
-      {
-        status: { code: SpanStatusCode.OK },
-        attributes: { 'pinehill.sampling.critical': 'PAYMENT' },
-      },
-    ];
-    expect(traceIdSamples(traceId, 0.1)).toBe(false);
-    expect(keepTrace(traceId, healthy, 0.1)).toBe(false);
-    expect(keepTrace(traceId, failed, 0)).toBe(true);
-    expect(keepTrace(traceId, payment, 0)).toBe(true);
-    expect(keepTrace(traceId, healthy, 1)).toBe(true);
-  });
-
-  it('bộ lọc xuất giữ cả trace khi span lỗi và nhớ trace qua lô xuất sau', () => {
-    const traceId = newTrace('probe', false).traceId;
-    const remembered = new Set<string>();
-    const span = (status: SpanStatusCode, attributes: Record<string, unknown> = {}) => ({
-      spanContext: () => ({ traceId }),
-      status: { code: status },
-      attributes,
-    });
-    expect(selectSampled([span(SpanStatusCode.OK)], 0, remembered)).toHaveLength(0);
-    expect(selectSampled([span(SpanStatusCode.ERROR)], 0, remembered)).toHaveLength(1);
-    // Lô kế tiếp của cùng trace: span lành vẫn đi theo vì trace đã được giữ.
-    expect(selectSampled([span(SpanStatusCode.OK)], 0, remembered)).toHaveLength(1);
-  });
 });
 
 describe('API → outbox → job worker (HB-181 AC1)', () => {
   const trace = newTrace('cid-outbox', true);
   const payload = runWithTrace(trace, () =>
-    withOutboxTrace({ operation: 'BOOKING_CREATED' }, currentTraceparent()),
+    withOutboxTrace({ operation: 'BOOKING_CREATED' }, currentTraceFields()),
   );
   const row = {
     id: '11111111-1111-4111-8111-111111111111',
@@ -131,16 +97,25 @@ describe('API → outbox → job worker (HB-181 AC1)', () => {
   };
   const envelope = envelopeOf(row);
 
-  it('ghi traceparent của request vào payload outbox', () => {
-    expect(payload).toMatchObject({ traceparent: traceparentOf(trace) });
+  it('ghi traceparent + correlationId của request vào payload outbox', () => {
+    expect(payload).toMatchObject({
+      traceparent: traceparentOf(trace),
+      correlationId: 'cid-outbox',
+    });
     expect(envelope.traceparent).toBe(traceparentOf(trace));
+    expect(envelope.correlationId).toBe('cid-outbox');
   });
 
-  it('job/consumer ở worker nối tiếp đúng trace của sự kiện', () => {
+  it('job/consumer ở worker nối tiếp đúng trace và mã tương quan của sự kiện', () => {
     const fromEnvelope = resolveTrace(envelope.traceparent, envelope.correlationId);
     expect(fromEnvelope.traceId).toBe(trace.traceId);
-    const fromJobData = traceFromPayload({ traceparent: envelope.traceparent });
+    expect(fromEnvelope.correlationId).toBe('cid-outbox');
+    const fromJobData = traceFromPayload({
+      traceparent: envelope.traceparent,
+      correlationId: envelope.correlationId,
+    });
     expect(fromJobData?.traceId).toBe(trace.traceId);
+    expect(fromJobData?.correlationId).toBe('cid-outbox');
   });
 
   it('lượt thử lại dùng lại dữ liệu job nên vẫn cùng trace', () => {
@@ -153,15 +128,22 @@ describe('API → outbox → job worker (HB-181 AC1)', () => {
   });
 
   it('không thêm trace khi ngoài request hoặc payload đã có mã', () => {
+    const fields = { traceparent: traceparentOf(trace), correlationId: trace.correlationId };
     const untouched = withOutboxTrace({ operation: 'X' }, null);
     expect(untouched).toStrictEqual({ operation: 'X' });
-    const existing = withOutboxTrace({ traceparent: '00-giữ-nguyên' }, traceparentOf(trace));
-    expect(existing).toStrictEqual({ traceparent: '00-giữ-nguyên' });
-    expect(withOutboxTrace('primitive', traceparentOf(trace))).toBe('primitive');
+    const existing = withOutboxTrace(
+      { traceparent: '00-giu-nguyen', correlationId: 'cid-giu' },
+      fields,
+    );
+    expect(existing).toStrictEqual({ traceparent: '00-giu-nguyen', correlationId: 'cid-giu' });
+    expect(withOutboxTrace('primitive', fields)).toBe('primitive');
   });
 
   it('payload mảng không bị chèn khoá lạ', () => {
-    const array = withOutboxTrace([{ a: 1 }], traceparentOf(trace));
+    const array = withOutboxTrace([{ a: 1 }], {
+      traceparent: traceparentOf(trace),
+      correlationId: trace.correlationId,
+    });
     expect(array).toStrictEqual([{ a: 1 }]);
   });
 });
