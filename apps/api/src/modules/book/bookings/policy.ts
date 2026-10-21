@@ -26,6 +26,10 @@ export interface PolicySnapshot {
   readonly id: string;
   readonly code: string;
   readonly name: string;
+  /** BR-CANCEL-09: số giờ báo trước tối thiểu; `null` = gói không hoàn (NONREF). */
+  readonly earlyCheckoutFreeHours?: number | null;
+  /** BR-CANCEL-09: tỷ lệ hoàn phần đêm chưa ở (0..100, số nguyên). */
+  readonly earlyCheckoutRefundPct?: number;
   readonly tiers: readonly PolicyTier[];
 }
 
@@ -33,9 +37,28 @@ export interface PolicySnapshot {
 export async function loadPolicySnapshot(tx: Tx, policyId: string): Promise<PolicySnapshot> {
   const policy = await tx.cancellation_policies.findUnique({
     where: { id: policyId },
-    select: { id: true, code: true, name: true },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      early_checkout_free_hours: true,
+      early_checkout_refund_pct: true,
+    },
   });
   if (policy === null) configuration('ratePlan.cancellationPolicyId', 'missing');
+  const earlyCheckoutFreeHours = policy.early_checkout_free_hours;
+  if (
+    earlyCheckoutFreeHours !== null &&
+    (!Number.isInteger(earlyCheckoutFreeHours) || earlyCheckoutFreeHours < 0)
+  )
+    configuration('cancellationPolicy.earlyCheckoutFreeHours', 'invalid');
+  const earlyCheckoutRefundPct = Number(policy.early_checkout_refund_pct);
+  if (
+    !Number.isInteger(earlyCheckoutRefundPct) ||
+    earlyCheckoutRefundPct < 0 ||
+    earlyCheckoutRefundPct > 100
+  )
+    configuration('cancellationPolicy.earlyCheckoutRefundPct', 'not-integer');
   const tiers = await tx.cancellation_tiers.findMany({
     where: { policy_id: policyId },
     orderBy: { sort_order: 'asc' },
@@ -53,5 +76,12 @@ export async function loadPolicySnapshot(tx: Tx, policyId: string): Promise<Poli
       chargeFirstNight: tier.charge_first_night,
     };
   });
-  return { id: policy.id, code: policy.code, name: policy.name, tiers: snapshot };
+  return {
+    id: policy.id,
+    code: policy.code,
+    name: policy.name,
+    earlyCheckoutFreeHours,
+    earlyCheckoutRefundPct,
+    tiers: snapshot,
+  };
 }

@@ -35,12 +35,23 @@ import { lockBooking } from '../../book/bookings/lock.js';
 import type { LockedBooking } from '../../book/bookings/lock.js';
 import { PIN_PURPOSE_FINANCIAL, requirePinToken } from '../../auth/pin/consume.js';
 import { readFacts } from '../../book/cancel/context.js';
-import { decide } from '../../book/cancel/engine.js';
+import type { CancelDecision } from '../../book/cancel/context.js';
 import { recordRefund, releaseAssignments } from '../../book/cancel/writes.js';
 import { BookingLedger } from '../../pay/ledger/service.js';
 import { maskOperationalText } from '../../prop/room-blocks/operational-text.js';
-import { capReceipts, voidUnusedNights } from './early.js';
-import { dateOnly, extraLines, localDate, localNow, safeError } from './support.js';
+import { planEarlyRefund, voidUnusedNights } from './early.js';
+import type { Voids } from './early.js';
+import { replayCheckOut } from './replay.js';
+import { ensureHousekeepingTasks } from './tasks.js';
+import {
+  FEE_SOURCE_KEY,
+  bookedFee,
+  dateOnly,
+  extraLines,
+  localDate,
+  localNow,
+  safeError,
+} from './support.js';
 import type { ExtraLine } from './support.js';
 import {
   balanceUnsettled,
@@ -57,7 +68,6 @@ type Tx = Prisma.TransactionClient;
 const CHECKED_IN = 'CHECKED_IN';
 const CHECKED_OUT = 'CHECKED_OUT';
 const DAY = 86_400_000;
-const FEE_SOURCE_KEY = 'checkout-late-fee';
 
 /** Kết quả nghiệp vụ: từ chối vì số dư (đã ghi nghĩa vụ) hoặc hoàn tất trả phòng. */
 type Outcome =
@@ -74,8 +84,10 @@ interface Completion {
   readonly extrasAmount: number;
   readonly input: CheckOutRequest;
   readonly paidAmount: bigint;
-  /** Giá trị nghĩa vụ ROOM của các đêm chưa ở đã void (0 khi không trả sớm). */
-  readonly unusedValue: bigint;
+  /** Nghĩa vụ đêm chưa ở đã void + tiền thực nhả (rỗng khi không trả sớm). */
+  readonly voids: Voids;
+  /** Phụ thu **đã ghi sổ** (đọc lại từ `booking_charges`), không phải con số engine vừa tính. */
+  readonly feeAmount: number;
 }
 
 export class CheckOutService {
@@ -131,6 +143,18 @@ export class CheckOutService {
 
   private async execute(tx: Tx, actor: AuthorizedActor, input: CheckOutRequest): Promise<Outcome> {
     const booking = await this.lockAndAuthorize(tx, actor, input.bookingId);
+    // Response đã mất sau khi transaction nghiệp vụ commit ⇒ dựng lại từ sổ, không trả 409.
+    if (booking.status === CHECKED_OUT)
+      return {
+        kind: 'done',
+        response: await replayCheckOut(
+          tx,
+          booking.id,
+          await this.activeRooms(tx, booking.id),
+          input,
+        ),
+      };
+    if (booking.status !== CHECKED_IN) throw invalidState();
     const businessNow = this.clock.now();
     await requirePinToken(tx, {
       userId: actor.id,
@@ -147,9 +171,9 @@ export class CheckOutService {
     const extras = extraLines(input.extras);
     const extrasAmount = extras.reduce((sum, line) => sum + line.amount, 0);
     await this.recordObligations(tx, booking.id, decision.lateCheckOutFee, extras, now);
-    const unusedValue =
+    const voids =
       decision.earlyCheckout === null
-        ? 0n
+        ? { value: 0n, released: new Map<string, bigint>() }
         : await voidUnusedNights(
             tx,
             booking.id,
@@ -158,6 +182,7 @@ export class CheckOutService {
             dateOnly(booking.checkOut),
             now,
           );
+    const feeAmount = await bookedFee(tx, booking.id, FEE_SOURCE_KEY);
     const projection = await this.ledger.sync(tx, booking.id, actor);
     if (projection.balanceDue > 0n) return { kind: 'refused', balanceDue: projection.balanceDue };
 
@@ -172,16 +197,16 @@ export class CheckOutService {
         extrasAmount,
         input,
         paidAmount: projection.paidAmount,
-        unusedValue,
+        voids,
+        feeAmount,
       }),
     };
   }
 
-  /** Khoá booking rồi mới kiểm phạm vi/trạng thái (HB-093, BR-FO-05). */
+  /** Khoá booking rồi mới kiểm phạm vi (HB-093). Trạng thái được xử lý ở `execute`. */
   private async lockAndAuthorize(tx: Tx, actor: AuthorizedActor, bookingId: string) {
     const booking = await lockBooking(tx, bookingId);
     if (!actor.canActOn(booking.propertyId)) throw forbidden();
-    if (booking.status !== CHECKED_IN) throw invalidState();
     return booking;
   }
 
@@ -220,15 +245,15 @@ export class CheckOutService {
     const businessDate = new Date(
       `${localDate(done.businessNow, this.config.BUSINESS_TIMEZONE)}T00:00:00Z`,
     );
-    const housekeepingTaskIds = await this.ensureHousekeeping(tx, roomIds, businessDate, now);
+    const housekeepingTaskIds = await ensureHousekeepingTasks(tx, roomIds, businessDate, now);
     let refundRequestId: string | null = null;
     if (done.decision.earlyCheckout !== null) {
       const refund = await this.recordEarlyRefund(
         tx,
         actor,
         booking.id,
+        done.voids,
         done.paidAmount,
-        done.unusedValue,
         done.businessNow,
         now,
         done.input.note,
@@ -285,7 +310,7 @@ export class CheckOutService {
         propertyId: booking.propertyId,
         status: CHECKED_OUT,
         checkedOutAt: now.toISOString(),
-        feeAmount: done.decision.lateCheckOutFee,
+        feeAmount: done.feeAmount,
         extrasAmount: done.extrasAmount,
         releasedAssignmentCount: released,
         housekeepingTaskIds,
@@ -299,7 +324,7 @@ export class CheckOutService {
       status: CHECKED_OUT,
       checkedOutAt: now.toISOString(),
       extrasAmount: done.extrasAmount,
-      feeAmount: done.decision.lateCheckOutFee,
+      feeAmount: done.feeAmount,
       balanceDue: 0,
       housekeepingTaskIds,
     });
@@ -366,71 +391,41 @@ export class CheckOutService {
   }
 
   /**
-   * BR-FO-06: đúng **một** nhiệm vụ PENDING cho mỗi phòng vật lý/ngày trả phòng. Khoá duy nhất
-   * `(room_id, business_date)` là chốt chống trùng; nhiệm vụ đã có (kể cả do lượt trước) được dùng lại.
-   */
-  private async ensureHousekeeping(
-    tx: Tx,
-    roomIds: readonly string[],
-    businessDate: Date,
-    now: Date,
-  ): Promise<string[]> {
-    if (!roomIds.length) return [];
-    const existing = await tx.housekeeping_tasks.findMany({
-      where: { room_id: { in: [...roomIds] }, business_date: businessDate },
-      select: { id: true, room_id: true },
-    });
-    const byRoom = new Map(existing.map((task) => [task.room_id, task.id]));
-    const ids: string[] = [];
-    for (const roomId of roomIds) {
-      const found = byRoom.get(roomId);
-      if (found) {
-        ids.push(found);
-        continue;
-      }
-      const task = await tx.housekeeping_tasks.create({
-        data: {
-          room_id: roomId,
-          business_date: businessDate,
-          status: 'PENDING',
-          created_at: now,
-          updated_at: now,
-        },
-        select: { id: true },
-      });
-      ids.push(task.id);
-    }
-    return ids;
-  }
-
-  /**
-   * BR-CANCEL-09: hoàn của trả sớm do engine huỷ HB-053 quyết từ policy snapshot; tầng này chỉ
-   * chuyển dữ kiện và ghi `RefundRequest` qua đúng đường `recordRefund` của F5. Booking vẫn
+   * BR-CANCEL-09: hoàn trả sớm tính từ cấu hình trả phòng sớm **đã chốt trong snapshot**; tầng này
+   * chỉ chuyển dữ kiện và ghi `RefundRequest` qua đúng đường `recordRefund` của F5. Booking vẫn
    * `CHECKED_OUT` — không gọi `closeBooking`/void nghĩa vụ phòng như huỷ booking.
    */
   private async recordEarlyRefund(
     tx: Tx,
     actor: AuthorizedActor,
     bookingId: string,
+    voids: Voids,
     paidAmount: bigint,
-    unusedValue: bigint,
     businessNow: Date,
     now: Date,
     note: string | undefined,
   ) {
-    if (unusedValue <= 0n) return null;
     const facts = await readFacts(tx, bookingId, true, paidAmount);
     const selected = facts.rooms
       .filter((room) => room.active)
       .map((room) => room.roomId)
       .sort();
     if (!selected.length) throw invalidState();
-    const cap = paidAmount < unusedValue ? paidAmount : unusedValue;
-    const decision = decide(
-      { ...facts, receipts: capReceipts(facts.receipts, cap) },
-      { state: 'CONFIRMED', forceMajeure: false, selected },
-      businessNow.getTime(),
-    );
+    const plan = planEarlyRefund(facts, voids, businessNow.getTime());
+    if (plan.amount <= 0n) return null;
+    const decision: CancelDecision = {
+      hours: plan.noticeHours,
+      tierId: null,
+      token: 'EARLY_CHECKOUT',
+      policyId: facts.policy.id,
+      refundPercent: plan.refundPercent,
+      base: plan.base,
+      requested: plan.amount,
+      penalty: 0n,
+      fee: 0n,
+      net: plan.amount,
+      legs: plan.legs,
+    };
     const request: CancelRequest = {
       reason: 'EARLY_CHECKOUT',
       isForceMajeure: false,

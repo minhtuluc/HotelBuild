@@ -16,6 +16,7 @@ import { errorBodySchema, pinTokenSchema, tokenPairSchema } from '@pinehill/cont
 import { AppModule } from '../../src/app.module.js';
 import { CLOCK } from '../../src/infrastructure/ports.js';
 import { clock, databaseUrl, password, propertyId, rows, userId } from '../idempotency/database.js';
+import { insertLedger } from './seed-ledger.js';
 
 export { clock, rows, userId } from '../idempotency/database.js';
 
@@ -27,12 +28,31 @@ const DAY = 86_400_000;
 
 let app: NestFastifyApplication;
 let redis: Redis;
-let ratePlanId = '',
-  channelId = '',
+let channelId = '',
   typeId = '',
   guestId = '';
-let policyId = '';
-let tierIds: string[] = [];
+
+interface PolicyFixture {
+  id: string;
+  tiers: string[];
+  ratePlanId: string;
+  readonly freeHours: number | null;
+  readonly refundPct: number;
+}
+
+/** Hai gói giá đã chốt: FLEX7 (72h/50%) và NONREF (không hoàn). */
+const policies: Record<'FLEX7' | 'NONREF', PolicyFixture> = {
+  FLEX7: { id: '', tiers: [], ratePlanId: '', freeHours: 72, refundPct: 50 },
+  NONREF: { id: '', tiers: [], ratePlanId: '', freeHours: null, refundPct: 0 },
+};
+
+/** Bậc huỷ chuẩn (không dùng cho hoàn trả sớm — hoàn trả sớm đọc `earlyCheckout*`). */
+const STANDARD_TIERS = [
+  [168, 100, 1],
+  [72, 50, 2],
+  [24, 0, 3],
+  [-1, 0, 4],
+] as const;
 
 export let q1 = '',
   q2 = '',
@@ -83,6 +103,10 @@ export interface BookingOptions {
   nightly?: number;
   paid?: number;
   assign?: string;
+  /** Gói giá + policy đã chốt: FLEX7 (72h/50%) hoặc NONREF (không hoàn). */
+  policy?: 'FLEX7' | 'NONREF';
+  /** `false` mô phỏng snapshot cũ thiếu `earlyCheckout*` (ca phải từ chối, không hoàn 0). */
+  earlyConfig?: boolean;
 }
 
 export interface SeededBooking {
@@ -90,45 +114,6 @@ export interface SeededBooking {
   bookingRoomId: string;
   checkIn: string;
   checkOut: string;
-}
-
-const ROOM_CHARGE = `INSERT INTO booking_charges(booking_id,booking_room_id,stay_date,kind,source_key,amount)
-  VALUES($1,$2,$3,'ROOM',$4,$5) RETURNING id`;
-const PAYMENT = `INSERT INTO payments(booking_id,type,method,amount,status,idempotency_key,paid_at,created_by)
-  VALUES($1,'DEPOSIT','BANK_TRANSFER',$2,'SUCCEEDED',$3,clock_timestamp(),$4) RETURNING id`;
-const ALLOCATE = 'INSERT INTO payment_allocations(payment_id,charge_id,amount) VALUES($1,$2,$3)';
-
-/** Nghĩa vụ ROOM từng đêm + Payment SUCCEEDED đã phân bổ (BR-PAY-02). */
-async function insertLedger(
-  id: string,
-  bookingRoomId: string,
-  checkIn: string,
-  nightly: number,
-  nights: number,
-  paid: number,
-): Promise<void> {
-  const charges: string[] = [];
-  for (let night = 0; night < nights; night += 1) {
-    const stayDate = day(checkIn, night);
-    charges.push(
-      await insert(ROOM_CHARGE, [
-        id,
-        bookingRoomId,
-        stayDate,
-        `room:${bookingRoomId}:${stayDate}`,
-        nightly,
-      ]),
-    );
-  }
-  if (paid <= 0) return;
-  const payment = await insert(PAYMENT, [id, paid, randomUUID(), userId]);
-  let left = paid;
-  for (const charge of charges) {
-    if (left <= 0) break;
-    const amount = Math.min(left, nightly);
-    await rows(ALLOCATE, [payment, charge, amount]);
-    left -= amount;
-  }
 }
 
 /** `price_snapshots` ORIGINAL theo csdl §3.6, bậc lấy id thật để `RefundRequest.appliedTierId` hợp lệ. */
@@ -139,24 +124,36 @@ async function insertSnapshot(
   checkOut: string,
   nightly: number,
   nights: number,
+  policy: 'FLEX7' | 'NONREF',
+  withEarly: boolean,
 ): Promise<void> {
-  const policy = {
-    id: policyId,
-    code: 'HB145',
+  const chosen = policies[policy];
+  const policyJson: Record<string, unknown> = {
+    id: chosen.id,
+    code: policy,
     version: 1,
-    tiers: [
-      { id: tierIds[0], offsetHours: 168, refundPercent: 100, chargeFirstNight: false },
-      { id: tierIds[1], offsetHours: 72, refundPercent: 100, chargeFirstNight: false },
-      { id: tierIds[2], offsetHours: 24, refundPercent: 50, chargeFirstNight: false },
-      { id: tierIds[3], offsetHours: -1, refundPercent: 50, chargeFirstNight: false },
-    ],
+    tiers: chosen.tiers.map((tierId, index) => ({
+      id: tierId,
+      offsetHours: STANDARD_TIERS[index]![0],
+      refundPercent: STANDARD_TIERS[index]![1],
+      chargeFirstNight: false,
+    })),
   };
+  if (withEarly) {
+    policyJson.earlyCheckoutFreeHours = chosen.freeHours;
+    policyJson.earlyCheckoutRefundPct = chosen.refundPct;
+  }
   const gross = nightly * nights;
   const payload = {
     schemaVersion: 1,
     engineVersion: 'hb145-test',
-    ratePlan: { id: ratePlanId, code: 'FLEX7', version: 1, depositPercent: 30 },
-    policy,
+    ratePlan: {
+      id: chosen.ratePlanId,
+      code: policy,
+      version: 1,
+      depositPercent: 30,
+    },
+    policy: policyJson,
     stay: {
       checkIn,
       checkOut,
@@ -183,7 +180,7 @@ async function insertSnapshot(
     `INSERT INTO price_snapshots(booking_id,seq,kind,payload_json,gross_amount,commission_amount,
         policy_snapshot_json,engine_version)
      VALUES($1,1,'ORIGINAL',$2::jsonb,$3,0,$4::jsonb,'hb145-test')`,
-    [id, JSON.stringify(payload), gross, JSON.stringify(policy)],
+    [id, JSON.stringify(payload), gross, JSON.stringify(policyJson)],
   );
 }
 
@@ -195,18 +192,31 @@ export async function seedBooking(options: BookingOptions = {}): Promise<SeededB
   const nights = Math.round((Date.parse(checkOut) - Date.parse(checkIn)) / DAY);
   const total = nightly * nights;
   const paid = options.paid ?? 0;
+  const policy = options.policy ?? 'FLEX7';
+  const chosen = policies[policy];
   const code = `PH-${checkIn.slice(2).replaceAll('-', '')}-${randomUUID().slice(0, 5).toUpperCase()}`;
   const id = await insert(
     `INSERT INTO bookings(code,guest_id,property_id,room_type_id,rate_plan_id,channel_id,
         check_in,check_out,adults,deposit_percent,status,created_by)
      VALUES($1,$2,$3,$4,$5,$6,$7,$8,1,30,$9,$10) RETURNING id`,
-    [code, guestId, propertyId, typeId, ratePlanId, channelId, checkIn, checkOut, status, userId],
+    [
+      code,
+      guestId,
+      propertyId,
+      typeId,
+      chosen.ratePlanId,
+      channelId,
+      checkIn,
+      checkOut,
+      status,
+      userId,
+    ],
   );
   const bookingRoomId = await insert(
     'INSERT INTO booking_rooms(booking_id,room_type_id,adults,price_per_night) VALUES($1,$2,1,$3) RETURNING id',
     [id, typeId, nightly],
   );
-  await insertLedger(id, bookingRoomId, checkIn, nightly, nights, paid);
+  await insertLedger(id, bookingRoomId, checkIn, nightly, nights, paid, day);
   await rows('UPDATE bookings SET total_amount=$2,paid_amount=$3,balance_due=$4 WHERE id=$1', [
     id,
     total,
@@ -218,13 +228,27 @@ export async function seedBooking(options: BookingOptions = {}): Promise<SeededB
       'INSERT INTO room_assignments(booking_room_id,room_id,bed_no,start_date,end_date) VALUES($1,$2,0,$3,$4)',
       [bookingRoomId, options.assign, checkIn, checkOut],
     );
-  await insertSnapshot(id, bookingRoomId, checkIn, checkOut, nightly, nights);
+  await insertSnapshot(
+    id,
+    bookingRoomId,
+    checkIn,
+    checkOut,
+    nightly,
+    nights,
+    policy,
+    options.earlyConfig ?? true,
+  );
   return { id, bookingRoomId, checkIn, checkOut };
 }
 
 /** Đang ở; mặc định 1 đêm (D−1 → D) đã thu đủ như bộ test khoá. */
-export const checkedIn = (room: string, paid = NIGHTLY, checkIn = day(D, -1), checkOut = D) =>
-  seedBooking({ status: 'CHECKED_IN', checkIn, checkOut, paid, assign: room });
+export const checkedIn = (
+  room: string,
+  paid = NIGHTLY,
+  checkIn = day(D, -1),
+  checkOut = D,
+  extra: Omit<BookingOptions, 'status' | 'checkIn' | 'checkOut' | 'paid' | 'assign'> = {},
+) => seedBooking({ status: 'CHECKED_IN', checkIn, checkOut, paid, assign: room, ...extra });
 
 export const checkOutBody = (seed: SeededBooking, pinToken?: string) => ({
   bookingId: seed.id,
@@ -303,28 +327,30 @@ beforeAll(async () => {
   redis = new Redis(redisUrl.href);
   await redis.ping();
 
-  policyId = await insert(
-    "INSERT INTO cancellation_policies(code,name) VALUES('HB145','Synthetic HB-145') RETURNING id",
+  policies.FLEX7.id = await insert(
+    `INSERT INTO cancellation_policies(code,name,early_checkout_free_hours,early_checkout_refund_pct)
+     VALUES('FLEX7','Synthetic FLEX7',72,50) RETURNING id`,
   );
-  tierIds = [];
-  for (const [offset, percent, order] of [
-    [168, 100, 1],
-    [72, 100, 2],
-    [24, 50, 3],
-    [-1, 50, 4],
-  ] as const)
-    tierIds.push(
-      await insert(
-        `INSERT INTO cancellation_tiers(policy_id,offset_hours,refund_percent,charge_first_night,label,sort_order)
-         VALUES($1,$2,$3,false,$4,$5) RETURNING id`,
-        [policyId, offset, percent, `${offset}h`, order],
-      ),
+  policies.NONREF.id = await insert(
+    `INSERT INTO cancellation_policies(code,name,early_checkout_free_hours,early_checkout_refund_pct)
+     VALUES('NONREF','Synthetic NONREF',NULL,0) RETURNING id`,
+  );
+  for (const key of ['FLEX7', 'NONREF'] as const) {
+    const target = policies[key];
+    for (const [offset, percent, order] of STANDARD_TIERS)
+      target.tiers.push(
+        await insert(
+          `INSERT INTO cancellation_tiers(policy_id,offset_hours,refund_percent,charge_first_night,label,sort_order)
+           VALUES($1,$2,$3,false,$4,$5) RETURNING id`,
+          [target.id, offset, percent, `${offset}h`, order],
+        ),
+      );
+    target.ratePlanId = await insert(
+      `INSERT INTO rate_plans(code,name,deposit_percent,cancellation_policy_id)
+       VALUES($1,$1,30,$2) RETURNING id`,
+      [key, target.id],
     );
-  ratePlanId = await insert(
-    `INSERT INTO rate_plans(code,name,deposit_percent,cancellation_policy_id)
-     VALUES('FLEX7','Synthetic FLEX7',30,$1) RETURNING id`,
-    [policyId],
-  );
+  }
   channelId = await insert(
     "INSERT INTO channels(code,name,multiplier) VALUES('WEB','Web',1) RETURNING id",
   );
