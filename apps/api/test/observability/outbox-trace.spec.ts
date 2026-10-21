@@ -8,8 +8,12 @@ import {
   traceparentOf,
 } from '../../src/infrastructure/tracing/trace-context.js';
 
-/** Test khoá (HB-181 AC1) cần PostgreSQL thật; thiếu URL thì bỏ qua thay vì dựng CSDL giả. */
-const databaseUrl = process.env.DATABASE_URL ?? process.env.DATABASE_MIGRATION_URL;
+/**
+ * Test khoá (HB-181 AC1) cần PostgreSQL thật; thiếu URL thì bỏ qua thay vì dựng CSDL giả.
+ * Dùng role chủ (`DATABASE_MIGRATION_URL`) trước: bộ test migration trong `pnpm run ci` xoay mật khẩu
+ * `app_rw` giữa lượt, nên client tạo muộn sẽ xác thực bằng mật khẩu cũ và đỏ oan (TD-27).
+ */
+const databaseUrl = process.env.DATABASE_MIGRATION_URL ?? process.env.DATABASE_URL;
 
 describe.skipIf(databaseUrl === undefined)('traceparent trong payload outbox (HB-181 AC1)', () => {
   const db = new PrismaClient({ datasourceUrl: databaseUrl ?? '' }).$extends(
