@@ -11,6 +11,8 @@ allow:
   - apps/api/test/uc-no-show/**
 locked:
   - apps/api/test/front-office/front-office.locked.spec.ts
+locked_sha:
+  - c14613fe28d15d2d3e830df220501f9236ba773181f5fcbb953ec016b8d095a3 apps/api/test/front-office/front-office.locked.spec.ts
 ---
 
 # HB-147 — UC + endpoint no-show + worker q.no-show-mark lúc 23:59
