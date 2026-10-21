@@ -9,6 +9,7 @@ import { SettingsModule } from './modules/sys/settings/module.js';
 import { HousekeepingModule } from './modules/fo/housekeeping/module.js';
 import { CheckInModule } from './modules/fo/check-in/module.js';
 import { CheckOutModule } from './modules/fo/check-out/module.js';
+import { NoShowModule } from './modules/fo/no-show/module.js';
 import { GridModule } from './modules/inv/grid/module.js';
 import { AvailabilityModule } from './modules/inv/availability/module.js';
 import { AllotmentsModule } from './modules/inv/allotments/module.js';
@@ -107,6 +108,8 @@ export class AppModule {
         CheckInModule,
         // HB-145: trả phòng (BR-FO-03/05/06) — phụ thu, chốt số dư, giải phóng, sinh việc dọn.
         CheckOutModule,
+        // HB-147: không đến (BR-CANCEL-10) — bậc cuối + phụ thu đêm đầu, chung engine huỷ.
+        NoShowModule,
         AuditLogsModule,
         SettingsModule,
         PayCounterModule,

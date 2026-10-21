@@ -3,6 +3,7 @@ import {
   HOLD_EXPIRY_JOB,
   HOLD_RECONCILE_JOB,
   isRepeatableQueue,
+  NO_SHOW_MARK_JOB,
   OUTBOX_RELAY_JOB,
   QUEUE_NAMES,
   REFUND_PAYOUT_JOB,
@@ -105,6 +106,15 @@ export function repeatSchedules(config: WorkerConfig, name: QueueName): readonly
         id: 'q.refund-payout-scheduler',
         everySeconds: config.REFUND_PAYOUT_INTERVAL_SECONDS,
         jobName: REFUND_PAYOUT_JOB,
+        data: {},
+      },
+    ];
+  if (name === 'q.no-show-mark')
+    return [
+      {
+        id: 'q.no-show-mark-scheduler',
+        everySeconds: config.NO_SHOW_MARK_INTERVAL_SECONDS,
+        jobName: NO_SHOW_MARK_JOB,
         data: {},
       },
     ];
