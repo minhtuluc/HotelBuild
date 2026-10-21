@@ -10,9 +10,15 @@ export interface HomeScreenProps {
   session: Session;
   onLogout: () => void;
   onTasks?: () => void;
+  onLookup?: () => void;
 }
 
-export default function HomeScreen({ session, onLogout, onTasks }: HomeScreenProps): ReactElement {
+export default function HomeScreen({
+  session,
+  onLogout,
+  onTasks,
+  onLookup,
+}: HomeScreenProps): ReactElement {
   const [pinResult, setPinResult] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -58,6 +64,21 @@ export default function HomeScreen({ session, onLogout, onTasks }: HomeScreenPro
           }}
         >
           <Text style={{ color: color.primary }}>{t('home.tasks')}</Text>
+        </Pressable>
+      ) : null}
+      {onLookup ? (
+        <Pressable
+          testID="open-lookup"
+          accessibilityRole="button"
+          accessibilityLabel={t('home.lookup')}
+          onPress={onLookup}
+          style={{
+            minHeight: touchTargetDp,
+            justifyContent: 'center',
+            paddingHorizontal: space.s3,
+          }}
+        >
+          <Text style={{ color: color.primary }}>{t('home.lookup')}</Text>
         </Pressable>
       ) : null}
       <Pressable
