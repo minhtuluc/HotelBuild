@@ -22,7 +22,12 @@ export interface CancelFacts {
   readonly checkIn: string;
   readonly rooms: readonly RoomBasis[];
   readonly receipts: readonly { readonly id: string; readonly amount: bigint }[];
-  readonly policy: { readonly id: string; readonly tiers: readonly TierInput[] };
+  readonly policy: {
+    readonly id: string;
+    readonly tiers: readonly TierInput[];
+    readonly earlyCheckoutFreeHours?: number | null | undefined;
+    readonly earlyCheckoutRefundPct?: number | undefined;
+  };
   /** Bản `policy_snapshot_json` nguyên trạng (object) để ghi lại khi tạo snapshot PARTIAL_CANCEL. */
   readonly policyJson: Record<string, z.infer<typeof jsonValueSchema>>;
   /** `payload_json` nguyên trạng (mọi khoá) để ghi lại **nguyên vẹn** khi tạo snapshot PARTIAL_CANCEL. */
@@ -61,7 +66,13 @@ const tierJsonSchema = z.object({
   refundPercent: z.number(),
   chargeFirstNight: z.boolean(),
 });
-const policyJsonSchema = z.object({ id: z.string().min(1), tiers: z.array(tierJsonSchema).min(1) });
+const policyJsonSchema = z.object({
+  id: z.string().min(1),
+  tiers: z.array(tierJsonSchema).min(1),
+  // BR-CANCEL-09: hai trường này vào snapshot từ HB-145; vắng mặt = dữ liệu cũ, không được đoán.
+  earlyCheckoutFreeHours: z.number().int().nonnegative().nullable().optional(),
+  earlyCheckoutRefundPct: z.number().int().min(0).max(100).optional(),
+});
 const policyRecordSchema = z.record(z.string(), jsonValueSchema);
 
 export type JsonScalar = z.infer<typeof jsonValueSchema>;
