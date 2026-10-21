@@ -316,14 +316,16 @@ test('chỉ CONFIRMED, và chỉ từ 23:59 ngày nhận phòng, mới ghi đư�
     await seedBooking({ status: 'CHECKED_OUT', checkIn: day(D, -1), checkOut: D }),
     await seedBooking({ status: 'CANCELLED' }),
   ];
-  const token = await staffToken('FRONT_DESK');
-  const early = await post(NO_SHOW, token, { bookingId: confirmed.id, reason: 'Quá sớm' });
+  const earlyToken = await staffToken('FRONT_DESK');
+  const early = await post(NO_SHOW, earlyToken, { bookingId: confirmed.id, reason: 'Quá sớm' });
   guardRoute(early, NO_SHOW);
   expect(early.status).toBe(409);
   expect(errorCode(early)).toBe('E_BOOK_INVALID_STATE');
   expect(await chargeIds(confirmed.id, 'PENALTY')).toEqual([]);
 
   clock.value = vn(D, '23:59:00');
+  // Token cấp lúc 10:00 đã hết hạn (15 phút) sau bước nhảy đồng hồ ⇒ cấp token tươi ở mốc 23:59.
+  const token = await staffToken('FRONT_DESK');
   const ok = await post(NO_SHOW, token, { bookingId: confirmed.id, reason: 'Khách không đến' });
   expect(ok.status).toBe(200);
   expect(noShowResponseSchema.parse(ok.body).status).toBe('NO_SHOW');
