@@ -10,7 +10,7 @@ allow:
 locked:
   - apps/api/test/front-office/front-office.locked.spec.ts
 locked_sha:
-  - c14613fe28d15d2d3e830df220501f9236ba773181f5fcbb953ec016b8d095a3 apps/api/test/front-office/front-office.locked.spec.ts
+  - 524e0193e8b9625b591f0994006b5e5c0959516c96cacaae275b3e0c3d8b6bdf apps/api/test/front-office/front-office.locked.spec.ts
 ---
 
 # HB-144 — UC + endpoint check-in
