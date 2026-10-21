@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import type { WorkerConfig } from '../../config/env.js';
 import type { JobContext } from '../types.js';
+import { resolveTrace } from '../../tracing/trace-context.js';
+import { withTrace } from '../../tracing/tracing.js';
 import { outboxErrorCode, type OutboxConsumer } from './consumer.js';
 import { envelopeOf, type OutboxEventRow } from './envelope.js';
 
@@ -359,8 +361,21 @@ async function runDelivery(
 ): Promise<DeliveryRun> {
   const claim = await claimDelivery(context.db, row.consumer, row.id, now, options);
   if (claim === null) return { counter: 'stale', claimed: false };
+  const envelope = envelopeOf(row);
   try {
-    await consumer.handle(envelopeOf(row), context);
+    // Consumer nối tiếp trace của lần ghi phát sinh sự kiện ở API (HB-181); sự kiện cũ chưa có mã thì mở
+    // trace mới thay vì đoán mã. Lượt thử lại đọc lại cùng `payload_json` nên vẫn cùng trace.
+    await withTrace(
+      context.tracing,
+      resolveTrace(envelope.traceparent, envelope.correlationId),
+      `outbox.consume ${row.consumer}`,
+      {
+        'messaging.system': 'outbox',
+        'outbox.consumer': row.consumer,
+        'outbox.event_type': envelope.eventType,
+      },
+      () => consumer.handle(envelope, context),
+    );
   } catch (error) {
     const errorCode = outboxErrorCode(error);
     const outcome = await failDelivery(

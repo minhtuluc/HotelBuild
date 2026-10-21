@@ -13,7 +13,11 @@ const GENERATION_ERROR_CODE = 'E_GEN_SERVICE_UNAVAILABLE';
 const GENERATION_ERROR_MESSAGE = 'Không sinh được tệp báo cáo.';
 const EXPORT_FAILED_ACTION = 'REPORT_EXPORT_FAILED';
 
-const payloadSchema = z.strictObject({ operationId: z.uuid() });
+// `traceparent` là ngữ cảnh quan sát (HB-181) do API gắn khi đẩy job; không phải dữ liệu nghiệp vụ.
+const payloadSchema = z.strictObject({
+  operationId: z.uuid(),
+  traceparent: z.string().max(128).optional(),
+});
 const storedPayloadSchema = z.object({
   report: z.enum(['occupancy', 'adr-revpar', 'revenue-by-channel', 'cancellations']),
   format: z.enum(['CSV', 'XLSX']),

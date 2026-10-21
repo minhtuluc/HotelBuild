@@ -1,0 +1,78 @@
+# OTel Collector cho api/worker (HB-181 AC1/AC3). Nhận OTLP, lấy mẫu **đuôi** rồi mới lưu: trace lỗi,
+# trace thanh toán và span chậm > 1 s được giữ 100 %, phần còn lại 10 % (NFR-OBS-03). Connector
+# `spanmetrics` sinh số liệu cho luật SLO trong prometheus-rules.yml.
+#
+# Chưa chạy ở đâu: cần staging HB-175 (xem README §6).
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 2s
+    limit_percentage: 75
+    spike_limit_percentage: 20
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+  tail_sampling:
+    # 10 s đủ để span cuối của request tới; đây là phần lớn nhất của độ trễ phát hiện (README §4).
+    decision_wait: 10s
+    num_traces: 100000
+    expected_new_traces_per_sec: 200
+    policies:
+      # Thứ tự quyết định: khớp luật đầu tiên là giữ.
+      - name: errors
+        type: status_code
+        status_code:
+          status_codes: [ERROR]
+      - name: payments
+        type: string_attribute
+        string_attribute:
+          key: pinehill.sampling.critical
+          values: [PAYMENT]
+      - name: slow-spans
+        type: latency
+        latency:
+          threshold_ms: 1000
+      - name: baseline
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: 10
+
+connectors:
+  spanmetrics:
+    histogram:
+      explicit:
+        # Đơn vị ms — luật p95 dùng bucket `le="400"` / `le="900"`.
+        buckets: [5ms, 10ms, 25ms, 50ms, 100ms, 200ms, 400ms, 900ms, 1s, 2s, 5s]
+    dimensions:
+      - name: http.route
+      - name: pinehill.sampling.critical
+    metrics_flush_interval: 15s
+
+exporters:
+  otlphttp/tempo:
+    endpoint: ${env:TEMPO_OTLP_HTTP_ENDPOINT}
+    # Chính sách lưu (7 ngày; span > 1 s giữ 30 ngày) thuộc Tempo, không phải collector (README §6.4).
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion:
+      enabled: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, tail_sampling]
+      exporters: [spanmetrics, otlphttp/tempo]
+    metrics:
+      receivers: [spanmetrics]
+      exporters: [prometheus]
+  telemetry:
+    logs:
+      level: info

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_SAMPLE_RATIO } from '../infrastructure/tracing/sampling.js';
 
 export const CONFIG = Symbol('CONFIG');
 
@@ -54,6 +55,28 @@ const apiEnvSchema = z.object({
   // Chỉ để quyết định fail-fast (production không được chạy adapter mô phỏng). `loadConfig` đọc từ env.
   NODE_ENV: z.enum(['development', 'test', 'production']).optional(),
   LOG_LEVEL: z.enum(logLevels).default('info'),
+  // Quan sát (HB-181): endpoint OTLP bỏ trống ⇒ **không** bật exporter (mặc định dev); trace vẫn lan
+  // truyền qua `traceparent`. Tỉ lệ lấy mẫu tối thiểu 10% (NFR-OBS-03); trace lỗi và thanh toán luôn
+  // được giữ 100% bất kể giá trị này.
+  OTEL_EXPORTER_OTLP_ENDPOINT: z
+    .string()
+    .optional()
+    .transform((value) => (value === undefined || value.trim() === '' ? undefined : value))
+    .pipe(urlWithProtocol('http:', 'https:').optional()),
+  // Bỏ trống ⇒ `DEFAULT_SAMPLE_RATIO`; nơi dùng áp mặc định để kiểu cấu hình vẫn tuỳ chọn (test dựng
+  // `ApiConfig` trực tiếp). Giá trị khai báo phải nằm trong `[0.1, 1]` (NFR-OBS-03).
+  OTEL_SAMPLE_RATIO: z
+    .string()
+    .optional()
+    .transform((value) => (value === undefined || value.trim() === '' ? undefined : Number(value)))
+    .refine(
+      (value) =>
+        value === undefined ||
+        (Number.isFinite(value) && value >= DEFAULT_SAMPLE_RATIO && value <= 1),
+      { message: 'OTEL_SAMPLE_RATIO phải trong khoảng 0.1..1' },
+    )
+    // `optional()` ngoài cùng: khoá vắng ⇒ mặc định ở nơi dùng, kiểu cấu hình vẫn dựng được trong test.
+    .optional(),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   // Mặc định chỉ nghe loopback (dev); container đặt HOST=0.0.0.0 (AC6).
   HOST: z.string().min(1).default('127.0.0.1'),

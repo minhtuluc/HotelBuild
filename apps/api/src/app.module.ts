@@ -30,6 +30,14 @@ import { RbacGuard } from './common/guards/rbac.guard.js';
 import { ScopeDenialInterceptor } from './common/rbac/scope-denial.interceptor.js';
 import { AuthGuard } from './common/guards/auth.guard.js';
 import { CLOCK, ID_GENERATOR, SystemClock, UuidGenerator } from './infrastructure/ports.js';
+import { ensureRequestTrace } from './infrastructure/tracing/request-trace.js';
+import { DEFAULT_SAMPLE_RATIO } from './infrastructure/tracing/sampling.js';
+import {
+  currentTrace,
+  rememberRequestTrace,
+  requestTraceOf,
+} from './infrastructure/tracing/trace-context.js';
+import { TracingModule } from './infrastructure/tracing/tracing.module.js';
 import { PrismaModule } from './infrastructure/prisma/prisma.module.js';
 import { RedisModule } from './infrastructure/redis/redis.module.js';
 import { HEALTH_PROBES } from './infrastructure/health/health-probe.js';
@@ -63,13 +71,27 @@ import { PspModule } from './modules/pay/psp/module.js';
 import { OnlinePaymentsModule } from './modules/pay/online/module.js';
 import { PspWebhooksModule } from './modules/pay/webhooks/module.js';
 
+/**
+ * Request của một dòng log pino-http (`{ res, responseTime }`): `res.req` là request gốc, nơi `customProps`
+ * đã gắn trace. Không đọc bindings vì pino không đưa bindings vào `mixin`.
+ */
+function requestOfLog(mergeObject: object): object | undefined {
+  const response = 'res' in mergeObject ? mergeObject.res : undefined;
+  if (typeof response !== 'object' || response === null || !('req' in response)) return undefined;
+  const request = response.req;
+  return typeof request === 'object' && request !== null ? request : undefined;
+}
+
 @Module({})
 export class AppModule {
   static register(config: ApiConfig, probes?: readonly HealthProbe[]): DynamicModule {
+    // Một bộ sinh id cho phần log/trace ở middleware (interceptor nhận `ID_GENERATOR` qua DI).
+    const ids = new UuidGenerator();
     return {
       module: AppModule,
       global: true,
       imports: [
+        TracingModule.register(config),
         LoggerModule.forRoot({
           pinoHttp: {
             level: config.LOG_LEVEL,
@@ -77,7 +99,31 @@ export class AppModule {
             quietReqLogger: true,
             quietResLogger: true,
             serializers: { req: serializeSafeRequest },
-            customProps: (request) => ({ correlationId: request.headers['x-correlation-id'] }),
+            // Trace của request được chốt **một lần** ở đây (middleware pino chạy trước interceptor); nếu
+            // khách không gửi `traceparent`, mã mới ghi lại vào header để span dùng đúng mã đó.
+            customProps: (request) => {
+              const trace = ensureRequestTrace(request, {
+                ids: ids,
+                sampleRatio: config.OTEL_SAMPLE_RATIO ?? DEFAULT_SAMPLE_RATIO,
+              });
+              // Gắn trace vào chính request để dòng "request completed" (chạy ngoài AsyncLocalStorage,
+              // chỉ còn `res.req` trỏ lại request) vẫn tra được trong `mixin`.
+              rememberRequestTrace(request, trace);
+              return { correlationId: trace.correlationId, traceId: trace.traceId };
+            },
+            // Mọi dòng log đều có hai khoá, kể cả log ngoài request (giá trị `null`) — NFR-OBS-01. Log
+            // hoàn tất của pino-http chạy ngoài AsyncLocalStorage nên tra trace qua `res.req`.
+            mixin: (mergeObject) => {
+              const active = currentTrace();
+              if (active !== undefined)
+                return { traceId: active.traceId, correlationId: active.correlationId };
+              const tracked = requestTraceOf(requestOfLog(mergeObject));
+              return {
+                traceId: tracked?.traceId ?? null,
+                correlationId: tracked?.correlationId ?? null,
+              };
+            },
+            base: { service: 'api' },
             redact: {
               paths: ['req.headers.authorization', 'req.headers.cookie'],
               censor: '[Redacted]',

@@ -1,5 +1,6 @@
 import { Queue } from 'bullmq';
 import type { ConnectionOptions } from 'bullmq';
+import { currentTraceparent } from '../../../infrastructure/tracing/trace-context.js';
 
 export const REPORT_EXPORT_QUEUE = 'q.report-export';
 
@@ -31,9 +32,11 @@ export function createExportQueue(redisUrl: string): ExportQueue {
   const queue = new Queue(REPORT_EXPORT_QUEUE, { connection: redisOptions(redisUrl) });
   return {
     enqueue: async (operationId) => {
+      // `traceparent` đi cùng dữ liệu job nên lượt thử lại (BullMQ giữ nguyên `data`) vẫn cùng trace.
+      const traceparent = currentTraceparent();
       await queue.add(
         'report-export',
-        { operationId },
+        { operationId, ...(traceparent === null ? {} : { traceparent }) },
         {
           jobId: operationId,
           attempts: 3,

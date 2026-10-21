@@ -7,10 +7,19 @@ import type { DynamicModule, Provider } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { CONFIG } from '../../config/env.js';
 import type { ApiConfig } from '../../config/env.js';
+import { outboxTraceExtension } from './outbox-trace.extension.js';
 
 export const PRISMA = Symbol('PRISMA');
 
 export type DatabaseClient = PrismaClient;
+
+/**
+ * Client Prisma có extension trace outbox (HB-181). Extension không đổi bề mặt delegate (chỉ chèn trace
+ * context vào bản ghi outbox) nên nơi dùng vẫn khai `DatabaseClient`; kiểu trả về để tự suy ra.
+ */
+function outboxTraceClient(url: string) {
+  return new PrismaClient({ datasourceUrl: url }).$extends(outboxTraceExtension());
+}
 
 @Injectable()
 class PrismaLifecycle implements OnApplicationShutdown {
@@ -29,8 +38,8 @@ export class PrismaModule {
     const provider: Provider = {
       provide: PRISMA,
       inject: [CONFIG],
-      useFactory: (config: ApiConfig): DatabaseClient =>
-        new PrismaClient({ datasourceUrl: config.DATABASE_URL }),
+      // Extension chỉ **thêm** `traceparent` vào payload outbox đang có (HB-181), không đổi truy vấn khác.
+      useFactory: (config: ApiConfig) => outboxTraceClient(config.DATABASE_URL),
     };
     return { module: PrismaModule, providers: [provider, PrismaLifecycle], exports: [PRISMA] };
   }
