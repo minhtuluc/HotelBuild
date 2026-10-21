@@ -23,8 +23,17 @@ function hardcodedText(source: string, name: string): string[] {
   visit(ast);
   return found;
 }
-test('order list, detail and stay text use the catalog, including accessibility labels', () => {
-  const files = ['../src/orders.ts', '../app/booking/[code].tsx', '../app/(tabs)/bookings.tsx'];
+test('order, cancel and reschedule screens use the catalog, including accessibility labels', () => {
+  const files = [
+    '../src/orders.ts',
+    '../src/order-view.tsx',
+    '../src/cancel.ts',
+    '../src/reschedule.ts',
+    '../app/booking/[code].tsx',
+    '../app/booking/[code]/cancel.tsx',
+    '../app/booking/[code]/reschedule.tsx',
+    '../app/(tabs)/bookings.tsx',
+  ];
   const findings = files.flatMap((file) =>
     hardcodedText(readFileSync(new URL(file, import.meta.url), 'utf8'), file).map((text) => ({
       file,
