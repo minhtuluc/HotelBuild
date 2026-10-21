@@ -39,6 +39,9 @@ describe('HB-147 — quét no-show lúc 23:59', () => {
 
     const state = await noShowState(testDb.db, fixture);
     expect(state.status).toBe('NO_SHOW');
+    // BR-CANCEL-10 §5.4: dấu vết kết thúc cũng phải ghi, không chỉ đổi status.
+    expect(state.cancelReason).toBe('NO_SHOW');
+    expect(state.cancelledAt).not.toBeNull();
     // BR-CANCEL-06: max(0, 1.100.000 − 300.000).
     expect(state.penaltyAmount).toBe('800000');
     expect(state.balanceDue).toBe('800000');
@@ -94,18 +97,40 @@ describe('HB-147 — quét no-show lúc 23:59', () => {
     expect(state.history).toEqual([]);
   });
 
-  it('chỉ đánh dấu booking có check_in là ngày nghiệp vụ hôm nay', async () => {
+  it('quét cửa sổ bắt sót 7 ngày: ngày cũ được nhặt lại, tương lai và quá cũ thì không', async () => {
     const tomorrow = await seedNoShow(testDb.db, { label: 'future', checkInOffsetDays: 1 });
-    const yesterday = await seedNoShow(testDb.db, { label: 'past', checkInOffsetDays: -1 });
+    const yesterday = await seedNoShow(testDb.db, { label: 'catchup', checkInOffsetDays: -1 });
+    const stale = await seedNoShow(testDb.db, { label: 'stale', checkInOffsetDays: -10 });
     const h = passed();
     await noShowMarkJob({}, h.context);
 
-    for (const fixture of [tomorrow, yesterday]) {
-      const state = await noShowState(testDb.db, fixture);
-      expect(state.status).toBe('CONFIRMED');
-      expect(state.activeAssignments).toBe(1);
-      expect(state.penaltyCharges).toEqual([]);
-    }
+    expect((await noShowState(testDb.db, tomorrow)).status).toBe('CONFIRMED');
+    expect((await noShowState(testDb.db, stale)).status).toBe('CONFIRMED');
+    const caught = await noShowState(testDb.db, yesterday);
+    expect(caught.status).toBe('NO_SHOW');
+    expect(caught.penaltyCharges).toEqual([{ amount: '1100000', voidedAmount: '0' }]);
+  });
+
+  it('phòng đã huỷ vẫn vào trọng số chia tiền: phạt khớp engine (600.000, không phải 100.000)', async () => {
+    const fixture = await seedNoShow(testDb.db, {
+      label: 'partial',
+      units: 2,
+      paid: 1_000_000,
+    });
+    // Như luồng huỷ một phần: chỉ trạng thái đổi, `booking_charges.amount` của phòng đã huỷ giữ nguyên.
+    await testDb.rows(
+      'UPDATE booking_rooms SET status = $1, cancelled_at = clock_timestamp() WHERE id = $2',
+      ['CANCELLED', fixture.bookingRoomIds[1]],
+    );
+    const h = passed();
+    await noShowMarkJob({}, h.context);
+
+    const state = await noShowState(testDb.db, fixture);
+    expect(state.status).toBe('NO_SHOW');
+    // Giá đêm đầu còn lại 1.100.000; phần đã thu của phòng đó = 1.000.000 × 2,2/4,4 = 500.000.
+    expect(state.penaltyAmount).toBe('600000');
+    expect(state.balanceDue).toBe('600000');
+    expect(state.penaltyCharges).toEqual([{ amount: '600000', voidedAmount: '0' }]);
   });
 
   it('chưa tới mốc trong ngày thì chưa đánh dấu', async () => {

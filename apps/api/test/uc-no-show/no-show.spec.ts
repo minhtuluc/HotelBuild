@@ -59,6 +59,12 @@ test('cùng Idempotency-Key: phát lại nguyên phản hồi, không ghi khoả
   expect(second.body).toEqual(first.body);
   expect(await chargeIds(seed.id, 'PENALTY')).toHaveLength(1);
   expect(await penaltyRows(seed.id)).toMatchObject([{ status: 'PENDING', amount: '800000' }]);
+  // Dấu vết kết thúc: design §5.4 ghi cả lý do/mốc, không chỉ đổi trạng thái.
+  const [booking] = await rows('SELECT cancel_reason,cancelled_at FROM bookings WHERE id=$1', [
+    seed.id,
+  ]);
+  expect(booking?.['cancel_reason']).toBe('NO_SHOW');
+  expect(booking?.['cancelled_at']).not.toBeNull();
 });
 
 test('hai lệnh đua nhau: đúng một lệnh thắng, chỉ một công nợ PENALTY', async () => {
@@ -73,19 +79,17 @@ test('hai lệnh đua nhau: đúng một lệnh thắng, chỉ một công nợ 
   expect(await penaltyRows(seed.id)).toHaveLength(1);
 });
 
-test('MANAGER và OWNER cũng ghi được; vai trò khác bị chặn', async () => {
+test('chỉ FRONT_DESK ghi được; vai trò khác bị chặn (api.md §6.3)', async () => {
   clock.value = vn(D, '23:59:00');
-  for (const role of ['MANAGER', 'OWNER']) {
+  const allowed = await seedBooking();
+  const response = await mark(await staffToken('FRONT_DESK'), allowed.id);
+  expect(response.status).toBe(200);
+  expect(noShowResponseSchema.parse(response.body).status).toBe('NO_SHOW');
+  for (const role of ['MANAGER', 'OWNER', 'RESERVATION_AGENT', 'ACCOUNTANT', 'HOUSEKEEPING']) {
     const seed = await seedBooking();
-    const response = await mark(await staffToken(role), seed.id);
-    expect(response.status, role).toBe(200);
-    expect(noShowResponseSchema.parse(response.body).status).toBe('NO_SHOW');
-  }
-  for (const role of ['RESERVATION_AGENT', 'ACCOUNTANT', 'HOUSEKEEPING']) {
-    const seed = await seedBooking();
-    const response = await mark(await staffToken(role), seed.id);
-    expect(response.status, role).toBe(403);
-    expect(errorCode(response)).toBe('E_RBAC_FORBIDDEN');
+    const refused = await mark(await staffToken(role), seed.id);
+    expect(refused.status, role).toBe(403);
+    expect(errorCode(refused)).toBe('E_RBAC_FORBIDDEN');
     expect(await chargeIds(seed.id, 'PENALTY')).toEqual([]);
   }
 });

@@ -107,6 +107,8 @@ export interface NoShowState {
   readonly penaltyAmount: string;
   readonly paidAmount: string;
   readonly balanceDue: string;
+  readonly cancelReason: string | null;
+  readonly cancelledAt: string | null;
   readonly activeAssignments: number;
   readonly releaseReasons: string[];
   readonly history: { from: string | null; to: string; reason: string | null }[];
@@ -127,9 +129,12 @@ export async function noShowState(db: PrismaClient, fixture: NoShowFixture): Pro
         penalty_amount: bigint;
         paid_amount: bigint;
         balance_due: bigint;
+        cancel_reason: string | null;
+        cancelled_at: Date | null;
       }[]
     >`
-      SELECT status, total_amount, penalty_amount, paid_amount, balance_due
+      SELECT status, total_amount, penalty_amount, paid_amount, balance_due, cancel_reason,
+             cancelled_at
         FROM bookings WHERE id = ${fixture.bookingId}::uuid`,
     'booking',
   );
@@ -180,6 +185,8 @@ export async function noShowState(db: PrismaClient, fixture: NoShowFixture): Pro
     penaltyAmount: booking.penalty_amount.toString(),
     paidAmount: booking.paid_amount.toString(),
     balanceDue: booking.balance_due.toString(),
+    cancelReason: booking.cancel_reason,
+    cancelledAt: booking.cancelled_at?.toISOString() ?? null,
     activeAssignments: Number(assignments.active),
     releaseReasons: reasons.map((row) => row.release_reason ?? ''),
     history: history.map((row) => ({

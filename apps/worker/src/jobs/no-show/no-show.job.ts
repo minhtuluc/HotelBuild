@@ -20,14 +20,11 @@ export const noShowMarkJob: JobHandler = async (data, context) => {
   if (!payload.success) throw new Error('NO_SHOW_PAYLOAD_INVALID');
   const options = {
     markTime: context.config.NO_SHOW_MARK_TIME,
+    catchupDays: context.config.NO_SHOW_CATCHUP_DAYS,
     batchSize: context.config.NO_SHOW_BATCH_SIZE,
     maxPages: NO_SHOW_MAX_PAGES,
   };
-  const report = await sweepNoShows(
-    prismaNoShowPort(context.db, options.markTime),
-    options,
-    context.log,
-  );
+  const report = await sweepNoShows(prismaNoShowPort(context.db, options), options, context.log);
   context.log({
     queue: NO_SHOW_QUEUE,
     msg:

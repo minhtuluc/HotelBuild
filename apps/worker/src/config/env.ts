@@ -66,6 +66,8 @@ const workerEnvSchema = z.object({
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/)
     .default('23:59'),
+  // Cửa sổ bắt sót (ngày): một ngày worker chết/trượt mốc không làm booking đó vĩnh viễn bị bỏ quên.
+  NO_SHOW_CATCHUP_DAYS: z.coerce.number().int().min(0).max(30).default(7),
   NO_SHOW_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(100),
 });
 

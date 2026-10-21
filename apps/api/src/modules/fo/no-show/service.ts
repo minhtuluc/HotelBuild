@@ -219,6 +219,8 @@ export class NoShowService {
         total_amount = (SELECT coalesce(sum(amount - voided_amount), 0) FROM booking_charges
                          WHERE booking_id = ${facts.id}::uuid AND kind = 'ROOM'),
         status = 'NO_SHOW',
+        cancel_reason = ${NO_SHOW_REASON},
+        cancelled_at = ${now}::timestamptz,
         updated_at = ${now}::timestamptz,
         version = version + 1
        WHERE id = ${facts.id}::uuid

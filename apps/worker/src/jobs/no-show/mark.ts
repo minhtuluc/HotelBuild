@@ -37,6 +37,11 @@ export const POLICY_MISSING = 'NO_SHOW_POLICY_MISSING';
 export interface MarkOptions {
   /** Mốc giờ trong ngày coi là "hết ngày nhận phòng" (`HH:MM` hoặc `HH:MM:SS`, BR-SYS-02). */
   readonly markTime: string;
+  /**
+   * Cửa sổ bắt sót (ngày): lượt quét nhận cả booking có `check_in` trong `N` ngày gần nhất, để một
+   * ngày worker chết hoặc trượt mốc 23:59 không làm booking đó vĩnh viễn không được đánh dấu.
+   */
+  readonly catchupDays: number;
   /** Số booking mỗi trang. */
   readonly batchSize: number;
   /** Trần số trang mỗi lượt (nhịp ngắn giữ lượt chạy ngắn khi tồn đọng bất thường). */
@@ -107,20 +112,25 @@ export function firstNightPenalty(firstNight: bigint, paid: bigint): bigint {
   return firstNight > paid ? firstNight - paid : 0n;
 }
 
-/** Danh sách ứng viên: `CONFIRMED`, `check_in` là ngày nghiệp vụ hôm nay và đã qua mốc (giờ CSDL). */
+/**
+ * Danh sách ứng viên: `CONFIRMED`, `check_in` nằm trong cửa sổ bắt sót `[hôm nay − N, hôm nay]` và đã
+ * qua mốc 23:59 của **chính ngày nhận phòng** (giờ CSDL). Xếp ngày cũ trước để lượt sau dọn hết tồn.
+ */
 export async function dueNoShowIds(
   db: PrismaClient,
-  options: Pick<MarkOptions, 'markTime' | 'batchSize'>,
+  options: Pick<MarkOptions, 'markTime' | 'catchupDays' | 'batchSize'>,
 ): Promise<string[]> {
   const rows = await db.$queryRaw<{ id: string }[]>`
     WITH now AS (SELECT clock_timestamp() AS at)
     SELECT b.id
       FROM bookings b, now
      WHERE b.status = 'CONFIRMED'
-       AND b.check_in = (now.at AT TIME ZONE ${BUSINESS_TIMEZONE}::text)::date
+       AND b.check_in BETWEEN (now.at AT TIME ZONE ${BUSINESS_TIMEZONE}::text)::date
+                          - ${options.catchupDays}::int
+                          AND (now.at AT TIME ZONE ${BUSINESS_TIMEZONE}::text)::date
        AND now.at >= ((b.check_in::timestamp + ${options.markTime}::time)
                       AT TIME ZONE ${BUSINESS_TIMEZONE}::text)
-     ORDER BY b.seq
+     ORDER BY b.check_in, b.seq
      LIMIT ${options.batchSize}`;
   return rows.map((row) => row.id);
 }
@@ -132,13 +142,28 @@ interface BookingRow {
   readonly check_in: Date;
   readonly check_out: Date;
   readonly status: string;
-  readonly eligible: boolean;
+  readonly milestone_passed: boolean;
+  /** Số ngày đã qua kể từ `check_in` theo ngày nghiệp vụ VN (`0` = hôm nay). */
+  readonly days_past: number;
 }
 
 interface RoomRow {
   readonly id: string;
   readonly weight: bigint;
   readonly first_night: bigint;
+}
+
+/**
+ * Điều kiện đánh dấu đọc **sau** khi đã khoá booking: còn `CONFIRMED`, đã qua mốc 23:59 của ngày nhận
+ * phòng và ngày nhận phòng không cũ hơn cửa sổ bắt sót.
+ */
+function isDue(booking: BookingRow, catchupDays: number): boolean {
+  return (
+    booking.status === 'CONFIRMED' &&
+    booking.milestone_passed &&
+    booking.days_past >= 0 &&
+    booking.days_past <= catchupDays
+  );
 }
 
 /**
@@ -149,42 +174,50 @@ interface RoomRow {
 export async function markNoShow(
   db: PrismaClient,
   bookingId: string,
-  markTime: string,
+  options: Pick<MarkOptions, 'markTime' | 'catchupDays'>,
 ): Promise<MarkOutcome> {
   return db.$transaction(async (tx) => {
-    // 1. Khoá booking trước (ADR-014) rồi mới đọc lại trạng thái + mốc bằng giờ CSDL.
+    // 1. Khoá booking trước (ADR-014). **Sau** khi khoá mới đọc giờ CSDL rồi mới xét mốc/cửa sổ: một
+    //    lượt phải chờ khoá qua nửa đêm vẫn quyết định trên giờ thật, không trên mốc đọc trước khoá.
+    const locked = (
+      await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM bookings WHERE id = ${bookingId}::uuid FOR UPDATE`
+    )[0];
+    if (locked === undefined) return SKIPPED;
+    const now = (await tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`)[0]!.now;
     const booking = (
       await tx.$queryRaw<BookingRow[]>`
-        WITH now AS (SELECT clock_timestamp() AS at)
         SELECT b.id, b.property_id, b.room_type_id, b.check_in, b.check_out, b.status,
-               (now.at >= ((b.check_in::timestamp + ${markTime}::time)
-                           AT TIME ZONE ${BUSINESS_TIMEZONE}::text)
-                AND (now.at AT TIME ZONE ${BUSINESS_TIMEZONE}::text)::date = b.check_in) AS eligible
-          FROM bookings b, now
-         WHERE b.id = ${bookingId}::uuid
-         FOR UPDATE OF b`
+               (${now}::timestamptz >= ((b.check_in::timestamp + ${options.markTime}::time)
+                                        AT TIME ZONE ${BUSINESS_TIMEZONE}::text)) AS milestone_passed,
+               ((${now}::timestamptz AT TIME ZONE ${BUSINESS_TIMEZONE}::text)::date - b.check_in)
+                 AS days_past
+          FROM bookings b
+         WHERE b.id = ${bookingId}::uuid`
     )[0];
-    if (booking === undefined || booking.status !== 'CONFIRMED' || !booking.eligible)
-      return SKIPPED;
-    const now = (await tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`)[0]!.now;
+    if (booking === undefined || !isDue(booking, options.catchupDays)) return SKIPPED;
     const checkIn = booking.check_in.toISOString().slice(0, 10);
 
-    // 2. Đơn vị bán đang hoạt động (khoá theo thứ tự id) + trọng số/giá đêm đầu từ nghĩa vụ ROOM.
+    // 2. Đơn vị bán đang hoạt động (được đánh dấu) — khoá theo thứ tự id.
     const active = await tx.$queryRaw<{ id: string }[]>`
       SELECT id FROM booking_rooms
        WHERE booking_id = ${bookingId}::uuid AND status = 'ACTIVE'
        ORDER BY id FOR UPDATE`;
     if (active.length === 0) return SKIPPED;
+    // Trọng số lấy trên **mọi** BookingRoom, kể cả phòng đã huỷ — engine huỷ (`loadRooms`) cũng vậy,
+    // nếu chỉ chia trên phòng còn hoạt động thì tiền đã thu của phòng đã huỷ bị tính nhầm vào phòng còn
+    // lại và mức phạt no-show sẽ khác mức phạt của lệnh huỷ trên cùng booking.
     const rooms = await tx.$queryRaw<RoomRow[]>`
       SELECT br.id,
              coalesce(sum(c.amount), 0)::bigint AS weight,
              coalesce(sum(c.amount) FILTER (WHERE c.stay_date = ${checkIn}::date), 0)::bigint
                AS first_night
         FROM booking_rooms br
-        JOIN booking_charges c ON c.booking_room_id = br.id AND c.kind = 'ROOM'
-       WHERE br.booking_id = ${bookingId}::uuid AND br.status = 'ACTIVE'
+        LEFT JOIN booking_charges c ON c.booking_room_id = br.id AND c.kind = 'ROOM'
+       WHERE br.booking_id = ${bookingId}::uuid
        GROUP BY br.id
        ORDER BY br.id`;
+    if (rooms.some((room) => room.weight <= 0n)) throw new Error('NO_SHOW_CHARGES_INCOMPLETE');
     const selected = new Set(active.map((room) => room.id));
     const receipts = await tx.$queryRaw<{ amount: bigint }[]>`
       SELECT amount FROM payments
@@ -276,8 +309,8 @@ export async function markNoShow(
       UPDATE bookings
          SET status = 'NO_SHOW', total_amount = ${totals.room_total},
              penalty_amount = ${totals.penalty_total}, paid_amount = ${totals.paid},
-             balance_due = ${totals.outstanding}, updated_at = ${now},
-             version = version + 1
+             balance_due = ${totals.outstanding}, cancel_reason = ${NO_SHOW_REASON},
+             cancelled_at = ${now}, updated_at = ${now}, version = version + 1
        WHERE id = ${bookingId}::uuid`;
     await tx.booking_status_history.create({
       data: {
@@ -331,10 +364,13 @@ export interface NoShowPort {
   mark(bookingId: string): Promise<MarkOutcome>;
 }
 
-export function prismaNoShowPort(db: PrismaClient, markTime: string): NoShowPort {
+export function prismaNoShowPort(
+  db: PrismaClient,
+  options: Pick<MarkOptions, 'markTime' | 'catchupDays'>,
+): NoShowPort {
   return {
-    dueIds: (batchSize) => dueNoShowIds(db, { markTime, batchSize }),
-    mark: (bookingId) => markNoShow(db, bookingId, markTime),
+    dueIds: (batchSize) => dueNoShowIds(db, { ...options, batchSize }),
+    mark: (bookingId) => markNoShow(db, bookingId, options),
   };
 }
 
