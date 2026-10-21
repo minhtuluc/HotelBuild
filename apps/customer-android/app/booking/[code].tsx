@@ -3,19 +3,12 @@
  *
  * Đọc qua `GET /bookings?q=<mã>` bằng client của phiên; **offline** thì hiện **bản đã tải** kèm nhãn "có
  * thể đã cũ". Hợp đồng chưa có tuyến PriceSnapshot/Payment cho chi tiết nên màn hình để khung chờ đúng yêu
- * cầu thiết kế §8.1, không bịa số; huỷ/đổi ngày thuộc HB-114.
+ * cầu thiết kế §8.1, không bịa số; huỷ/đổi ngày mở sang SCR-81/82 (HB-114).
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Share, Text } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
-import {
-  color,
-  radius,
-  space,
-  touchTargetDp,
-  typography,
-  formatDateTimeVn,
-} from '@pinehill/ui-native';
+import { color, radius, space, touchTargetDp, typography } from '@pinehill/ui-native';
 import { createBookingApi } from '@pinehill/api-client';
 import type { BookingSummary } from '@pinehill/contracts';
 import { createSession } from '../../src/session-factory';
@@ -26,72 +19,15 @@ import { formatVnd } from '../../src/search';
 import {
   ORDER_STATUS_KEYS,
   balanceRows,
+  bookingOf,
   loadOrderDetail,
   stayOf,
   type OrderDetailOutcome,
 } from '../../src/orders';
-
-function bookingOf(outcome: OrderDetailOutcome | null): BookingSummary | null {
-  if (outcome === null) return null;
-  if (outcome.kind === 'ready') return outcome.booking;
-  if (outcome.kind === 'offline') return outcome.booking;
-  return null;
-}
+import { OrderNotices } from '../../src/order-view';
 
 function money(amount: number): string {
   return t('orders.money', { amount: formatVnd(amount) });
-}
-
-interface Notice {
-  readonly testId: string;
-  readonly text: string;
-  readonly tone: 'warning' | 'danger';
-}
-
-/** Thông báo của màn chi tiết: cũ khi offline, không thấy trong bản đã tải, hoặc lỗi theo mã. */
-function noticesOf(outcome: OrderDetailOutcome | null): readonly Notice[] {
-  if (outcome === null) return [];
-  if (outcome.kind === 'failed')
-    return [
-      {
-        testId: 'order-failed',
-        text: t('orders.failed', { code: outcome.code ?? 'UNKNOWN' }),
-        tone: 'danger',
-      },
-    ];
-  if (outcome.kind === 'notFound')
-    return [{ testId: 'order-not-found', text: t('orders.detail.notFound'), tone: 'danger' }];
-  if (outcome.kind !== 'offline') return [];
-  const time =
-    outcome.cachedAt === null ? t('orders.stale.unknown') : formatDateTimeVn(outcome.cachedAt);
-  const stale: Notice = {
-    testId: 'order-stale',
-    text: t('orders.stale', { time }),
-    tone: 'warning',
-  };
-  if (outcome.booking !== null) return [stale];
-  return [
-    stale,
-    { testId: 'order-not-cached', text: t('orders.detail.notCached'), tone: 'danger' },
-  ];
-}
-
-function DetailNotice({ outcome }: { outcome: OrderDetailOutcome | null }): ReactElement {
-  return (
-    <>
-      {noticesOf(outcome).map((notice) => (
-        <Text
-          key={notice.testId}
-          accessibilityRole="alert"
-          accessibilityLiveRegion="polite"
-          data-testid={notice.testId}
-          style={{ color: notice.tone === 'warning' ? color.warning : color.danger }}
-        >
-          {notice.text}
-        </Text>
-      ))}
-    </>
-  );
 }
 
 function DetailBody({ booking }: { booking: BookingSummary }): ReactElement {
@@ -129,7 +65,22 @@ function DetailBody({ booking }: { booking: BookingSummary }): ReactElement {
       <Text style={{ color: color.textMuted }} data-testid="order-payments-pending">
         {t('orders.detail.paymentsPending')}
       </Text>
-      <Text style={{ color: color.textMuted }}>{t('orders.detail.actionsPending')}</Text>
+      <View style={{ flexDirection: 'row', gap: space.s2 }}>
+        <Link
+          href={{ pathname: '/booking/[code]/cancel', params: { code: booking.code } }}
+          accessibilityLabel={t('booking.cancel.open')}
+          style={{ color: color.primary, minHeight: touchTargetDp, padding: space.s3 }}
+        >
+          {t('booking.cancel.open')}
+        </Link>
+        <Link
+          href={{ pathname: '/booking/[code]/reschedule', params: { code: booking.code } }}
+          accessibilityLabel={t('booking.reschedule.open')}
+          style={{ color: color.primary, minHeight: touchTargetDp, padding: space.s3 }}
+        >
+          {t('booking.reschedule.open')}
+        </Link>
+      </View>
     </>
   );
 }
@@ -193,7 +144,7 @@ export default function BookingDetailScreen(): ReactElement {
           {t('orders.detail.notFound')}
         </Text>
       ) : null}
-      <DetailNotice outcome={outcome} />
+      <OrderNotices outcome={outcome} />
       {booking ? (
         <Link
           href={{ pathname: '/payment/[bookingId]', params: { bookingId: booking.id } }}

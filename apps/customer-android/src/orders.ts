@@ -212,3 +212,9 @@ export async function loadOrderDetail(
   const found = findByCode(outcome.kind === 'ready' ? outcome.bookings : [], code);
   return found === undefined ? { kind: 'notFound' } : { kind: 'ready', booking: found };
 }
+
+/** Booking đang mở từ kết quả tải chi tiết (kể cả bản offline đã tải); lỗi/không thấy thì `null`. */
+export function bookingOf(outcome: OrderDetailOutcome | null): BookingSummary | null {
+  if (outcome === null || outcome.kind === 'failed' || outcome.kind === 'notFound') return null;
+  return outcome.booking;
+}
