@@ -1,0 +1,235 @@
+/**
+ * Khoá + đọc dữ kiện cho `POST /front-office/check-in` (HB-144, BR-FO-07).
+ *
+ * Thứ tự khoá theo ADR-014: `bookings → properties → room_types` (do `lockBooking` của HB-077 lo),
+ * rồi `booking_rooms`, rồi `rooms` (`ORDER BY id`). Nhờ vậy check-in của hai quầy và bước cập nhật
+ * nhiệm vụ buồng phòng (HB-148 cũng khoá `rooms`) không chen được giữa bước kiểm sẵn sàng và bước ghi.
+ * Không đọc `bookings.balance_due` làm số dư quyết định — sổ cái HB-093 là nguồn duy nhất (BR-PAY-02).
+ */
+import type { Prisma } from '@prisma/client';
+import type { CheckInUnit } from '@pinehill/domain/front-office';
+import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
+import { requireProperty } from '../../../common/rbac/scope.js';
+import { lockBooking } from '../../book/bookings/lock.js';
+import type { LockedBooking } from '../../book/bookings/lock.js';
+import type { BookingLedger } from '../../pay/ledger/service.js';
+import { conflict, invalid, missing } from './errors.js';
+import type { Command } from './validation.js';
+
+type Tx = Prisma.TransactionClient;
+
+const ROOM_STATUS: Readonly<Record<string, CheckInUnit['status']>> = {
+  ACTIVE: 'ACTIVE',
+  MAINTENANCE: 'MAINTENANCE',
+  INACTIVE: 'INACTIVE',
+};
+
+const READINESS: Readonly<Record<string, NonNullable<CheckInUnit['readinessForCurrentRelease']>>> =
+  {
+    DONE: 'DONE',
+    INSPECTED: 'INSPECTED',
+    VERIFIED: 'VERIFIED',
+    PENDING: 'PENDING',
+    IN_PROGRESS: 'IN_PROGRESS',
+  };
+
+export interface LockedRoom {
+  readonly id: string;
+  readonly propertyId: string;
+  readonly roomTypeId: string;
+  readonly status: CheckInUnit['status'];
+}
+
+/** Khoá phòng vật lý rồi trả trạng thái đã ổn định; thiếu/khác cơ sở ⇒ 404 để không lộ dữ liệu. */
+export async function lockRooms(
+  tx: Tx,
+  propertyId: string,
+  roomIds: readonly string[],
+): Promise<readonly LockedRoom[]> {
+  const rows = await tx.$queryRaw<
+    { id: string; property_id: string; room_type_id: string; status: string }[]
+  >`SELECT id, property_id, room_type_id, status FROM rooms
+     WHERE id = ANY(${roomIds}::uuid[]) ORDER BY id FOR UPDATE`;
+  if (rows.length !== roomIds.length || rows.some((row) => row.property_id !== propertyId))
+    throw missing();
+  return rows.map((row) => {
+    const status = ROOM_STATUS[row.status];
+    if (status === undefined) throw conflict('Trạng thái phòng vật lý không hợp lệ để giao.');
+    return {
+      id: row.id,
+      propertyId: row.property_id,
+      roomTypeId: row.room_type_id,
+      status,
+    };
+  });
+}
+
+/** Phòng đang có khách khác chưa trả (assignment còn hiệu lực, chồng kỳ lưu trú). */
+export async function occupiedRooms(
+  tx: Tx,
+  roomIds: readonly string[],
+  bookingId: string,
+  checkIn: Date,
+  checkOut: Date,
+): Promise<ReadonlyMap<string, true>> {
+  const rows = await tx.$queryRaw<{ room_id: string }[]>`
+    SELECT DISTINCT a.room_id FROM room_assignments a
+      JOIN booking_rooms br ON br.id = a.booking_room_id
+     WHERE a.room_id = ANY(${roomIds}::uuid[])
+       AND a.released_at IS NULL
+       AND br.booking_id <> ${bookingId}::uuid
+       AND a.start_date < ${checkOut}::date
+       AND a.end_date >= ${checkIn}::date
+     ORDER BY a.room_id`;
+  return new Map(rows.map((row) => [row.room_id, true]));
+}
+
+/** Phòng bị chặn đúng ngày giao (BR-FO-07: "không block tại thời điểm giao"). */
+export async function blockedRooms(
+  tx: Tx,
+  roomIds: readonly string[],
+  businessDate: string,
+): Promise<ReadonlyMap<string, true>> {
+  const rows = await tx.$queryRaw<{ room_id: string }[]>`
+    SELECT DISTINCT room_id FROM room_blocks
+     WHERE room_id = ANY(${roomIds}::uuid[])
+       AND start_date <= ${businessDate}::date
+       AND end_date > ${businessDate}::date
+     ORDER BY room_id`;
+  return new Map(rows.map((row) => [row.room_id, true]));
+}
+
+/**
+ * Bằng chứng sẵn sàng của **lượt giải phóng hiện tại**: nhiệm vụ buồng phòng của đúng ngày nghiệp vụ
+ * nhận phòng. Task của ngày cũ không chứng minh phòng sạch sau lượt ở mới (BR-FO-07) nên không đọc.
+ */
+export async function readinessTasks(
+  tx: Tx,
+  roomIds: readonly string[],
+  businessDate: string,
+): Promise<ReadonlyMap<string, CheckInUnit['readinessForCurrentRelease']>> {
+  const rows = await tx.housekeeping_tasks.findMany({
+    where: { room_id: { in: [...roomIds] }, business_date: new Date(`${businessDate}T00:00:00Z`) },
+    orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+    select: { room_id: true, status: true },
+  });
+  const readiness = new Map<string, CheckInUnit['readinessForCurrentRelease']>();
+  for (const row of rows) {
+    if (readiness.has(row.room_id)) continue;
+    readiness.set(row.room_id, READINESS[row.status] ?? null);
+  }
+  return readiness;
+}
+
+/** Giá đêm đầu theo nghĩa vụ ROOM đã chốt (§3.6) — engine dùng cho phụ thu check-in sớm BR-FO-04. */
+export async function firstNightAmount(tx: Tx, bookingId: string, checkIn: Date): Promise<bigint> {
+  const rows = await tx.$queryRaw<{ total: bigint }[]>`
+    SELECT coalesce(sum(amount - voided_amount), 0)::bigint AS total
+      FROM booking_charges
+     WHERE booking_id = ${bookingId}::uuid AND kind = 'ROOM' AND stay_date = ${checkIn}::date`;
+  return rows[0]!.total;
+}
+
+/** Ngưỡng cho nợ của MANAGER đọc từ `SystemSetting` (BR-SYS-02), mặc định 5.000.000 và 50%. */
+export async function managerDebtLimits(
+  tx: Tx,
+): Promise<{ readonly amount: number; readonly percent: number }> {
+  const rows = await tx.system_settings.findMany({
+    where: { key: { in: ['deal.threshold.checkInDebt', 'deal.threshold.checkInDebtPct'] } },
+    select: { key: true, value: true },
+  });
+  const byKey = new Map(rows.map((row) => [row.key, row.value]));
+  const setting = (key: string, fallback: bigint, max: bigint): number => {
+    const raw = byKey.get(key);
+    let value: bigint;
+    try {
+      value = raw === undefined ? fallback : BigInt(raw);
+    } catch {
+      value = fallback;
+    }
+    if (value < 0n || value > max) value = fallback;
+    return Number(value);
+  };
+  return {
+    amount: setting('deal.threshold.checkInDebt', 5_000_000n, BigInt(Number.MAX_SAFE_INTEGER)),
+    percent: setting('deal.threshold.checkInDebtPct', 50n, 100n),
+  };
+}
+
+/** VND nguyên trong khoảng biểu diễn được của `number` — engine HB-141 nhận `number`. */
+export function money(value: bigint): number {
+  const amount = Number(value);
+  if (!Number.isSafeInteger(amount) || amount < 0)
+    throw new Error('CHECKIN_AMOUNT_UNREPRESENTABLE');
+  return amount;
+}
+
+export interface CheckInFacts {
+  readonly booking: LockedBooking;
+  readonly bookingRooms: readonly { readonly id: string }[];
+  readonly units: readonly CheckInUnit[];
+  readonly checkInDate: string;
+  readonly checkOutDate: string;
+  readonly balanceDue: bigint;
+  readonly firstNight: bigint;
+  readonly limits: { readonly amount: number; readonly percent: number };
+}
+
+/**
+ * Khoá booking → `booking_rooms` → `rooms` (ADR-014) rồi đọc mọi dự kiện quyết định trong cùng
+ * transaction. Số dư lấy từ sổ cái HB-093; sẵn sàng lấy từ nhiệm vụ buồng phòng của **ngày nhận phòng**
+ * (lượt giải phóng hiện tại), không lấy task cũ.
+ */
+export async function lockCheckInFacts(
+  tx: Tx,
+  actor: AuthorizedActor,
+  input: Command,
+  ledger: BookingLedger,
+): Promise<CheckInFacts> {
+  const booking = await lockBooking(tx, input.bookingId);
+  requireProperty(actor, booking.propertyId);
+  const bookingRooms = await tx.booking_rooms.findMany({
+    where: { booking_id: booking.id },
+    orderBy: { id: 'asc' },
+    select: { id: true },
+  });
+  // `actualRoomIds` giao đúng một phòng thực tế cho mỗi đơn vị bán của booking.
+  if (bookingRooms.length === 0 || bookingRooms.length !== input.actualRoomIds.length)
+    throw invalid();
+  await tx.$queryRaw`SELECT id FROM booking_rooms
+    WHERE booking_id = ${booking.id}::uuid ORDER BY id FOR UPDATE`;
+  const rooms = await lockRooms(tx, booking.propertyId, input.actualRoomIds);
+  const byRoom = new Map(rooms.map((room) => [room.id, room]));
+  // Điều chuyển/nâng hạng phải làm trước bằng `POST /room-moves`; check-in không tự đổi loại phòng.
+  if (rooms.some((room) => room.roomTypeId !== booking.roomTypeId))
+    throw conflict('Phòng thực tế không thuộc loại phòng đã đặt.');
+
+  const projection = await ledger.read(tx, booking.id);
+  const checkInDate = booking.checkIn.toISOString().slice(0, 10);
+  const occupied = await occupiedRooms(
+    tx,
+    input.actualRoomIds,
+    booking.id,
+    booking.checkIn,
+    booking.checkOut,
+  );
+  const blocked = await blockedRooms(tx, input.actualRoomIds, checkInDate);
+  const readiness = await readinessTasks(tx, input.actualRoomIds, checkInDate);
+  return {
+    booking,
+    bookingRooms,
+    units: input.actualRoomIds.map((roomId) => ({
+      roomId,
+      bedNo: 0,
+      status: byRoom.get(roomId)!.status,
+      blockedAtHandover: blocked.has(roomId),
+      occupiedAtHandover: occupied.has(roomId),
+      readinessForCurrentRelease: readiness.get(roomId) ?? null,
+    })),
+    checkInDate,
+    checkOutDate: booking.checkOut.toISOString().slice(0, 10),
+    balanceDue: projection.balanceDue,
+    firstNight: await firstNightAmount(tx, booking.id, booking.checkIn),
+    limits: await managerDebtLimits(tx),
+  };
+}

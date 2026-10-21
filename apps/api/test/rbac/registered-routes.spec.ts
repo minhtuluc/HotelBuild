@@ -102,11 +102,13 @@ function independentOracle(): Record<string, Expected> {
     status: 200,
     method: RequestMethod.GET,
   };
-  keyed[`${RequestMethod.POST}:room-blocks`] = {
-    roles: ['FRONT_DESK', 'MANAGER', 'OWNER'],
-    status: 400,
-    method: RequestMethod.POST,
-  };
+  // HB-034 AC2 (BR-INV-06) + HB-144 (api.md §2.9): thao tác ghi của quầy — thân oracle hỏng ⇒ 400.
+  for (const path of ['room-blocks', 'front-office/check-in'])
+    keyed[`${RequestMethod.POST}:${path}`] = {
+      roles: ['FRONT_DESK', 'MANAGER', 'OWNER'],
+      status: 400,
+      method: RequestMethod.POST,
+    };
   keyed[`${RequestMethod.DELETE}:room-blocks/:roomBlockId`] = {
     roles: ['MANAGER', 'OWNER'],
     status: 404,
@@ -151,6 +153,8 @@ function independentOracle(): Record<string, Expected> {
     status: 428,
     method: RequestMethod.PATCH,
   };
+  // HB-144 / api.md §2.9, §6.3: nhận phòng là tuyến FRONT_DESK; MANAGER/OWNER vẫn gọi được vì chính
+  // họ duyệt cho nợ trong cùng lệnh (BR-FO-01). Thân oracle không hợp lệ ⇒ 400 trước khi chạm dữ liệu.
   // HB-036 / UC-SYS-01,02: explicit grants, independent of route permission providers.
   keyed[`${RequestMethod.GET}:audit-logs`] = {
     roles: ['MANAGER', 'OWNER'],
