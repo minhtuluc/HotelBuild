@@ -24,6 +24,7 @@ import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js'
 import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import { CLOCK } from '../../../infrastructure/ports.js';
 import { BookingLedger } from '../../pay/ledger/service.js';
+import { maskOperationalText } from '../../prop/room-blocks/operational-text.js';
 import { refused } from './errors.js';
 import { lockCheckInFacts, money } from './facts.js';
 import type { CheckInFacts } from './facts.js';
@@ -50,6 +51,8 @@ export class CheckInService {
   async checkIn(tx: Tx, actor: AuthorizedActor, body: unknown): Promise<CheckInResponse> {
     const input = command(body);
     const facts = await lockCheckInFacts(tx, actor, input, this.ledger);
+    // Ghi chú là văn bản tự do của người gọi: che số điện thoại/email trước khi vào nhật ký (BR-GEN-07).
+    const note = input.note === undefined ? undefined : maskOperationalText(input.note);
     const balanceDue = money(facts.balanceDue);
     const role = approverRole(actor.role);
     const base: CheckInInput = {
@@ -67,7 +70,7 @@ export class CheckInService {
           : null,
       managerDebtLimits: facts.limits,
     };
-    const earlyCheckInFee = await this.decide(tx, actor, facts, input, base);
+    const earlyCheckInFee = await this.decide(tx, actor, facts, input, note, base);
 
     const checkedInAt = await writeCheckIn(tx, this.audit, actor, {
       booking: facts.booking,
@@ -76,7 +79,7 @@ export class CheckInService {
         roomId: input.actualRoomIds[index]!,
       })),
       roomIds: input.actualRoomIds,
-      note: input.note,
+      note,
       idNumber: input.idNumber,
       earlyCheckInFee,
       balanceDue,
@@ -103,11 +106,12 @@ export class CheckInService {
     actor: AuthorizedActor,
     facts: CheckInFacts,
     input: Command,
+    note: string | undefined,
     base: CheckInInput,
   ): Promise<number> {
     const decision = decideCheckIn(base);
     if (!decision.ok) {
-      await this.refuse(tx, actor, facts, input, decision.error);
+      await this.refuse(tx, actor, facts, input, note, decision.error);
       throw refused(decision.error);
     }
     if (decision.value.earlyCheckInFee === 0 || base.balanceDue === 0)
@@ -117,7 +121,7 @@ export class CheckInService {
       balanceDue: base.balanceDue + decision.value.earlyCheckInFee,
     });
     if (!withFee.ok) {
-      await this.refuse(tx, actor, facts, input, withFee.error);
+      await this.refuse(tx, actor, facts, input, note, withFee.error);
       throw refused(withFee.error);
     }
     return decision.value.earlyCheckInFee;
@@ -126,13 +130,15 @@ export class CheckInService {
   /**
    * BR-SYS-05: lượt nhận phòng bị từ chối vẫn là hành động nghiệp vụ cần vết (ai, booking nào, lý
    * do). Ghi trong **cùng** transaction nên lỗi hạ tầng nhật ký chặn cả lệnh (fail closed) thay vì
-   * trả 409 trong khi nhật ký hỏng — đúng bất biến ca "audit không ghi được" của HB-143 khoá.
+   * trả 409 trong khi nhật ký hỏng — đúng bất biến ca "audit không ghi được" của HB-143 khoá. Lệnh bị
+   * từ chối vẫn rollback, nên dòng này chỉ có tác dụng bắt lỗi hạ tầng audit (không lưu lại).
    */
   private async refuse(
     tx: Tx,
     actor: AuthorizedActor,
     facts: CheckInFacts,
     input: Command,
+    note: string | undefined,
     failure: CheckInFailure,
   ): Promise<void> {
     await this.audit.record(tx, {
@@ -150,7 +156,7 @@ export class CheckInService {
         roomIds: [...input.actualRoomIds],
         reason: failure.code === 'E_FO_CHECKIN_NOT_ALLOWED' ? failure.reason : failure.code,
       },
-      reason: input.note ?? null,
+      reason: note ?? null,
     });
   }
 }
