@@ -8,6 +8,7 @@ import { SettingsCommittedInterceptor } from './modules/sys/settings/committed-i
 import { SettingsModule } from './modules/sys/settings/module.js';
 import { HousekeepingModule } from './modules/fo/housekeeping/module.js';
 import { CheckInModule } from './modules/fo/check-in/module.js';
+import { CheckOutModule } from './modules/fo/check-out/module.js';
 import { GridModule } from './modules/inv/grid/module.js';
 import { AvailabilityModule } from './modules/inv/availability/module.js';
 import { AllotmentsModule } from './modules/inv/allotments/module.js';
@@ -104,6 +105,8 @@ export class AppModule {
         HousekeepingModule,
         // HB-144: nhận phòng (BR-FO-01/02/04/07) — gọi engine HB-141, gán phòng thật qua F4.
         CheckInModule,
+        // HB-145: trả phòng (BR-FO-03/05/06) — phụ thu, chốt số dư, giải phóng, sinh việc dọn.
+        CheckOutModule,
         AuditLogsModule,
         SettingsModule,
         PayCounterModule,

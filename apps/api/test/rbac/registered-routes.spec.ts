@@ -102,8 +102,8 @@ function independentOracle(): Record<string, Expected> {
     status: 200,
     method: RequestMethod.GET,
   };
-  // HB-034 AC2 (BR-INV-06) + HB-144 (api.md §2.9): thao tác ghi của quầy — thân oracle hỏng ⇒ 400.
-  for (const path of ['room-blocks', 'front-office/check-in'])
+  // HB-034 AC2 (BR-INV-06) + HB-144/145 (api.md §2.9): thao tác ghi của quầy — thân oracle hỏng ⇒ 400.
+  for (const path of ['room-blocks', 'front-office/check-in', 'front-office/check-out'])
     keyed[`${RequestMethod.POST}:${path}`] = {
       roles: ['FRONT_DESK', 'MANAGER', 'OWNER'],
       status: 400,
