@@ -25,9 +25,11 @@ let policyId = '',
   ratePlanId = '',
   channelId = '',
   typeId = '',
+  dormTypeId = '',
   guestId = '',
   roomOne = '',
-  roomTwo = '';
+  roomTwo = '',
+  dormRoom = '';
 
 export { clock, rows, userId };
 export const CHECK_IN = '/api/v1/front-office/check-in';
@@ -62,12 +64,8 @@ export async function staffToken(role: string): Promise<string> {
   return tokenPairSchema.parse(response.body).accessToken;
 }
 
-export const post = (path: string, token: string, body: object) =>
-  http()
-    .post(path)
-    .set('Authorization', `Bearer ${token}`)
-    .set('Idempotency-Key', randomUUID())
-    .send(body);
+export const post = (path: string, token: string, body: object, key = randomUUID()) =>
+  http().post(path).set('Authorization', `Bearer ${token}`).set('Idempotency-Key', key).send(body);
 
 /** Nhiệm vụ buồng phòng của lượt giải phóng hiện tại (BR-FO-06/07). */
 export async function housekeeping(
@@ -84,6 +82,9 @@ export async function housekeeping(
 
 export const roomA = (): string => roomOne;
 export const roomB = (): string => roomTwo;
+/** Phòng ở ghép (DOR) — check-in theo giường chưa thuộc hợp đồng `actualRoomIds`. */
+export const roomDorm = (): string => dormRoom;
+export const dormType = (): string => dormTypeId;
 export const guestOf = (): string => guestId;
 
 export interface BookingOptions {
@@ -96,6 +97,8 @@ export interface BookingOptions {
   paidInFull?: boolean;
   /** Gán phòng ngay khi seed — mô phỏng assignment đã có từ hold (F4). */
   assign?: string;
+  /** Loại phòng của booking; mặc định loại bán theo phòng. */
+  roomTypeId?: string;
 }
 
 export interface SeededBooking {
@@ -156,6 +159,7 @@ export async function seedBooking(options: BookingOptions = {}): Promise<SeededB
   const nights = Math.round((Date.parse(checkOut) - Date.parse(checkIn)) / DAY);
   const total = nightly * nights;
   const paid = options.paidInFull === true ? total : (options.paid ?? 0);
+  const roomType = options.roomTypeId ?? typeId;
   const suffix = randomUUID().replaceAll('-', '').slice(0, 5).toUpperCase();
   const id = await insert(
     `INSERT INTO bookings(code,guest_id,property_id,room_type_id,rate_plan_id,channel_id,
@@ -165,7 +169,7 @@ export async function seedBooking(options: BookingOptions = {}): Promise<SeededB
       `PH-${checkIn.slice(2).replaceAll('-', '')}-${suffix}`,
       guestId,
       propertyId,
-      typeId,
+      roomType,
       ratePlanId,
       channelId,
       checkIn,
@@ -176,7 +180,7 @@ export async function seedBooking(options: BookingOptions = {}): Promise<SeededB
   );
   const bookingRoomId = await insert(
     'INSERT INTO booking_rooms(booking_id,room_type_id,adults,price_per_night) VALUES($1,$2,1,$3) RETURNING id',
-    [id, typeId, nightly],
+    [id, roomType, nightly],
   );
   await insertLedger(id, bookingRoomId, checkIn, nightly, nights, paid);
   await rows('UPDATE bookings SET total_amount=$2,paid_amount=$3,balance_due=$4 WHERE id=$1', [
@@ -229,6 +233,12 @@ export const historyRows = (bookingId: string, toStatus: string) =>
     bookingId,
     toStatus,
   ]);
+export const extraCharges = (bookingId: string) =>
+  rows(
+    `SELECT kind,amount::text AS amount,source_key FROM booking_charges
+      WHERE booking_id=$1 AND kind='EXTRA_SERVICE' ORDER BY created_at`,
+    [bookingId],
+  );
 export const guestIdNumber = async (id: string): Promise<string | null> => {
   const value = (await rows('SELECT id_number FROM guests WHERE id=$1', [id]))[0]!.id_number;
   return typeof value === 'string' ? value : null;
@@ -257,6 +267,11 @@ beforeAll(async () => {
      VALUES($1,'STD','Synthetic UC144',2,$2,400000,3000000) RETURNING id`,
     [propertyId, NIGHTLY],
   );
+  dormTypeId = await insert(
+    `INSERT INTO room_types(property_id,code,name,capacity_adults,base_price,min_price,max_price,allow_shared)
+     VALUES($1,'DOR','Synthetic DOR',2,$2,400000,3000000,true) RETURNING id`,
+    [propertyId, NIGHTLY],
+  );
   guestId = await insert(
     "INSERT INTO guests(full_name,phone) VALUES('Synthetic UC-144','+84900000144') RETURNING id",
   );
@@ -269,6 +284,11 @@ beforeAll(async () => {
     `INSERT INTO rooms(property_id,room_type_id,code,name,floor,bed_count)
      VALUES($1,$2,'UCR2','UCR2',1,1) RETURNING id`,
     [propertyId, typeId],
+  );
+  dormRoom = await insert(
+    `INSERT INTO rooms(property_id,room_type_id,code,name,floor,bed_count)
+     VALUES($1,$2,'UCD1','UCD1',1,6) RETURNING id`,
+    [propertyId, dormTypeId],
   );
 
   const redisUrl = new URL(process.env.REDIS_URL);

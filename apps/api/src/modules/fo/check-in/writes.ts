@@ -13,6 +13,7 @@ import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js'
 import type { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import type { LockedBooking } from '../../book/bookings/lock.js';
 import { inventoryError } from '../../book/holds/lock.js';
+import type { BookingLedger } from '../../pay/ledger/service.js';
 
 type Tx = Prisma.TransactionClient;
 
@@ -57,6 +58,33 @@ export async function assignActualRooms(
   }
 }
 
+export interface EarlyFeeWrite {
+  readonly bookingId: string;
+  readonly checkInDate: string;
+  /** Phụ thu VND nguyên do engine HB-141 trả về (`earlyCheckInFee`). */
+  readonly amount: number;
+}
+
+/**
+ * BR-FO-04: phụ thu check-in sớm là **nghĩa vụ** của booking, không chỉ một con số trong phản hồi.
+ * Ghi một `booking_charges` `EXTRA_SERVICE` với `source_key` ổn định (một booking một phụ thu ⇒ gọi lại
+ * không nhân đôi), rồi để `BookingLedger.sync` chiếu lại `balance_due` — không ghi tay cột số dư
+ * (BR-PAY-02, ADR-016).
+ */
+export async function recordEarlyFee(
+  tx: Tx,
+  ledger: BookingLedger,
+  actor: AuthorizedActor,
+  write: EarlyFeeWrite,
+): Promise<void> {
+  await tx.$executeRaw`
+    INSERT INTO booking_charges(booking_id, stay_date, kind, source_key, amount, reason)
+    VALUES(${write.bookingId}::uuid, ${write.checkInDate}::date, 'EXTRA_SERVICE',
+           ${`checkin-early:${write.bookingId}`}, ${BigInt(write.amount)}, 'CHECKIN_EARLY')
+    ON CONFLICT (booking_id, source_key) DO NOTHING`;
+  await ledger.sync(tx, write.bookingId, actor);
+}
+
 export interface CheckInWrite {
   readonly booking: LockedBooking;
   readonly assignments: readonly Assignment[];
@@ -81,11 +109,15 @@ export async function writeCheckIn(
 ): Promise<Date> {
   const now = (await tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`)[0]!.now;
   // `guests.id_number` là cột duy nhất schema cho phép (NFR-SEC-03). Chỉ điền khi còn trống: lệnh
-  // check-in không được âm thầm ghi đè giấy tờ đã đối chiếu trước đó.
-  if (write.idNumber !== undefined)
-    await tx.$executeRaw`UPDATE guests
-        SET id_number = COALESCE(id_number, ${write.idNumber}), updated_at = ${now}
-      WHERE id = ${write.booking.guestId}::uuid`;
+  // check-in không được âm thầm ghi đè giấy tờ đã đối chiếu trước đó. Đọc lại giá trị **thực sự đã lưu**
+  // để nhật ký không ghi một số giấy tờ khác với dữ liệu (P3).
+  let persistedIdNumber: string | null = null;
+  if (write.idNumber !== undefined) {
+    const persisted = await tx.$queryRaw<{ id_number: string | null }[]>`
+      UPDATE guests SET id_number = COALESCE(id_number, ${write.idNumber}), updated_at = ${now}
+      WHERE id = ${write.booking.guestId}::uuid RETURNING id_number`;
+    persistedIdNumber = persisted[0]?.id_number ?? null;
+  }
   try {
     await assignActualRooms(tx, write.booking, write.assignments, now);
   } catch (error) {
@@ -134,7 +166,7 @@ export async function writeCheckIn(
       earlyCheckInFee: write.earlyCheckInFee,
       balanceDue: write.balanceDue,
       // `AuditWriter` che khoá `idNumber` (NFR-SEC-03) — không tự chế bộ che thứ hai.
-      idNumber: write.idNumber ?? null,
+      idNumber: persistedIdNumber,
     },
     reason: write.note === undefined ? null : write.note,
   });

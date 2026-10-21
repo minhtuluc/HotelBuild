@@ -30,7 +30,7 @@ import { lockCheckInFacts, money } from './facts.js';
 import type { CheckInFacts } from './facts.js';
 import { command, localNow } from './validation.js';
 import type { Command } from './validation.js';
-import { writeCheckIn } from './writes.js';
+import { recordEarlyFee, writeCheckIn } from './writes.js';
 
 type Tx = Prisma.TransactionClient;
 
@@ -71,6 +71,16 @@ export class CheckInService {
       managerDebtLimits: facts.limits,
     };
     const earlyCheckInFee = await this.decide(tx, actor, facts, input, note, base);
+    // BR-FO-04: phụ thu sớm là nghĩa vụ thật của booking (EXTRA_SERVICE + chiếu lại số dư), không chỉ
+    // là con số trong phản hồi. Ghi cùng transaction với check-in nên lỗi bất kỳ rollback cả hai.
+    if (earlyCheckInFee > 0)
+      await recordEarlyFee(tx, this.ledger, actor, {
+        bookingId: facts.booking.id,
+        checkInDate: facts.checkInDate,
+        amount: earlyCheckInFee,
+      });
+    // Khoản nợ tại thời điểm nhận phòng = số dư sổ cái + phụ thu vừa ghi; đây là số engine đã duyệt.
+    const balanceAfterFee = balanceDue + earlyCheckInFee;
 
     const checkedInAt = await writeCheckIn(tx, this.audit, actor, {
       booking: facts.booking,
@@ -82,10 +92,10 @@ export class CheckInService {
       note,
       idNumber: input.idNumber,
       earlyCheckInFee,
-      balanceDue,
+      balanceDue: balanceAfterFee,
       debt:
         balanceDue > 0 && role !== null
-          ? { amount: balanceDue, collectionDeadline: facts.checkOutDate }
+          ? { amount: balanceAfterFee, collectionDeadline: facts.checkOutDate }
           : null,
     });
     return checkInResponseSchema.parse({
@@ -114,17 +124,20 @@ export class CheckInService {
       await this.refuse(tx, actor, facts, input, note, decision.error);
       throw refused(decision.error);
     }
-    if (decision.value.earlyCheckInFee === 0 || base.balanceDue === 0)
-      return decision.value.earlyCheckInFee;
+    const fee = decision.value.earlyCheckInFee;
+    // Không có phiếu duyệt nợ ⇒ phụ thu sớm là khoản thu tại quầy (BR-FO-04), không tự mở một quyết
+    // định nợ BR-FO-01. Có duyệt nợ ⇒ phụ thu phải nằm trong **chính** số tiền được duyệt mới hợp lệ.
+    if (fee === 0 || base.debtApproval === null) return fee;
     const withFee = decideCheckIn({
       ...base,
-      balanceDue: base.balanceDue + decision.value.earlyCheckInFee,
+      balanceDue: base.balanceDue + fee,
+      debtApproval: { ...base.debtApproval, amount: base.debtApproval.amount + fee },
     });
     if (!withFee.ok) {
       await this.refuse(tx, actor, facts, input, note, withFee.error);
       throw refused(withFee.error);
     }
-    return decision.value.earlyCheckInFee;
+    return fee;
   }
 
   /**

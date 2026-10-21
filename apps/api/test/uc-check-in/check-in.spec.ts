@@ -6,6 +6,7 @@
  * - mốc 23:59 ngày nhận phòng (BR-FO-02) tính theo giây;
  * - che PII số giấy tờ trong nhật ký (NFR-SEC-03).
  */
+import { randomUUID } from 'node:crypto';
 import { expect, test } from 'vitest';
 import { checkInResponseSchema } from '@pinehill/contracts';
 import type { SeededBooking } from './fixture.js';
@@ -19,7 +20,9 @@ import {
   checkInBody,
   clock,
   day,
+  dormType,
   errorCode,
+  extraCharges,
   guestIdNumber,
   guestOf,
   historyRows,
@@ -27,6 +30,8 @@ import {
   post,
   roomA,
   roomB,
+  roomDorm,
+  rows,
   seedBooking,
   staffToken,
   vn,
@@ -217,4 +222,87 @@ test('phòng của booking khác đang ở (assignment chưa giải phóng) → 
   expect(response.status).toBe(409);
   expect(errorCode(response)).toBe('E_FO_CHECKIN_NOT_ALLOWED');
   expect(await activeAssignments(seed.bookingRoomId)).toEqual([]);
+});
+
+test('phụ thu check-in sớm thành nghĩa vụ EXTRA_SERVICE; replay cùng khoá không nhân đôi', async () => {
+  clock.value = vn(D, '13:00:00');
+  const seed = await seedBooking({ paidInFull: true });
+  await housekeeping(roomA());
+  const token = await staffToken('FRONT_DESK');
+  const key = randomUUID();
+  const body = checkInBody(seed, roomA());
+
+  const first = await post(CHECK_IN, token, body, key);
+
+  expect(first.status).toBe(201);
+  expect(checkInResponseSchema.parse(first.body)).toMatchObject({
+    status: 'CHECKED_IN',
+    earlyCheckInFee: 330_000,
+  });
+  expect(await extraCharges(seed.id)).toEqual([
+    { kind: 'EXTRA_SERVICE', amount: '330000', source_key: `checkin-early:${seed.id}` },
+  ]);
+  expect(await bookingRow(seed.id)).toMatchObject({ status: 'CHECKED_IN', balance_due: '330000' });
+
+  const replay = await post(CHECK_IN, token, body, key);
+  expect(replay.status).toBe(201);
+  expect(replay.body).toEqual(first.body);
+  expect(await extraCharges(seed.id)).toHaveLength(1);
+  expect(await bookingRow(seed.id)).toMatchObject({ balance_due: '330000' });
+});
+
+test('nợ + phụ thu sớm: MANAGER duyệt được khi tổng vẫn trong cả hai ngưỡng', async () => {
+  clock.value = vn(D, '13:00:00');
+  // 8 đêm × 1.000.000 = 8.000.000; nợ 2.000.000 + phụ thu 300.000 = 2.300.000 (28,75%).
+  const seed = await seedBooking({ nightly: 1_000_000, checkOut: day(D, 8), paid: 6_000_000 });
+  await housekeeping(roomA());
+
+  const response = await checkIn(seed, roomA(), 'MANAGER');
+
+  expect(response.status).toBe(201);
+  expect(await extraCharges(seed.id)).toHaveLength(1);
+  expect(await bookingRow(seed.id)).toMatchObject({ balance_due: '2300000' });
+});
+
+test('nợ + phụ thu sớm đẩy quá 50%: MANAGER bị từ chối, OWNER duyệt', async () => {
+  clock.value = vn(D, '13:00:00');
+  // 8 đêm × 1.000.000 = 8.000.000; nợ 4.000.000 + phụ thu 300.000 = 4.300.000 (53,75%).
+  const seed = await seedBooking({ nightly: 1_000_000, checkOut: day(D, 8), paid: 4_000_000 });
+  await housekeeping(roomA());
+
+  const manager = await checkIn(seed, roomA(), 'MANAGER');
+  expect(manager.status).toBe(409);
+  expect(errorCode(manager)).toBe('E_FO_CHECKIN_NOT_ALLOWED');
+  expect(await extraCharges(seed.id)).toEqual([]);
+
+  const owner = await checkIn(seed, roomA(), 'OWNER');
+  expect(owner.status).toBe(201);
+  expect(await bookingRow(seed.id)).toMatchObject({ balance_due: '4300000' });
+});
+
+test('phòng ở ghép (DOR) bị từ chối 409, không rơi vào lỗi trigger 23514/500', async () => {
+  const seed = await seedBooking({ paidInFull: true, roomTypeId: dormType() });
+  await housekeeping(roomDorm());
+
+  const response = await checkIn(seed, roomDorm());
+
+  expect(response.status).toBe(409);
+  expect(errorCode(response)).toBe('E_FO_CHECKIN_NOT_ALLOWED');
+  expect(await activeAssignments(seed.bookingRoomId)).toEqual([]);
+});
+
+test('giấy tờ đã có sẵn: nhật ký ghi giá trị thực sự lưu, không ghi số khách vừa đưa', async () => {
+  const seed = await seedBooking({ paidInFull: true });
+  await housekeeping(roomA());
+  await rows('UPDATE guests SET id_number=$2 WHERE id=$1', [guestOf(), '001199001234']);
+
+  const submitted = '079201009999';
+  const response = await checkIn(seed, roomA(), 'FRONT_DESK', { idNumber: submitted });
+
+  expect(response.status).toBe(201);
+  expect(await guestIdNumber(guestOf())).toBe('001199001234');
+  const audits = await auditPayloads(seed.id);
+  expect(audits.some((row) => String(row.payload).includes('****1234'))).toBe(true);
+  expect(audits.some((row) => String(row.payload).includes(submitted))).toBe(false);
+  expect(audits.some((row) => String(row.payload).includes('001199001234'))).toBe(false);
 });

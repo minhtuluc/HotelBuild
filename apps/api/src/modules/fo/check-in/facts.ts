@@ -40,18 +40,33 @@ export interface LockedRoom {
   readonly status: CheckInUnit['status'];
 }
 
-/** Khoá phòng vật lý rồi trả trạng thái đã ổn định; thiếu/khác cơ sở ⇒ 404 để không lộ dữ liệu. */
+/**
+ * Khoá phòng vật lý rồi trả trạng thái đã ổn định; thiếu/khác cơ sở ⇒ 404 để không lộ dữ liệu.
+ *
+ * Phòng ở ghép (DOR, `room_types.allow_shared`) bị từ chối **trước** khi ghi assignment: hợp đồng
+ * `actualRoomIds` không có chiều giường nên `bed_no = 0` sẽ bị trigger `fn_guard_bed_no` chặn bằng
+ * SQLSTATE 23514 (lỗi hệ thống). Từ chối 409 ở đây cũng làm bước kiểm "khách cũ" không cần biết giường.
+ */
 export async function lockRooms(
   tx: Tx,
   propertyId: string,
   roomIds: readonly string[],
 ): Promise<readonly LockedRoom[]> {
   const rows = await tx.$queryRaw<
-    { id: string; property_id: string; room_type_id: string; status: string }[]
-  >`SELECT id, property_id, room_type_id, status FROM rooms
-     WHERE id = ANY(${roomIds}::uuid[]) ORDER BY id FOR UPDATE`;
+    {
+      id: string;
+      property_id: string;
+      room_type_id: string;
+      status: string;
+      allow_shared: boolean;
+    }[]
+  >`SELECT r.id, r.property_id, r.room_type_id, r.status, rt.allow_shared
+      FROM rooms r JOIN room_types rt ON rt.id = r.room_type_id
+     WHERE r.id = ANY(${roomIds}::uuid[]) ORDER BY r.id FOR UPDATE OF r`;
   if (rows.length !== roomIds.length || rows.some((row) => row.property_id !== propertyId))
     throw missing();
+  if (rows.some((row) => row.allow_shared))
+    throw conflict('Chưa hỗ trợ nhận phòng theo giường (phòng ở ghép).');
   return rows.map((row) => {
     const status = ROOM_STATUS[row.status];
     if (status === undefined) throw conflict('Trạng thái phòng vật lý không hợp lệ để giao.');
