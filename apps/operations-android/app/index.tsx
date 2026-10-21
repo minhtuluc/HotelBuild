@@ -10,10 +10,18 @@ import SelectPropertyScreen from './select-property';
 import HomeScreen from './home';
 import { HousekeepingReadScreen } from '../src/housekeeping/screen';
 import { createTaskWriter } from '../src/housekeeping/writer-factory.native';
+import { LookupScreen } from '../src/lookup/screen';
 import { t } from '../src/strings';
 
 type Stage =
-  'boot' | 'login' | 'changePassword' | 'pinSetup' | 'selectProperty' | 'home' | 'housekeeping';
+  | 'boot'
+  | 'login'
+  | 'changePassword'
+  | 'pinSetup'
+  | 'selectProperty'
+  | 'home'
+  | 'housekeeping'
+  | 'lookup';
 
 export default function RootScreen(): ReactElement {
   const session = useMemo(createSession, []);
@@ -104,11 +112,13 @@ export default function RootScreen(): ReactElement {
         onBack={() => setStage('home')}
       />
     );
+  if (stage === 'lookup') return <LookupScreen session={session} onBack={() => setStage('home')} />;
   return (
     <HomeScreen
       session={session}
       onLogout={() => setStage('login')}
       onTasks={() => setStage('housekeeping')}
+      onLookup={() => setStage('lookup')}
     />
   );
 }

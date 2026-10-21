@@ -1,0 +1,42 @@
+appId: vn.pinehill.operations
+---
+# SCR-62 (HB-156) — real F7 fixture API with an active FRONT_DESK account (PIN configured).
+# Supply synthetic credentials and the fixture guest's name/query through Maestro environment;
+# no values are committed. Device run: BLOCKED in the PR until an emulator/device is available.
+- launchApp:
+    clearState: true
+- assertVisible: "Đăng nhập Pine Hill"
+- tapOn:
+    id: "username"
+- inputText: "${STAFF_USERNAME}"
+- tapOn:
+    id: "password"
+- inputText: "${STAFF_PASSWORD}"
+- tapOn:
+    id: "login-submit"
+- tapOn:
+    id: "open-lookup"
+- assertVisible: "Tra cứu booking & khách"
+- tapOn:
+    id: "lookup-query"
+- inputText: "${LOOKUP_GUEST_NAME}"
+- hideKeyboard
+- tapOn:
+    id: "lookup-search"
+- assertVisible:
+    id: "lookup-state"
+- assertVisible: "Kết quả tra cứu"
+- assertVisible: "${LOOKUP_GUEST_NAME}"
+# Blacklist flag is server-provided (BR-CRM-04); the fixture guest is blacklisted.
+- assertVisible: "Danh sách đen"
+- tapOn:
+    id: "lookup-query"
+- eraseText
+- inputText: "${LOOKUP_BOOKING_CODE}"
+- hideKeyboard
+- tapOn:
+    id: "lookup-search"
+- assertVisible: "${LOOKUP_BOOKING_CODE}"
+- tapOn:
+    id: "lookup-back"
+- assertVisible: "Pine Hill — Vận hành"
