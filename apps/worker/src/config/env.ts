@@ -59,6 +59,16 @@ const workerEnvSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
+  // HB-147: đánh dấu no-show (BR-CANCEL-10, BR-SYS-02 `job.noShow.markTime`). Nhịp quét một phút để
+  // trượt mốc 23:59 không quá một phút; mốc giờ VN và trần booking mỗi trang cấu hình được.
+  NO_SHOW_MARK_INTERVAL_SECONDS: z.coerce.number().positive().default(60),
+  NO_SHOW_MARK_TIME: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/)
+    .default('23:59'),
+  // Cửa sổ bắt sót (ngày): một ngày worker chết/trượt mốc không làm booking đó vĩnh viễn bị bỏ quên.
+  NO_SHOW_CATCHUP_DAYS: z.coerce.number().int().min(0).max(30).default(7),
+  NO_SHOW_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(100),
 });
 
 export type WorkerConfig = z.output<typeof workerEnvSchema>;

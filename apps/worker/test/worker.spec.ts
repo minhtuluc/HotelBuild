@@ -108,12 +108,13 @@ describe('createWorkerApp', () => {
     expect([...h.handlers.keys()]).toEqual([...QUEUE_NAMES]);
     expect(h.schedulers).toEqual([]);
   });
-  it('bật scheduler cho đúng nhịp: hold-expiry 30 giây + đối chiếu 900 giây, outbox 5 giây, dọn tệp và chi hoàn 30 giây', async () => {
+  it('bật scheduler cho đúng nhịp: hold-expiry 30 giây + đối chiếu 900 giây, no-show 60 giây, outbox 5 giây, dọn tệp và chi hoàn 30 giây', async () => {
     const h = harness();
     await createWorkerApp(config({ ENABLE_REPEATABLE_SCHEDULERS: true }), h.deps).start();
     expect(h.schedulers).toEqual([
       'q.hold-expiry:q.hold-expiry-scheduler:30000:{"name":"hold-expiry","data":{"mode":"SWEEP"}}',
       'q.hold-expiry:q.hold-expiry-reconcile-scheduler:900000:{"name":"hold-reconcile","data":{"mode":"RECONCILE"}}',
+      'q.no-show-mark:q.no-show-mark-scheduler:60000:{"name":"no-show-mark","data":{}}',
       'q.outbox-relay:q.outbox-relay-scheduler:5000:{"name":"outbox-relay","data":{}}',
       'q.export-cleanup:q.export-cleanup-scheduler:900000:{"name":"export-cleanup","data":{}}',
       'q.refund-payout:q.refund-payout-scheduler:30000:{"name":"refund-payout","data":{}}',

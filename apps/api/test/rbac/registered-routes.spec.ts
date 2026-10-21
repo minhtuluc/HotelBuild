@@ -153,8 +153,10 @@ function independentOracle(): Record<string, Expected> {
     status: 428,
     method: RequestMethod.PATCH,
   };
-  // HB-144 / api.md §2.9, §6.3: nhận phòng là tuyến FRONT_DESK; MANAGER/OWNER vẫn gọi được vì chính
-  // họ duyệt cho nợ trong cùng lệnh (BR-FO-01). Thân oracle không hợp lệ ⇒ 400 trước khi chạm dữ liệu.
+  // HB-147 / api.md §2.9, §6.3: no-show thủ công là tuyến **FRONT_DESK**; thân oracle không hợp lệ ⇒ 400
+  // sau khi qua quyền. Một dòng để giữ file dưới trần 400 dòng của ESLint (`max-lines`).
+  // prettier-ignore
+  keyed[`${RequestMethod.POST}:front-office/no-show`] = { roles: ['FRONT_DESK'], status: 400, method: RequestMethod.POST };
   // HB-036 / UC-SYS-01,02: explicit grants, independent of route permission providers.
   keyed[`${RequestMethod.GET}:audit-logs`] = {
     roles: ['MANAGER', 'OWNER'],

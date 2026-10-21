@@ -86,6 +86,7 @@ describe('JOB_HANDLERS', () => {
     expect(Object.keys(JOB_HANDLERS).sort()).toEqual([
       'q.export-cleanup',
       'q.hold-expiry',
+      'q.no-show-mark',
       'q.notification-send',
       'q.outbox-relay',
       'q.refund-payout',

@@ -15,6 +15,7 @@ export type QueueName = (typeof QUEUE_NAMES)[number];
 /** Các hàng đợi chạy lặp theo nhịp; chỉ bật khi cấu hình cho phép. */
 export const REPEATABLE_QUEUES = [
   'q.hold-expiry',
+  'q.no-show-mark',
   'q.outbox-relay',
   'q.export-cleanup',
   'q.refund-payout',
@@ -32,3 +33,4 @@ export const HOLD_RECONCILE_JOB = 'hold-reconcile';
 export const OUTBOX_RELAY_JOB = 'outbox-relay';
 export const EXPORT_CLEANUP_JOB = 'export-cleanup';
 export const REFUND_PAYOUT_JOB = 'refund-payout';
+export const NO_SHOW_MARK_JOB = 'no-show-mark';
