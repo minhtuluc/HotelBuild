@@ -28,6 +28,7 @@ export const catalog = {
   'home.lookup': 'Tra cứu booking & khách',
   'home.arrivals': 'Khách đến hôm nay & nhận phòng',
   'home.walkIn': 'Tạo booking khách vãng lai',
+  'home.departures': 'Khách đi hôm nay & trả phòng',
   'home.pinDemo': 'Thử thao tác cần PIN',
   'home.pinDemo.ok': 'Đã mở khoá PIN: {purpose}',
   'home.logout': 'Đăng xuất',

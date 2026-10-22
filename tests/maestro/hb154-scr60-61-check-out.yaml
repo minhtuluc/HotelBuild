@@ -1,0 +1,39 @@
+appId: vn.pinehill.operations
+---
+# SCR-60/61 (HB-154) — real F7 fixture API, active FRONT_DESK account with PIN, one CHECKED_IN stay due today
+# whose balance is settled. Supply synthetic STAFF_USERNAME/STAFF_PASSWORD/STAFF_PIN and DEPARTURE_CODE through
+# Maestro environment; no values are committed. Taps: open departures, open the card, unlock PIN, confirm (4).
+# Device run: BLOCKED in the PR until an emulator/device is available.
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "username"
+- inputText: "${STAFF_USERNAME}"
+- tapOn:
+    id: "password"
+- inputText: "${STAFF_PASSWORD}"
+- tapOn:
+    id: "login-submit"
+- tapOn:
+    id: "open-departures"
+- assertVisible: "Khách đi hôm nay"
+- assertVisible:
+    id: "departures-synced"
+- tapOn: "${DEPARTURE_CODE}"
+- assertVisible: "Trả phòng ${DEPARTURE_CODE}"
+- tapOn:
+    id: "pin-input"
+- inputText: "${STAFF_PIN}"
+- hideKeyboard
+- tapOn:
+    id: "pin-unlock"
+- assertVisible:
+    id: "pin-unlocked"
+- tapOn:
+    id: "check-out-submit"
+- assertVisible:
+    id: "check-out-done"
+- assertVisible: "Máy chủ đã xác nhận trả phòng ${DEPARTURE_CODE}"
+- tapOn:
+    id: "check-out-close"
+- assertNotVisible: "${DEPARTURE_CODE}"

@@ -1,0 +1,45 @@
+appId: vn.pinehill.operations
+---
+# SCR-59 (HB-154) — same fixture as hb154-scr60-61-check-out.yaml but the stay still owes money, so the server
+# refuses the check-out (E_PAY_AMOUNT_MISMATCH) and the balance is collected before checking out again.
+# Supply STAFF_USERNAME/STAFF_PASSWORD/STAFF_PIN and OWING_CODE. Device run: BLOCKED until a device exists.
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "username"
+- inputText: "${STAFF_USERNAME}"
+- tapOn:
+    id: "password"
+- inputText: "${STAFF_PASSWORD}"
+- tapOn:
+    id: "login-submit"
+- tapOn:
+    id: "open-departures"
+- tapOn: "${OWING_CODE}"
+- tapOn:
+    id: "pin-input"
+- inputText: "${STAFF_PIN}"
+- hideKeyboard
+- tapOn:
+    id: "pin-unlock"
+- tapOn:
+    id: "check-out-submit"
+- assertVisible:
+    id: "check-out-unsettled"
+- assertVisible:
+    id: "check-out-unsettled-balance"
+- tapOn:
+    id: "check-out-collect"
+- assertVisible:
+    id: "collect-due"
+- tapOn:
+    id: "pin-input"
+- inputText: "${STAFF_PIN}"
+- hideKeyboard
+- tapOn:
+    id: "pin-unlock"
+- tapOn:
+    id: "collect-submit"
+- assertVisible:
+    id: "collect-done"
+- assertVisible: "Thành công"
