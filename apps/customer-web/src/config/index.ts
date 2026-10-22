@@ -23,3 +23,17 @@ export function webEnv(): WebEnv {
   cached ??= readWebEnv(process.env);
   return cached;
 }
+
+/**
+ * Thông tin liên hệ lễ tân cho khách (SCR-08: SĐT đã có hồ sơ, không có email để đặt lại mật khẩu).
+ * Tuỳ chọn; thiếu hoặc quá dài thì màn hình dùng lời hướng dẫn chung thay vì hiện số giả.
+ */
+export function readFrontDeskContact(value: string | undefined): string | null {
+  const text = value?.trim() ?? '';
+  return text === '' || text.length > 160 ? null : text;
+}
+
+/** Đọc literal `process.env.NEXT_PUBLIC_*` để Next nhúng được giá trị vào bundle trình duyệt. */
+export function frontDeskContact(): string | null {
+  return readFrontDeskContact(process.env.NEXT_PUBLIC_FRONT_DESK_CONTACT);
+}
