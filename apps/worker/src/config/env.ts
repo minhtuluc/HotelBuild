@@ -76,6 +76,10 @@ const workerEnvSchema = z.object({
   // Cửa sổ bắt sót (ngày): một ngày worker chết/trượt mốc không làm booking đó vĩnh viễn bị bỏ quên.
   NO_SHOW_CATCHUP_DAYS: z.coerce.number().int().min(0).max(30).default(7),
   NO_SHOW_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(100),
+  // HB-182: nhịp quét cảnh báo vận hành (NFR-OBS-04; kênh DEGRADED phải báo MANAGER trong ≤ 5 phút —
+  // BR-CHAN-07) và trần số sự cố mỗi điều kiện trong một lượt để lượt chạy luôn ngắn.
+  ALERTS_SCAN_INTERVAL_SECONDS: z.coerce.number().positive().default(300),
+  ALERTS_SCAN_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(50),
 });
 
 export type WorkerConfig = z.output<typeof workerEnvSchema>;

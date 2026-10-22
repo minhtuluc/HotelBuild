@@ -38,6 +38,15 @@ function formatVnd(amount: number): string {
 }
 
 /** Tiêu đề thư theo mẫu; mẫu lạ giữ nguyên tên (không đoán), nội dung vẫn gửi đủ dữ kiện. */
+/** HB-182 — cảnh báo vận hành gửi nhân viên (không phải thông báo cho khách). */
+const ALERT_SUBJECTS: Readonly<Record<string, string>> = {
+  'alert-room-conflict': 'Cảnh báo: xung đột gán phòng — Pine Hill',
+  'alert-inventory-overbook': 'Cảnh báo: tồn kênh bán vượt hạn mức — Pine Hill',
+  'alert-channel-degraded': 'Cảnh báo: kênh đồng bộ suy giảm — Pine Hill',
+  'alert-login-abnormal': 'Cảnh báo: đăng nhập bất thường — Pine Hill',
+  'alert-refund-sla': 'Cảnh báo: hoàn tiền quá hạn cam kết — Pine Hill',
+};
+
 function subjectOf(template: string, message: NotificationMessage): string {
   const code = message.bookingCode === undefined ? '' : ` [${message.bookingCode}]`;
   if (template === 'booking-confirmed') return `Xác nhận đặt phòng${code} — Pine Hill`;
@@ -45,7 +54,7 @@ function subjectOf(template: string, message: NotificationMessage): string {
   if (template === 'refund-paid') return `Thông báo hoàn tiền${code} — Pine Hill`;
   if (template === 'room-moved') return `Thông báo đổi phòng${code} — Pine Hill`;
   if (template === 'payment-confirmed') return `Xác nhận thanh toán${code} — Pine Hill`;
-  return `Thông báo từ Pine Hill (${template})`;
+  return ALERT_SUBJECTS[template] ?? `Thông báo từ Pine Hill (${template})`;
 }
 
 function stayLine(message: NotificationMessage): string | null {
@@ -55,6 +64,17 @@ function stayLine(message: NotificationMessage): string | null {
 
 /** Thư văn bản thuần gửi theo kênh; chỉ nhận các trường đã biết của message, không dump JSON. */
 export function renderMessage(input: OutgoingMessage): { subject: string; body: string } {
+  if (input.template.startsWith('alert-')) {
+    const reason = input.message.reason ?? 'Chi tiết đã ghi trong nhật ký kiểm toán Pine Hill.';
+    return {
+      subject: subjectOf(input.template, input.message),
+      body: [
+        'Pine Hill — cảnh báo vận hành —',
+        reason,
+        'Mở bảng điều khiển vận hành để xem và xử lý.',
+      ].join('\n'),
+    };
+  }
   const lines: string[] = [];
   if (input.message.guestName !== undefined) lines.push(`Kính gửi ${input.message.guestName},`);
   const stay = stayLine(input.message);

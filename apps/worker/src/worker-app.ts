@@ -1,4 +1,5 @@
 import {
+  ALERTS_SCAN_JOB,
   EXPORT_CLEANUP_JOB,
   HOLD_EXPIRY_JOB,
   HOLD_RECONCILE_JOB,
@@ -106,6 +107,15 @@ export function repeatSchedules(config: WorkerConfig, name: QueueName): readonly
         id: 'q.refund-payout-scheduler',
         everySeconds: config.REFUND_PAYOUT_INTERVAL_SECONDS,
         jobName: REFUND_PAYOUT_JOB,
+        data: {},
+      },
+    ];
+  if (name === 'q.alerts-scan')
+    return [
+      {
+        id: 'q.alerts-scan-scheduler',
+        everySeconds: config.ALERTS_SCAN_INTERVAL_SECONDS,
+        jobName: ALERTS_SCAN_JOB,
         data: {},
       },
     ];
