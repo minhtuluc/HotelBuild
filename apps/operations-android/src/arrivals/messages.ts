@@ -53,6 +53,7 @@ export const catalog = {
   offlineBlock:
     'Cần kết nối mạng để xác nhận nhận phòng. Không có thao tác nào được gửi hoặc xếp hàng.',
   closeDetail: 'Về danh sách',
+  noShow: 'Ghi no-show',
   done: 'Máy chủ đã xác nhận nhận phòng {code} lúc {time}.',
   roomsAssigned: 'Phòng đã gán: {rooms}',
   earlyFee: 'Phụ thu nhận sớm máy chủ trả: {amount}',

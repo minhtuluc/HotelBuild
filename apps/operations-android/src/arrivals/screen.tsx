@@ -28,6 +28,7 @@ export interface ArrivalsScreenProps {
   /** Camera QR; thiếu thì nút Quét báo chưa khả dụng và lễ tân dùng ô tìm theo mã. */
   scanner?: QrScanner;
   onCollectBalance?: (booking: BookingSummary) => void;
+  onNoShow?: (booking: BookingSummary) => void;
 }
 
 const IDLE_STATE: ArrivalsState = {
@@ -166,6 +167,7 @@ export function ArrivalsScreen({
   onBack,
   scanner = unavailableScanner,
   onCollectBalance,
+  onNoShow,
 }: ArrivalsScreenProps): ReactElement {
   const [term, setTerm] = useState('');
   const [selected, setSelected] = useState<BookingSummary | null>(null);
@@ -184,6 +186,7 @@ export function ArrivalsScreen({
         onChanged={reload}
         onClose={closeDetail}
         {...(onCollectBalance === undefined ? {} : { onCollectBalance })}
+        {...(onNoShow === undefined ? {} : { onNoShow })}
       />
     );
 
