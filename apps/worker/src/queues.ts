@@ -8,6 +8,7 @@ export const QUEUE_NAMES = [
   'q.export-cleanup',
   'q.notification-send',
   'q.refund-payout',
+  'q.alerts-scan',
 ] as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[number];
@@ -19,6 +20,7 @@ export const REPEATABLE_QUEUES = [
   'q.outbox-relay',
   'q.export-cleanup',
   'q.refund-payout',
+  'q.alerts-scan',
 ] as const;
 
 export const isRepeatableQueue = (name: QueueName): boolean =>
@@ -34,3 +36,5 @@ export const OUTBOX_RELAY_JOB = 'outbox-relay';
 export const EXPORT_CLEANUP_JOB = 'export-cleanup';
 export const REFUND_PAYOUT_JOB = 'refund-payout';
 export const NO_SHOW_MARK_JOB = 'no-show-mark';
+/** HB-182 — quét cảnh báo vận hành (NFR-OBS-04); không có `data.mode`, một nhịp duy nhất. */
+export const ALERTS_SCAN_JOB = 'alerts-scan';
