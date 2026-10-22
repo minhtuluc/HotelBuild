@@ -31,6 +31,8 @@ export interface CheckInDetailProps {
   onClose: () => void;
   /** Chuyển sang thu số dư (SCR-59, HB-154); thiếu thì không hiện nút. */
   onCollectBalance?: (booking: BookingSummary) => void;
+  /** Mở SCR-64 ghi no-show (HB-155); thiếu thì không hiện nút. */
+  onNoShow?: (booking: BookingSummary) => void;
 }
 
 type Result =
@@ -267,7 +269,7 @@ function useCheckInForm({
 }
 
 export function CheckInDetail(props: CheckInDetailProps): ReactElement {
-  const { booking, rooms, onChanged, onClose, onCollectBalance } = props;
+  const { booking, rooms, onChanged, onClose, onCollectBalance, onNoShow } = props;
   const form = useCheckInForm(props);
   const { result, busy } = form;
   if (result?.kind === 'done')
@@ -332,6 +334,17 @@ export function CheckInDetail(props: CheckInDetailProps): ReactElement {
             onPress={() => {
               onChanged();
               onClose();
+            }}
+          />
+        ) : null}
+        {onNoShow ? (
+          <ActionButton
+            testID="check-in-no-show"
+            label={text('noShow')}
+            tone="plain"
+            disabled={busy}
+            onPress={() => {
+              onNoShow(booking);
             }}
           />
         ) : null}

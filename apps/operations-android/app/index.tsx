@@ -1,7 +1,7 @@
 /** Điểm vào Operations Android: đăng nhập → me() → đổi mật khẩu/PIN/chọn cơ sở → màn chính. */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import type { UserMe } from '@pinehill/contracts';
+import type { BookingSummary, UserMe } from '@pinehill/contracts';
 import { createSession } from '../src/session-factory';
 import LoginScreen from './login';
 import ChangePasswordScreen from './change-password';
@@ -14,6 +14,8 @@ import { LookupScreen } from '../src/lookup/screen';
 import { ArrivalsScreen } from '../src/arrivals/screen';
 import { ArrivalsCache } from '../src/arrivals/reader';
 import { createCheckInWriter } from '../src/arrivals/writer-factory.native';
+import { NoShowScreen } from '../src/no-show/screen';
+import { createNoShowWriter } from '../src/no-show/writer-factory.native';
 import { t } from '../src/strings';
 
 type Stage =
@@ -31,7 +33,9 @@ export default function RootScreen(): ReactElement {
   const session = useMemo(createSession, []);
   const makeTaskWriter = useCallback(() => createTaskWriter(session), [session]);
   const makeCheckInWriter = useCallback(() => createCheckInWriter(session), [session]);
+  const noShowWriter = useMemo(() => createNoShowWriter(session), [session]);
   const arrivalsCache = useMemo(() => new ArrivalsCache(), []);
+  const [noShowTarget, setNoShowTarget] = useState<BookingSummary | null>(null);
   const [stage, setStage] = useState<Stage>('boot');
   const [currentPassword, setCurrentPassword] = useState('');
   const [profile, setProfile] = useState<UserMe | null>(null);
@@ -60,9 +64,13 @@ export default function RootScreen(): ReactElement {
   useEffect(
     () =>
       session.subscribe(() => {
-        if (!session.hasAccessToken()) arrivalsCache.clear();
+        noShowWriter.reset();
+        if (!session.hasAccessToken()) {
+          arrivalsCache.clear();
+          setNoShowTarget(null);
+        }
       }),
-    [session, arrivalsCache],
+    [session, arrivalsCache, noShowWriter],
   );
 
   useEffect(() => {
@@ -81,14 +89,24 @@ export default function RootScreen(): ReactElement {
     housekeeping: () => (
       <HousekeepingReadScreen session={session} createWriter={makeTaskWriter} onBack={goHome} />
     ),
-    arrivals: () => (
-      <ArrivalsScreen
-        session={session}
-        cache={arrivalsCache}
-        createWriter={makeCheckInWriter}
-        onBack={goHome}
-      />
-    ),
+    arrivals: () =>
+      noShowTarget === null ? (
+        <ArrivalsScreen
+          session={session}
+          cache={arrivalsCache}
+          createWriter={makeCheckInWriter}
+          onBack={goHome}
+          onNoShow={setNoShowTarget}
+        />
+      ) : (
+        <NoShowScreen
+          booking={noShowTarget}
+          writer={noShowWriter}
+          now={Date.now}
+          onChanged={() => undefined}
+          onClose={() => setNoShowTarget(null)}
+        />
+      ),
     lookup: () => <LookupScreen session={session} onBack={goHome} />,
   };
 

@@ -1,0 +1,36 @@
+appId: vn.pinehill.operations
+---
+# SCR-64 (HB-155) — real F7 fixture API, active FRONT_DESK account with PIN, one CONFIRMED booking whose
+# check-in date is today and whose 23:59 mark has ALREADY passed (fixture clock/booking dated earlier in the
+# same business day on the API clock; the API rejects earlier attempts with E_BOOK_INVALID_STATE).
+# Supply synthetic STAFF_USERNAME/STAFF_PASSWORD and ARRIVAL_CODE through Maestro environment; no values are committed.
+# 4 taps from the home screen: open arrivals, open the card, "Ghi no-show", confirm (the reason is prefilled).
+# Device run: BLOCKED in the PR until an emulator/device is available.
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "username"
+- inputText: "${STAFF_USERNAME}"
+- tapOn:
+    id: "password"
+- inputText: "${STAFF_PASSWORD}"
+- tapOn:
+    id: "login-submit"
+- tapOn:
+    id: "open-arrivals"
+- tapOn: "${ARRIVAL_CODE}"
+- tapOn:
+    id: "check-in-no-show"
+- assertVisible: "Ghi no-show ${ARRIVAL_CODE}"
+- assertVisible:
+    id: "no-show-countdown"
+- assertVisible:
+    id: "no-show-policy"
+- tapOn:
+    id: "no-show-submit"
+- assertVisible:
+    id: "no-show-done"
+- assertVisible: "Máy chủ đã ghi no-show ${ARRIVAL_CODE}"
+- tapOn:
+    id: "no-show-close"
+- assertNotVisible: "${ARRIVAL_CODE}"
