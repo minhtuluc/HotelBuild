@@ -1,0 +1,33 @@
+appId: vn.pinehill.operations
+---
+# SCR-57/58 (HB-153) — real F7 fixture API, active FRONT_DESK account with PIN, one CONFIRMED booking arriving
+# today (balanceDue = 0) at a property with ACTIVE rooms of its room type. Supply synthetic
+# STAFF_USERNAME/STAFF_PASSWORD and ARRIVAL_CODE through Maestro environment; no values are committed.
+# Check-in is 3 taps from the home screen: open arrivals, open the card, confirm (rooms are preselected).
+# Device run: BLOCKED in the PR until an emulator/device is available.
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "username"
+- inputText: "${STAFF_USERNAME}"
+- tapOn:
+    id: "password"
+- inputText: "${STAFF_PASSWORD}"
+- tapOn:
+    id: "login-submit"
+- tapOn:
+    id: "open-arrivals"
+- assertVisible: "Khách đến hôm nay"
+- assertVisible:
+    id: "arrivals-synced"
+- assertVisible: "${ARRIVAL_CODE}"
+- tapOn: "${ARRIVAL_CODE}"
+- assertVisible: "Nhận phòng ${ARRIVAL_CODE}"
+- tapOn:
+    id: "check-in-submit"
+- assertVisible:
+    id: "check-in-done"
+- assertVisible: "Máy chủ đã xác nhận nhận phòng ${ARRIVAL_CODE}"
+- tapOn:
+    id: "check-in-close"
+- assertNotVisible: "${ARRIVAL_CODE}"

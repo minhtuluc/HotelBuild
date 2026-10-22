@@ -1,0 +1,36 @@
+appId: vn.pinehill.operations
+---
+# SCR-57/58 (HB-153) — offline cache and QR fallback. Same fixture as hb153-scr57-58-check-in.yaml (the
+# arrival must still be CONFIRMED). Device run: BLOCKED in the PR until an emulator/device is available.
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "username"
+- inputText: "${STAFF_USERNAME}"
+- tapOn:
+    id: "password"
+- inputText: "${STAFF_PASSWORD}"
+- tapOn:
+    id: "login-submit"
+- tapOn:
+    id: "open-arrivals"
+- assertVisible: "${ARRIVAL_CODE}"
+# QR button: no camera adapter in this build, so it explains and leaves manual entry available.
+- tapOn:
+    id: "arrivals-scan"
+- assertVisible:
+    id: "arrivals-scan-notice"
+- assertVisible:
+    id: "arrivals-filter"
+# Offline: the cached list stays with its sync stamp, but check-in is refused without any request.
+- toggleAirplaneMode
+- tapOn:
+    id: "arrivals-refresh"
+- assertVisible:
+    id: "arrivals-stale"
+- assertVisible: "${ARRIVAL_CODE}"
+- tapOn: "${ARRIVAL_CODE}"
+- tapOn:
+    id: "check-in-submit"
+- assertVisible: "Cần kết nối mạng để xác nhận nhận phòng"
+- toggleAirplaneMode
