@@ -1,0 +1,4 @@
+{
+  "$comment": "HB-183/NFR-SEC-06 — waiver cho finding đã chấp nhận. Bắt buộc: github_advisory_id, package (module_name trong pnpm audit), owner, reason, firstSeen, reviewedAt (YYYY-MM-DD). Cổng security-audit-gate.mjs chặn khi thiếu waiver, khi firstSeen/reviewedAt quá 7 ngày hoặc reviewedAt trước firstSeen; waiver không gia hạn quá 7 ngày và không áp dụng cho tag phát hành. Quy trình: docs/07-ban-giao/van-hanh/bao-mat-ci.md",
+  "waivers": []
+}
