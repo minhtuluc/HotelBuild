@@ -12,6 +12,7 @@ export interface HomeScreenProps {
   onTasks?: () => void;
   onLookup?: () => void;
   onArrivals?: () => void;
+  onWalkIn?: () => void;
 }
 
 export default function HomeScreen({
@@ -20,6 +21,7 @@ export default function HomeScreen({
   onTasks,
   onLookup,
   onArrivals,
+  onWalkIn,
 }: HomeScreenProps): ReactElement {
   const [pinResult, setPinResult] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -96,6 +98,21 @@ export default function HomeScreen({
           }}
         >
           <Text style={{ color: color.primary }}>{t('home.lookup')}</Text>
+        </Pressable>
+      ) : null}
+      {onWalkIn ? (
+        <Pressable
+          testID="open-walk-in"
+          accessibilityRole="button"
+          accessibilityLabel={t('home.walkIn')}
+          onPress={onWalkIn}
+          style={{
+            minHeight: touchTargetDp,
+            justifyContent: 'center',
+            paddingHorizontal: space.s3,
+          }}
+        >
+          <Text style={{ color: color.primary }}>{t('home.walkIn')}</Text>
         </Pressable>
       ) : null}
       <Pressable

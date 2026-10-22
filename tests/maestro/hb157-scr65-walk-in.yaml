@@ -1,0 +1,53 @@
+appId: vn.pinehill.operations
+---
+# SCR-65 (HB-157) — real F7 fixture API, active FRONT_DESK account with PIN, a property with an ACTIVE room type
+# that has stock tonight and the WALKIN channel configured. Supply synthetic STAFF_USERNAME/STAFF_PASSWORD,
+# STAFF_PIN, ROOM_TYPE_CODE and GUEST_PHONE (0XXXXXXXXX) through Maestro environment; no values are committed.
+# Device run: BLOCKED in the PR until an emulator/device is available.
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "username"
+- inputText: "${STAFF_USERNAME}"
+- tapOn:
+    id: "password"
+- inputText: "${STAFF_PASSWORD}"
+- tapOn:
+    id: "login-submit"
+- tapOn:
+    id: "open-walk-in"
+- assertVisible: "Bước 1/5: Kỳ lưu trú"
+- tapOn: "Loại phòng ${ROOM_TYPE_CODE}"
+- tapOn:
+    id: "walk-in-next"
+- assertVisible: "Bước 2/5: Thông tin khách"
+- tapOn:
+    id: "walk-in-name"
+- inputText: "Khách Maestro"
+- tapOn:
+    id: "walk-in-phone"
+- inputText: "${GUEST_PHONE}"
+- hideKeyboard
+- tapOn:
+    id: "walk-in-next"
+- assertVisible: "Bước 3/5: Xác nhận & tạo booking"
+- tapOn:
+    id: "walk-in-create"
+- assertVisible: "Bước 4/5: Thu cọc"
+- assertVisible:
+    id: "walk-in-deposit-amount"
+- tapOn:
+    id: "walk-in-pin"
+- inputText: "${STAFF_PIN}"
+- hideKeyboard
+- tapOn:
+    id: "walk-in-verify-pin"
+- assertVisible: "PIN hợp lệ"
+- tapOn:
+    id: "walk-in-pay"
+- assertVisible: "Bước 5/5: Hoàn tất"
+- assertVisible:
+    id: "walk-in-done"
+- tapOn:
+    id: "walk-in-home"
+- assertVisible: "Pine Hill — Vận hành"
