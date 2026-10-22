@@ -436,6 +436,7 @@ test.describe('SCR-37 trạng thái §8.1', () => {
   };
   for (const [state, text] of Object.entries(states)) {
     test(`${state}: nội dung và axe`, async ({ page }) => {
+      await loginCollectionStaff(page); // khu vực nhân viên đã yêu cầu đăng nhập (HB-020)
       await page.goto(`/bookings/synthetic-demo/collect?state=${state}`);
       await expect(page.getByTestId('collect-screen')).toContainText(text);
       const results = await new AxeBuilder({ page })
@@ -479,7 +480,8 @@ test.describe('SCR-37 phiên và lỗi xác thực', () => {
     const other = await context.newPage();
     try {
       await logoutCollectionStaff(other);
-      await expect(page.getByTestId('collect-screen')).toContainText('Bạn không có quyền');
+      // HB-020: hết phiên ở tab khác ⇒ khu vực nhân viên đưa tab này về /login (thay cho trạng thái thiếu quyền tại màn).
+      await expect(page).toHaveURL(/\/login\?.*reason=expired/);
     } finally {
       release();
       await other.close();
@@ -491,7 +493,8 @@ test.describe('SCR-37 phiên và lỗi xác thực', () => {
           requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
         ),
     );
-    await expect(page.getByTestId('collect-screen')).toContainText('Bạn không có quyền');
+    await expect(page).toHaveURL(/\/login\?.*reason=expired/);
+    await expect(page.getByTestId('collect-screen')).toHaveCount(0);
     await expect(page.getByTestId('pin-verified')).toHaveCount(0);
     await expect(page.getByTestId('collect-booking')).toHaveCount(0);
     await expect(page.getByTestId('collect-send')).toHaveCount(0);

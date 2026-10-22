@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { loginCollectionStaff } from './collect-fixture';
 import { operationsWebOnly } from './guard';
 
 /**
@@ -65,6 +66,7 @@ for (const screen of SCREENS) {
   test.describe(`trạng thái của ${screen}`, () => {
     for (const state of STATES) {
       test(`${state} hiện đúng nội dung và không vi phạm axe`, async ({ page }) => {
+        await loginCollectionStaff(page); // khu vực nhân viên đã yêu cầu đăng nhập (HB-020)
         await page.goto(`${screen}?state=${state}`);
         await expect(page.getByText(EXPECTED[state], { exact: false })).toBeVisible();
         const results = await new AxeBuilder({ page })
