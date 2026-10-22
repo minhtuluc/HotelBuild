@@ -169,8 +169,22 @@ afterAll(async () => {
   await testDb?.close();
 }, 30_000);
 
+/**
+ * Chỉ xoá khoá chống trùng **của HB-182**. Không `FLUSHDB`: `REDIS_URL` là DB dùng chung với các ca
+ * BullMQ khác trong cùng lượt chạy song song (`outbox-relay`, `hold-expiry`), xoá cả DB sẽ làm job của
+ * chúng biến mất giữa ca và biến một ca nhanh thành timeout.
+ */
+async function clearAlertDedupKeys(): Promise<void> {
+  let cursor = '0';
+  do {
+    const [next, keys] = await redis.scan(cursor, 'MATCH', 'alert-dedup:*', 'COUNT', 500);
+    cursor = next;
+    if (keys.length > 0) await redis.del(...keys);
+  } while (cursor !== '0');
+}
+
 beforeEach(async () => {
-  await redis.flushdb();
+  await clearAlertDedupKeys();
 });
 
 describe('HB-182 — quét cảnh báo vận hành', () => {
