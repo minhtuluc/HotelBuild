@@ -11,6 +11,7 @@ export interface HomeScreenProps {
   onLogout: () => void;
   onTasks?: () => void;
   onLookup?: () => void;
+  onArrivals?: () => void;
 }
 
 export default function HomeScreen({
@@ -18,6 +19,7 @@ export default function HomeScreen({
   onLogout,
   onTasks,
   onLookup,
+  onArrivals,
 }: HomeScreenProps): ReactElement {
   const [pinResult, setPinResult] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -51,6 +53,21 @@ export default function HomeScreen({
       <Text style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}>
         {t('home.title')}
       </Text>
+      {onArrivals ? (
+        <Pressable
+          testID="open-arrivals"
+          accessibilityRole="button"
+          accessibilityLabel={t('home.arrivals')}
+          onPress={onArrivals}
+          style={{
+            minHeight: touchTargetDp,
+            justifyContent: 'center',
+            paddingHorizontal: space.s3,
+          }}
+        >
+          <Text style={{ color: color.primary }}>{t('home.arrivals')}</Text>
+        </Pressable>
+      ) : null}
       {onTasks ? (
         <Pressable
           testID="open-housekeeping"

@@ -11,6 +11,9 @@ import HomeScreen from './home';
 import { HousekeepingReadScreen } from '../src/housekeeping/screen';
 import { createTaskWriter } from '../src/housekeeping/writer-factory.native';
 import { LookupScreen } from '../src/lookup/screen';
+import { ArrivalsScreen } from '../src/arrivals/screen';
+import { ArrivalsCache } from '../src/arrivals/reader';
+import { createCheckInWriter } from '../src/arrivals/writer-factory.native';
 import { t } from '../src/strings';
 
 type Stage =
@@ -21,11 +24,14 @@ type Stage =
   | 'selectProperty'
   | 'home'
   | 'housekeeping'
-  | 'lookup';
+  | 'lookup'
+  | 'arrivals';
 
 export default function RootScreen(): ReactElement {
   const session = useMemo(createSession, []);
   const makeTaskWriter = useCallback(() => createTaskWriter(session), [session]);
+  const makeCheckInWriter = useCallback(() => createCheckInWriter(session), [session]);
+  const arrivalsCache = useMemo(() => new ArrivalsCache(), []);
   const [stage, setStage] = useState<Stage>('boot');
   const [currentPassword, setCurrentPassword] = useState('');
   const [profile, setProfile] = useState<UserMe | null>(null);
@@ -50,6 +56,15 @@ export default function RootScreen(): ReactElement {
     setStage('home');
   }
 
+  // Dữ liệu khách đến chỉ nằm trong RAM của phiên: mất token (đăng xuất/thu hồi) là xoá ngay.
+  useEffect(
+    () =>
+      session.subscribe(() => {
+        if (!session.hasAccessToken()) arrivalsCache.clear();
+      }),
+    [session, arrivalsCache],
+  );
+
   useEffect(() => {
     void (async () => {
       const restored = await session.silentRefresh().catch(() => false);
@@ -60,6 +75,22 @@ export default function RootScreen(): ReactElement {
       await advance(await session.profile());
     })();
   }, [session]);
+
+  const goHome = () => setStage('home');
+  const tools: Partial<Record<Stage, () => ReactElement>> = {
+    housekeeping: () => (
+      <HousekeepingReadScreen session={session} createWriter={makeTaskWriter} onBack={goHome} />
+    ),
+    arrivals: () => (
+      <ArrivalsScreen
+        session={session}
+        cache={arrivalsCache}
+        createWriter={makeCheckInWriter}
+        onBack={goHome}
+      />
+    ),
+    lookup: () => <LookupScreen session={session} onBack={goHome} />,
+  };
 
   if (stage === 'boot') {
     return (
@@ -104,21 +135,15 @@ export default function RootScreen(): ReactElement {
       />
     );
   }
-  if (stage === 'housekeeping')
-    return (
-      <HousekeepingReadScreen
-        session={session}
-        createWriter={makeTaskWriter}
-        onBack={() => setStage('home')}
-      />
-    );
-  if (stage === 'lookup') return <LookupScreen session={session} onBack={() => setStage('home')} />;
+  const tool = tools[stage];
+  if (tool !== undefined) return tool();
   return (
     <HomeScreen
       session={session}
       onLogout={() => setStage('login')}
       onTasks={() => setStage('housekeeping')}
       onLookup={() => setStage('lookup')}
+      onArrivals={() => setStage('arrivals')}
     />
   );
 }
