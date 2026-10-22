@@ -1,8 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { installUsersApi } from './fake-api/users/users';
 import { operationsWebOnly } from './operations-web/guard';
-import { loginCollectionStaff } from './operations-web/collect-fixture';
+import { expect, test } from './operations-web/staff-session';
 
 /**
  * SCR-15 (HB-021) — người dùng, vai trò, phạm vi cơ sở trên API giả F1 (`fake-api/users`).
@@ -14,7 +14,6 @@ import { loginCollectionStaff } from './operations-web/collect-fixture';
 operationsWebOnly();
 
 async function open(page: Page, options: Parameters<typeof installUsersApi>[1] = {}) {
-  await loginCollectionStaff(page);
   const spy = await installUsersApi(page, options);
   await page.goto('/admin/users');
   return spy;
