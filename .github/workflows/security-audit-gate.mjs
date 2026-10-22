@@ -13,7 +13,6 @@ const DAY_MS = 86_400_000;
 const CVSS_FLOOR = 7;
 const UNSCORED_BLOCKING = new Set(['high', 'critical']);
 const DEFAULT_WAIVERS = new URL('./security-waivers.json', import.meta.url);
-
 function fail(message) {
   console.error(`Cổng bảo mật: ${message}`);
   process.exit(2);
@@ -23,7 +22,6 @@ function readJson(path, label) {
   try { return JSON.parse(readFileSync(path, 'utf8')); }
   catch (error) { fail(`không đọc được ${label} (${error.code ?? error.message})`); }
 }
-
 /** Ngày `YYYY-MM-DD` -> mili giây UTC; null nếu không phải ngày lịch hợp lệ. */
 function day(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -60,12 +58,10 @@ function findingRows(audit) {
     }))
     .filter((row) => (row.score === null ? UNSCORED_BLOCKING.has(row.severity) : row.score >= CVSS_FLOOR));
 }
-
 function describe(row) {
   const score = row.score === null ? `chưa có điểm CVSS (mức ${row.severity})` : `CVSS ${row.score}`;
   return `${row.id} ${row.package}@${row.versions.join(',')} — ${score}`;
 }
-
 function validateWaivers(waivers) {
   if (!Array.isArray(waivers)) fail('"waivers" phải là mảng');
   const seen = new Set();

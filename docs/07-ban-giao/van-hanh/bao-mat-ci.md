@@ -24,9 +24,9 @@ liệu không sinh check này — đừng đặt làm required check nếu chưa
 
 `security-audit-gate.mjs` đọc báo cáo `pnpm audit --json` (không đọc `node_modules`). Finding vào cổng
 khi **CVSS ≥ 7,0** — kể cả registry xếp `moderate`, ví dụ `uuid` 7.5 — hoặc khi **chưa có điểm CVSS** mà
-registry xếp `high`/`critical`; không suy điểm từ nhãn severity và không hạ ngưỡng theo nhãn. Bước
-`pnpm audit --audit-level=high` vẫn chạy để thấy ngưỡng registry, nhưng quyết định chặn thuộc cổng: nếu
-lấy trần `--audit-level=high` làm cổng thì waiver không bao giờ làm CI xanh được.
+registry xếp `high`/`critical`; không suy điểm từ nhãn severity. Bước `pnpm audit --audit-level=high` chỉ tạo
+báo cáo và luôn thoát 0; **chỉ cổng** quyết định đạt/không đạt — lấy trần `--audit-level=high` làm cổng thì
+waiver vô nghĩa và mọi PR sẽ đỏ vĩnh viễn.
 
 "Đã xử lý" chỉ đến từ waiver có chủ và ngày rà soát trong `.github/workflows/security-waivers.json`:
 
@@ -40,7 +40,8 @@ lấy trần `--audit-level=high` làm cổng thì waiver không bao giờ làm 
 
 Cổng fail closed khi báo cáo audit không có `advisories` — lỗi mạng/registry không được coi là đạt.
 `--release` (tag phát hành) bỏ qua waiver: release không đi kèm lỗ hổng CVSS ≥ 7,0 đã biết. Gia hạn quá 7
-ngày không phải việc của file waiver; phải vá/nâng, thay dependency hoặc sửa NFR-SEC-06 có duyệt.
+ngày không phải việc của file waiver; phải vá/nâng, thay dependency hoặc sửa NFR-SEC-06 có duyệt. Năm waiver
+hiện tại (mở 22/10) hết hiệu lực sau 29/10/2026 — TD-34 phải xong trước mốc đó.
 
 ## Chạy cục bộ
 
@@ -56,10 +57,10 @@ node --check .github/workflows/security-audit-gate.mjs
 
 - 5 tệp `.github/workflows/*.yml` parse được bằng PyYAML 6.0.3; `node --check` và `eslint` trên script cổng đều mã 0.
 - `pnpm audit --json`: **4 high, 0 critical, 11 moderate, 3 low**, exit 1 (nên `--audit-level=high` cũng vậy).
-- Cổng với waiver rỗng: **5 finding**, exit 1 — `uuid` 7.5, `node-forge` 7.5, `braces` 7.5, `markdown-it`
-  7.5, `vite` (high, chưa có điểm). Đây là trạng thái đúng của nền hiện tại, không phải lỗi cổng.
-- Waiver tổng hợp (`firstSeen` 20/10, `reviewedAt` 22/10): exit 0; `firstSeen` 10/10 hoặc `reviewedAt`
-  01/10: exit 1; `--release` với waiver hợp lệ: exit 1. Waiver này chỉ nằm trong `/tmp`, không vào repo.
+- Cổng với waiver đã cam kết (`reviewedAt` 22/10): **exit 0** cho 5 finding trên; `--today 2026-10-30` hoặc
+  `firstSeen` 10/10 → exit 1; `--release` với waiver hợp lệ → exit 1; báo cáo `{}` → exit 2.
+- Waiver rỗng (tệp `/tmp`): **5 finding**, exit 1 — `uuid` 7.5, `node-forge` 7.5, `braces` 7.5,
+  `markdown-it` 7.5, `vite` (high, chưa có điểm) — chứng minh cổng không bỏ sót finding.
 
 ## Chưa nghiệm thu
 
@@ -67,10 +68,9 @@ node --check .github/workflows/security-audit-gate.mjs
   bật Actions, bật code scanning/GHAS cho repo private và đặt check bắt buộc; thiếu thì giữ BLOCKED.
 - **CodeQL và Trivy chưa chạy cục bộ**: máy này không có `codeql`/`trivy`, Trivy cần CSDL tải từ mạng;
   phần đã kiểm chỉ là YAML + tham số. Kết quả quét thật phải đến từ runner.
-- **5 advisory chưa xử lý**: `node-forge` 1.4.0 và `braces` 3.0.3 chưa có bản vá phát hành; `markdown-it`
-  14.3.2, `vite` 7.3.6, `uuid` 7.0.3 cần nâng ở ticket dependency (root `package.json`/lockfile ngoài allow
-  của HB-183). Không thêm ignore/baseline audit hay waiver để làm xanh; xem
-  [bản vá dependency](va-dependency-20261014.md).
+- **5 advisory đang waive tạm**: `node-forge` 1.4.0, `braces` 3.0.3 (chưa có bản vá phát hành) và `uuid`
+  7.0.3, `markdown-it` 14.3.2, `vite` 7.3.6 (cần nâng phiên bản) — TD-34, root `package.json`/lockfile ngoài
+  allow HB-183; xem [bản vá dependency](va-dependency-20261014.md). Không thêm ignore/baseline audit.
 - **Pentest staging**: xem [checklist pentest](pentest-checklist.md) — mọi mục runtime đang BLOCKED.
 
 ## Quyết định tự đưa ra

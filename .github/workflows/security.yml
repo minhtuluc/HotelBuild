@@ -41,11 +41,10 @@ jobs:
           cache: pnpm
       - name: Cài manifest (frozen lockfile)
         run: pnpm install --frozen-lockfile --ignore-scripts
-      # Bước registry chỉ để lộ kết quả; quyết định chặn do cổng dưới đây (waiver + hạn 7 ngày).
-      # Không dùng trần --audit-level=high làm cổng vì khi đó waiver không thể làm CI xanh.
-      - name: pnpm audit --audit-level=high (ngưỡng registry)
-        continue-on-error: true
-        run: pnpm audit --audit-level=high --json > "$RUNNER_TEMP/pnpm-audit.json"
+      # Bước registry chỉ tạo báo cáo và không bao giờ làm job đỏ; cổng bên dưới quyết định.
+      - name: pnpm audit --audit-level=high (chỉ tạo báo cáo)
+        run: |
+          pnpm audit --audit-level=high --json > "$RUNNER_TEMP/pnpm-audit.json" && echo "registry=pass" || echo "registry=fail"
       - name: Cổng CVSS ≥ 7,0 / hạn 7 ngày / waiver (quyết định chặn)
         run: >-
           node .github/workflows/security-audit-gate.mjs "$RUNNER_TEMP/pnpm-audit.json"
