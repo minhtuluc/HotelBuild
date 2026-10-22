@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './operations-web/staff-session';
 
 /** 10 trạng thái của hợp đồng §8.1, phủ bởi tuyến `?state=` trên cả hai web app. */
 const STATES = [
