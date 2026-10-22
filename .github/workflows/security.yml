@@ -1,0 +1,124 @@
+name: Security
+
+# HB-183 / NFR-SEC-06: SAST (CodeQL), SCA (Trivy + pnpm audit), quét ảnh và hạn xử lý CVSS ≥ 7,0.
+# Quét bí mật (gitleaks, HB-176) do `secret-scan.yml` đảm nhiệm — workflow đó chạy thêm hằng đêm.
+# PR chỉ chạy khi diff đụng mã và không build ảnh, để giữ thời gian phản hồi.
+on:
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'tests/maestro/**'
+  schedule:
+    - cron: '30 18 * * *'
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Chạy cổng chặn phát hành (bỏ qua toàn bộ waiver)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Audit phụ thuộc + hạn CVSS 7 ngày
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Cài manifest (frozen lockfile)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      # Bước registry chỉ tạo báo cáo và không bao giờ làm job đỏ; cổng bên dưới quyết định.
+      - name: pnpm audit --audit-level=high (chỉ tạo báo cáo)
+        run: |
+          pnpm audit --audit-level=high --json > "$RUNNER_TEMP/pnpm-audit.json" && echo "registry=pass" || echo "registry=fail"
+      - name: Cổng CVSS ≥ 7,0 / hạn 7 ngày / waiver (quyết định chặn)
+        run: >-
+          node .github/workflows/security-audit-gate.mjs "$RUNNER_TEMP/pnpm-audit.json"
+          --waivers .github/workflows/security-waivers.json
+      # Tag phát hành: cổng chặt hơn, bỏ qua waiver; các job khác của workflow vẫn phải xanh.
+      - name: Cổng phát hành (tag v* hoặc dispatch release)
+        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.release == 'true'
+        run: |
+          pnpm audit --json > "$RUNNER_TEMP/release-audit.json" || true
+          node .github/workflows/security-audit-gate.mjs "$RUNNER_TEMP/release-audit.json" --release
+
+  codeql:
+    name: CodeQL (JavaScript/TypeScript)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    # Code scanning cần quyền ghi security-events; repo private phải bật GHAS (xem bao-mat-ci.md).
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Khởi tạo CodeQL (phủ app Expo — repo không có mã Kotlin/Java)
+        uses: github/codeql-action/init@4bfa242aa49c5f7c6770b98670d354a7dfac05f8 # v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+      - name: Phân tích và tải SARIF lên code scanning
+        uses: github/codeql-action/analyze@4bfa242aa49c5f7c6770b98670d354a7dfac05f8 # v3
+        with:
+          category: '/language:javascript-typescript'
+
+  trivy:
+    name: Trivy (filesystem + image)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache CSDL lỗ hổng Trivy
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ github.run_id }}
+          restore-keys: trivy-db-
+      # exit-code 1 làm job đỏ; SARIF vẫn được tải lên nhờ `if: always()`.
+      - name: Trivy fs — lockfile, Dockerfile, misconfig
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: '1'
+          format: sarif
+          output: trivy-fs.sarif
+      - name: Tải SARIF Trivy (best effort — không thay cổng)
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@4bfa242aa49c5f7c6770b98670d354a7dfac05f8 # v3
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+      - name: Build ảnh API để quét (đêm/phát hành)
+        if: github.event_name != 'pull_request'
+        run: docker build -f docker/api.Dockerfile -t pinehill-api:scan .
+      - name: Trivy image — OS và thư viện trong ảnh
+        if: github.event_name != 'pull_request'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: pinehill-api:scan
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: '1'

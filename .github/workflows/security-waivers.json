@@ -1,0 +1,10 @@
+{
+  "$comment": "HB-183/NFR-SEC-06 — waiver cho finding đã chấp nhận. Bắt buộc: github_advisory_id, package (module_name trong pnpm audit), owner, reason, firstSeen, reviewedAt (YYYY-MM-DD). Cổng security-audit-gate.mjs chặn khi thiếu waiver, khi firstSeen/reviewedAt quá 7 ngày hoặc reviewedAt trước firstSeen; waiver không gia hạn quá 7 ngày và không áp dụng cho tag phát hành. Quy trình: docs/07-ban-giao/van-hanh/bao-mat-ci.md",
+  "waivers": [
+    { "github_advisory_id": "GHSA-w5hq-g745-h8pq", "package": "uuid", "owner": "lead", "reason": "uuid 7.0.3 kéo theo Expo (xcode/@expo/config-plugins); nâng chuỗi Expo ở TD-34", "firstSeen": "2026-10-22", "reviewedAt": "2026-10-22" },
+    { "github_advisory_id": "GHSA-86w9-cpqp-85rv", "package": "node-forge", "owner": "lead", "reason": "node-forge 1.4.0 qua Expo CLI, chưa có bản vá phát hành; đã ghi nhận từ 14/10 (va-dependency-20261014), mốc waiver mở 22/10 — TD-34", "firstSeen": "2026-10-22", "reviewedAt": "2026-10-22" },
+    { "github_advisory_id": "GHSA-vfj7-8cjw-p6xm", "package": "braces", "owner": "lead", "reason": "braces 3.0.3 qua Expo Metro/micromatch, chưa có bản vá phát hành; đã ghi nhận từ 14/10 (va-dependency-20261014), mốc waiver mở 22/10 — TD-34", "firstSeen": "2026-10-22", "reviewedAt": "2026-10-22" },
+    { "github_advisory_id": "GHSA-gfr2-rv44-r23c", "package": "markdown-it", "owner": "lead", "reason": "markdown-it 14.3.2 dùng cho kiểm tài liệu; nâng phiên bản ở TD-34", "firstSeen": "2026-10-22", "reviewedAt": "2026-10-22" },
+    { "github_advisory_id": "GHSA-587h-7wmj-h5pm", "package": "vite", "owner": "lead", "reason": "vite 7.3.6 trong tooling dev/test; nâng phiên bản ở TD-34", "firstSeen": "2026-10-22", "reviewedAt": "2026-10-22" }
+  ]
+}
