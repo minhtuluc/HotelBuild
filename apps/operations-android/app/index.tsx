@@ -18,6 +18,9 @@ import { NoShowScreen } from '../src/no-show/screen';
 import { createNoShowWriter } from '../src/no-show/writer-factory.native';
 import { WalkInScreen } from '../src/walk-in/screen';
 import { createWalkInFlow } from '../src/walk-in/flow-factory.native';
+import { CollectScreen } from '../src/stay/collect';
+import { DeparturesScreen } from '../src/stay/screen';
+import { createCheckOutWriter, createCollectWriter } from '../src/stay/writer-factory.native';
 import { t } from '../src/strings';
 
 type Stage =
@@ -30,7 +33,9 @@ type Stage =
   | 'housekeeping'
   | 'lookup'
   | 'arrivals'
-  | 'walkIn';
+  | 'arrivals'
+  | 'walkIn'
+  | 'departures';
 
 export default function RootScreen(): ReactElement {
   const session = useMemo(createSession, []);
@@ -40,6 +45,9 @@ export default function RootScreen(): ReactElement {
   const arrivalsCache = useMemo(() => new ArrivalsCache(), []);
   const [noShowTarget, setNoShowTarget] = useState<BookingSummary | null>(null);
   const makeWalkInFlow = useCallback(() => createWalkInFlow(session), [session]);
+  const makeCheckOutWriter = useCallback(() => createCheckOutWriter(session), [session]);
+  const makeCollectWriter = useCallback(() => createCollectWriter(session), [session]);
+  const [collecting, setCollecting] = useState<BookingSummary | null>(null);
   const [stage, setStage] = useState<Stage>('boot');
   const [currentPassword, setCurrentPassword] = useState('');
   const [profile, setProfile] = useState<UserMe | null>(null);
@@ -94,15 +102,7 @@ export default function RootScreen(): ReactElement {
       <HousekeepingReadScreen session={session} createWriter={makeTaskWriter} onBack={goHome} />
     ),
     arrivals: () =>
-      noShowTarget === null ? (
-        <ArrivalsScreen
-          session={session}
-          cache={arrivalsCache}
-          createWriter={makeCheckInWriter}
-          onBack={goHome}
-          onNoShow={setNoShowTarget}
-        />
-      ) : (
+      noShowTarget !== null ? (
         <NoShowScreen
           booking={noShowTarget}
           writer={noShowWriter}
@@ -110,7 +110,31 @@ export default function RootScreen(): ReactElement {
           onChanged={() => undefined}
           onClose={() => setNoShowTarget(null)}
         />
+      ) : collecting !== null ? (
+        <CollectScreen
+          session={session}
+          booking={collecting}
+          createWriter={makeCollectWriter}
+          onClose={() => setCollecting(null)}
+        />
+      ) : (
+        <ArrivalsScreen
+          session={session}
+          cache={arrivalsCache}
+          createWriter={makeCheckInWriter}
+          onBack={goHome}
+          onNoShow={setNoShowTarget}
+          onCollectBalance={setCollecting}
+        />
       ),
+    departures: () => (
+      <DeparturesScreen
+        session={session}
+        createCheckOutWriter={makeCheckOutWriter}
+        createCollectWriter={makeCollectWriter}
+        onBack={goHome}
+      />
+    ),
     lookup: () => <LookupScreen session={session} onBack={goHome} />,
     walkIn: () => <WalkInScreen session={session} createFlow={makeWalkInFlow} onBack={goHome} />,
   };
@@ -168,6 +192,7 @@ export default function RootScreen(): ReactElement {
       onLookup={() => setStage('lookup')}
       onArrivals={() => setStage('arrivals')}
       onWalkIn={() => setStage('walkIn')}
+      onDepartures={() => setStage('departures')}
     />
   );
 }
