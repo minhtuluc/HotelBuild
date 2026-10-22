@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { loginCollectionStaff } from './operations-web/collect-fixture';
 
 const HEALTH = '**/api/v1/system/health';
 
@@ -13,6 +14,11 @@ const errorEnvelope = (code: string, traceId: string) =>
   });
 
 test.describe('shell gọi API qua client dùng chung (F0-08)', () => {
+  // Khu vực nhân viên đã yêu cầu đăng nhập (HB-020); customer web không có cổng này.
+  test.beforeEach(async ({ page }, info) => {
+    if (info.project.name.startsWith('operations-web')) await loginCollectionStaff(page);
+  });
+
   test('hiện trạng thái thành công khi máy chủ trả lời', async ({ page }) => {
     await page.route(HEALTH, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'ok' }) }),

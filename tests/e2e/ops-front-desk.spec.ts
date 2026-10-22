@@ -191,6 +191,7 @@ const EXPECTED = {
 
 for (const state of STATES) {
   test(`trạng thái ${state}: nội dung đúng hợp đồng và axe sạch`, async ({ page }) => {
+    await loginCollectionStaff(page); // khu vực nhân viên đã yêu cầu đăng nhập (HB-020)
     await page.goto(`/front-desk?state=${state}`);
     await expect(page.getByText(EXPECTED[state], { exact: false })).toBeVisible();
     const results = await new AxeBuilder({ page })
