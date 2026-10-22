@@ -27,6 +27,7 @@ export const catalog = {
   'home.tasks': 'Nhiệm vụ buồng phòng của tôi',
   'home.lookup': 'Tra cứu booking & khách',
   'home.arrivals': 'Khách đến hôm nay & nhận phòng',
+  'home.walkIn': 'Tạo booking khách vãng lai',
   'home.pinDemo': 'Thử thao tác cần PIN',
   'home.pinDemo.ok': 'Đã mở khoá PIN: {purpose}',
   'home.logout': 'Đăng xuất',

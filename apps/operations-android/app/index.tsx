@@ -16,6 +16,8 @@ import { ArrivalsCache } from '../src/arrivals/reader';
 import { createCheckInWriter } from '../src/arrivals/writer-factory.native';
 import { NoShowScreen } from '../src/no-show/screen';
 import { createNoShowWriter } from '../src/no-show/writer-factory.native';
+import { WalkInScreen } from '../src/walk-in/screen';
+import { createWalkInFlow } from '../src/walk-in/flow-factory.native';
 import { t } from '../src/strings';
 
 type Stage =
@@ -27,7 +29,8 @@ type Stage =
   | 'home'
   | 'housekeeping'
   | 'lookup'
-  | 'arrivals';
+  | 'arrivals'
+  | 'walkIn';
 
 export default function RootScreen(): ReactElement {
   const session = useMemo(createSession, []);
@@ -36,6 +39,7 @@ export default function RootScreen(): ReactElement {
   const noShowWriter = useMemo(() => createNoShowWriter(session), [session]);
   const arrivalsCache = useMemo(() => new ArrivalsCache(), []);
   const [noShowTarget, setNoShowTarget] = useState<BookingSummary | null>(null);
+  const makeWalkInFlow = useCallback(() => createWalkInFlow(session), [session]);
   const [stage, setStage] = useState<Stage>('boot');
   const [currentPassword, setCurrentPassword] = useState('');
   const [profile, setProfile] = useState<UserMe | null>(null);
@@ -108,6 +112,7 @@ export default function RootScreen(): ReactElement {
         />
       ),
     lookup: () => <LookupScreen session={session} onBack={goHome} />,
+    walkIn: () => <WalkInScreen session={session} createFlow={makeWalkInFlow} onBack={goHome} />,
   };
 
   if (stage === 'boot') {
@@ -162,6 +167,7 @@ export default function RootScreen(): ReactElement {
       onTasks={() => setStage('housekeeping')}
       onLookup={() => setStage('lookup')}
       onArrivals={() => setStage('arrivals')}
+      onWalkIn={() => setStage('walkIn')}
     />
   );
 }
