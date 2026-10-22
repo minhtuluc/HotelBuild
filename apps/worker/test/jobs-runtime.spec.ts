@@ -84,6 +84,7 @@ describe('defaultWorkerApp', () => {
 describe('JOB_HANDLERS', () => {
   test('chỉ đăng ký handler cho hàng đợi đã có nghiệp vụ', () => {
     expect(Object.keys(JOB_HANDLERS).sort()).toEqual([
+      'q.alerts-scan',
       'q.export-cleanup',
       'q.hold-expiry',
       'q.no-show-mark',

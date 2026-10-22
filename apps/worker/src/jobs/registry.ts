@@ -1,5 +1,6 @@
 import { exportCleanupJob } from '../export/cleanup.job.js';
 import { reportExportJob } from '../export/report-export.job.js';
+import { alertsScanJob } from './alerts/alerts.job.js';
 import { holdExpiryJob } from './hold-expiry/hold-expiry.job.js';
 import { outboxRelayJob } from './outbox-relay/outbox-relay.job.js';
 import { channelSenders } from '../noti/channels.js';
@@ -16,6 +17,7 @@ import type { JobRegistry } from './types.js';
  */
 export const JOB_HANDLERS: JobRegistry = {
   'q.hold-expiry': holdExpiryJob,
+  'q.alerts-scan': alertsScanJob,
   'q.report-export': reportExportJob,
   'q.export-cleanup': exportCleanupJob,
   'q.outbox-relay': outboxRelayJob,

@@ -118,6 +118,7 @@ describe('createWorkerApp', () => {
       'q.outbox-relay:q.outbox-relay-scheduler:5000:{"name":"outbox-relay","data":{}}',
       'q.export-cleanup:q.export-cleanup-scheduler:900000:{"name":"export-cleanup","data":{}}',
       'q.refund-payout:q.refund-payout-scheduler:30000:{"name":"refund-payout","data":{}}',
+      'q.alerts-scan:q.alerts-scan-scheduler:300000:{"name":"alerts-scan","data":{}}',
     ]);
   });
   it('nhịp lặp lấy từ cấu hình (không hằng số hoá 30/900 giây)', async () => {
