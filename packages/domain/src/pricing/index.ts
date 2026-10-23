@@ -95,6 +95,8 @@ export interface PricingInput {
   readonly ratePlan: RatePlan;
   readonly checkIn: string;
   readonly checkOut: string;
+  /** Số đơn vị bán của booking (`roomCount`; phòng DOR theo giường). Mặc định 1 — giữ nguyên kết quả cũ. */
+  readonly units?: number;
   readonly channelCode: string;
   readonly now: number;
   readonly seasons: readonly Season[];
@@ -173,7 +175,7 @@ import {
 import { nightly, losMultiplier } from './nightly.js';
 import { promotions } from './promotions.js';
 import { dateDay, dateString, validate } from './validation.js';
-export const ENGINE_VERSION = 'pricing-1.0.0';
+export const ENGINE_VERSION = 'pricing-1.1.0';
 /** Pure loaded-configuration quote; callers resolve Vietnamese dates and transactional promotion usage. */
 export function quotePrice(i: PricingInput): PricingResult {
   try {
@@ -183,15 +185,18 @@ export function quotePrice(i: PricingInput): PricingResult {
       warnings: PricingWarning[] = [],
       nights: NightPrice[] = [];
     const los = losMultiplier(i, count);
-    let subtotal = 0n;
+    // QĐ-06 mục 1: `nights[].nightlyPrice` là giá MỘT đơn vị; tổng, trần giảm, sàn và cọc tính trên N đơn vị.
+    const units = BigInt(i.units ?? 1);
+    let perUnit = 0n;
     for (let n = 0; n < count; n++) {
       const result = nightly(i, dateString(start + n), los);
-      subtotal += BigInt(result.night.nightlyPrice);
+      perUnit += BigInt(result.night.nightlyPrice);
       nights.push(result.night);
       warnings.push(...result.warnings);
     }
+    const subtotal = perUnit * units;
     const sub = rational(subtotal),
-      p = promotions(i, sub, multiply(min, integer(count))),
+      p = promotions(i, sub, multiply(min, integer(count * Number(units)))),
       total = floor1000(subtract(sub, p.discount));
     return ok({
       engineVersion: ENGINE_VERSION,
