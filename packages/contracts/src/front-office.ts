@@ -68,9 +68,49 @@ export const noShowResponseSchema = z.object({
   refundRequestId: z.string().min(1).nullable(),
 });
 
+/**
+ * `POST /front-office/no-show/preview` — HB-204. Xem trước tiền no-show, **không ghi**, không PIN, không
+ * `Idempotency-Key`; số do cùng engine với lệnh ghi (BR-CANCEL-06, BR-CANCEL-10) và không ràng buộc:
+ * lệnh ghi tính lại sau khoá (ADR-014).
+ */
+export const noShowPreviewRequestSchema = z.strictObject({
+  bookingId: z.string().min(1),
+});
+
+export const noShowPreviewSchema = z.object({
+  bookingId: z.string().min(1),
+  /** Phụ thu đêm đầu theo bậc bắt tất; 0 khi không áp dụng. */
+  penaltyAmount: z.number().int().min(0),
+  /** Tiền hoàn dự kiến sau khi trừ phạt; 0 khi không có. */
+  expectedRefundAmount: z.number().int().min(0),
+  /** Mốc sớm nhất được ghi no-show: 23:59 giờ VN ngày nhận phòng (BR-FO-02). */
+  markableFrom: isoUtcTimestampSchema,
+  computedAt: isoUtcTimestampSchema,
+});
+
+/**
+ * `POST /front-office/check-out/preview` — HB-204. Cùng ràng buộc thân lệnh với check-out nhưng **không**
+ * có `pinToken` (không ghi, không tiền ra); số không ràng buộc (BR-FO-03, BR-FO-05, BR-CANCEL-09).
+ */
+export const checkOutPreviewRequestSchema = checkOutRequestSchema.omit({ pinToken: true });
+
+export const checkOutPreviewSchema = z.object({
+  bookingId: z.string().min(1),
+  /** Phụ thu trả muộn/sớm do máy chủ tính. */
+  feeAmount: z.number().int().min(0),
+  extrasAmount: z.number().int().min(0),
+  /** Số dư dự kiến phải thu sau phụ thu và phát sinh. */
+  balanceDue: z.number().int().min(0),
+  computedAt: isoUtcTimestampSchema,
+});
+
 export type CheckInRequest = z.infer<typeof checkInRequestSchema>;
 export type CheckInResponse = z.infer<typeof checkInResponseSchema>;
 export type CheckOutRequest = z.infer<typeof checkOutRequestSchema>;
 export type CheckOutResponse = z.infer<typeof checkOutResponseSchema>;
 export type NoShowRequest = z.infer<typeof noShowRequestSchema>;
 export type NoShowResponse = z.infer<typeof noShowResponseSchema>;
+export type NoShowPreviewRequest = z.infer<typeof noShowPreviewRequestSchema>;
+export type NoShowPreview = z.infer<typeof noShowPreviewSchema>;
+export type CheckOutPreviewRequest = z.infer<typeof checkOutPreviewRequestSchema>;
+export type CheckOutPreview = z.infer<typeof checkOutPreviewSchema>;

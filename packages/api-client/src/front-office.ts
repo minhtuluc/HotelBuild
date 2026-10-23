@@ -5,6 +5,8 @@
 import {
   checkInRequestSchema,
   checkInResponseSchema,
+  checkOutPreviewRequestSchema,
+  checkOutPreviewSchema,
   checkOutRequestSchema,
   checkOutResponseSchema,
   guestAnonymizeRequestSchema,
@@ -12,15 +14,20 @@ import {
   guestCreateRequestSchema,
   guestLoyaltySchema,
   guestSummarySchema,
+  housekeepingTaskCreateRequestSchema,
   housekeepingTaskSchema,
   housekeepingTaskUpdateRequestSchema,
   listResponseSchema,
+  noShowPreviewRequestSchema,
+  noShowPreviewSchema,
   noShowRequestSchema,
   noShowResponseSchema,
   reconciliationCloseRequestSchema,
   reconciliationCloseResponseSchema,
   type CheckInRequest,
   type CheckInResponse,
+  type CheckOutPreview,
+  type CheckOutPreviewRequest,
   type CheckOutRequest,
   type CheckOutResponse,
   type GuestAnonymizeRequest,
@@ -29,8 +36,11 @@ import {
   type GuestLoyalty,
   type GuestSummary,
   type HousekeepingTask,
+  type HousekeepingTaskCreateRequest,
   type HousekeepingTaskUpdateRequest,
   type ListPage,
+  type NoShowPreview,
+  type NoShowPreviewRequest,
   type NoShowRequest,
   type NoShowResponse,
   type ReconciliationCloseRequest,
@@ -43,6 +53,10 @@ export interface FrontOfficeApi {
   /** 🔒 Thu phát sinh khi trả phòng; PIN gắn người, hành động và amount (BR-RBAC-05). */
   checkOut(input: CheckOutRequest): Promise<ApiResponse<CheckOutResponse>>;
   noShow(input: NoShowRequest): Promise<ApiResponse<NoShowResponse>>;
+  /** Xem trước tiền no-show: không ghi, không PIN; số không ràng buộc (HB-204). */
+  noShowPreview(input: NoShowPreviewRequest): Promise<ApiResponse<NoShowPreview>>;
+  /** Xem trước phụ thu/số dư trả phòng: không ghi, **không** PIN; số không ràng buộc (HB-204). */
+  checkOutPreview(input: CheckOutPreviewRequest): Promise<ApiResponse<CheckOutPreview>>;
   /** 🔒 Chốt ca/ngày theo (người thu, ngày VN) — BR-PAY-06,10. */
   closeReconciliation(
     input: ReconciliationCloseRequest,
@@ -73,6 +87,20 @@ export function createFrontOfficeApi(client: ApiClient): FrontOfficeApi {
         body: noShowRequestSchema.parse(input),
         decoder: noShowResponseSchema,
       }),
+    noShowPreview: (input) =>
+      client.request({
+        method: 'POST',
+        path: '/front-office/no-show/preview',
+        body: noShowPreviewRequestSchema.parse(input),
+        decoder: noShowPreviewSchema,
+      }),
+    checkOutPreview: (input) =>
+      client.request({
+        method: 'POST',
+        path: '/front-office/check-out/preview',
+        body: checkOutPreviewRequestSchema.parse(input),
+        decoder: checkOutPreviewSchema,
+      }),
     closeReconciliation: (input) =>
       client.request({
         method: 'POST',
@@ -98,6 +126,8 @@ export interface HousekeepingApi {
     input: HousekeepingTaskUpdateRequest,
     ifMatch: string,
   ): Promise<ApiResponse<HousekeepingTask>>;
+  /** Ghi nhận nhiệm vụ dọn/biên bản kiểm cho phòng chưa có bằng chứng sẵn sàng (HB-204, BR-FO-07). */
+  createTask(input: HousekeepingTaskCreateRequest): Promise<ApiResponse<HousekeepingTask>>;
 }
 
 export function createHousekeepingApi(client: ApiClient): HousekeepingApi {
@@ -117,6 +147,13 @@ export function createHousekeepingApi(client: ApiClient): HousekeepingApi {
         ifMatch,
         decoder: housekeepingTaskSchema,
       }),
+    createTask: (input) =>
+      client.request({
+        method: 'POST',
+        path: '/housekeeping/tasks',
+        body: housekeepingTaskCreateRequestSchema.parse(input),
+        decoder: housekeepingTaskSchema,
+      }),
   };
 }
 
@@ -129,6 +166,8 @@ export interface GuestApi {
     limit?: number;
     cursor?: string;
   }): Promise<ApiResponse<ListPage<GuestSummary>>>;
+  /** Hồ sơ khách theo id trong phạm vi; ngoài phạm vi hoặc không có ⇒ 404 (HB-204). */
+  get(guestId: string): Promise<ApiResponse<GuestSummary>>;
   create(input: GuestCreateRequest): Promise<ApiResponse<GuestSummary>>;
   /** Ẩn danh hoá theo yêu cầu khách — không xoá cứng (BR-CRM-05, §2.14). */
   anonymize(guestId: string, input: GuestAnonymizeRequest): Promise<ApiResponse<GuestSummary>>;
@@ -145,6 +184,12 @@ export function createGuestApi(client: ApiClient): GuestApi {
         path: '/guests',
         ...(query === undefined ? {} : { query }),
         decoder: listResponseSchema(guestSummarySchema),
+      }),
+    get: (guestId) =>
+      client.request({
+        method: 'GET',
+        path: `/guests/${encodeURIComponent(guestId)}`,
+        decoder: guestSummarySchema,
       }),
     create: (input) =>
       client.request({

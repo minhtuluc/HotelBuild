@@ -299,9 +299,12 @@ theo `tiers[i].hoursBeforeCheckIn/refundPercent/chargeFirstNight` chỉ ra dòng
 |--------|-----------|-------|-------------------|---------------|----|----|
 | POST | `/api/v1/front-office/check-in` | Check-in khách | FRONT_DESK | `bookingId`, `idNumber`, `actualRoomIds[]`, `earlyCheckIn`, `note` | UC-FO-01 | BR-FO-01,02,04 |
 | POST | `/api/v1/front-office/check-out` | Check-out, thu phát sinh, ghi nhận trả phòng sớm với `cancelReason = EARLY_CHECKOUT`; ngưỡng đọc từ `CancellationPolicy.earlyCheckoutFreeHours`/`earlyCheckoutRefundPct` | FRONT_DESK | `bookingId`, `extras[]`, `lateCheckOut`, `earlyCheckOut`, `pinToken` 🔒 | UC-FO-02 | BR-FO-03,05,06, BR-CANCEL-09 |
+| POST | `/api/v1/front-office/check-out/preview` | **Xem trước** phụ thu trả muộn/sớm, phát sinh và số dư, không ghi, **không PIN** (HB-204). Trả `feeAmount`, `extrasAmount`, `balanceDue`, `computedAt` | FRONT_DESK | `bookingId`, `extras[]`, `lateCheckOut`, `earlyCheckOut`, `note` | UC-FO-02 | BR-FO-03,05, BR-CANCEL-09 |
 | POST | `/api/v1/front-office/no-show` | Ghi nhận khách không đến | FRONT_DESK | `bookingId`, `reason` | UC-FO-04 | BR-CANCEL-10 |
+| POST | `/api/v1/front-office/no-show/preview` | **Xem trước** tiền no-show, không ghi (HB-204). Trả `penaltyAmount`, `expectedRefundAmount`, `markableFrom` (23:59 giờ VN ngày nhận phòng), `computedAt` | FRONT_DESK | `bookingId` | UC-FO-04 | BR-CANCEL-06,10, BR-FO-02 |
 | GET | `/api/v1/housekeeping/tasks` | Danh sách nhiệm vụ trong phạm vi; HOUSEKEEPING chỉ thấy việc được giao | HOUSEKEEPING, FRONT_DESK, MANAGER | `propertyId`, `businessDate`, `status`, `assignedTo`, `limit`, `cursor` | UC-FO-03 | BR-FO-06, BR-RBAC-02,03 |
 | PATCH | `/api/v1/housekeeping/tasks/{taskId}` | Cập nhật nhiệm vụ theo quyền từng trường; không tự tăng tồn tương lai | HOUSEKEEPING, FRONT_DESK, MANAGER | `status`, `note`, `reason`; `assignedTo` chỉ FRONT_DESK/MANAGER; `If-Match`, `Idempotency-Key` | UC-FO-03 | BR-FO-06,07 |
+| POST | `/api/v1/housekeeping/tasks` | **Ghi nhận** nhiệm vụ dọn (`PENDING`) hoặc biên bản đã kiểm (`INSPECTED`) cho `(roomId, businessDate)` chưa có bằng chứng sẵn sàng của lượt giải phóng hiện tại (HB-204); trả `201` nhiệm vụ như PATCH | FRONT_DESK, MANAGER | `roomId`, `businessDate`, `status` (`PENDING`\|`INSPECTED`), `note`, `reason` (bắt buộc); `Idempotency-Key` | UC-FO-03 | BR-FO-06,07 |
 
 HB-148 theo BR-FO-07: HOUSEKEEPING chỉ chuyển việc được giao `PENDING → IN_PROGRESS → DONE`.
 FRONT_DESK/MANAGER kiểm tra `DONE → INSPECTED` hoặc mở lại `DONE/INSPECTED → PENDING`;
@@ -312,12 +315,26 @@ PATCH khoá phòng vật lý rồi nhiệm vụ, kiểm lại phạm vi/người
 kết quả idempotency trong cùng transaction. `completedAt` được đặt lúc DONE, giữ khi INSPECTED,
 xoá khi mở lại. Trạng thái sai → 409; phiên bản cũ → 412; thiếu `If-Match` → 428. GET `no-store`.
 
+HB-204 — **tuyến xem trước** (`…/no-show/preview`, `…/check-out/preview`): chỉ đọc dù dùng `POST`; không ghi bảng nào, không audit,
+không 🔒 PIN, không `Idempotency-Key`. Số do **cùng engine** với lệnh ghi tương ứng; **không ràng buộc**: lệnh ghi tính lại sau khoá
+bằng `clock_timestamp()` (ADR-014), nên số xem trước có thể lệch khi đổi mốc giờ hoặc dữ liệu. Booking sai trạng thái/ngoài
+phạm vi trả đúng mã lỗi của lệnh ghi (`404 E_GEN_NOT_FOUND`, `409 E_BOOK_INVALID_STATE`). `POST /housekeeping/tasks` là lệnh ghi: có
+`Idempotency-Key`, audit cùng transaction; đã có nhiệm vụ mở (`PENDING`/`IN_PROGRESS`) cho cùng `(roomId, businessDate)` →
+`409 E_FO_TASK_TRANSITION_NOT_ALLOWED`; phòng ngoài phạm vi → `404`; HOUSEKEEPING và vai trò khác → `403`.
+
+Ví dụ (HB-204): `POST /api/v1/front-office/no-show/preview` thân `{ "bookingId": "b1" }` → `200`
+`{ "bookingId": "b1", "penaltyAmount": 600000, "expectedRefundAmount": 0, "markableFrom": "2026-10-23T16:59:00.000Z", "computedAt": "2026-10-23T08:00:00.000Z" }`;
+`POST /api/v1/front-office/check-out/preview` thân `{ "bookingId": "b1", "lateCheckOut": true, "earlyCheckOut": false }` → `200`
+`{ "bookingId": "b1", "feeAmount": 550000, "extrasAmount": 0, "balanceDue": 550000, "computedAt": "2026-10-23T05:00:00.000Z" }`;
+`POST /api/v1/housekeeping/tasks` thân `{ "roomId": "r1", "businessDate": "2026-10-23", "status": "INSPECTED", "reason": "Lễ tân kiểm phòng trước khi giao" }` → `201` nhiệm vụ.
+
 ### 2.10. CRM — Khách hàng (3 UC)
 
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |
 |--------|-----------|-------|-------------------|---------------|----|----|
 | GET | `/api/v1/guests` | Tra cứu hồ sơ khách | FRONT_DESK | `q`, `loyaltyTier`, `blacklisted`, `propertyId` | UC-CRM-01 | BR-CRM-01 |
 | POST | `/api/v1/guests` | Tạo hồ sơ khách (nhận diện theo SĐT chuẩn hoá) | FRONT_DESK | `fullName`, `phone`, `email`, `idNumber`, `dob`, `nationality`, `consentMarketing` | UC-CRM-01 | BR-CRM-01, NFR-COMP-01 |
+| GET | `/api/v1/guests/{guestId}` | Hồ sơ khách theo id trong phạm vi (HB-204; `me` là tuyến riêng bên dưới, không phải id). Ngoài phạm vi hoặc không tồn tại → `404 E_GEN_NOT_FOUND` (không phân biệt) | FRONT_DESK | — | UC-CRM-01 | BR-CRM-01, BR-RBAC-02 |
 | POST | `/api/v1/guests/{guestId}/anonymize` | Ẩn danh hoá theo yêu cầu khách (không xoá cứng) | MANAGER | `reason`, `requestedAt` | UC-CRM-01 | BR-CRM-05, NFR-COMP-01 |
 | GET | `/api/v1/guests/{guestId}/loyalty` | Hạng, điểm, tổng đêm tích luỹ 12 tháng | FRONT_DESK | — | UC-CRM-02 | BR-CRM-02,03 |
 | GET | `/api/v1/guests/me` | Hồ sơ của **chính khách** đang đăng nhập (phiên khách, không lộ `guestId` cho client) | — | — | UC-CRM-01 | BR-CRM-01 |
@@ -427,6 +444,7 @@ Response 201:
 - Hệ số công suất lấy từ `OccupancySnapshot`; ngưỡng đọc từ `pricing.occupancyMidPct`/`pricing.occupancyHighPct`; snapshot cũ hơn 5 phút → hệ số 1,00 (BR-RATE-01, BR-SYS-02; 02 §4.3).
 - Khuyến mãi áp **một lần trên tổng tạm tính** theo thứ tự tất định: `AMOUNT` trước, `PERCENT` sau, cùng loại theo `code` tăng dần; tổng giảm cắt về `pricing.maxDiscountPct`; chạm sàn → **bỏ mã, giữ giá gốc, vẫn cho xác nhận** và trả `E_RATE_BELOW_FLOOR` trong `warnings[]` (BR-RATE-10,11,12). Mã hết hạn/hết lượt → `422 E_RATE_PROMO_INVALID` (BR-RATE-14); cùng vi phạm sàn nhưng xảy ra ở màn hình cấu hình khuyến mãi thì **chặn bằng `422 E_RATE_BELOW_FLOOR`** (BR-RATE-12).
 - `expiresAt` theo BR-RATE-15; quá hạn phải tính lại. Cùng đầu vào **PHẢI** cùng kết quả, chỉ `quotedAt` được khác (BR-RATE-17). `warnings[]` còn chứa cảnh báo cân bằng giá khi giá niêm yết **sau kẹp** của kênh OTA thấp hơn `WEB`; `AGENCY` ngoài phạm vi, không chặn lưu (BR-RATE-09).
+- **Nhiều phòng (`roomCount = N`, QĐ-06 mục 1, HB-205):** mỗi `nights[].nightlyPrice` là giá **một đơn vị bán** (DOR: một giường); `subtotal`, `discountAmount`, `total` và `depositAmount` là **tổng N đơn vị** (`subtotal = N × Σ nightlyPrice`). Khuyến mãi áp **một lần** trên subtotal tổng theo thứ tự `AMOUNT` rồi `PERCENT`; trần `pricing.maxDiscountPct` và sàn (`N × Σ minPrice`) tính trên tổng (BR-RATE-10,11,12,13). Cùng đầu vào PHẢI cùng kết quả trên mọi bề mặt (BR-RATE-17). `engineVersion` tăng khi áp ngữ nghĩa này.
 - Mã lỗi: `400 E_BOOK_MISSING_FIELD`, `422 E_BOOK_OVER_CAPACITY`, `422 E_BOOK_MIN_NIGHTS`, `409 E_INV_NO_AVAILABILITY`. Giá trị mặc định gói giá (`minNights`, `losDiscountEnabled`) theo 02 §4.4.
 
 `quoteId` phải gắn principal/phiên báo giá cùng fingerprint `{propertyId, roomTypeId, ratePlanCode, channelCode, checkIn, checkOut, adults, children, roomCount, promotionCodes}` và snapshot cấu hình đã dùng. Đổi bất cứ trường nào → `409 E_RATE_QUOTE_MISMATCH`. Giá/hệ số client gửi không có thẩm quyền. Hết TTL hoặc mất cache → trả 410 và báo giá mới để khách xác nhận, không âm thầm tăng tiền. Báo giá chưa giữ tồn; khi chuyển sang hold phải kiểm tra tồn và hạn mức khuyến mãi trong transaction. Giá đã chốt trong hold hợp lệ không tăng do quote hết TTL trong lúc chờ PSP.
