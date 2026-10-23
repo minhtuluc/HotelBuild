@@ -29,6 +29,12 @@ function unique(values: readonly string[]): void {
     'Empty or duplicate identity',
   );
 }
+function validateUnits(units: number | undefined): void {
+  requireValid(
+    units === undefined || (Number.isSafeInteger(units) && units >= 1 && units <= 1000),
+    'Units must be an integer between 1 and 1000',
+  );
+}
 function validateStay(i: PricingInput): number {
   const nights = dateDay(i.checkOut) - dateDay(i.checkIn);
   timestamp(i.now);
@@ -54,6 +60,7 @@ function validateStay(i: PricingInput): number {
     'Stay outside rate plan bounds',
   );
   percent(i.ratePlan.depositPercent);
+  validateUnits(i.units);
   if (i.ratePlan.fixedNightlyPrice !== undefined) integer(i.ratePlan.fixedNightlyPrice);
   return nights;
 }

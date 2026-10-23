@@ -94,7 +94,8 @@ export async function insertHold(
     },
     select: { id: true, code: true, created_at: true },
   });
-  const pricePerNight = BigInt(Math.floor(creation.quote.total / Math.max(nights, 1)));
+  // Đơn giá phòng-đêm của MỘT đơn vị bán: tổng kỳ gồm cả N đơn vị (QĐ-06 mục 1).
+  const pricePerNight = BigInt(Math.floor(creation.quote.total / Math.max(nights * rooms, 1)));
   const adults = spread(creation.input.adults, rooms);
   const children = spread(creation.input.children, rooms);
   for (const [index, unit] of creation.units.entries()) {

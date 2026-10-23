@@ -113,7 +113,8 @@ export class RateQuoteService {
         'Tỷ lệ cọc của gói giá không biểu diễn được bằng số nguyên phần trăm.',
       );
 
-    const result = quotePrice({ ...facts, channelCode: input.channelCode });
+    // QĐ-06 mục 1: `roomCount` là số đơn vị bán; engine trả tổng N đơn vị, `nights[]` giữ giá một đơn vị.
+    const result = quotePrice({ ...facts, channelCode: input.channelCode, units: input.roomCount });
     if (!result.ok) throw engineFailure(result.error);
     const priced = result.value;
     const engineVersion = priced.engineVersion;
