@@ -14,6 +14,8 @@ import { lockBooking } from '../../book/bookings/lock.js';
 import type { LockedBooking } from '../../book/bookings/lock.js';
 import type { BookingLedger } from '../../pay/ledger/service.js';
 import { conflict, invalid, missing } from './errors.js';
+import { matchRoomsToUnits } from './matching.js';
+import type { UnitRoom } from './matching.js';
 import type { Command } from './validation.js';
 
 type Tx = Prisma.TransactionClient;
@@ -114,25 +116,44 @@ export async function blockedRooms(
   return new Map(rows.map((row) => [row.room_id, true]));
 }
 
+const TIME_ZONE = 'Asia/Ho_Chi_Minh';
+
 /**
- * Bằng chứng sẵn sàng của **lượt giải phóng hiện tại**: nhiệm vụ buồng phòng của đúng ngày nghiệp vụ
- * nhận phòng. Task của ngày cũ không chứng minh phòng sạch sau lượt ở mới (BR-FO-07) nên không đọc.
+ * Bằng chứng sẵn sàng của **lượt giải phóng gần nhất** (BR-FO-07, HB-206/F7-QA-05): nhiệm vụ buồng phòng
+ * mới nhất `business_date ∈ [L, ngày nhận phòng]` của từng phòng, trong đó `L` là ngày giải phóng gần nhất
+ * của một lượt ở **đã diễn ra** (booking khác `CHECKED_IN`/`CHECKED_OUT`; ngày nhả theo giờ VN, chưa nhả thì
+ * `end_date`; loại dòng nhả do đổi phòng lúc nhận vì phòng đó chưa ai ở) với `L ≤` ngày nhận phòng.
+ * Phòng chưa từng có lượt ở: `L` = ngày nhận phòng ⇒ chỉ nhiệm vụ đúng ngày đó (luật cũ, bộ khoá HB-143).
+ * Nhiệm vụ trước `L` thuộc lượt trước nên không chứng minh phòng sạch sau lượt ở mới.
  */
 export async function readinessTasks(
   tx: Tx,
   roomIds: readonly string[],
+  bookingId: string,
   businessDate: string,
 ): Promise<ReadonlyMap<string, CheckInUnit['readinessForCurrentRelease']>> {
-  const rows = await tx.housekeeping_tasks.findMany({
-    where: { room_id: { in: [...roomIds] }, business_date: new Date(`${businessDate}T00:00:00Z`) },
-    orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-    select: { room_id: true, status: true },
-  });
+  const rows = await tx.$queryRaw<{ room_id: string; status: string }[]>`
+    WITH last_release AS (
+      SELECT a.room_id,
+             max(coalesce((a.released_at AT TIME ZONE ${TIME_ZONE})::date, a.end_date)) AS released_on
+        FROM room_assignments a
+        JOIN booking_rooms br ON br.id = a.booking_room_id
+        JOIN bookings b ON b.id = br.booking_id
+       WHERE a.room_id = ANY(${roomIds}::uuid[])
+         AND br.booking_id <> ${bookingId}::uuid
+         AND b.status IN ('CHECKED_IN', 'CHECKED_OUT')
+         AND coalesce(a.release_reason, '') <> 'CHECKIN_ROOM_CHANGED'
+         AND coalesce((a.released_at AT TIME ZONE ${TIME_ZONE})::date, a.end_date) <= ${businessDate}::date
+       GROUP BY a.room_id)
+    SELECT DISTINCT ON (t.room_id) t.room_id, t.status::text AS status
+      FROM housekeeping_tasks t
+      LEFT JOIN last_release l ON l.room_id = t.room_id
+     WHERE t.room_id = ANY(${roomIds}::uuid[])
+       AND t.business_date <= ${businessDate}::date
+       AND t.business_date >= coalesce(l.released_on, ${businessDate}::date)
+     ORDER BY t.room_id, t.business_date DESC, t.created_at DESC, t.id DESC`;
   const readiness = new Map<string, CheckInUnit['readinessForCurrentRelease']>();
-  for (const row of rows) {
-    if (readiness.has(row.room_id)) continue;
-    readiness.set(row.room_id, READINESS[row.status] ?? null);
-  }
+  for (const row of rows) readiness.set(row.room_id, READINESS[row.status] ?? null);
   return readiness;
 }
 
@@ -181,7 +202,8 @@ export function money(value: bigint): number {
 
 export interface CheckInFacts {
   readonly booking: LockedBooking;
-  readonly bookingRooms: readonly { readonly id: string }[];
+  /** Ghép phòng thực tế ↔ đơn vị bán (theo thứ tự `booking_rooms.id`), độc lập thứ tự `actualRoomIds`. */
+  readonly assignments: readonly UnitRoom[];
   readonly units: readonly CheckInUnit[];
   readonly checkInDate: string;
   readonly checkOutDate: string;
@@ -229,10 +251,19 @@ export async function lockCheckInFacts(
     booking.checkOut,
   );
   const blocked = await blockedRooms(tx, input.actualRoomIds, checkInDate);
-  const readiness = await readinessTasks(tx, input.actualRoomIds, checkInDate);
+  const readiness = await readinessTasks(tx, input.actualRoomIds, booking.id, checkInDate);
+  const current = await tx.$queryRaw<{ booking_room_id: string; room_id: string }[]>`
+    SELECT booking_room_id, room_id FROM room_assignments
+     WHERE booking_room_id = ANY(${bookingRooms.map((room) => room.id)}::uuid[]) AND released_at IS NULL
+     ORDER BY booking_room_id, id`;
+  const assignments = matchRoomsToUnits(
+    bookingRooms.map((room) => room.id),
+    new Map(current.map((row) => [row.booking_room_id, row.room_id])),
+    input.actualRoomIds,
+  );
   return {
     booking,
-    bookingRooms,
+    assignments,
     units: input.actualRoomIds.map((roomId) => ({
       roomId,
       bedNo: 0,

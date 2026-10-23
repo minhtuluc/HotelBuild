@@ -84,10 +84,7 @@ export class CheckInService {
 
     const checkedInAt = await writeCheckIn(tx, this.audit, actor, {
       booking: facts.booking,
-      assignments: facts.bookingRooms.map((room, index) => ({
-        bookingRoomId: room.id,
-        roomId: input.actualRoomIds[index]!,
-      })),
+      assignments: facts.assignments,
       roomIds: input.actualRoomIds,
       note,
       idNumber: input.idNumber,
