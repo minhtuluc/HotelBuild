@@ -155,6 +155,9 @@ function independentOracle(): Record<string, Expected> {
     status: 400,
     method: RequestMethod.GET,
   };
+  // HB-207 / api.md §2.9: ghi nhận nhiệm vụ/biên bản kiểm chỉ FRONT_DESK, MANAGER; thân oracle không hợp lệ ⇒ 400.
+  // prettier-ignore
+  keyed[`${RequestMethod.POST}:housekeeping/tasks`] = { roles: ['FRONT_DESK', 'MANAGER'], status: 400, method: RequestMethod.POST };
   keyed[`${RequestMethod.PATCH}:housekeeping/tasks/:taskId`] = {
     roles: ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER'],
     status: 428,

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  housekeepingTaskCreateRequestSchema,
   housekeepingTaskQuerySchema,
   housekeepingTaskUpdateRequestSchema,
 } from '@pinehill/contracts';
@@ -12,6 +13,18 @@ export const forbidden = () =>
 export const missing = () => new AppError(404, 'E_GEN_NOT_FOUND', 'Không tìm thấy nhiệm vụ.');
 export const invalid = () =>
   new AppError(400, 'E_GEN_VALIDATION_FAILED', 'Yêu cầu nhiệm vụ không hợp lệ.');
+export const taskExists = () =>
+  new AppError(
+    409,
+    'E_FO_TASK_TRANSITION_NOT_ALLOWED',
+    'Phòng đã có nhiệm vụ cho ngày này; hãy cập nhật nhiệm vụ đó.',
+  );
+export const roomNotActive = () =>
+  new AppError(
+    409,
+    'E_FO_TASK_TRANSITION_NOT_ALLOWED',
+    'Phòng không ở trạng thái hoạt động nên không ghi nhận nhiệm vụ.',
+  );
 export const conflict = () =>
   new AppError(412, 'E_GEN_VERSION_CONFLICT', 'Nhiệm vụ đã thay đổi; hãy tải lại.');
 const uuidSchema = z.uuid().transform((s) => s.toLowerCase());
@@ -23,7 +36,9 @@ const querySchema = housekeepingTaskQuerySchema.extend({
 const updateSchema = housekeepingTaskUpdateRequestSchema.extend({
   assignedTo: uuidSchema.nullable().optional(),
 });
+const createSchema = housekeepingTaskCreateRequestSchema.extend({ roomId: uuidSchema });
 export type Query = z.infer<typeof querySchema>;
+export type Create = z.infer<typeof createSchema>;
 export type Update = z.infer<typeof updateSchema>;
 export function taskId(value: unknown) {
   const result = uuidSchema.safeParse(value);
@@ -49,6 +64,20 @@ export function updateInput(value: unknown): Update {
     ...input,
     ...(input.note === undefined ? {} : { note: maskTaskText(input.note) }),
     ...(input.reason === undefined ? {} : { reason: maskTaskText(input.reason) }),
+  };
+}
+/** Thân `POST /housekeeping/tasks` (HB-207): ngày phải là ngày lịch có thật; chữ tự do được che trước khi lưu. */
+export function createInput(value: unknown): Create {
+  const result = createSchema.safeParse(value);
+  if (!result.success) throw invalid();
+  const input = result.data;
+  const day = new Date(`${input.businessDate}T00:00:00Z`);
+  if (!Number.isFinite(day.getTime()) || day.toISOString().slice(0, 10) !== input.businessDate)
+    throw invalid();
+  return {
+    ...input,
+    ...(input.note === undefined ? {} : { note: maskTaskText(input.note) }),
+    reason: maskTaskText(input.reason),
   };
 }
 export function expectedVersion(value: unknown): bigint {

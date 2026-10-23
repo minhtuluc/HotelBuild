@@ -8,10 +8,12 @@ import { RetryTransaction } from '../../../common/idempotency/transaction-retry.
 import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import { taskSelect, project } from './projection.js';
 import type { Task } from './projection.js';
-import { conflict, forbidden, invalid, missing } from './validation.js';
-import type { Query, Update } from './validation.js';
+import { conflict, forbidden, invalid, missing, roomNotActive, taskExists } from './validation.js';
+import type { Create, Query, Update } from './validation.js';
 import { fieldPermissions, transition } from './transitions.js';
 const readers = ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER'];
+/** Vai trò được ghi nhận nhiệm vụ/biên bản kiểm cho phòng (HB-207; api.md §2.9). */
+const creators = ['FRONT_DESK', 'MANAGER'];
 function changes(input: Update, clock: Clock): Prisma.housekeeping_tasksUncheckedUpdateInput {
   return {
     ...(input.status === undefined ? {} : { status: input.status }),
@@ -152,6 +154,77 @@ export class HousekeepingService {
       !user.user_property_scopes.some((scope) => scope.property_id === propertyId)
     )
       throw invalid();
+  }
+
+  /** Kiểm trước idempotency: vai trò, phòng tồn tại và nằm trong phạm vi (không đọc trạng thái phòng). */
+  async authorizeCreate(
+    tx: Prisma.TransactionClient | PrismaClient,
+    actor: AuthorizedActor,
+    input: Create,
+  ): Promise<void> {
+    if (!creators.includes(actor.role)) throw forbidden();
+    const room = await tx.rooms.findUnique({
+      where: { id: input.roomId },
+      select: { property_id: true },
+    });
+    if (!room) throw missing();
+    requireProperty(actor, room.property_id);
+  }
+  /**
+   * Ghi nhận nhiệm vụ cho `(phòng, ngày)` (BR-FO-07, F7-QA-01). Khoá phòng trước như check-in và PATCH
+   * (ADR-014); ràng buộc duy nhất `(room_id, business_date)` + `skipDuplicates` làm hai lệnh đồng thời
+   * chỉ có một lệnh ghi được mà không làm hỏng giao dịch. Đã có nhiệm vụ (mọi trạng thái) ⇒ 409:
+   * chuyển trạng thái đi qua PATCH, không tạo dòng thứ hai.
+   */
+  async create(tx: Prisma.TransactionClient, actor: AuthorizedActor, input: Create) {
+    try {
+      await this.authorizeCreate(tx, actor, input);
+      await tx.$executeRaw`SET LOCAL lock_timeout='1s'`;
+      const [locked] = await tx.$queryRaw<
+        { property_id: string; status: string }[]
+      >`SELECT property_id, status FROM rooms WHERE id=${input.roomId}::uuid FOR UPDATE`;
+      if (!locked) throw missing();
+      requireProperty(actor, locked.property_id);
+      await this.currentActor(tx, actor, locked.property_id);
+      if (locked.status !== 'ACTIVE') throw roomNotActive();
+      const now = this.clock.now();
+      const inserted = await tx.housekeeping_tasks.createMany({
+        data: [
+          {
+            room_id: input.roomId,
+            business_date: new Date(`${input.businessDate}T00:00:00Z`),
+            status: input.status,
+            note: input.note ?? null,
+            completed_at: input.status === 'INSPECTED' ? now : null,
+            created_at: now,
+            updated_at: now,
+          },
+        ],
+        skipDuplicates: true,
+      });
+      if (inserted.count !== 1) throw taskExists();
+      const created = await tx.housekeeping_tasks.findFirst({
+        where: {
+          room_id: input.roomId,
+          business_date: new Date(`${input.businessDate}T00:00:00Z`),
+        },
+        select: taskSelect,
+      });
+      if (!created) throw new Error('HOUSEKEEPING_CREATE_READBACK_MISSING');
+      const body = project(created);
+      await this.audit.record(tx, {
+        actor,
+        action: 'HOUSEKEEPING_TASK_CREATED',
+        entityType: 'HousekeepingTask',
+        entityId: created.id,
+        beforeJson: null,
+        afterJson: body,
+        reason: input.reason,
+      });
+      return body;
+    } catch (error) {
+      safeError(error);
+    }
   }
   async update(
     tx: Prisma.TransactionClient,

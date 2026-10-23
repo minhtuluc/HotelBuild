@@ -27,3 +27,7 @@ Không triển khai checkout/check-in hay tạo task: HB-145 tạo sau checkout,
 HB-144 phải giữ cùng Room lock khi kiểm readiness và ghi giao phòng. HB-148 kiểm chứng khoá
 Room thật nhưng chưa nghiệm thu race end-to-end với endpoint check-in chưa tồn tại.
 Test `apps/api/test/uc-buong-phong/` dùng HTTP + PG16 + Redis7 thật, không mock/skip.
+
+## HB-207: `POST /housekeeping/tasks` (ghi nhận kiểm phòng)
+
+FRONT_DESK/MANAGER tạo nhiệm vụ `PENDING` hoặc biên bản `INSPECTED` (kèm `reason`) cho phòng chưa có bằng chứng sẵn sàng của lượt giải phóng (BR-FO-07, F7-QA-01). `INSPECTED` đóng dấu `completed_at` theo đồng hồ máy chủ. Khoá phòng `FOR UPDATE` trước như PATCH/check-in (ADR-014); ràng buộc duy nhất `(room_id, business_date)` + `createMany(skipDuplicates)` ⇒ hai lệnh đồng thời chỉ một lệnh ghi được, lệnh kia 409. **Đã có nhiệm vụ ở bất kỳ trạng thái nào ⇒ 409** `E_FO_TASK_TRANSITION_NOT_ALLOWED` (mở lại/kiểm tra nhiệm vụ cũ đi qua PATCH); phòng không `ACTIVE` ⇒ cùng mã. Audit `HOUSEKEEPING_TASK_CREATED` (before = null) cùng giao dịch; `note`/`reason` che số giấy tờ/điện thoại trước khi lưu.
