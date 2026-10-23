@@ -1,0 +1,95 @@
+name: EAS Build
+
+# HB-189 / ADR-018: hai app Android (customer, operations) build độc lập bằng EAS; khoá ký và EXPO_TOKEN
+# nằm ở EAS/GitHub secrets, repo không chứa bí mật. Workflow chỉ chạy từ chạy tay hoặc tag `android-v*`
+# trên repo này — không có trigger pull_request nên PR từ fork không bao giờ chạm secrets.
+# Cập nhật JS qua EAS Update không đi qua workflow này (xem docs/07-ban-giao/van-hanh/android.md).
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'App cần build'
+        type: choice
+        options: [both, customer, operations]
+        default: both
+      profile:
+        description: 'Profile EAS (preview = APK kênh staging; apk-fallback = APK production dự phòng)'
+        type: choice
+        options: [preview, production, apk-fallback]
+        default: preview
+  push:
+    tags: ['android-v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eas-build-${{ github.ref }}-${{ github.event.inputs.app || 'both' }}-${{ github.event.inputs.profile || 'production' }}
+  cancel-in-progress: false
+
+env:
+  # Chỉ ghim phiên bản chính để eas.json (`cli.version`) còn quyết định cận dưới; nâng khi cần.
+  EAS_CLI_VERSION: '16'
+  PROFILE: ${{ github.event.inputs.profile || 'production' }}
+
+jobs:
+  plan:
+    name: Chọn app cần build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    outputs:
+      apps: ${{ steps.pick.outputs.apps }}
+    steps:
+      - id: pick
+        env:
+          APP_INPUT: ${{ github.event.inputs.app || 'both' }}
+        run: |
+          case "$APP_INPUT" in
+            customer)   echo 'apps=["customer"]' >> "$GITHUB_OUTPUT" ;;
+            operations) echo 'apps=["operations"]' >> "$GITHUB_OUTPUT" ;;
+            both)       echo 'apps=["customer","operations"]' >> "$GITHUB_OUTPUT" ;;
+            *) echo "app không hợp lệ: $APP_INPUT" >&2; exit 1 ;;
+          esac
+
+  build:
+    name: Build ${{ matrix.app }}-android
+    needs: plan
+    if: ${{ !github.event.repository.fork }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(needs.plan.outputs.apps) }}
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.app }}-android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Cài (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      # Chặn sớm: app phải typecheck, qua test và export được bytecode Hermes trước khi tốn quota EAS.
+      - name: Typecheck + test + export Hermes
+        run: |
+          pnpm typecheck
+          pnpm test
+          pnpm build
+      - name: Kiểm tra EXPO_TOKEN
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "Thiếu secret EXPO_TOKEN (chủ dự án tạo trên expo.dev, xem docs/07-ban-giao/van-hanh/android.md)" >&2
+            exit 1
+          fi
+      - name: Gửi build lên EAS (không chờ)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: >-
+          npx --yes eas-cli@${EAS_CLI_VERSION} build
+          --platform android --profile "$PROFILE" --non-interactive --no-wait

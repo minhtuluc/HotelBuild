@@ -4,6 +4,9 @@
     "slug": "pinehill-customer",
     "scheme": "pinehill-customer",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
