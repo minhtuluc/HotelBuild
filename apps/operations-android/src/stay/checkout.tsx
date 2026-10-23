@@ -6,11 +6,16 @@
  */
 import { useMemo, useState, type ReactElement } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
-import type { BookingSummary, CheckOutResponse } from '@pinehill/contracts';
+import type { BookingSummary, CheckOutPreview, CheckOutResponse } from '@pinehill/contracts';
 import { color, space, touchTargetDp } from '@pinehill/ui-native';
 import { ActionButton, CheckRow } from '../arrivals/controls';
 import { formatVnDateTime } from '../arrivals/format';
 import { formatStay, formatVnd } from '../lookup/view';
+import { usePreview } from '../preview/hooks';
+import { previewText } from '../preview/messages';
+import { checkOutPreviewPort } from '../preview/ports';
+import type { PreviewState } from '../preview/reader';
+import { PreviewStatus } from '../preview/status';
 import type { Session } from '../session';
 import { PinPanel, ResultNotice, type Outcome } from './controls';
 import { useBalance, useStayWriter } from './hooks';
@@ -65,6 +70,7 @@ function useCheckOutForm(
   props: Pick<CheckOutDetailProps, 'booking' | 'date' | 'onChanged'>,
   writer: PinnedWriter<CheckOutBody, CheckOutResponse> | null,
   loadBalance: (bookingId: string) => void,
+  onEarlyChange: (early: boolean) => void,
 ) {
   const { booking, date, onChanged } = props;
   const [early, setEarly] = useState(() => isEarlyCheckOut(booking, date));
@@ -83,7 +89,47 @@ function useCheckOutForm(
     if (outcome.kind === 'done') onChanged();
     if (outcome.kind === 'failed' && isUnsettled(outcome.failure)) loadBalance(booking.id);
   };
-  return { early, setEarly, note, setNote, unlocked, setUnlocked, busy, result, submit };
+  const toggleEarly = (): void => {
+    const next = !early;
+    setEarly(next);
+    onEarlyChange(next);
+  };
+  return { early, toggleEarly, note, setNote, unlocked, setUnlocked, busy, result, submit };
+}
+
+/** Số xem trước do máy chủ trả (HB-209): chỉ hiển thị, không ràng buộc; lỗi/offline nói rõ "chưa có số". */
+function PreviewBlock({
+  state,
+  onRetry,
+}: {
+  state: PreviewState<CheckOutPreview>;
+  onRetry: () => void;
+}): ReactElement {
+  const value = state.value;
+  return (
+    <View testID="check-out-preview" style={{ gap: space.s1 }}>
+      <Text accessibilityRole="header" style={{ fontWeight: '700', color: color.text }}>
+        {previewText('title')}
+      </Text>
+      <PreviewStatus phase={state.phase} testID="check-out-preview-status" onRetry={onRetry} />
+      {state.phase === 'ready' && value !== null ? (
+        <>
+          <Text testID="check-out-preview-fee">
+            {text('previewFee', { amount: formatVnd(value.feeAmount) })}
+          </Text>
+          <Text testID="check-out-preview-extras">
+            {text('previewExtras', { amount: formatVnd(value.extrasAmount) })}
+          </Text>
+          <Text testID="check-out-preview-balance" style={{ fontWeight: '700' }}>
+            {text('previewBalance', { amount: formatVnd(value.balanceDue) })}
+          </Text>
+          <Text testID="check-out-preview-time" style={{ color: color.textMuted }}>
+            {previewText('computed', { time: formatVnDateTime(value.computedAt) })}
+          </Text>
+        </>
+      ) : null}
+    </View>
+  );
 }
 
 function Unsettled({ balance }: { balance: BalanceState }): ReactElement {
@@ -168,7 +214,13 @@ export function CheckOutDetail(props: CheckOutDetailProps): ReactElement {
   const ports = useMemo(() => balancePorts(session), [session]);
   const writer = useStayWriter(session, createWriter);
   const balance = useBalance(ports);
-  const form = useCheckOutForm(props, writer, balance.load);
+  const previewPort = useMemo(() => checkOutPreviewPort(session), [session]);
+  const previewFor = (early: boolean) => () =>
+    previewPort(checkOutBody(booking.id, { early, note: '' }));
+  const preview = usePreview(session, booking.id, previewFor(isEarlyCheckOut(booking, props.date)));
+  const form = useCheckOutForm(props, writer, balance.load, (early) => {
+    preview.load(previewFor(early));
+  });
   const { result, busy } = form;
   if (result?.kind === 'done')
     return <Done booking={booking} response={result.response} onClose={onClose} />;
@@ -196,11 +248,15 @@ export function CheckOutDetail(props: CheckOutDetailProps): ReactElement {
           label={text('early')}
           checked={form.early}
           disabled={busy}
-          onToggle={() => {
-            form.setEarly((value) => !value);
-          }}
+          onToggle={form.toggleEarly}
         />
         <Text style={{ color: color.textMuted }}>{text('earlyNote')}</Text>
+        <PreviewBlock
+          state={preview.state}
+          onRetry={() => {
+            preview.load(previewFor(form.early));
+          }}
+        />
         <Text>{text('note')}</Text>
         <TextInput
           testID="check-out-note"

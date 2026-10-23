@@ -64,6 +64,9 @@ export interface Wire {
   verify: () => Response;
   checkOut: (n: number) => Response;
   payment: (n: number) => Response;
+  /** Số xem trước trả phòng (HB-209); `body` là thân yêu cầu để phản hồi theo lựa chọn của lễ tân. */
+  checkOutPreview: (n: number, body: Record<string, unknown>) => Response;
+  previews: Post[];
   posts: Post[];
   verifies: Array<Record<string, unknown>>;
   balanceReads: number;
@@ -97,6 +100,16 @@ export const paid = () =>
     { status: 201 },
   );
 
+export const previewOf = (body: Record<string, unknown>, over: Record<string, unknown> = {}) =>
+  Response.json({
+    bookingId: body.bookingId,
+    feeAmount: body.earlyCheckOut === true ? 0 : 150_000,
+    extrasAmount: 0,
+    balanceDue: body.earlyCheckOut === true ? 0 : 150_000,
+    computedAt: '2026-10-22T05:29:00.000Z',
+    ...over,
+  });
+
 export function wire(over: Partial<Wire> = {}): Wire {
   return {
     online: true,
@@ -109,6 +122,8 @@ export function wire(over: Partial<Wire> = {}): Wire {
     verify: () => Response.json({ pinToken: PIN_TOKEN, expiresAt: '2026-10-22T09:00:00.000Z' }),
     checkOut: done,
     payment: paid,
+    checkOutPreview: (_n, body) => previewOf(body),
+    previews: [],
     posts: [],
     verifies: [],
     balanceReads: 0,
@@ -149,6 +164,10 @@ function route(w: Wire, input: RequestInfo | URL, init: RequestInit | undefined)
   }
   if (path.endsWith('/balance')) return balanceResponse(w);
   if (path === '/bookings') return Response.json({ data: w.bookings, meta });
+  if (path === '/front-office/check-out/preview') {
+    w.previews.push({ path, key: new Headers(init?.headers).get('idempotency-key'), body });
+    return w.checkOutPreview(w.previews.length, body);
+  }
   w.posts.push({ path, key: new Headers(init?.headers).get('idempotency-key'), body });
   const n = w.posts.filter((p) => p.path === path).length;
   return path === '/payments' ? w.payment(n) : w.checkOut(n);

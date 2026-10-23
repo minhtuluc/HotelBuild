@@ -33,7 +33,6 @@ type Stage =
   | 'housekeeping'
   | 'lookup'
   | 'arrivals'
-  | 'arrivals'
   | 'walkIn'
   | 'departures';
 
@@ -48,6 +47,7 @@ export default function RootScreen(): ReactElement {
   const makeCheckOutWriter = useCallback(() => createCheckOutWriter(session), [session]);
   const makeCollectWriter = useCallback(() => createCollectWriter(session), [session]);
   const [collecting, setCollecting] = useState<BookingSummary | null>(null);
+  const [walkInFromArrivals, setWalkInFromArrivals] = useState(false);
   const [stage, setStage] = useState<Stage>('boot');
   const [currentPassword, setCurrentPassword] = useState('');
   const [profile, setProfile] = useState<UserMe | null>(null);
@@ -80,6 +80,8 @@ export default function RootScreen(): ReactElement {
         if (!session.hasAccessToken()) {
           arrivalsCache.clear();
           setNoShowTarget(null);
+          setCollecting(null);
+          setWalkInFromArrivals(false);
         }
       }),
     [session, arrivalsCache, noShowWriter],
@@ -97,36 +99,53 @@ export default function RootScreen(): ReactElement {
   }, [session]);
 
   const goHome = () => setStage('home');
-  const tools: Partial<Record<Stage, () => ReactElement>> = {
-    housekeeping: () => (
-      <HousekeepingReadScreen session={session} createWriter={makeTaskWriter} onBack={goHome} />
-    ),
-    arrivals: () =>
-      noShowTarget !== null ? (
+  const arrivalsStage = (): ReactElement => {
+    if (noShowTarget !== null)
+      return (
         <NoShowScreen
+          session={session}
           booking={noShowTarget}
           writer={noShowWriter}
           now={Date.now}
           onChanged={() => undefined}
           onClose={() => setNoShowTarget(null)}
         />
-      ) : collecting !== null ? (
+      );
+    if (collecting !== null)
+      return (
         <CollectScreen
           session={session}
           booking={collecting}
           createWriter={makeCollectWriter}
           onClose={() => setCollecting(null)}
         />
-      ) : (
-        <ArrivalsScreen
+      );
+    // Quay lại từ SCR-65 dựng lại danh sách nên tự tải lại: booking vãng lai mới hiện ngay.
+    if (walkInFromArrivals)
+      return (
+        <WalkInScreen
           session={session}
-          cache={arrivalsCache}
-          createWriter={makeCheckInWriter}
-          onBack={goHome}
-          onNoShow={setNoShowTarget}
-          onCollectBalance={setCollecting}
+          createFlow={makeWalkInFlow}
+          onBack={() => setWalkInFromArrivals(false)}
         />
-      ),
+      );
+    return (
+      <ArrivalsScreen
+        session={session}
+        cache={arrivalsCache}
+        createWriter={makeCheckInWriter}
+        onBack={goHome}
+        onNoShow={setNoShowTarget}
+        onCollectBalance={setCollecting}
+        onWalkIn={() => setWalkInFromArrivals(true)}
+      />
+    );
+  };
+  const tools: Partial<Record<Stage, () => ReactElement>> = {
+    housekeeping: () => (
+      <HousekeepingReadScreen session={session} createWriter={makeTaskWriter} onBack={goHome} />
+    ),
+    arrivals: () => arrivalsStage(),
     departures: () => (
       <DeparturesScreen
         session={session}

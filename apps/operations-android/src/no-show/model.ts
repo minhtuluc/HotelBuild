@@ -3,7 +3,8 @@
  *
  * Ranh giới (ADR-018): màn hình **không** tính phụ thu đêm đầu, bậc huỷ hay quyết định "đã tới mốc". Số đếm
  * ngược chỉ là **hiển thị** theo giờ Việt Nam; máy chủ so mốc 23:59 theo múi giờ cơ sở và từ chối bằng
- * `E_BOOK_INVALID_STATE` nếu chưa tới (BR-CANCEL-10, BR-FO-02).
+ * `E_BOOK_INVALID_STATE` nếu chưa tới (BR-CANCEL-10, BR-FO-02). Mốc và số tiền hiển thị lấy từ số xem
+ * trước của máy chủ (HB-209), không tính ở đây.
  */
 import type { NoShowRequest } from '@pinehill/contracts';
 
@@ -24,24 +25,19 @@ export function noShowBody(bookingId: string, reason: string): NoShowBody {
   return { bookingId, reason: reason.trim() };
 }
 
-const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-/** Mốc 23:59:00 giờ Việt Nam (UTC+7, không có DST) của ngày nhận phòng, theo mili giây; `null` nếu ngày hỏng. */
-export function markInstantMs(checkIn: string): number | null {
-  if (!CALENDAR_DATE.test(checkIn)) return null;
-  const at = Date.parse(`${checkIn}T23:59:00+07:00`);
-  return Number.isFinite(at) ? at : null;
-}
-
 export type Countdown =
   | { readonly kind: 'counting'; readonly remainingMs: number }
   | { readonly kind: 'reached' }
   | { readonly kind: 'unknown' };
 
-/** Từ đúng 23:59:00 trở đi là "đã tới mốc" (bao gồm mốc, BR-FO-02). */
-export function countdownToMark(checkIn: string, nowMs: number): Countdown {
-  const mark = markInstantMs(checkIn);
-  if (mark === null) return { kind: 'unknown' };
+/**
+ * Đếm ngược tới **mốc máy chủ trả** (`markableFrom` của số xem trước): máy khách không tự dựng mốc 23:59
+ * (ADR-018). Chưa có mốc (đang tải, lỗi, offline) thì `unknown` — không bịa hạn. Từ đúng mốc trở đi là
+ * "đã tới" (bao gồm mốc, BR-FO-02); máy chủ vẫn là nơi quyết định khi ghi.
+ */
+export function countdownToMark(markableFrom: string | null, nowMs: number): Countdown {
+  const mark = markableFrom === null ? Number.NaN : Date.parse(markableFrom);
+  if (!Number.isFinite(mark)) return { kind: 'unknown' };
   return nowMs >= mark ? { kind: 'reached' } : { kind: 'counting', remainingMs: mark - nowMs };
 }
 

@@ -1,0 +1,48 @@
+appId: vn.pinehill.operations
+---
+# SCR-57/61/64 (HB-210) — real F7 fixture API after HB-208 and HB-209 are deployed, active FRONT_DESK account with
+# PIN, one CONFIRMED booking arriving today whose guest has a profile (GUEST_NAME), and one CHECKED_IN stay due
+# today (DEPARTURE_CODE). Supply synthetic STAFF_USERNAME/STAFF_PASSWORD, ARRIVAL_CODE, GUEST_NAME and
+# DEPARTURE_CODE through Maestro environment; no values are committed.
+# Device run: BLOCKED in the PR until an emulator/device is available.
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "username"
+- inputText: "${STAFF_USERNAME}"
+- tapOn:
+    id: "password"
+- inputText: "${STAFF_PASSWORD}"
+- tapOn:
+    id: "login-submit"
+# SCR-57: guest name on the card, walk-in entry point.
+- tapOn:
+    id: "open-arrivals"
+- assertVisible: "${ARRIVAL_CODE}"
+- assertVisible: "${GUEST_NAME}"
+- assertVisible:
+    id: "arrivals-walk-in"
+# SCR-64: the server preview (penalty, mark) is shown before confirming.
+- tapOn: "${ARRIVAL_CODE}"
+- tapOn:
+    id: "check-in-no-show"
+- assertVisible:
+    id: "no-show-preview"
+- assertVisible:
+    id: "no-show-countdown"
+- tapOn:
+    id: "no-show-back"
+# SCR-61: the server preview of the late fee / balance is shown and follows the "early" toggle.
+- tapOn:
+    id: "check-in-back"
+- tapOn:
+    id: "arrivals-back"
+- tapOn:
+    id: "open-departures"
+- tapOn: "${DEPARTURE_CODE}"
+- assertVisible:
+    id: "check-out-preview"
+- tapOn:
+    id: "check-out-early"
+- assertVisible:
+    id: "check-out-preview"

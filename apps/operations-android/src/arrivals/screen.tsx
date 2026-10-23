@@ -14,7 +14,8 @@ import { CheckInDetail } from './detail';
 import { formatVnDateTime } from './format';
 import { arrivalsText as text } from './messages';
 import { filterArrivals } from './model';
-import { arrivalsPorts } from './ports';
+import { GuestNames } from './guest-names';
+import { arrivalsPorts, guestPort } from './ports';
 import { ArrivalsReader, type ArrivalsCache, type ArrivalsState } from './reader';
 import { resolveScan, unavailableScanner, type QrScanner, type ScanResolution } from './scan';
 import type { CheckInWriter } from './writer';
@@ -29,6 +30,8 @@ export interface ArrivalsScreenProps {
   scanner?: QrScanner;
   onCollectBalance?: (booking: BookingSummary) => void;
   onNoShow?: (booking: BookingSummary) => void;
+  /** Mở luồng tạo booking khách vãng lai (SCR-65); thiếu thì không hiện nút. */
+  onWalkIn?: () => void;
 }
 
 const IDLE_STATE: ArrivalsState = {
@@ -59,7 +62,10 @@ function scanMessage(resolution: ScanResolution): string | null {
   }
 }
 
-/** Reader + writer gắn với vòng đời màn hình; đổi phiên/cơ sở thì bỏ khoá chờ và tải lại cho ngữ cảnh mới. */
+/**
+ * Reader + writer + tên khách gắn với vòng đời màn hình; đổi phiên/cơ sở thì bỏ khoá chờ và tên đã đọc
+ * (PII chỉ ở RAM) rồi tải lại cho ngữ cảnh mới. Tên đọc theo id mỗi khi danh sách có dữ liệu mới.
+ */
 function useArrivals(
   session: Session,
   cache: ArrivalsCache,
@@ -69,15 +75,26 @@ function useArrivals(
   const [reader, setReader] = useState<ArrivalsReader | null>(null);
   const [writer, setWriter] = useState<CheckInWriter | null>(null);
   const [state, setState] = useState<ArrivalsState>(IDLE_STATE);
+  const [names, setNames] = useState<GuestNames | null>(null);
+  const [nameVersion, setNameVersion] = useState(0);
   useEffect(() => {
     const activeReader = new ArrivalsReader(arrivalsPorts(session), cache);
     const activeWriter = createWriter();
+    const activeNames = new GuestNames(guestPort(session));
     setReader(activeReader);
     setWriter(activeWriter);
+    setNames(activeNames);
     setState(activeReader.state);
-    const unsubscribe = activeReader.subscribe(() => setState(activeReader.state));
+    const unsubscribeNames = activeNames.subscribe(() => {
+      setNameVersion((version) => version + 1);
+    });
+    const unsubscribe = activeReader.subscribe(() => {
+      setState(activeReader.state);
+      void activeNames.ensure(activeReader.state.arrivals.map((booking) => booking.guestId));
+    });
     const sessionChanges = session.subscribe(() => {
       activeWriter.reset();
+      activeNames.clear();
       activeReader.invalidate();
       onReset();
       if (session.hasAccessToken()) void activeReader.load(session.selectedProperty() ?? undefined);
@@ -85,15 +102,17 @@ function useArrivals(
     void activeReader.load(session.selectedProperty() ?? undefined);
     return () => {
       unsubscribe();
+      unsubscribeNames();
       sessionChanges();
       activeReader.dispose();
       activeWriter.dispose();
+      activeNames.dispose();
     };
   }, [session, cache, createWriter, onReset]);
   const reload = (): void => {
     void reader?.load(session.selectedProperty() ?? undefined);
   };
-  return { writer, state, reload };
+  return { writer, state, reload, names, nameVersion };
 }
 
 function SyncInfo({ state }: { state: ArrivalsState }): ReactElement {
@@ -168,13 +187,19 @@ export function ArrivalsScreen({
   scanner = unavailableScanner,
   onCollectBalance,
   onNoShow,
+  onWalkIn,
 }: ArrivalsScreenProps): ReactElement {
   const [term, setTerm] = useState('');
   const [selected, setSelected] = useState<BookingSummary | null>(null);
   const closeDetail = useCallback(() => {
     setSelected(null);
   }, []);
-  const { writer, state, reload } = useArrivals(session, cache, createWriter, closeDetail);
+  const { writer, state, reload, names, nameVersion } = useArrivals(
+    session,
+    cache,
+    createWriter,
+    closeDetail,
+  );
   const { notice, scan } = useScan(scanner, state.arrivals, setSelected, setTerm);
 
   if (selected !== null && writer !== null)
@@ -231,19 +256,53 @@ export function ArrivalsScreen({
         data={rows}
         keyExtractor={(row) => row.id}
         contentContainerStyle={{ gap: space.s3 }}
-        renderItem={({ item }) => <ArrivalCard booking={item} onOpen={setSelected} />}
+        extraData={nameVersion}
+        renderItem={({ item }) => (
+          <ArrivalCard
+            booking={item}
+            guestName={names?.get(item.guestId) ?? null}
+            onOpen={setSelected}
+          />
+        )}
       />
-      <View style={{ gap: space.s2 }}>
-        <ActionButton testID="arrivals-scan" label={text('scan')} onPress={() => void scan()} />
-        <ActionButton
-          testID="arrivals-refresh"
-          label={text('refresh')}
-          tone="plain"
-          disabled={loading}
-          onPress={reload}
-        />
-        <ActionButton testID="arrivals-back" label={text('back')} tone="plain" onPress={onBack} />
-      </View>
+      <Actions
+        loading={loading}
+        onScan={() => void scan()}
+        onRefresh={reload}
+        onWalkIn={onWalkIn}
+        onBack={onBack}
+      />
+    </View>
+  );
+}
+
+function Actions({
+  loading,
+  onScan,
+  onRefresh,
+  onWalkIn,
+  onBack,
+}: {
+  loading: boolean;
+  onScan: () => void;
+  onRefresh: () => void;
+  onWalkIn: (() => void) | undefined;
+  onBack: () => void;
+}): ReactElement {
+  return (
+    <View style={{ gap: space.s2 }}>
+      <ActionButton testID="arrivals-scan" label={text('scan')} onPress={onScan} />
+      {onWalkIn === undefined ? null : (
+        <ActionButton testID="arrivals-walk-in" label={text('walkIn')} onPress={onWalkIn} />
+      )}
+      <ActionButton
+        testID="arrivals-refresh"
+        label={text('refresh')}
+        tone="plain"
+        disabled={loading}
+        onPress={onRefresh}
+      />
+      <ActionButton testID="arrivals-back" label={text('back')} tone="plain" onPress={onBack} />
     </View>
   );
 }

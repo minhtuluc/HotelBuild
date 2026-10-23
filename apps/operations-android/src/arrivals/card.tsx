@@ -9,16 +9,23 @@ import { arrivalsText as text } from './messages';
 /** Thẻ khách đến: toàn bộ số tiền/trạng thái là số máy chủ trả, không suy ra thêm (ADR-018). */
 export function ArrivalCard({
   booking,
+  guestName = null,
   onOpen,
 }: {
   booking: BookingSummary;
+  /** Họ tên đọc theo id (HB-208); `null` khi chưa có/không có — thẻ vẫn hiện bình thường. */
+  guestName?: string | null;
   onOpen: (booking: BookingSummary) => void;
 }): ReactElement {
   return (
     <Pressable
       testID={'arrival-' + booking.id}
       accessibilityRole="button"
-      accessibilityLabel={`${text('open', { code: booking.code })}, ${statusText(booking.status)}`}
+      accessibilityLabel={[
+        text('open', { code: booking.code }),
+        statusText(booking.status),
+        ...(guestName === null ? [] : [guestName]),
+      ].join(', ')}
       onPress={() => {
         onOpen(booking);
       }}
@@ -31,6 +38,14 @@ export function ArrivalCard({
         borderColor: color.border,
       }}
     >
+      {guestName === null ? null : (
+        <Text
+          testID={'arrival-name-' + booking.id}
+          style={{ color: color.text, fontWeight: '700' }}
+        >
+          {guestName}
+        </Text>
+      )}
       <Text style={{ color: color.text, fontWeight: '700' }}>
         {booking.code} · {statusText(booking.status)}
       </Text>

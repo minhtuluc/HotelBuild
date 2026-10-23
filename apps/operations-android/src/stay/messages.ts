@@ -28,7 +28,10 @@ export const catalog = {
   checkOutTitle: 'Trả phòng {code}',
   stayLine: 'Lưu trú {stay}',
   checkOutNote:
-    'Phụ thu trả muộn/trả sớm do máy chủ tính theo giờ nghiệp vụ (BR-FO-03, BR-FO-05); màn hình không tự tính và chưa có nguồn số trước khi ghi, nên số tiền chỉ hiện sau khi máy chủ phản hồi.',
+    'Phụ thu trả muộn/trả sớm do máy chủ tính theo giờ nghiệp vụ (BR-FO-03, BR-FO-05). Số xem trước bên dưới là số máy chủ trả, màn hình không tự tính; số chốt do máy chủ tính lại khi bạn xác nhận.',
+  previewFee: 'Phụ thu trả muộn/sớm dự kiến: {amount}',
+  previewExtras: 'Phát sinh dự kiến: {amount}',
+  previewBalance: 'Còn phải thu dự kiến sau trả phòng: {amount}',
   early: 'Khách trả phòng sớm',
   earlyNote: 'Phải khớp ngày trả thực tế; máy chủ từ chối nếu lệch (BR-CANCEL-09).',
   note: 'Ghi chú (tuỳ chọn)',
