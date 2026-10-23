@@ -7,6 +7,7 @@ import {
   Inject,
   Param,
   Patch,
+  Post,
   Query,
   Req,
   UseInterceptors,
@@ -16,9 +17,16 @@ import { Permission } from '../../../common/rbac/permissions.js';
 import { Idempotent } from '../../../common/idempotency/decorators.js';
 import { IdempotencyContext } from '../../../common/idempotency/context.js';
 import { HousekeepingService } from './service.js';
-import { HousekeepingAccess } from './access.js';
+import { HousekeepingAccess, HousekeepingCreateAccess } from './access.js';
 import { HousekeepingETagInterceptor } from './etag-interceptor.js';
-import { requestActor, readQuery, updateInput, expectedVersion, taskId } from './validation.js';
+import {
+  requestActor,
+  readQuery,
+  updateInput,
+  createInput,
+  expectedVersion,
+  taskId,
+} from './validation.js';
 @Controller('housekeeping/tasks')
 export class HousekeepingController {
   constructor(
@@ -30,6 +38,19 @@ export class HousekeepingController {
   @Permission('housekeepingTasks.read')
   list(@Query() query: unknown, @Req() request: FastifyRequest) {
     return this.service.list(requestActor(request), readQuery(query));
+  }
+  @Post()
+  @Header('Cache-Control', 'no-store')
+  @Header('Access-Control-Expose-Headers', 'ETag')
+  @Permission('housekeepingTasks.create')
+  @Idempotent(HousekeepingCreateAccess)
+  @UseInterceptors(HousekeepingETagInterceptor)
+  create(@Body() body: unknown, @Req() request: FastifyRequest) {
+    return this.service.create(
+      this.context.transaction(),
+      requestActor(request),
+      createInput(body),
+    );
   }
   @Patch(':taskId')
   @Header('Cache-Control', 'no-store')

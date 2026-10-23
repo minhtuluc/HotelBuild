@@ -7,14 +7,16 @@ import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import { permissionProvider } from '../../../common/rbac/permissions.js';
 import { HousekeepingService } from './service.js';
 import { HousekeepingController } from './controller.js';
-import { HousekeepingAccess } from './access.js';
+import { HousekeepingAccess, HousekeepingCreateAccess } from './access.js';
 @Module({
   controllers: [HousekeepingController],
   providers: [
     HousekeepingAccess,
+    HousekeepingCreateAccess,
     permissionProvider('housekeeping', {
       'housekeepingTasks.read': ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER'],
       'housekeepingTasks.update': ['HOUSEKEEPING', 'FRONT_DESK', 'MANAGER'],
+      'housekeepingTasks.create': ['FRONT_DESK', 'MANAGER'],
     }),
     {
       provide: HousekeepingService,
