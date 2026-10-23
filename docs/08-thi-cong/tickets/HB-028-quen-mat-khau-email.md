@@ -12,7 +12,19 @@ allow:
   - apps/api/test/password-reset/**
   - pnpm-lock.yaml
 locked:
-  - apps/api/test/password-reset/password-reset.locked.spec.ts
+  - apps/api/test/password-reset/reset-confirm.spec.ts
+  - apps/api/test/password-reset/reset-controls.spec.ts
+  - apps/api/test/password-reset/reset-data.ts
+  - apps/api/test/password-reset/reset-mail.ts
+  - apps/api/test/password-reset/reset-oracle.fixture.ts
+  - apps/api/test/password-reset/reset-request.spec.ts
+locked_sha:
+  - a97efee4b82b65a8c4a011971adf1cb0e202fbddb8ab8b695afe7fc1af03c3fc apps/api/test/password-reset/reset-confirm.spec.ts
+  - 2f91a6e2108636a7458a7905ea2e652502cb5e94b11a3c99fe99e3e1980b4c0b apps/api/test/password-reset/reset-controls.spec.ts
+  - 8fd072ffc775970e6ff832563136835bd19e58866e7fe6fcfe3d720a613bc005 apps/api/test/password-reset/reset-data.ts
+  - 40c0667a2a1e5518e2f13a570dc75f915e19f4d25405aa46511ad799e5410944 apps/api/test/password-reset/reset-mail.ts
+  - bffde9298e6d9977bd71241f4ac38c9cc7a3c1adf009c237e9531175dbef9a00 apps/api/test/password-reset/reset-oracle.fixture.ts
+  - a357e4d7c9ef8c4f535a7f9cb38e80bcde3ed43f7f9a30e9f7fffa80d8793bbd apps/api/test/password-reset/reset-request.spec.ts
 ---
 
 # HB-028 — Quên mật khẩu qua email
@@ -28,7 +40,7 @@ Khách có email nhận link đặt lại mật khẩu; khách không có email 
 
 ## Hai giai đoạn
 
-- **A — Codex** (`lead/HB-028-test-khoa`): `password-reset.locked.spec.ts` dùng Mailpit thật (API `http://127.0.0.1:8025/api/v1`) hoặc cổng mail giả có ghi nhận. Ca: SĐT có tài khoản + email → 202, đúng 1 thư chứa link; SĐT không tồn tại / không có email → **cùng** 202, 0 thư; token dùng hai lần → lần hai `E_AUTH_RESET_TOKEN_INVALID`; quá 30 phút → bị từ chối; đặt lại xong → mọi phiên khách bị thu hồi, đăng nhập bằng mật khẩu mới được; quá 3 yêu cầu/giờ/SĐT → 429; token không có trong log.
+- **A — Codex** (nhánh ứng viên `ticket/HB-028-quen-mat-khau-a`, ghim bởi Opus 23/10): `reset-request.spec.ts`, `reset-confirm.spec.ts`, `reset-controls.spec.ts` + `reset-data.ts`, `reset-mail.ts`, `reset-oracle.fixture.ts` dùng Mailpit thật (API `http://127.0.0.1:8025/api/v1`) hoặc cổng mail giả có ghi nhận. Ca: SĐT có tài khoản + email → 202, đúng 1 thư chứa link; SĐT không tồn tại / không có email → **cùng** 202, 0 thư; token dùng hai lần → lần hai `E_AUTH_RESET_TOKEN_INVALID`; quá 30 phút → bị từ chối; đặt lại xong → mọi phiên khách bị thu hồi, đăng nhập bằng mật khẩu mới được; quá 3 yêu cầu/giờ/SĐT → 429; token không có trong log.
 - **B — DeepSeek** (`ticket/HB-028-quen-mat-khau`): hiện thực tới khi test khoá xanh.
 
 ## Tiêu chí nghiệm thu

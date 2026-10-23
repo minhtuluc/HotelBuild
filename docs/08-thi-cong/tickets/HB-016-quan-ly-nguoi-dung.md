@@ -8,7 +8,15 @@ allow:
   - apps/api/src/modules/auth/users/**
   - apps/api/test/users/**
 locked:
-  - apps/api/test/users/users.locked.spec.ts
+  - apps/api/test/users/users-access.spec.ts
+  - apps/api/test/users/users-controls.spec.ts
+  - apps/api/test/users/users-oracle.fixture.ts
+  - apps/api/test/users/users-oracle.spec.ts
+locked_sha:
+  - c6d4cb9c8fb80f66718089411c873a13626dea6999fe61879c41c540bb8465c9 apps/api/test/users/users-access.spec.ts
+  - 0f5316c4a5d3d72e40dbb6fc5a9b292696777833cdcc29e4ad4083651c18b3f7 apps/api/test/users/users-controls.spec.ts
+  - dd31cb5e1e7adb418a510d50cba1bab3bb2e9634722977b73fbbfb3b2c72a7dd apps/api/test/users/users-oracle.fixture.ts
+  - e7814489449678b427701d4d9971709d8bd2cdd7219d36e0533f70aaefd96df8 apps/api/test/users/users-oracle.spec.ts
 ---
 
 # HB-016 — Quản lý người dùng
@@ -24,7 +32,7 @@ OWNER/SYSADMIN xem, tạo người dùng và gán vai trò/phạm vi/trạng th�
 
 ## Hai giai đoạn
 
-- **A — Codex** (`lead/HB-016-test-khoa`): `users.locked.spec.ts`. Ca: SYSADMIN gán `OWNER` hoặc `SYSADMIN` → 403; ai đó sửa chính mình → 403; vô hiệu OWNER hoạt động cuối → 403 (hai yêu cầu song song vô hiệu hai OWNER cuối: đúng một thành công); thiếu `If-Match` → 428, `version` cũ → 412; đổi phạm vi/vai trò/vô hiệu → mọi phiên của người đó bị thu hồi, access token cũ bị từ chối ở request kế tiếp (TC-AUTH-10); `POST /users` trùng `username` → 409, tạo xong `mustChangePassword=true`; `GET /users` lọc đúng và không trả `password_hash`; mọi thay đổi có audit với before/after.
+- **A — Codex** (nhánh ứng viên `ticket/HB-016-users-a`, ghim bởi Opus 23/10): `users-access.spec.ts`, `users-controls.spec.ts`, `users-oracle.spec.ts` + `users-oracle.fixture.ts`. Ca: SYSADMIN gán `OWNER` hoặc `SYSADMIN` → 403; ai đó sửa chính mình → 403; vô hiệu OWNER hoạt động cuối → 403 (hai yêu cầu song song vô hiệu hai OWNER cuối: đúng một thành công); thiếu `If-Match` → 428, `version` cũ → 412; đổi phạm vi/vai trò/vô hiệu → mọi phiên của người đó bị thu hồi, access token cũ bị từ chối ở request kế tiếp (TC-AUTH-10); `POST /users` trùng `username` → 409, tạo xong `mustChangePassword=true`; `GET /users` lọc đúng và không trả `password_hash`; mọi thay đổi có audit với before/after.
 - **B — DeepSeek** (`ticket/HB-016-users`): hiện thực tới khi test khoá xanh.
 
 ## Tiêu chí nghiệm thu
