@@ -29,7 +29,8 @@ let policyId = '',
   guestId = '',
   roomOne = '',
   roomTwo = '',
-  dormRoom = '';
+  dormRoom = '',
+  roomThree = '';
 
 export { clock, rows, userId };
 export const CHECK_IN = '/api/v1/front-office/check-in';
@@ -82,6 +83,7 @@ export async function housekeeping(
 
 export const roomA = (): string => roomOne;
 export const roomB = (): string => roomTwo;
+export const roomC = (): string => roomThree;
 /** Phòng ở ghép (DOR) — check-in theo giường chưa thuộc hợp đồng `actualRoomIds`. */
 export const roomDorm = (): string => dormRoom;
 export const dormType = (): string => dormTypeId;
@@ -99,11 +101,21 @@ export interface BookingOptions {
   assign?: string;
   /** Loại phòng của booking; mặc định loại bán theo phòng. */
   roomTypeId?: string;
+  /** Số đơn vị bán (`booking_rooms`); mặc định 1. Với >1 chỉ hỗ trợ `paidInFull` hoặc chưa thu. */
+  units?: number;
+  /**
+   * Phòng gán sẵn cho từng đơn vị bán theo thứ tự `booking_rooms.id` tăng dần; `null` = chưa gán.
+   * Ghi đè `assign` (chỉ đơn vị đầu).
+   */
+  assignEach?: readonly (string | null)[];
 }
 
 export interface SeededBooking {
   readonly id: string;
+  /** Đơn vị bán có `id` nhỏ nhất. */
   readonly bookingRoomId: string;
+  /** Mọi đơn vị bán, sắp theo `id` tăng dần (thứ tự mã cũ dùng để ghép `actualRoomIds`). */
+  readonly bookingRoomIds: readonly string[];
   readonly checkIn: string;
   readonly checkOut: string;
   readonly total: number;
@@ -150,16 +162,66 @@ async function insertLedger(
   }
 }
 
+/** `units` đơn vị bán của booking, sắp theo `id` tăng dần (thứ tự mã cũ dùng để ghép `actualRoomIds`). */
+async function insertUnits(
+  bookingId: string,
+  roomType: string,
+  nightly: number,
+  units: number,
+): Promise<string[]> {
+  const created: string[] = [];
+  for (let unit = 0; unit < units; unit += 1)
+    created.push(
+      await insert(
+        'INSERT INTO booking_rooms(booking_id,room_type_id,adults,price_per_night) VALUES($1,$2,1,$3) RETURNING id',
+        [bookingId, roomType, nightly],
+      ),
+    );
+  return created.sort();
+}
+
+/** Gán sẵn phòng cho từng đơn vị (mô phỏng assignment đã có từ hold). */
+async function assignUnits(
+  bookingRoomIds: readonly string[],
+  options: BookingOptions,
+  checkIn: string,
+  checkOut: string,
+): Promise<void> {
+  const assigned = options.assignEach ?? (options.assign === undefined ? [] : [options.assign]);
+  for (const [index, roomId] of assigned.entries()) {
+    const bookingRoomId = bookingRoomIds[index];
+    if (roomId === null || bookingRoomId === undefined) continue;
+    await rows(
+      'INSERT INTO room_assignments(booking_room_id,room_id,bed_no,start_date,end_date) VALUES($1,$2,0,$3,$4)',
+      [bookingRoomId, roomId, checkIn, checkOut],
+    );
+  }
+}
+
 /** Booking CONFIRMED + nghĩa vụ ROOM từng đêm + (tuỳ chọn) Payment đã phân bổ. */
-export async function seedBooking(options: BookingOptions = {}): Promise<SeededBooking> {
-  const status = options.status ?? 'CONFIRMED';
+function resolveBooking(options: BookingOptions) {
   const checkIn = options.checkIn ?? D;
   const checkOut = options.checkOut ?? day(checkIn, 2);
   const nightly = options.nightly ?? NIGHTLY;
   const nights = Math.round((Date.parse(checkOut) - Date.parse(checkIn)) / DAY);
-  const total = nightly * nights;
-  const paid = options.paidInFull === true ? total : (options.paid ?? 0);
-  const roomType = options.roomTypeId ?? typeId;
+  const units = options.units ?? 1;
+  const total = nightly * nights * units;
+  return {
+    status: options.status ?? 'CONFIRMED',
+    checkIn,
+    checkOut,
+    nightly,
+    nights,
+    units,
+    total,
+    paid: options.paidInFull === true ? total : (options.paid ?? 0),
+    roomType: options.roomTypeId ?? typeId,
+  };
+}
+
+export async function seedBooking(options: BookingOptions = {}): Promise<SeededBooking> {
+  const { status, checkIn, checkOut, nightly, nights, units, total, paid, roomType } =
+    resolveBooking(options);
   const suffix = randomUUID().replaceAll('-', '').slice(0, 5).toUpperCase();
   const id = await insert(
     `INSERT INTO bookings(code,guest_id,property_id,room_type_id,rate_plan_id,channel_id,
@@ -178,23 +240,20 @@ export async function seedBooking(options: BookingOptions = {}): Promise<SeededB
       userId,
     ],
   );
-  const bookingRoomId = await insert(
-    'INSERT INTO booking_rooms(booking_id,room_type_id,adults,price_per_night) VALUES($1,$2,1,$3) RETURNING id',
-    [id, roomType, nightly],
-  );
-  await insertLedger(id, bookingRoomId, checkIn, nightly, nights, paid);
+  const bookingRoomIds = await insertUnits(id, roomType, nightly, units);
+  // Một Payment bao toàn bộ khoản đã thu cho đơn vị duy nhất; booking nhiều đơn vị chỉ thu đủ hoặc chưa
+  // thu. Fixture không phân bổ tiền theo nghĩa vụ mà server quyết.
+  const paidPerUnit = units === 1 ? paid : options.paidInFull === true ? nightly * nights : 0;
+  for (const bookingRoomId of bookingRoomIds)
+    await insertLedger(id, bookingRoomId, checkIn, nightly, nights, paidPerUnit);
   await rows('UPDATE bookings SET total_amount=$2,paid_amount=$3,balance_due=$4 WHERE id=$1', [
     id,
     total,
     paid,
     total - paid,
   ]);
-  if (options.assign !== undefined)
-    await rows(
-      'INSERT INTO room_assignments(booking_room_id,room_id,bed_no,start_date,end_date) VALUES($1,$2,0,$3,$4)',
-      [bookingRoomId, options.assign, checkIn, checkOut],
-    );
-  return { id, bookingRoomId, checkIn, checkOut, total };
+  await assignUnits(bookingRoomIds, options, checkIn, checkOut);
+  return { id, bookingRoomId: bookingRoomIds[0]!, bookingRoomIds, checkIn, checkOut, total };
 }
 
 export const checkInBody = (seed: SeededBooking, roomId: string, extra: object = {}) => ({
@@ -203,6 +262,37 @@ export const checkInBody = (seed: SeededBooking, roomId: string, extra: object =
   earlyCheckIn: false,
   ...extra,
 });
+
+/** Thân nhận phòng nhiều đơn vị: `actualRoomIds` đúng thứ tự người gọi chọn. */
+export const checkInBodyMany = (seed: SeededBooking, roomIds: readonly string[]) => ({
+  bookingId: seed.id,
+  actualRoomIds: [...roomIds],
+  earlyCheckIn: false,
+});
+
+/** Nhả assignment của một lượt ở đã diễn ra (mô phỏng trả phòng) vào đúng mốc giờ nghiệp vụ. */
+export async function releaseStay(
+  bookingRoomId: string,
+  date: string,
+  time = '11:00:00',
+  reason = 'CHECK_OUT',
+): Promise<void> {
+  await rows(
+    'UPDATE room_assignments SET released_at=$2, release_reason=$3 WHERE booking_room_id=$1 AND released_at IS NULL',
+    [bookingRoomId, new Date(vn(date, time)).toISOString(), reason],
+  );
+}
+
+/** Phòng gán đang hiệu lực của từng đơn vị bán (theo thứ tự `booking_rooms.id`). */
+export async function activeRoomByUnit(seed: SeededBooking): Promise<(string | undefined)[]> {
+  const found = await rows(
+    `SELECT booking_room_id, room_id FROM room_assignments
+      WHERE booking_room_id = ANY($1::uuid[]) AND released_at IS NULL`,
+    [[...seed.bookingRoomIds]],
+  );
+  const byUnit = new Map(found.map((row) => [String(row.booking_room_id), String(row.room_id)]));
+  return seed.bookingRoomIds.map((unit) => byUnit.get(unit));
+}
 
 export const bookingRow = async (id: string) => {
   const found = await rows('SELECT status,balance_due FROM bookings WHERE id=$1', [id]);
@@ -285,6 +375,11 @@ beforeAll(async () => {
      VALUES($1,$2,'UCR2','UCR2',1,1) RETURNING id`,
     [propertyId, typeId],
   );
+  roomThree = await insert(
+    `INSERT INTO rooms(property_id,room_type_id,code,name,floor,bed_count)
+     VALUES($1,$2,'UCR3','UCR3',1,1) RETURNING id`,
+    [propertyId, typeId],
+  );
   dormRoom = await insert(
     `INSERT INTO rooms(property_id,room_type_id,code,name,floor,bed_count)
      VALUES($1,$2,'UCD1','UCD1',1,6) RETURNING id`,
@@ -292,7 +387,9 @@ beforeAll(async () => {
   );
 
   const redisUrl = new URL(process.env.REDIS_URL);
-  redisUrl.pathname = '/11';
+  // `/11` mặc định; lát cắt đang chạy song song đặt `REDIS_URL` với DB riêng thì dùng DB đó để không
+  // `flushdb` lên nhau (Redis dev chỉ có DB 0–15).
+  if (redisUrl.pathname === '/' || redisUrl.pathname === '/0') redisUrl.pathname = '/11';
   redis = new Redis(redisUrl.href);
   await redis.ping();
   const registered = AppModule.register({
