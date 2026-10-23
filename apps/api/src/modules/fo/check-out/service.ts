@@ -23,8 +23,11 @@ import type { Clock } from '@pinehill/domain';
 import { checkOutFee } from '@pinehill/domain/front-office';
 import type { CheckOutFeeDecision } from '@pinehill/domain/front-office';
 import {
+  checkOutPreviewSchema,
   checkOutResponseSchema,
   type CancelRequest,
+  type CheckOutPreview,
+  type CheckOutPreviewRequest,
   type CheckOutRequest,
   type CheckOutResponse,
 } from '@pinehill/contracts';
@@ -49,10 +52,12 @@ import {
   dateOnly,
   extraLines,
   localDate,
+  lastNightAmount,
   localNow,
+  recordObligations,
   safeError,
 } from './support.js';
-import type { ExtraLine } from './support.js';
+import type { LedgerProjection } from '../../pay/ledger/types.js';
 import {
   balanceUnsettled,
   earlyMismatch,
@@ -67,7 +72,6 @@ type Tx = Prisma.TransactionClient;
 
 const CHECKED_IN = 'CHECKED_IN';
 const CHECKED_OUT = 'CHECKED_OUT';
-const DAY = 86_400_000;
 
 /** Kết quả nghiệp vụ: từ chối vì số dư (đã ghi nghĩa vụ) hoặc hoàn tất trả phòng. */
 type Outcome =
@@ -88,6 +92,22 @@ interface Completion {
   readonly voids: Voids;
   /** Phụ thu **đã ghi sổ** (đọc lại từ `booking_charges`), không phải con số engine vừa tính. */
   readonly feeAmount: number;
+}
+
+/** Kết quả ghi nghĩa vụ + chiếu sổ cái của một lần trả phòng (dùng chung lệnh ghi và xem trước). */
+interface Settlement {
+  readonly rooms: readonly string[];
+  readonly decision: CheckOutFeeDecision;
+  readonly now: Date;
+  readonly extrasAmount: number;
+  readonly voids: Voids;
+  readonly feeAmount: number;
+  readonly projection: LedgerProjection;
+}
+
+/** Mang kết quả xem trước ra khỏi transaction bị rollback có chủ đích (không có ghi nào được commit). */
+class PreviewRollback {
+  constructor(readonly value: CheckOutPreview) {}
 }
 
 export class CheckOutService {
@@ -164,26 +184,13 @@ export class CheckOutService {
       now: businessNow,
     });
 
-    const rooms = await this.activeRooms(tx, booking.id);
-    if (!rooms.length) throw invalidState();
-    const decision = await this.decideFee(tx, booking, rooms, input.earlyCheckOut, businessNow);
-    const now = (await tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`)[0]!.now;
-    const extras = extraLines(input.extras);
-    const extrasAmount = extras.reduce((sum, line) => sum + line.amount, 0);
-    await this.recordObligations(tx, booking.id, decision.lateCheckOutFee, extras, now);
-    const voids =
-      decision.earlyCheckout === null
-        ? { value: 0n, released: new Map<string, bigint>() }
-        : await voidUnusedNights(
-            tx,
-            booking.id,
-            rooms,
-            localDate(businessNow, this.config.BUSINESS_TIMEZONE),
-            dateOnly(booking.checkOut),
-            now,
-          );
-    const feeAmount = await bookedFee(tx, booking.id, FEE_SOURCE_KEY);
-    const projection = await this.ledger.sync(tx, booking.id, actor);
+    const { rooms, decision, now, extrasAmount, voids, feeAmount, projection } = await this.settle(
+      tx,
+      actor,
+      booking,
+      input,
+      businessNow,
+    );
     if (projection.balanceDue > 0n) return { kind: 'refused', balanceDue: projection.balanceDue };
 
     return {
@@ -201,6 +208,76 @@ export class CheckOutService {
         feeAmount,
       }),
     };
+  }
+
+  /**
+   * Từ "còn phòng ACTIVE" tới "chiếu lại sổ cái": quyết định phụ thu bằng engine HB-142, ghi nghĩa vụ
+   * phụ thu/phát sinh, void đêm chưa ở khi trả sớm rồi `ledger.sync`. **Một** đường duy nhất cho lệnh
+   * trả phòng và xem trước (HB-209) nên hai bên không thể lệch số.
+   */
+  private async settle(
+    tx: Tx,
+    actor: AuthorizedActor,
+    booking: LockedBooking,
+    input: Pick<CheckOutRequest, 'earlyCheckOut' | 'extras'>,
+    businessNow: Date,
+  ): Promise<Settlement> {
+    const rooms = await this.activeRooms(tx, booking.id);
+    if (!rooms.length) throw invalidState();
+    const decision = await this.decideFee(tx, booking, rooms, input.earlyCheckOut, businessNow);
+    const now = (await tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`)[0]!.now;
+    const extras = extraLines(input.extras);
+    const extrasAmount = extras.reduce((sum, line) => sum + line.amount, 0);
+    await recordObligations(tx, booking.id, decision.lateCheckOutFee, extras, now);
+    const voids =
+      decision.earlyCheckout === null
+        ? { value: 0n, released: new Map<string, bigint>() }
+        : await voidUnusedNights(
+            tx,
+            booking.id,
+            rooms,
+            localDate(businessNow, this.config.BUSINESS_TIMEZONE),
+            dateOnly(booking.checkOut),
+            now,
+          );
+    const feeAmount = await bookedFee(tx, booking.id, FEE_SOURCE_KEY);
+    const projection = await this.ledger.sync(tx, booking.id, actor);
+    return { rooms, decision, now, extrasAmount, voids, feeAmount, projection };
+  }
+
+  /**
+   * Xem trước trả phòng (HB-209, TD-28). Chạy **đúng** `settle` của lệnh ghi (cùng khoá, cùng engine,
+   * cùng chiếu sổ cái) rồi **luôn rollback**: không PIN, không hoàn tất trả phòng và không có ghi nào
+   * được commit — số trả về chính là số lệnh ghi sẽ để lại ngay sau đó với cùng dữ liệu và đồng hồ.
+   * Booking đã `CHECKED_OUT` không có gì để xem trước nên cùng `409` với booking chưa nhận phòng.
+   */
+  async preview(actor: AuthorizedActor, input: CheckOutPreviewRequest): Promise<CheckOutPreview> {
+    try {
+      await this.authorizeFor(this.db, actor, input.bookingId);
+      await this.db.$transaction(
+        async (tx) => {
+          const booking = await this.lockAndAuthorize(tx, actor, input.bookingId);
+          if (booking.status !== CHECKED_IN) throw invalidState();
+          const businessNow = this.clock.now();
+          const settled = await this.settle(tx, actor, booking, input, businessNow);
+          if (settled.projection.balanceDue > BigInt(Number.MAX_SAFE_INTEGER)) throw internal();
+          throw new PreviewRollback(
+            checkOutPreviewSchema.parse({
+              bookingId: booking.id,
+              feeAmount: settled.feeAmount,
+              extrasAmount: settled.extrasAmount,
+              balanceDue: Number(settled.projection.balanceDue),
+              computedAt: businessNow.toISOString(),
+            }),
+          );
+        },
+        { isolationLevel: 'ReadCommitted' },
+      );
+    } catch (error) {
+      if (error instanceof PreviewRollback) return error.value;
+      safeError(error);
+    }
+    throw internal();
   }
 
   /** Khoá booking rồi mới kiểm phạm vi (HB-093). Trạng thái được xử lý ở `execute`. */
@@ -221,7 +298,7 @@ export class CheckOutService {
     const decision = checkOutFee({
       checkOutDate: dateOnly(booking.checkOut),
       localNow: localNow(businessNow, this.config.BUSINESS_TIMEZONE),
-      lastNightAmount: await this.lastNightAmount(tx, booking.id, rooms, booking.checkOut),
+      lastNightAmount: await lastNightAmount(tx, booking.id, rooms, booking.checkOut),
     });
     if (!decision.ok) throw internal();
     const early = decision.value.earlyCheckout !== null;
@@ -338,56 +415,6 @@ export class CheckOutService {
       select: { id: true },
     });
     return rows.map((row) => row.id);
-  }
-
-  /**
-   * Giá đêm cuối theo nghĩa vụ ROOM đã chốt (BR-FO-03). Nghĩa vụ ROOM là bản sao bất biến của
-   * snapshot giá tại thời điểm đặt, nên không đọc lại công thức giá ở đây.
-   */
-  private async lastNightAmount(
-    tx: Tx,
-    bookingId: string,
-    rooms: readonly string[],
-    checkOut: Date,
-  ): Promise<number> {
-    const lastNight = new Date(checkOut.getTime() - DAY).toISOString().slice(0, 10);
-    const rows = await tx.$queryRaw<{ amount: bigint }[]>`
-      SELECT coalesce(sum(amount - voided_amount), 0)::bigint AS amount
-        FROM booking_charges
-       WHERE booking_id = ${bookingId}::uuid AND kind = 'ROOM'
-         AND booking_room_id = ANY(${[...rooms]}::uuid[])
-         AND stay_date = ${lastNight}::date`;
-    const amount = rows[0]!.amount;
-    if (amount > BigInt(Number.MAX_SAFE_INTEGER)) throw internal();
-    return Number(amount);
-  }
-
-  /**
-   * BR-FO-05: phụ thu muộn và phát sinh là nghĩa vụ thật. Phụ thu ghi **một** dòng/booking; lần gọi
-   * lại cập nhật số tiền khi chưa có phân bổ nào (khách vẫn đang ở nên mốc giờ có thể lên bậc).
-   * Phát sinh khoá theo nội dung (`source_key`) nên gửi lại không ghi tiền hai lần.
-   */
-  private async recordObligations(
-    tx: Tx,
-    bookingId: string,
-    fee: number,
-    extras: readonly ExtraLine[],
-    now: Date,
-  ): Promise<void> {
-    if (fee > 0)
-      await tx.$executeRaw`
-        INSERT INTO booking_charges(booking_id, kind, source_key, amount, reason, created_at, updated_at)
-        VALUES(${bookingId}::uuid, 'EXTRA_SERVICE', ${FEE_SOURCE_KEY}, ${BigInt(fee)},
-               'Phụ thu trả phòng muộn (BR-FO-03)', ${now}::timestamptz, ${now}::timestamptz)
-        ON CONFLICT (booking_id, source_key) DO UPDATE
-          SET amount = EXCLUDED.amount, updated_at = EXCLUDED.updated_at
-          WHERE NOT EXISTS (SELECT 1 FROM payment_allocations a WHERE a.charge_id = booking_charges.id)`;
-    for (const line of extras)
-      await tx.$executeRaw`
-        INSERT INTO booking_charges(booking_id, kind, source_key, amount, reason, created_at, updated_at)
-        VALUES(${bookingId}::uuid, 'EXTRA_SERVICE', ${line.key}, ${BigInt(line.amount)},
-               ${line.description}, ${now}::timestamptz, ${now}::timestamptz)
-        ON CONFLICT (booking_id, source_key) DO NOTHING`;
   }
 
   /**

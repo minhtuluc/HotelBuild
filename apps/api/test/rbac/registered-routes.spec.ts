@@ -110,7 +110,9 @@ function independentOracle(): Record<string, Expected> {
     method: RequestMethod.GET,
   };
   // HB-034 AC2 (BR-INV-06) + HB-144/145 (api.md §2.9): thao tác ghi của quầy — thân oracle hỏng ⇒ 400.
-  for (const path of ['room-blocks', 'front-office/check-in', 'front-office/check-out'])
+  // HB-209: cùng tập vai trò cho `check-out/preview`; một dòng để giữ file dưới trần `max-lines`.
+  // prettier-ignore
+  for (const path of ['room-blocks', 'front-office/check-in', 'front-office/check-out', 'front-office/check-out/preview'])
     keyed[`${RequestMethod.POST}:${path}`] = {
       roles: ['FRONT_DESK', 'MANAGER', 'OWNER'],
       status: 400,
@@ -167,6 +169,9 @@ function independentOracle(): Record<string, Expected> {
   // sau khi qua quyền. Một dòng để giữ file dưới trần 400 dòng của ESLint (`max-lines`).
   // prettier-ignore
   keyed[`${RequestMethod.POST}:front-office/no-show`] = { roles: ['FRONT_DESK'], status: 400, method: RequestMethod.POST };
+  // HB-209 / api.md §2.9: xem trước no-show dùng đúng quyền của lệnh ghi; thân oracle hỏng ⇒ 400.
+  // prettier-ignore
+  keyed[`${RequestMethod.POST}:front-office/no-show/preview`] = { roles: ['FRONT_DESK'], status: 400, method: RequestMethod.POST };
   // HB-036 / UC-SYS-01,02: explicit grants, independent of route permission providers.
   keyed[`${RequestMethod.GET}:audit-logs`] = {
     roles: ['MANAGER', 'OWNER'],

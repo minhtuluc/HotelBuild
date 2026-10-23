@@ -6,6 +6,9 @@ import type { CheckOutRequest } from '@pinehill/contracts';
 import { AppError } from '../../../common/app-error.js';
 import { RetryTransaction } from '../../../common/idempotency/transaction-retry.js';
 import { LedgerError } from '../../pay/ledger/projection.js';
+import { internal } from './validation.js';
+
+const DAY = 86_400_000;
 
 /** Mã sổ cái nghĩa là hạn mức hoàn vượt tiền thực thu (như `book/cancel/writes.ts`). */
 const overPaid = ['LEDGER_SOURCE_CAP', 'LEDGER_BOOKING_CAP', 'LEDGER_REFUND_NET'];
@@ -128,4 +131,54 @@ export function localNow(instant: Date, timeZone: string) {
 
 export function dateOnly(value: Date): string {
   return value.toISOString().slice(0, 10);
+}
+
+/**
+ * Giá đêm cuối theo nghĩa vụ ROOM đã chốt (BR-FO-03). Nghĩa vụ ROOM là bản sao bất biến của
+ * snapshot giá tại thời điểm đặt, nên không đọc lại công thức giá ở đây.
+ */
+export async function lastNightAmount(
+  tx: Prisma.TransactionClient,
+  bookingId: string,
+  rooms: readonly string[],
+  checkOut: Date,
+): Promise<number> {
+  const lastNight = new Date(checkOut.getTime() - DAY).toISOString().slice(0, 10);
+  const rows = await tx.$queryRaw<{ amount: bigint }[]>`
+    SELECT coalesce(sum(amount - voided_amount), 0)::bigint AS amount
+      FROM booking_charges
+     WHERE booking_id = ${bookingId}::uuid AND kind = 'ROOM'
+       AND booking_room_id = ANY(${[...rooms]}::uuid[])
+       AND stay_date = ${lastNight}::date`;
+  const amount = rows[0]!.amount;
+  if (amount > BigInt(Number.MAX_SAFE_INTEGER)) throw internal();
+  return Number(amount);
+}
+
+/**
+ * BR-FO-05: phụ thu muộn và phát sinh là nghĩa vụ thật. Phụ thu ghi **một** dòng/booking; lần gọi
+ * lại cập nhật số tiền khi chưa có phân bổ nào (khách vẫn đang ở nên mốc giờ có thể lên bậc).
+ * Phát sinh khoá theo nội dung (`source_key`) nên gửi lại không ghi tiền hai lần.
+ */
+export async function recordObligations(
+  tx: Prisma.TransactionClient,
+  bookingId: string,
+  fee: number,
+  extras: readonly ExtraLine[],
+  now: Date,
+): Promise<void> {
+  if (fee > 0)
+    await tx.$executeRaw`
+      INSERT INTO booking_charges(booking_id, kind, source_key, amount, reason, created_at, updated_at)
+      VALUES(${bookingId}::uuid, 'EXTRA_SERVICE', ${FEE_SOURCE_KEY}, ${BigInt(fee)},
+             'Phụ thu trả phòng muộn (BR-FO-03)', ${now}::timestamptz, ${now}::timestamptz)
+      ON CONFLICT (booking_id, source_key) DO UPDATE
+        SET amount = EXCLUDED.amount, updated_at = EXCLUDED.updated_at
+        WHERE NOT EXISTS (SELECT 1 FROM payment_allocations a WHERE a.charge_id = booking_charges.id)`;
+  for (const line of extras)
+    await tx.$executeRaw`
+      INSERT INTO booking_charges(booking_id, kind, source_key, amount, reason, created_at, updated_at)
+      VALUES(${bookingId}::uuid, 'EXTRA_SERVICE', ${line.key}, ${BigInt(line.amount)},
+             ${line.description}, ${now}::timestamptz, ${now}::timestamptz)
+      ON CONFLICT (booking_id, source_key) DO NOTHING`;
 }

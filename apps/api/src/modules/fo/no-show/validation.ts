@@ -6,8 +6,8 @@
  * kiểm là UUID trước khi chạm CSDL (tránh `::uuid` ném lỗi 500 vì đầu vào sai).
  */
 import { z } from 'zod';
-import { noShowRequestSchema } from '@pinehill/contracts';
-import type { NoShowRequest } from '@pinehill/contracts';
+import { noShowPreviewRequestSchema, noShowRequestSchema } from '@pinehill/contracts';
+import type { NoShowPreviewRequest, NoShowRequest } from '@pinehill/contracts';
 import type { FastifyRequest } from 'fastify';
 import { AppError } from '../../../common/app-error.js';
 import { isAuthorizedActor } from '../../../common/actor/authorized-actor.js';
@@ -41,6 +41,15 @@ export function noShowInput(value: unknown): NoShowRequest {
   const booking = uuidSchema.safeParse(parsed.data.bookingId);
   if (!booking.success) throw invalid();
   return Object.freeze({ bookingId: booking.data, reason: parsed.data.reason });
+}
+
+/** Thân lệnh xem trước (HB-209): chỉ `bookingId`, cùng chuẩn hoá UUID với lệnh ghi. */
+export function noShowPreviewInput(value: unknown): NoShowPreviewRequest {
+  const parsed = noShowPreviewRequestSchema.safeParse(value);
+  if (!parsed.success) throw invalid();
+  const booking = uuidSchema.safeParse(parsed.data.bookingId);
+  if (!booking.success) throw invalid();
+  return Object.freeze({ bookingId: booking.data });
 }
 
 /** Tuyến không `@Public` nên `AuthGuard`/`RbacGuard` đã dựng `AuthorizedActor` từ CSDL. */
