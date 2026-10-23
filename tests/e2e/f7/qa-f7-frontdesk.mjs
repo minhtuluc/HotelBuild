@@ -4,10 +4,11 @@
  * Đối chiếu số tiền/trạng thái với **biểu thức/SQL độc lập** do QA viết từ `quy-tac-nghiep-vu.md` và `csdl.md`
  * (không dùng lại engine `packages/domain/src/front-office` hay truy vấn trong `apps/api/src/modules/fo`).
  *
- * Cách chạy (PG16 + Redis7 dev đang chạy sẵn; DB Redis /21 của lát cắt này):
+ * Cách chạy (PG16 + Redis7 dev đang chạy sẵn; Redis dev chỉ có DB 0–15 — bản v1 ghi `/21` là **không hợp lệ**,
+ * QĐ-06 mục 6):
  *
  *   DATABASE_MIGRATION_URL='postgresql://pinehill:pinehill_dev@127.0.0.1:5432/pinehill' \
- *   REDIS_URL='redis://127.0.0.1:6379/21' \
+ *   REDIS_URL='redis://127.0.0.1:6379/9' \
  *   node tests/e2e/f7/qa-f7-frontdesk.mjs
  *
  * Ca phủ (mã ca ở `docs/05-ke-hoach/ke-hoach-kiem-thu.md`): TC-BOOK-17 (walk-in), TC-FO-01 (check-in/nợ), TC-FO-02
@@ -124,9 +125,20 @@ async function makeBooking(label, { role = 'frontdesk', property = ids.property,
   return book[label];
 }
 
-/** Điều kiện đầu cố ý bằng SQL: nhiệm vụ buồng phòng DONE của ngày nhận phòng (xem FINDING F7-QA-01 vì sao). */
-async function markReady(roomId, date) {
-  await sql("INSERT INTO housekeeping_tasks(room_id, business_date, status, completed_at) VALUES($1, $2, 'DONE', now())", [roomId, date]);
+/**
+ * Bằng chứng sẵn sàng qua **API thật** (HB-207): `POST /housekeeping/tasks` trạng thái `INSPECTED`.
+ * Bản v1 phải `INSERT SQL` vì chưa có tuyến này (FINDING F7-QA-01); v2 không còn SQL cho điều kiện đầu.
+ */
+async function markInspected(roomId, date) {
+  const res = await api('/housekeeping/tasks', {
+    token: await login('frontdesk'),
+    method: 'POST',
+    body: { roomId, businessDate: date, status: 'INSPECTED', reason: 'Kiểm phòng — QA F7 v2 (HB-196)' },
+    key: randomUUID(),
+  });
+  if (res.status !== 201)
+    throw new Error(`POST /housekeeping/tasks (${roomId}, ${date}) → ${res.status} ${JSON.stringify(res.body)}`);
+  return res;
 }
 async function dbBalance(bookingId) {
   const [row] = await sql(
@@ -209,9 +221,9 @@ async function main() {
   }
 
   // ---------- Era 1: 06:30 ----------
-  console.log('\n## 1. TC-FO-04 check-in sớm: 06:30 (trước 08:00) — và F7-QA-01 phòng chưa có nhiệm vụ buồng phòng');
-  // Điều kiện đầu (SQL, xem F7-QA-01): mọi phòng sẽ giao trong ngày D có nhiệm vụ DONE của ngày D, trừ T1 để kiểm quan sát F7-QA-01.
-  for (const label of ['T2', 'T3', 'V1', 'U1', 'U2', 'E1', 'E2', 'E3', 'M1', 'MR', 'L1', 'L2', 'L3']) for (const room of book[label].roomIds) await markReady(room, D);
+  console.log('\n## 1. TC-FO-04 check-in sớm: 06:30 (trước 08:00) — và F7-QA-01 ghi nhận bằng chứng sẵn sàng qua API (HB-207)');
+  // Điều kiện đầu qua **API** HB-207 (INSPECTED) cho mọi phòng sẽ giao trong ngày D, trừ T1 để kiểm F7-QA-01.
+  for (const label of ['T2', 'T3', 'V1', 'U1', 'U2', 'E1', 'E2', 'E3', 'M1', 'MR', 'L1', 'L2', 'L3']) for (const room of book[label].roomIds) await markInspected(room, D);
   await setClock(D, '06:30:00');
   let r = await postCheckIn('frontdesk', 'E3');
   check('TC-FO-04 06:30: trả 409 E_FO_CHECKIN_NOT_ALLOWED (bắt buộc đặt thêm 1 đêm, BR-FO-04)', r.status === 409 && errCode(r) === 'E_FO_CHECKIN_NOT_ALLOWED', `${r.status} ${JSON.stringify(r.body)}`);
@@ -220,14 +232,9 @@ async function main() {
 
   await setClock(D, '10:00:00');
   r = await postCheckIn('frontdesk', 'T1');
-  check('F7-QA-01 (quan sát): phòng chưa từng có nhiệm vụ buồng phòng ⇒ 409 phòng chưa sẵn sàng (BR-FO-07)', r.status === 409 && /chưa sẵn sàng/.test(r.body?.message ?? ''), `${r.status} ${JSON.stringify(r.body)}`);
-  const hkApiCreate = await api('/housekeeping/tasks', { token: await login('frontdesk'), method: 'POST', body: { roomId: roomOf('T1'), businessDate: D } });
-  finding(
-    'F7-QA-01',
-    'Phòng mới (chưa từng trả phòng) không có đường API nào tạo nhiệm vụ buồng phòng ⇒ check-in luôn bị 409 "phòng chưa sẵn sàng" cho lần giao đầu tiên.',
-    `check-in T1 lúc 10:00 → ${r.status} "${r.body?.message}"; POST /housekeeping/tasks → ${hkApiCreate.status} (không tồn tại); task chỉ được tạo trong check-out (fo/check-out/tasks.ts). Script phải INSERT SQL nhiệm vụ DONE để chạy tiếp. BR-FO-07 nói "chưa có task/bằng chứng sẵn sàng phải kiểm tra và ghi nhận" nhưng không có API ghi nhận đó.`,
-  );
-  for (const room of book.T1.roomIds) await markReady(room, D);
+  check('F7-QA-01: phòng chưa có bằng chứng sẵn sàng của lượt giải phóng ⇒ 409 "chưa sẵn sàng" (BR-FO-07)', r.status === 409 && /chưa sẵn sàng/.test(r.body?.message ?? ''), `${r.status} ${JSON.stringify(r.body)}`);
+  const hkApiCreate = await markInspected(roomOf('T1'), D);
+  check('F7-QA-01: POST /housekeeping/tasks (INSPECTED) ghi nhận bằng chứng sẵn sàng qua API ⇒ 201 (HB-207 — đóng F7-QA-01, không cần SQL)', hkApiCreate.status === 201 && hkApiCreate.body.status === 'INSPECTED' && hkApiCreate.body.roomId === roomOf('T1'), JSON.stringify(hkApiCreate.body));
 
   // ---------- Era 2: 09:00 ----------
   console.log('\n## 2. TC-FO-04 check-in sớm: 09:00 (phòng sẵn sàng) → miễn phí');
@@ -316,16 +323,9 @@ async function main() {
     const ordered = (await sql('SELECT a.room_id FROM room_assignments a JOIN booking_rooms br ON br.id = a.booking_room_id WHERE br.booking_id = $1 AND a.released_at IS NULL ORDER BY br.id', [book.MR.id])).map((x) => x.room_id);
     const reversed = [...ordered].reverse();
     r = await api('/front-office/check-in', { token: await login('frontdesk'), method: 'POST', body: { bookingId: book.MR.id, actualRoomIds: reversed, earlyCheckIn: false } });
-    const status409 = r.status === 409 && errCode(r) === 'E_INV_ROOM_TAKEN';
-    check('Quan sát: check-in booking 2 phòng với actualRoomIds theo thứ tự KHÁC thứ tự booking_rooms.id ⇒ 409 E_INV_ROOM_TAKEN dù hai phòng đều thuộc chính booking', status409, `${r.status} ${JSON.stringify(r.body)}`);
-    r = await api('/front-office/check-in', { token: await login('frontdesk'), method: 'POST', body: { bookingId: book.MR.id, actualRoomIds: ordered, earlyCheckIn: false } });
-    check('Quan sát: cùng hai phòng theo đúng thứ tự booking_rooms.id ⇒ 201', r.status === 201, `${r.status} ${JSON.stringify(r.body)}`);
-    if (status409)
-      finding(
-        'F7-QA-04',
-        'Check-in booking nhiều phòng ánh xạ `actualRoomIds[i]` ↔ `booking_rooms ORDER BY id` (UUID ngẫu nhiên) nhưng hợp đồng/GUI không cho biết thứ tự này ⇒ chọn đúng các phòng đã gán nhưng sai thứ tự bị 409 E_INV_ROOM_TAKEN.',
-        `MR (DLX×2, đã gán sẵn 2 phòng): đảo thứ tự actualRoomIds → 409 "Lịch phòng đã thay đổi."; đúng thứ tự → 201. facts.ts: bookingRooms orderBy id asc; writes.ts assignActualRooms giải phóng dòng cũ rồi INSERT phòng kia đang giữ bởi BookingRoom còn lại ⇒ vi phạm excl_room_assignments. Android/web chọn phòng theo mã nên dễ gặp với roomCount ≥ 2; không có API đọc phòng đã gán cho booking.`,
-      );
+    check('F7-QA-04: check-in booking 2 phòng với actualRoomIds KHÁC thứ tự booking_rooms.id ⇒ 201 (ghép lại đúng đơn vị, HB-206 — hết E_INV_ROOM_TAKEN)', r.status === 201 && eq([...r.body.roomIds].sort(), [...reversed].sort()), `${r.status} ${JSON.stringify(r.body)}`);
+    const live = (await sql('SELECT a.room_id FROM room_assignments a JOIN booking_rooms br ON br.id = a.booking_room_id WHERE br.booking_id = $1 AND a.released_at IS NULL ORDER BY br.id', [book.MR.id])).map((x) => x.room_id);
+    check('F7-QA-04: mỗi phòng gán đúng một đơn vị bán (không phòng nào bị chiếm hai lần)', new Set(live).size === 2 && eq([...live].sort(), [...reversed].sort()), JSON.stringify(live));
   }
 
   // L1–L3 nhận phòng cho TC-FO-03 (đã thu đủ)
@@ -488,7 +488,7 @@ async function main() {
     check(`TC-FO-03 ${time.slice(0, 5)}: trả phòng 200, feeAmount = ${money(expected)}`, res.status === 200 && BigInt(res.body.feeAmount) === expected && res.body.balanceDue === 0, `${res.status} ${JSON.stringify(res.body)}`);
   }
   // ---------- Era 9/10: phòng dọn xong hôm trước, khách nhận hôm sau ----------
-  console.log('\n## 9. F7-QA-05 phòng trả D+4 (dọn xong ngày D+4) — khách kế tiếp nhận ngày D+5 (BR-FO-07 "lượt giải phóng hiện tại")');
+  console.log('\n## 9. F7-QA-05 phòng trả D+4 (dọn xong ngày D+4) — khách kế tiếp nhận ngày D+5 (BR-FO-07 "lượt giải phóng gần nhất", HB-206 đã sửa)');
   await setClock(add(D, 4), '20:00:00');
   const l1Room = roomOf('L1');
   const l1Tasks = await api(`/housekeeping/tasks?propertyId=${ids.property}&businessDate=${add(D, 4)}`, { token: await login('frontdesk') });
@@ -502,17 +502,9 @@ async function main() {
   check('Việc dọn phòng L1 (ngày D+4) hoàn tất qua API: DONE', r.status === 200 && r.body.status === 'DONE', `${r.status} ${JSON.stringify(r.body)}`);
   await setClock(add(D, 5), '10:00:00');
   r = await api('/front-office/check-in', { token: await login('frontdesk'), method: 'POST', body: { bookingId: book.W2.id, actualRoomIds: [l1Room], earlyCheckIn: false } });
-  const refusedNextDay = r.status === 409 && /chưa sẵn sàng/.test(r.body?.message ?? '');
-  check('Quan sát: phòng đã dọn DONE hôm D+4 nhưng khách nhận ngày D+5 vẫn bị 409 "chưa sẵn sàng" (không có việc dọn ngày D+5)', refusedNextDay, `${r.status} ${JSON.stringify(r.body)}`);
-  await markReady(l1Room, add(D, 5));
-  r = await api('/front-office/check-in', { token: await login('frontdesk'), method: 'POST', body: { bookingId: book.W2.id, actualRoomIds: [l1Room], earlyCheckIn: false } });
-  check('Đối chứng: chỉ khi có việc dọn DONE mang đúng ngày nhận phòng (D+5) thì giao được ⇒ 201', r.status === 201, `${r.status} ${JSON.stringify(r.body)}`);
-  if (refusedNextDay)
-    finding(
-      'F7-QA-05',
-      'Bằng chứng sẵn sàng chỉ lấy từ nhiệm vụ buồng phòng có `businessDate` = ngày nhận phòng; phòng được dọn xong vào ngày trả phòng nhưng khách kế tiếp đến NGÀY SAU thì check-in bị 409, và không có job/endpoint nào tạo việc cho ngày đó.',
-      `L1 trả phòng D+4 (việc dọn D+4 → DONE qua API); W2 nhận ngày D+5 vào cùng phòng → 409 "Phòng thực tế chưa sẵn sàng"; chỉ sau khi INSERT SQL việc DONE ngày D+5 mới 201. facts.ts readinessTasks lọc business_date = ngày nhận phòng (cố ý, theo comment); BR-FO-07 viết "task gần nhất của lần giải phóng đó" nên hai cách đọc lệch nhau — cần lead chốt (lấy task mới nhất của phòng sau lần giải phóng gần nhất thay vì theo ngày).`,
-    );
+  check('F7-QA-05: phòng dọn DONE hôm D+4, khách nhận D+5 ⇒ giao được 201 (bằng chứng của LƯỢT GIẢI PHÓNG GẦN NHẤT, HB-206 — hết 409 sai)', r.status === 201 && eq(r.body.roomIds, [l1Room]), `${r.status} ${JSON.stringify(r.body)}`);
+  const l1Dated = (await sql('SELECT count(*)::int AS n FROM housekeeping_tasks WHERE room_id = $1 AND business_date = $2::date', [l1Room, add(D, 5)]))[0].n;
+  check('F7-QA-05: KHÔNG cần việc dọn mang đúng ngày nhận phòng (D+5) — bằng chứng lấy từ lượt giải phóng D+4', l1Dated === 0, `task D+5 = ${l1Dated}`);
 
   // cờ lateCheckOut do client gửi nhưng giờ do máy chủ quyết: kiểm L2-like cờ sai ở booking khác không còn rảnh ⇒ ghi chú giới hạn.
 

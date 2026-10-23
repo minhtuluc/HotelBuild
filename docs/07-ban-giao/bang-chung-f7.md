@@ -78,3 +78,17 @@ Cổng (chạy trên bản này): `pnpm check:scope`, `npm run check:docs`, `pnp
   `DATABASE_MIGRATION_URL='postgresql://pinehill:pinehill_dev@127.0.0.1:5432/pinehill' REDIS_URL='redis://127.0.0.1:6379/21' node tests/e2e/f7/qa-f7-frontdesk.mjs` (cần PG16 + Redis7 dev đang chạy; thoát mã 1 chừng nào F7-QA-03 còn mở);
   Android: `cd apps/operations-android && pnpm exec vitest run test/arrivals test/no-show test/stay test/walk-in`;
   web: `pnpm --filter @pinehill/operations-web build && pnpm --filter @pinehill/customer-web build` rồi lệnh Playwright ở §1 (thêm cổng riêng nếu có lượt khác đang chạy).
+
+## 7. Lượt 23/10/2026 — QA F7 **v2** sau HB-205/HB-206/HB-207 (Opus, mẻ 13)
+
+§1–§6 ở trên giữ nguyên **nguyên trạng** làm bản ghi lượt 22/10 (khi F7-QA-01/03/04/05 còn mở). Mục này ghi lượt chạy lại sau khi ba PR sửa vào `main`.
+
+- **Nền:** `main` = `3097dbb` (đã có #182 HB-205, #181 HB-206, #184 HB-207) — và gói kiểm Opus `wt/review-R2-all` (= `main@3112f01 + #181 + #182 + #184 + #185`).
+- **Script v2:** cùng `tests/e2e/f7/qa-f7-frontdesk.mjs`, sửa **điều kiện đầu** và các phép kiểm theo hành vi đã sửa; **không** nới phép kiểm nào.
+  - F7-QA-01: điều kiện đầu "sẵn sàng" chuyển từ `INSERT SQL` sang **API thật** `POST /housekeeping/tasks` (`INSPECTED`, HB-207) — không còn SQL.
+  - F7-QA-04: "đảo thứ tự `actualRoomIds`" nay khẳng định **201** (ghép lại đúng đơn vị) + mỗi phòng một đơn vị.
+  - F7-QA-05: phòng dọn `DONE` ngày D+4, khách nhận D+5 nay khẳng định **201**, kèm chứng minh **không** có việc dọn ngày D+5.
+  - Redis đổi `/21` → **`/9`** (Redis dev chỉ có DB 0–15, QĐ-06 mục 6).
+- **Kết quả:** **113/113 PASS · 0 FAIL · 1 FINDING** (thoát mã 0). FINDING duy nhất là **F7-QA-02** — giữ nguyên theo **QĐ-06 mục 3** (lượt bị từ chối không lưu audit là đúng thiết kế; nếu sau này cần thống kê lượt từ chối thì ghi TD). Log: `HB-F6-specs/batch-13-20261023/logs/qa-f7-v2-final.log`.
+- **F7-QA-01/03/04/05: PASS.** Giá nhiều phòng đúng: walk-in DLX 2 phòng 1 đêm = **2.904.000 ₫** = 2 × một phòng; `POST /quotes` `roomCount` 1/2/3 tăng đúng bội số.
+- **Lưu ý vận hành:** `pnpm run ci` **xoay mật khẩu `app_rw`** ⇒ phải chạy `pnpm db:dev-roles` trước khi chạy script (nếu không, health trả 503 vì probe Postgres dùng `app_rw`). Chạy script với `NODE_ENV=development` để `db:seed` tạo tài khoản dev (HB-018 AC2 bỏ qua tài khoản dev khi `NODE_ENV=production`).
