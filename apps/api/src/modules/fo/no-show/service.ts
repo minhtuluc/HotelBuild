@@ -19,8 +19,13 @@
 import type { PrismaClient } from '@prisma/client';
 import { DomainError } from '@pinehill/domain';
 import type { Clock } from '@pinehill/domain';
-import { noShowResponseSchema } from '@pinehill/contracts';
-import type { NoShowRequest, NoShowResponse } from '@pinehill/contracts';
+import { noShowPreviewSchema, noShowResponseSchema } from '@pinehill/contracts';
+import type {
+  NoShowPreview,
+  NoShowPreviewRequest,
+  NoShowRequest,
+  NoShowResponse,
+} from '@pinehill/contracts';
 import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
 import { AppError } from '../../../common/app-error.js';
 import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
@@ -58,19 +63,8 @@ export class NoShowService {
   }
 
   async mark(tx: Tx, actor: AuthorizedActor, input: NoShowRequest): Promise<NoShowResponse> {
-    await this.authorize(tx, actor, input.bookingId);
-    // `ledger.read` khoá booking → payments → refund_requests (ADR-014); `readFacts` đọc lại booking
-    // dưới cùng khoá và nạp snapshot giá/chính sách của lần ở này.
-    const projection = await this.ledger.read(tx, input.bookingId);
-    const facts = await readFacts(tx, input.bookingId, true, projection.paidAmount);
-    if (facts.status !== 'CONFIRMED')
-      throw invalidState('Chỉ booking CONFIRMED mới ghi nhận được khách không đến.');
+    const { facts, projection, milestone } = await this.assess(tx, actor, input.bookingId);
     const now = this.clock.now();
-    const milestone = nominalCheckInMs(
-      facts.checkIn,
-      NO_SHOW_MARK_TIME,
-      facts.payload.stay.timezone,
-    );
     if (now.getTime() < milestone)
       throw invalidState('Chưa tới 23:59 ngày nhận phòng nên chưa được ghi nhận không đến.');
     const selected = this.selection(facts);
@@ -131,6 +125,53 @@ export class NoShowService {
       penaltyAmount: safeAmount(decision.penalty),
       refundRequestId: null,
     });
+  }
+
+  /**
+   * Xem trước tiền no-show (HB-209, TD-28): cùng `assess` + cùng `decide` của engine huỷ như lệnh ghi,
+   * **không ghi gì** (chỉ khoá đọc theo ADR-014). Trước 23:59 lệnh ghi bị từ chối, nên số xem trước được
+   * tính tại chính mốc 23:59 (`markableFrom`) — bậc bắt tất mà lệnh ghi sẽ áp; từ mốc trở đi dùng `now`
+   * như lệnh ghi. `expectedRefundAmount` = 0: lệnh ghi không tạo yêu cầu hoàn (`refundRequestId` luôn
+   * `null`), nên số xem trước không hứa khoản hoàn mà lệnh ghi không thực hiện.
+   */
+  async preview(actor: AuthorizedActor, input: NoShowPreviewRequest): Promise<NoShowPreview> {
+    return this.db.$transaction(
+      async (tx) => {
+        const { facts, milestone } = await this.assess(tx, actor, input.bookingId);
+        const now = this.clock.now();
+        const decision = this.decide(
+          facts,
+          this.selection(facts),
+          Math.max(now.getTime(), milestone),
+        );
+        return noShowPreviewSchema.parse({
+          bookingId: facts.id,
+          penaltyAmount: safeAmount(decision.penalty),
+          expectedRefundAmount: 0,
+          markableFrom: new Date(milestone).toISOString(),
+          computedAt: now.toISOString(),
+        });
+      },
+      { isolationLevel: 'ReadCommitted' },
+    );
+  }
+
+  /**
+   * Phần dùng chung của lệnh ghi và xem trước: phạm vi → sổ cái (khoá booking → payments → refund_requests)
+   * → dữ kiện huỷ → trạng thái `CONFIRMED` → mốc 23:59 ngày nhận phòng theo múi giờ của snapshot.
+   */
+  private async assess(tx: Tx, actor: AuthorizedActor, bookingId: string) {
+    await this.authorize(tx, actor, bookingId);
+    const projection = await this.ledger.read(tx, bookingId);
+    const facts = await readFacts(tx, bookingId, true, projection.paidAmount);
+    if (facts.status !== 'CONFIRMED')
+      throw invalidState('Chỉ booking CONFIRMED mới ghi nhận được khách không đến.');
+    const milestone = nominalCheckInMs(
+      facts.checkIn,
+      NO_SHOW_MARK_TIME,
+      facts.payload.stay.timezone,
+    );
+    return { facts, projection, milestone };
   }
 
   /** Phiên còn hiệu lực và còn phạm vi cơ sở của booking (BR-RBAC-02, OWNER toàn chuỗi). */

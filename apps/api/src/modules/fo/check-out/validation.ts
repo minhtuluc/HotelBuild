@@ -3,7 +3,12 @@
  * Mã lỗi dùng lại danh mục §4.2 — không thêm mã mới, không đổi hợp đồng.
  */
 import type { FastifyRequest } from 'fastify';
-import { checkOutRequestSchema, type CheckOutRequest } from '@pinehill/contracts';
+import {
+  checkOutPreviewRequestSchema,
+  checkOutRequestSchema,
+  type CheckOutPreviewRequest,
+  type CheckOutRequest,
+} from '@pinehill/contracts';
 import { AppError } from '../../../common/app-error.js';
 import { isAuthorizedActor } from '../../../common/actor/authorized-actor.js';
 
@@ -40,6 +45,13 @@ export const internal = () =>
 /** Hết hạn/đã dùng/sai đối tượng của `pinToken` là lỗi `401 E_AUTH_PIN_REQUIRED` (HB-015). */
 export function checkOutInput(value: unknown): CheckOutRequest {
   const result = checkOutRequestSchema.safeParse(value);
+  if (!result.success) throw invalid();
+  return result.data;
+}
+
+/** Thân lệnh xem trước (HB-209): như lệnh trả phòng nhưng không có `pinToken` (không ghi, không tiền ra). */
+export function checkOutPreviewInput(value: unknown): CheckOutPreviewRequest {
+  const result = checkOutPreviewRequestSchema.safeParse(value);
   if (!result.success) throw invalid();
   return result.data;
 }
