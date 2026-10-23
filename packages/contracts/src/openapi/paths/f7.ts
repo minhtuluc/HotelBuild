@@ -9,12 +9,17 @@ import { listResponseSchema } from '../../common.js';
 import {
   checkInRequestSchema,
   checkInResponseSchema,
+  checkOutPreviewRequestSchema,
+  checkOutPreviewSchema,
   checkOutRequestSchema,
   checkOutResponseSchema,
+  noShowPreviewRequestSchema,
+  noShowPreviewSchema,
   noShowRequestSchema,
   noShowResponseSchema,
 } from '../../front-office.js';
 import {
+  housekeepingTaskCreateRequestSchema,
   housekeepingTaskQuerySchema,
   housekeepingTaskSchema,
   housekeepingTaskUpdateRequestSchema,
@@ -86,6 +91,59 @@ export function registerF7Paths(registry: OpenAPIRegistry, errorBodyComponent: z
   });
 
   registry.registerPath({
+    method: 'post',
+    path: '/api/v1/front-office/no-show/preview',
+    operationId: 'frontOfficeNoShowPreview',
+    summary:
+      'Xem trước tiền no-show — không ghi, không PIN, không ràng buộc (UC-FO-04, BR-CANCEL-06,10)',
+    tags: ['fo'],
+    ...bearerRead,
+    request: { body: jsonBody(noShowPreviewRequestSchema) },
+    responses: {
+      200: {
+        description: 'Số xem trước và mốc được ghi no-show',
+        ...jsonBody(noShowPreviewSchema),
+      },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
+      404: errorResponse('E_GEN_NOT_FOUND'),
+      409: errorResponse('E_BOOK_INVALID_STATE'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/front-office/check-out/preview',
+    operationId: 'frontOfficeCheckOutPreview',
+    summary:
+      'Xem trước phụ thu và số dư trả phòng — không ghi, không PIN, không ràng buộc (UC-FO-02, BR-FO-03,05)',
+    tags: ['fo'],
+    ...bearerRead,
+    request: { body: jsonBody(checkOutPreviewRequestSchema) },
+    responses: {
+      200: { description: 'Số xem trước trả phòng', ...jsonBody(checkOutPreviewSchema) },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
+      404: errorResponse('E_GEN_NOT_FOUND'),
+      409: errorResponse('E_BOOK_INVALID_STATE'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/housekeeping/tasks',
+    operationId: 'housekeepingTasksCreate',
+    summary:
+      'Ghi nhận nhiệm vụ dọn hoặc biên bản đã kiểm cho phòng chưa có bằng chứng sẵn sàng (UC-FO-03, BR-FO-07)',
+    ...bearerWrite(['fo']),
+    request: { body: jsonBody(housekeepingTaskCreateRequestSchema) },
+    responses: {
+      201: { description: 'Nhiệm vụ đã tạo', ...jsonBody(housekeepingTaskSchema) },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
+      404: errorResponse('E_GEN_NOT_FOUND'),
+      409: errorResponse('E_FO_TASK_TRANSITION_NOT_ALLOWED', 'E_SYS_REQUEST_IN_PROGRESS'),
+    },
+  });
+
+  registry.registerPath({
     method: 'get',
     path: '/api/v1/housekeeping/tasks',
     operationId: 'housekeepingTasksList',
@@ -131,6 +189,21 @@ export function registerF7Paths(registry: OpenAPIRegistry, errorBodyComponent: z
     responses: {
       200: { description: 'Danh sách khách', ...jsonBody(listResponseSchema(guestSummarySchema)) },
       403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/guests/{guestId}',
+    operationId: 'guestsGet',
+    summary: 'Hồ sơ khách theo id trong phạm vi (UC-CRM-01, BR-CRM-01)',
+    tags: ['crm'],
+    ...bearerRead,
+    parameters: [pathParam('guestId')],
+    responses: {
+      200: { description: 'Hồ sơ khách', ...jsonBody(guestSummarySchema) },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
+      404: errorResponse('E_GEN_NOT_FOUND'),
     },
   });
 

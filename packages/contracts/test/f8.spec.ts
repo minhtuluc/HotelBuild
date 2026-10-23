@@ -187,7 +187,9 @@ describe('CRM quản trị', () => {
     expect(guestAnonymizeRequestSchema.safeParse({ reason: 'x' }).success).toBe(false);
     const document = buildDocument();
     const guestPath = document.paths?.['/api/v1/guests/{guestId}'] ?? {};
-    expect(Object.keys(guestPath)).toEqual([]);
+    // HB-204 thêm GET đọc theo id; vẫn cấm mọi phương thức ghi/xoá trên chính đường dẫn này.
+    expect(Object.keys(guestPath)).toEqual(['get']);
+    expect(guestPath.delete).toBeUndefined();
   });
 
   it('hạng/điểm trả số đêm 12 tháng; danh sách đen cần lý do khi thêm và khi gỡ', () => {

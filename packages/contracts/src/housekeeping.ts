@@ -42,6 +42,20 @@ export const housekeepingTaskUpdateRequestSchema = z.strictObject({
   reason: z.string().max(500).optional(),
 });
 
+/**
+ * `POST /housekeeping/tasks` — HB-204. FRONT_DESK/MANAGER ghi nhận nhiệm vụ dọn (`PENDING`) hoặc biên bản
+ * **đã kiểm** (`INSPECTED`) cho `(roomId, businessDate)` khi phòng chưa có bằng chứng sẵn sàng của lượt
+ * giải phóng hiện tại (BR-FO-07). `reason` bắt buộc để audit; không nhận `assignedTo` (giao việc dùng PATCH).
+ */
+export const housekeepingTaskCreateRequestSchema = z.strictObject({
+  roomId: z.string().min(1),
+  businessDate: businessDateSchema,
+  status: z.enum(['PENDING', 'INSPECTED']),
+  note: z.string().max(500).optional(),
+  reason: z.string().min(1).max(500),
+});
+
 export type HousekeepingTask = z.infer<typeof housekeepingTaskSchema>;
 export type HousekeepingTaskQuery = z.infer<typeof housekeepingTaskQuerySchema>;
 export type HousekeepingTaskUpdateRequest = z.infer<typeof housekeepingTaskUpdateRequestSchema>;
+export type HousekeepingTaskCreateRequest = z.infer<typeof housekeepingTaskCreateRequestSchema>;

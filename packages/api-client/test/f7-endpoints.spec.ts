@@ -230,3 +230,81 @@ describe('hợp đồng F7 qua HTTP thật', () => {
     expect(recorded(1).bodyText).toContain('"consentVersion":"2026-10"');
   });
 });
+
+describe('hợp đồng bổ sung mẻ 13 (HB-204) qua HTTP thật', () => {
+  const PREVIEW_NO_SHOW = {
+    bookingId: 'b1',
+    penaltyAmount: 600_000,
+    expectedRefundAmount: 0,
+    markableFrom: '2026-12-24T16:59:00Z',
+    computedAt: '2026-12-24T08:00:00Z',
+  };
+  const PREVIEW_CHECK_OUT = {
+    bookingId: 'b1',
+    feeAmount: 550_000,
+    extrasAmount: 20_000,
+    balanceDue: 570_000,
+    computedAt: '2026-12-27T05:00:00Z',
+  };
+
+  it('tạo/ghi nhận kiểm phòng: POST /housekeeping/tasks, 201, không If-Match', async () => {
+    handler = () => ({ status: 201, body: { ...TASK, status: 'INSPECTED', version: 0 } });
+    const result = await createHousekeepingApi(client()).createTask({
+      roomId: 'r1',
+      businessDate: '2026-12-27',
+      status: 'INSPECTED',
+      reason: 'Lễ tân kiểm phòng',
+    });
+    expect(result.data.status).toBe('INSPECTED');
+    const seen = recorded(0);
+    expect(seen.method).toBe('POST');
+    expect(seen.url).toBe('/api/v1/housekeeping/tasks');
+    expect(seen.headers['idempotency-key']).toMatch(/^[0-9a-f-]{36}$/);
+    expect(seen.headers['if-match']).toBeUndefined();
+    expect(seen.bodyText).toContain('"reason":"Lễ tân kiểm phòng"');
+  });
+
+  it('tạo kiểm phòng chặn thân sai ngay ở client (trạng thái DONE), không gửi gì', () => {
+    const api = createHousekeepingApi(client());
+    expect(() =>
+      api.createTask({
+        roomId: 'r1',
+        businessDate: '2026-12-27',
+        // @ts-expect-error DONE không thuộc tập trạng thái được tạo
+        status: 'DONE',
+        reason: 'x',
+      }),
+    ).toThrow();
+    expect(requests).toHaveLength(0);
+  });
+
+  it('đọc khách theo id: GET /guests/{guestId}, mã hoá id', async () => {
+    handler = () => ({ status: 200, body: GUEST });
+    const result = await createGuestApi(client()).get('g 1/x');
+    expect(result.data.fullName).toBe('Nguyễn Văn A');
+    expect(recorded(0).method).toBe('GET');
+    expect(recorded(0).url).toBe('/api/v1/guests/g%201%2Fx');
+  });
+
+  it('xem trước no-show: không PIN, thân chỉ có bookingId', async () => {
+    handler = () => ({ status: 200, body: PREVIEW_NO_SHOW });
+    const result = await createFrontOfficeApi(client()).noShowPreview({ bookingId: 'b1' });
+    expect(result.data.penaltyAmount).toBe(600_000);
+    expect(recorded(0).url).toBe('/api/v1/front-office/no-show/preview');
+    expect(recorded(0).bodyText).toBe('{"bookingId":"b1"}');
+  });
+
+  it('xem trước trả phòng: gửi extras/cờ, KHÔNG chèn pinToken dù client có PIN', async () => {
+    handler = () => ({ status: 200, body: PREVIEW_CHECK_OUT });
+    const result = await createFrontOfficeApi(client()).checkOutPreview({
+      bookingId: 'b1',
+      extras: [{ description: 'Nước suối', amount: 20_000 }],
+      lateCheckOut: true,
+      earlyCheckOut: false,
+    });
+    expect(result.data.balanceDue).toBe(570_000);
+    expect(recorded(0).url).toBe('/api/v1/front-office/check-out/preview');
+    expect(recorded(0).bodyText).toContain('"lateCheckOut":true');
+    expect(recorded(0).bodyText).not.toContain('pinToken');
+  });
+});

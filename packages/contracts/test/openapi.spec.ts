@@ -124,6 +124,9 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['post', '/api/v1/front-office/check-in', 'bearer'],
   ['post', '/api/v1/front-office/check-out', 'bearer'],
   ['post', '/api/v1/front-office/no-show', 'bearer'],
+  // HB-204: ghi nhận kiểm phòng, đọc khách theo id (hai tuyến xem trước là POST không ghi — xem hb204.spec.ts).
+  ['post', '/api/v1/housekeeping/tasks', 'bearer'],
+  ['get', '/api/v1/guests/{guestId}', 'bearer'],
   ['get', '/api/v1/housekeeping/tasks', 'bearer'],
   ['patch', '/api/v1/housekeeping/tasks/{taskId}', 'bearer'],
   ['get', '/api/v1/guests', 'bearer'],
@@ -164,7 +167,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 89 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3, tuyến self HB-105 và walk-in HB-151)', () => {
+  it('có đủ 92 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151 và 3 path HB-204)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -236,9 +239,12 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/front-office/check-in',
         '/api/v1/front-office/check-out',
         '/api/v1/front-office/no-show',
+        '/api/v1/front-office/no-show/preview',
+        '/api/v1/front-office/check-out/preview',
         '/api/v1/housekeeping/tasks',
         '/api/v1/housekeeping/tasks/{taskId}',
         '/api/v1/guests',
+        '/api/v1/guests/{guestId}',
         '/api/v1/guests/me',
         '/api/v1/guests/me/loyalty',
         '/api/v1/reconciliation/daily/close',
@@ -346,7 +352,9 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
 
   it('không có DELETE /guests/{guestId} — chỉ ẩn danh hoá (§2.14, BR-CRM-05, HB-160 AC3)', () => {
     const guest = document.paths?.['/api/v1/guests/{guestId}'] ?? {};
-    expect(Object.keys(guest)).toEqual([]);
+    // HB-204 thêm GET đọc theo id; vẫn cấm mọi phương thức ghi/xoá trên chính đường dẫn này.
+    expect(Object.keys(guest)).toEqual(['get']);
+    expect(guest.delete).toBeUndefined();
     expect(document.paths?.['/api/v1/guests/{guestId}/anonymize']?.post).toBeDefined();
   });
 
