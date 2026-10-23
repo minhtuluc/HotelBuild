@@ -97,6 +97,26 @@ export class GuestsService {
     );
   }
 
+  /**
+   * HB-208 — hồ sơ theo id. Cùng luật phạm vi của `assertReachable` (OWNER mọi cơ sở; vai trò khác chỉ khách
+   * có booking trong phạm vi hoặc chưa có booking nào). Không có và ngoài phạm vi trả **cùng** `404`
+   * để không dò được hồ sơ ở cơ sở khác. Cùng `project` với danh sách nên bản ẩn danh hoá cũng khớp.
+   */
+  async get(actor: AuthorizedActor, guestId: string): Promise<GuestSummary> {
+    if (!staff.includes(actor.role)) throw forbidden();
+    return this.db.$transaction(async (tx) => {
+      const row = await tx.guests.findUnique({ where: { id: guestId }, select: guestSelect });
+      if (row === null) throw missing();
+      try {
+        await this.assertReachable(tx, actor, guestId);
+      } catch (error) {
+        if (error instanceof ScopeDeniedError) throw missing();
+        throw error;
+      }
+      return project(row);
+    });
+  }
+
   /** Cursor là `id`; điều kiện trả về so theo cặp `(created_at, id)` để trang không nhảy bản ghi. */
   private async cursor(
     tx: Prisma.TransactionClient,
