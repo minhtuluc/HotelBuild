@@ -59,6 +59,13 @@ interface Expected {
   status: number;
   method: RequestMethod;
 }
+/** `GET` trên id oracle không tồn tại ⇒ 404 trước khi chạm dữ liệu (gọn để tệp oracle không vượt `max-lines`). */
+const readMissing = (roles: readonly string[]): Expected => ({
+  roles,
+  status: 404,
+  method: RequestMethod.GET,
+});
+const GUEST_STAFF = ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'] as const;
 function independentOracle(): Record<string, Expected> {
   const expected: Record<string, Expected> = {};
   for (const [operation, allowed] of Object.entries(matrix))
@@ -222,27 +229,20 @@ function independentOracle(): Record<string, Expected> {
     status: 400,
     method: RequestMethod.POST,
   };
-  keyed[`${RequestMethod.GET}:operations/:operationId`] = {
-    roles: ['ACCOUNTANT', 'OWNER'],
-    status: 404,
-    method: RequestMethod.GET,
-  };
-  keyed[`${RequestMethod.GET}:operations/:operationId/download`] = {
-    roles: ['ACCOUNTANT', 'OWNER'],
-    status: 404,
-    method: RequestMethod.GET,
-  };
+  keyed[`${RequestMethod.GET}:operations/:operationId`] = readMissing(['ACCOUNTANT', 'OWNER']);
+  keyed[`${RequestMethod.GET}:operations/:operationId/download`] = readMissing([
+    'ACCOUNTANT',
+    'OWNER',
+  ]);
   // HB-166 / api.md §2.10: CRM quản trị — ẩn danh hoá, hạng/điểm, danh sách đen.
   keyed[`${RequestMethod.POST}:guests/:guestId/anonymize`] = {
     roles: ['MANAGER', 'OWNER'],
     status: 400,
     method: RequestMethod.POST,
   };
-  keyed[`${RequestMethod.GET}:guests/:guestId/loyalty`] = {
-    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
-    status: 404,
-    method: RequestMethod.GET,
-  };
+  // HB-208 / api.md §2.10: đọc hồ sơ theo id (không có hoặc ngoài phạm vi ⇒ 404).
+  keyed[`${RequestMethod.GET}:guests/:guestId`] = readMissing(GUEST_STAFF);
+  keyed[`${RequestMethod.GET}:guests/:guestId/loyalty`] = readMissing(GUEST_STAFF);
   keyed[`${RequestMethod.POST}:guests/:guestId/blacklist`] = {
     roles: ['MANAGER', 'OWNER'],
     status: 400,

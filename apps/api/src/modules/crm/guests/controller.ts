@@ -37,6 +37,14 @@ export class GuestsController {
     return this.service.search(actor(request), guestSearchInput(query));
   }
 
+  /** HB-208: đọc hồ sơ theo id (SCR-57/62 ghép tên, cờ danh sách đen). Đăng ký sau `@Get()`, trước các tuyến con. */
+  @Get(':guestId')
+  @Header('Cache-Control', 'no-store')
+  @Permission('guests.read')
+  get(@Param('guestId') guestId: string, @Req() request: FastifyRequest) {
+    return this.service.get(actor(request), guestPathId(guestId));
+  }
+
   @Post()
   @Header('Cache-Control', 'no-store')
   @Permission('guests.create')
