@@ -1,11 +1,12 @@
 /** Nối SCR-57/58 với tuyến đọc/ghi có sẵn qua `@pinehill/api-client` (không thêm endpoint). */
-import { createBookingApi } from '@pinehill/api-client';
+import { createBookingApi, createGuestApi } from '@pinehill/api-client';
 import {
   checkInRequestSchema,
   checkInResponseSchema,
   listResponseSchema,
   roomSummarySchema,
   type CheckInResponse,
+  type GuestSummary,
 } from '@pinehill/contracts';
 import type { Session } from '../session';
 import type { CheckInBody } from './model';
@@ -41,4 +42,9 @@ export async function sendCheckIn(
     decoder: checkInResponseSchema,
   });
   return response.data;
+}
+
+/** Hồ sơ khách theo id (HB-208) cho tên trên thẻ SCR-57; client ghim phiên hiện tại, một lần gửi. */
+export function guestPort(session: Session): (guestId: string) => Promise<GuestSummary> {
+  return async (guestId) => (await createGuestApi(session.resourceClient()).get(guestId)).data;
 }

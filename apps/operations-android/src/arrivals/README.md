@@ -10,6 +10,7 @@ Thin screens over the published API; no new endpoint, contract or package change
 ## Not done / BLOCKED
 
 - QR camera: needs an Expo camera dependency (not installed; package/lock files were out of scope). `QrScanner` + `resolveScan` are in place and tested; `ArrivalsScreen` takes `scanner` and defaults to `unavailableScanner`, so the button explains and the manual code filter keeps working. Wiring is one `scanner-factory.native.ts` plus one prop in `app/index.tsx`. The QR payload format is not specified in the docs; the parser accepts a bare `PH-YYMMDD-XXXXX` code or a string containing one.
-- Guest name / tier / arrival time on the card: `BookingSummary` carries `guestId` only and there is no `GET /guests/{id}`; the card shows code, status, stay, party size and server-provided amounts instead.
-- "Collect balance" (SCR-59) is HB-154: `onCollectBalance` is an optional prop, the button appears only when the parent passes it (not wired yet).
+- Guest tier / arrival time on the card: not provided by the published `GuestSummary`/`BookingSummary` for this purpose; the card shows code, status, stay, party size and server-provided amounts.
+- HB-210: the card shows the **guest full name** read by id (`GET /guests/{guestId}`, HB-208). Names live in RAM only (`GuestNames`, no phone/email kept), are fetched at most 4 at a time, one request per distinct guest, and dropped on session/property change; a 403/404 means "no name" (not retried), network/5xx errors retry on the next load, and a missing name never hides the card or blocks check-in.
+- HB-210: optional `onWalkIn` prop adds "+ Khách vãng lai"; `app/index.tsx` swaps the arrivals stage to the existing SCR-65 flow and back, remounting (and so reloading) the list.
 - Device run of TalkBack, camera permission and the Maestro scenarios (`tests/maestro/hb153-*.yaml`): no device available.

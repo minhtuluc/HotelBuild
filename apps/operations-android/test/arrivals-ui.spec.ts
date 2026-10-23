@@ -179,6 +179,25 @@ const room = (id: string, code: string) => ({
 });
 const meta = { limit: 100, total: 2, hasMore: false, nextCursor: null };
 
+/** `GET /guests/{id}` (HB-208): tên trên thẻ; không phải lệnh check-in nên không ghi vào `posts`. */
+const guestOf = (pathname: string): Response | null => {
+  const id = /\/guests\/([^/]+)$/.exec(pathname)?.[1];
+  return id === undefined
+    ? null
+    : Response.json({
+        id,
+        fullName: 'Nguyễn Văn An',
+        phone: '+84912345678',
+        email: null,
+        loyaltyTier: 'GUEST',
+        loyaltyPoints: 0,
+        totalStays: 0,
+        blacklisted: false,
+        consentMarketing: false,
+        createdAt: '2026-10-01T00:00:00.000Z',
+      });
+};
+
 interface Wire {
   online: boolean;
   checkIn: () => Response;
@@ -195,6 +214,8 @@ async function mount(wire: Wire, bookings = [booking('b1', { balanceDue: 0 })]) 
       const url = new URL(String(input));
       if (url.pathname.endsWith('/login')) return Response.json(tokens);
       if (url.pathname.endsWith('/bookings')) return Response.json({ data: bookings, meta });
+      const guest = guestOf(url.pathname);
+      if (guest !== null) return guest;
       if (url.pathname.endsWith('/rooms'))
         return Response.json({
           data: [room('r2', 'CS01-102'), room('r1', 'CS01-101')],

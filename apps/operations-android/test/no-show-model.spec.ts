@@ -1,11 +1,5 @@
 import { expect, test } from 'vitest';
-import {
-  countdownToMark,
-  formatCountdown,
-  markInstantMs,
-  noShowBody,
-  reasonIssue,
-} from '../src/no-show/model';
+import { countdownToMark, formatCountdown, noShowBody, reasonIssue } from '../src/no-show/model';
 
 test('reasonIssue requires a non-blank reason of at most 500 characters', () => {
   expect(reasonIssue('Khách không liên lạc được')).toBeNull();
@@ -23,23 +17,24 @@ test('noShowBody trims the reason and carries only the contract fields', () => {
   });
 });
 
-test('the mark is 23:59 Vietnam time on the check-in date', () => {
-  expect(markInstantMs('2026-10-22')).toBe(Date.parse('2026-10-22T16:59:00.000Z'));
-  expect(markInstantMs('2026-10-22x')).toBeNull();
-  expect(markInstantMs('2026-13-45')).toBeNull();
-  expect(markInstantMs('')).toBeNull();
-});
+const MARK = '2026-10-22T16:59:00.000Z';
 
-test('countdownToMark counts down, and reaches exactly at 23:59:00 inclusive (BR-FO-02)', () => {
-  const mark = Date.parse('2026-10-22T16:59:00.000Z');
-  expect(countdownToMark('2026-10-22', mark - 3_725_000)).toEqual({
+test('countdownToMark follows the instant the server gives, inclusive at the mark (BR-FO-02)', () => {
+  const mark = Date.parse(MARK);
+  expect(countdownToMark(MARK, mark - 3_725_000)).toEqual({
     kind: 'counting',
     remainingMs: 3_725_000,
   });
-  expect(countdownToMark('2026-10-22', mark - 1)).toEqual({ kind: 'counting', remainingMs: 1 });
-  expect(countdownToMark('2026-10-22', mark)).toEqual({ kind: 'reached' });
-  expect(countdownToMark('2026-10-22', mark + 60_000)).toEqual({ kind: 'reached' });
-  expect(countdownToMark('nope', mark)).toEqual({ kind: 'unknown' });
+  expect(countdownToMark(MARK, mark - 1)).toEqual({ kind: 'counting', remainingMs: 1 });
+  expect(countdownToMark(MARK, mark)).toEqual({ kind: 'reached' });
+  expect(countdownToMark(MARK, mark + 60_000)).toEqual({ kind: 'reached' });
+});
+
+test('with no server instant (or a broken one) the client invents no deadline', () => {
+  const now = Date.parse(MARK);
+  expect(countdownToMark(null, now)).toEqual({ kind: 'unknown' });
+  expect(countdownToMark('nope', now)).toEqual({ kind: 'unknown' });
+  expect(countdownToMark('', now)).toEqual({ kind: 'unknown' });
 });
 
 test('formatCountdown renders HH:mm:ss rounding partial seconds up', () => {

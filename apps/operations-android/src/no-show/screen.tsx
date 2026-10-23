@@ -4,15 +4,21 @@
  * tính hay quyết định "đã tới mốc" (ADR-018): đếm ngược chỉ hiển thị, nút xác nhận gửi được và máy chủ từ
  * chối bằng mã/lý do hiển thị nguyên văn. Mất mạng thì không gửi, không xếp hàng.
  */
-import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
-import type { BookingSummary, NoShowResponse } from '@pinehill/contracts';
+import type { BookingSummary, NoShowPreview, NoShowResponse } from '@pinehill/contracts';
 import { color, space, touchTargetDp, typography } from '@pinehill/ui-native';
 import { ActionButton } from '../arrivals/controls';
 import { formatVnDateTime } from '../arrivals/format';
 import type { ActionFailure } from '../arrivals/model';
 import { formatBusinessDate } from '../housekeeping/date';
 import { formatVnd } from '../lookup/view';
+import { usePreview } from '../preview/hooks';
+import { previewText } from '../preview/messages';
+import { noShowPreviewPort } from '../preview/ports';
+import type { PreviewState } from '../preview/reader';
+import { PreviewStatus } from '../preview/status';
+import type { Session } from '../session';
 import { noShowText as text } from './messages';
 import {
   countdownToMark,
@@ -24,6 +30,7 @@ import {
 import type { NoShowWriter } from './writer';
 
 export interface NoShowScreenProps {
+  session: Session;
   booking: BookingSummary;
   writer: NoShowWriter;
   /** Đồng hồ thiết bị (ms) chỉ cho đếm ngược hiển thị; bơm được để test. */
@@ -97,18 +104,59 @@ function useClock(now: () => number): number {
   return current;
 }
 
-function Countdown({ checkIn, nowMs }: { checkIn: string; nowMs: number }): ReactElement {
-  const countdown = countdownToMark(checkIn, nowMs);
+function Countdown({
+  markableFrom,
+  nowMs,
+}: {
+  markableFrom: string | null;
+  nowMs: number;
+}): ReactElement {
+  const countdown = countdownToMark(markableFrom, nowMs);
   let label = text('countdownUnknown');
   if (countdown.kind === 'reached') label = text('countdownReached');
-  if (countdown.kind === 'counting')
-    label = text('countdown', { time: formatCountdown(countdown.remainingMs) });
+  if (countdown.kind === 'counting' && markableFrom !== null)
+    label = text('countdown', {
+      time: formatCountdown(countdown.remainingMs),
+      mark: formatVnDateTime(markableFrom),
+    });
   return (
     <View style={{ gap: space.s1 }}>
       <Text testID="no-show-countdown" accessibilityLiveRegion="none" style={{ fontWeight: '700' }}>
         {label}
       </Text>
       <Text style={{ color: color.textMuted }}>{text('countdownNote')}</Text>
+    </View>
+  );
+}
+
+/** Số xem trước do máy chủ trả (HB-209): chỉ hiển thị, không ràng buộc; lỗi/offline nói rõ "chưa có số". */
+function PreviewBlock({
+  state,
+  onRetry,
+}: {
+  state: PreviewState<NoShowPreview>;
+  onRetry: () => void;
+}): ReactElement {
+  const value = state.value;
+  return (
+    <View testID="no-show-preview" style={{ gap: space.s1 }}>
+      <Text accessibilityRole="header" style={{ fontWeight: '700', color: color.text }}>
+        {previewText('title')}
+      </Text>
+      <PreviewStatus phase={state.phase} testID="no-show-preview-status" onRetry={onRetry} />
+      {state.phase === 'ready' && value !== null ? (
+        <>
+          <Text testID="no-show-preview-penalty" style={{ fontWeight: '700' }}>
+            {text('previewPenalty', { amount: formatVnd(value.penaltyAmount) })}
+          </Text>
+          <Text testID="no-show-preview-refund">
+            {text('previewRefund', { amount: formatVnd(value.expectedRefundAmount) })}
+          </Text>
+          <Text testID="no-show-preview-time" style={{ color: color.textMuted }}>
+            {previewText('computed', { time: formatVnDateTime(value.computedAt) })}
+          </Text>
+        </>
+      ) : null}
     </View>
   );
 }
@@ -170,9 +218,87 @@ function useNoShowForm({
   return { reason, issue, busy, result, submit, edit };
 }
 
+function ReasonField({
+  reason,
+  issue,
+  busy,
+  onChange,
+}: {
+  reason: string;
+  issue: ReasonIssue | null;
+  busy: boolean;
+  onChange: (value: string) => void;
+}): ReactElement {
+  return (
+    <>
+      <Text>{text('reasonLabel')}</Text>
+      <TextInput
+        testID="no-show-reason"
+        accessibilityLabel={text('reasonLabel')}
+        value={reason}
+        maxLength={600}
+        editable={!busy}
+        onChangeText={onChange}
+        style={{
+          minHeight: touchTargetDp,
+          paddingHorizontal: space.s3,
+          borderWidth: 1,
+          borderRadius: 8,
+          color: color.text,
+        }}
+      />
+      {issue === null ? null : (
+        <Text
+          accessibilityRole="alert"
+          testID="no-show-reason-issue"
+          style={{ color: color.danger }}
+        >
+          {text(issue === 'EMPTY' ? 'reasonEmpty' : 'reasonTooLong')}
+        </Text>
+      )}
+    </>
+  );
+}
+
+function Footer({
+  busy,
+  unknown,
+  onSubmit,
+  onReconcile,
+  onClose,
+}: {
+  busy: boolean;
+  unknown: boolean;
+  onSubmit: () => void;
+  onReconcile: () => void;
+  onClose: () => void;
+}): ReactElement {
+  return (
+    <View style={{ padding: space.s4, gap: space.s2 }}>
+      <ActionButton
+        testID="no-show-submit"
+        label={busy ? text('submitting') : text('submit')}
+        disabled={busy}
+        onPress={onSubmit}
+      />
+      {unknown ? (
+        <ActionButton
+          testID="no-show-reconcile"
+          label={text('reconcile')}
+          tone="plain"
+          onPress={onReconcile}
+        />
+      ) : null}
+      <ActionButton testID="no-show-back" label={text('back')} tone="plain" onPress={onClose} />
+    </View>
+  );
+}
+
 export function NoShowScreen(props: NoShowScreenProps): ReactElement {
-  const { booking, now, onChanged, onClose } = props;
+  const { session, booking, now, onChanged, onClose } = props;
   const nowMs = useClock(now);
+  const previewPort = useMemo(() => noShowPreviewPort(session), [session]);
+  const preview = usePreview(session, booking.id, () => previewPort(booking.id));
   const form = useNoShowForm(props);
   const { result, busy } = form;
   if (result?.kind === 'done')
@@ -189,57 +315,29 @@ export function NoShowScreen(props: NoShowScreenProps): ReactElement {
         </Text>
         <Text>{text('stay', { checkIn: formatBusinessDate(booking.checkIn) })}</Text>
         <Text>{text('paid', { paid: formatVnd(booking.paidAmount) })}</Text>
-        <Countdown checkIn={booking.checkIn} nowMs={nowMs} />
+        <PreviewBlock
+          state={preview.state}
+          onRetry={() => {
+            preview.load(() => previewPort(booking.id));
+          }}
+        />
+        <Countdown markableFrom={preview.state.value?.markableFrom ?? null} nowMs={nowMs} />
         <Text testID="no-show-policy" style={{ color: color.textMuted }}>
           {text('policy')}
         </Text>
-        <Text>{text('reasonLabel')}</Text>
-        <TextInput
-          testID="no-show-reason"
-          accessibilityLabel={text('reasonLabel')}
-          value={form.reason}
-          maxLength={600}
-          editable={!busy}
-          onChangeText={form.edit}
-          style={{
-            minHeight: touchTargetDp,
-            paddingHorizontal: space.s3,
-            borderWidth: 1,
-            borderRadius: 8,
-            color: color.text,
-          }}
-        />
-        {form.issue === null ? null : (
-          <Text
-            accessibilityRole="alert"
-            testID="no-show-reason-issue"
-            style={{ color: color.danger }}
-          >
-            {text(form.issue === 'EMPTY' ? 'reasonEmpty' : 'reasonTooLong')}
-          </Text>
-        )}
+        <ReasonField reason={form.reason} issue={form.issue} busy={busy} onChange={form.edit} />
         <ResultNotice result={result} />
       </ScrollView>
-      <View style={{ padding: space.s4, gap: space.s2 }}>
-        <ActionButton
-          testID="no-show-submit"
-          label={busy ? text('submitting') : text('submit')}
-          disabled={busy}
-          onPress={() => void form.submit()}
-        />
-        {unknown ? (
-          <ActionButton
-            testID="no-show-reconcile"
-            label={text('reconcile')}
-            tone="plain"
-            onPress={() => {
-              onChanged();
-              onClose();
-            }}
-          />
-        ) : null}
-        <ActionButton testID="no-show-back" label={text('back')} tone="plain" onPress={onClose} />
-      </View>
+      <Footer
+        busy={busy}
+        unknown={unknown}
+        onSubmit={() => void form.submit()}
+        onReconcile={() => {
+          onChanged();
+          onClose();
+        }}
+        onClose={onClose}
+      />
     </View>
   );
 }

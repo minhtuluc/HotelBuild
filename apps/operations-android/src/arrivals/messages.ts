@@ -8,6 +8,7 @@ export const catalog = {
   refresh: 'Làm mới',
   filter: 'Tìm theo mã booking',
   scan: 'Quét mã QR',
+  walkIn: '+ Khách vãng lai',
   idle: 'Chưa tải danh sách khách đến.',
   loading: 'Đang tải danh sách khách đến…',
   ready: 'Danh sách khách đến',

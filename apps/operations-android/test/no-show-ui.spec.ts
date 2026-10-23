@@ -51,6 +51,7 @@ vi.mock('react', async (original) => {
       h.effects.set(h.index++, effect);
     },
     useCallback: (fn: unknown) => fn,
+    useMemo: (fn: unknown) => call(fn),
   };
 });
 vi.mock('react-native', () => ({
@@ -190,6 +191,16 @@ const marked = () =>
 
 const events: string[] = [];
 
+/** Số xem trước của máy chủ (HB-209): phạt 600.000, mốc ghi no-show 23:59 giờ VN ngày 22/10. */
+const previewOk = () =>
+  Response.json({
+    bookingId: 'b1',
+    penaltyAmount: 600_000,
+    expectedRefundAmount: 0,
+    markableFrom: '2026-10-22T16:59:00.000Z',
+    computedAt: '2026-10-22T09:40:00.000Z',
+  });
+
 async function mount(wire: Wire) {
   const session = new Session({
     storage: memoryStorage(),
@@ -199,6 +210,7 @@ async function mount(wire: Wire) {
     fetchImpl: async (input, init) => {
       const url = new URL(String(input));
       if (url.pathname.endsWith('/login')) return Response.json(tokens);
+      if (url.pathname.endsWith('/no-show/preview')) return previewOk();
       wire.posts.push({
         key: new Headers(init?.headers).get('idempotency-key'),
         body: typeof init?.body === 'string' ? JSON.parse(init.body) : null,
@@ -215,6 +227,7 @@ async function mount(wire: Wire) {
   });
   element = () =>
     NoShowScreen({
+      session,
       booking,
       writer,
       now: () => Date.now(),
@@ -241,17 +254,18 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-test('shows the countdown to 23:59, the policy consequence (no invented amount) and a prefilled reason', async () => {
+test('shows the server preview, a countdown to the server mark, the policy and a prefilled reason', async () => {
   await mount({ online: true, noShow: marked, posts: [] });
+  expect(byId('no-show-preview-penalty')?.text).toContain('600.000');
   expect(byId('no-show-countdown')?.text).toContain('07:19:00');
   expect(textOf()).toContain('PH-261022-B1');
   expect(byId('no-show-policy')?.text).toContain('bậc cuối');
-  expect(byId('no-show-policy')?.text).toContain('chưa có API xem trước');
+  expect(byId('no-show-policy')?.text).not.toContain('chưa có API xem trước');
   expect(byId('no-show-reason')?.props.value).toBe('Khách không đến nhận phòng');
   expect(byId('no-show-submit')?.props.accessibilityState).toMatchObject({ disabled: false });
 });
 
-test('the countdown ticks and flips to "reached" at 23:59:00', async () => {
+test('the countdown ticks and flips to "reached" at the server mark', async () => {
   await mount({ online: true, noShow: marked, posts: [] });
   vi.setSystemTime(new Date('2026-10-22T16:58:58.000Z'));
   vi.advanceTimersByTime(1000);
@@ -259,7 +273,7 @@ test('the countdown ticks and flips to "reached" at 23:59:00', async () => {
   expect(byId('no-show-countdown')?.text).toContain('00:00:01');
   vi.advanceTimersByTime(1000);
   render();
-  expect(byId('no-show-countdown')?.text).toContain('Đã tới 23:59');
+  expect(byId('no-show-countdown')?.text).toContain('Đã tới mốc');
 });
 
 test('one tap on confirm sends the prefilled reason with a key and shows what the server charged', async () => {
