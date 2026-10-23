@@ -102,7 +102,7 @@ Thứ tự và giới hạn:
 
 1. **App:** quay về image/digest cũ đã ghi, kiểm health rồi chạy lại [kiểm sau migration](migration-post-checks.md). Đường này **phụ thuộc pipeline HB-177** — hiện `CHƯA CÓ`; deploy tay không được coi là rollback.
 2. **CSDL:** **không** chạy down migration. Làm theo [migration.md §5](migration.md#5-thất-bại-và-hồi-phục): giữ lưu lượng ở bản tương thích, PITR/restore theo HB-179, cần MANAGER+ phê duyệt, ngoài giờ cao điểm, ghi audit.
-3. **Runbook đang có:** [migration](migration.md), [kiểm sau migration](migration-post-checks.md), [log lỗi API](observability-error-logs.md), [quét bí mật](quet-bi-mat.md), [bản vá dependency](va-dependency-20261014.md). **Chưa có runbook rollback production** ([HB-180](../../08-thi-cong/tickets/HB-180-runbook-rollback.md)) — đây là điều kiện chặn go-live, không phải việc làm sau.
+3. **Runbook đang có:** [migration](migration.md), [kiểm sau migration](migration-post-checks.md), [log lỗi API](observability-error-logs.md), [quét bí mật](quet-bi-mat.md), [biến môi trường và lịch xoay khoá](bien-moi-truong.md) (bảng AC1–AC2 của HB-176, chưa nghiệm thu), [bản vá dependency](va-dependency-20261014.md). **Chưa có runbook rollback production** ([HB-180](../../08-thi-cong/tickets/HB-180-runbook-rollback.md)) — đây là điều kiện chặn go-live, không phải việc làm sau.
 4. **Sau rollback:** biên bản sự cố (SHA/digest trước–sau, thời điểm, chỉ số đã vượt ngưỡng, người quyết định), chạy lại cổng kiểm, thông báo cho chủ đầu tư và khách bị ảnh hưởng nếu có.
 
 ### 3.6 Truyền thông

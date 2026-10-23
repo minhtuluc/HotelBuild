@@ -42,6 +42,6 @@ Khi nâng phiên bản, cập nhật checksum từ release chính thức, chạy
 
 ## Chưa nghiệm thu
 
-- Không có staging HB-175, bảng biến × môi trường/kho thực và lịch xoay JWT/PSP đã duyệt: HB-176 còn OPEN.
+- Không có staging HB-175, kho bí mật thực và lịch xoay JWT/PSP đã duyệt: HB-176 còn OPEN. Bảng biến × môi trường và lịch xoay **đề xuất** nằm ở [bien-moi-truong.md](bien-moi-truong.md).
 - Job được thêm vào repo không tự đổi branch protection. Cần job GitHub chạy trên đúng SHA và trạng thái bắt buộc do chủ repo quản trị; thiếu run/check phải ghi BLOCKED, không gọi CI hosted xanh.
 - Các việc CodeQL/Trivy/pnpm audit, hạn xử lý CVSS và pentest staging thuộc HB-183, chưa được thực hiện bởi phần này.
