@@ -4,6 +4,9 @@
     "slug": "pinehill-operations",
     "scheme": "pinehill-operations",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
