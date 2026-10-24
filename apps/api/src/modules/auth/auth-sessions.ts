@@ -15,7 +15,7 @@ import type { DatabaseClient } from '../../infrastructure/prisma/prisma.module.j
 import type { TokenPairResponse } from './auth.service.js';
 
 /** Every family transition uses the same transaction lock, including descendant insertion. */
-async function lockFamily(tx: Prisma.TransactionClient, familyId: string): Promise<void> {
+export async function lockFamily(tx: Prisma.TransactionClient, familyId: string): Promise<void> {
   await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(${`auth:family:${familyId}`}::text, 0))`;
 }
 

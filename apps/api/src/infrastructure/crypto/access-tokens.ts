@@ -10,7 +10,8 @@ export const ACCESS_TOKEN_TTL_SECONDS = 900;
 
 export interface AccessTokenInput {
   readonly userId: string;
-  readonly role: AccessTokenClaims['role'];
+  /** `GUEST` là chủ thể phiên khách (HB-017): không phải vai trò nhân viên nên chỉ ký, không tham gia RBAC. */
+  readonly role: AccessTokenClaims['role'] | 'GUEST';
   readonly propertyScope: readonly string[];
   readonly sessionId: string;
 }
