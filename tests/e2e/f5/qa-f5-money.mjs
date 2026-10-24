@@ -37,6 +37,7 @@ import { scenarioCancelTiers } from './sc-cancel.mjs';
 import { scenarioPaidThenExpires, scenarioPsp } from './sc-psp.mjs';
 import { scenarioPayout, scenarioRefundControls } from './sc-refund.mjs';
 import { scenarioPartialCancel, scenarioReschedule } from './sc-partial.mjs';
+import { scenarioInvariants, scenarioMultiMethod } from './sc-final.mjs';
 import { ctx } from './qa-f5-ctx.mjs';
 
 const section = (title) => console.log(`\n## ${title}`);
@@ -57,6 +58,10 @@ try {
   await scenarioPartialCancel();
   section('6. Đổi ngày (BR-BOOK-12, BR-CANCEL-08, BR-RATE-16)');
   await scenarioReschedule();
+  section('7. Hoàn nhiều phương thức (TC-PAY-23, BR-PAY-08)');
+  await scenarioMultiMethod();
+  section('8. Bất biến sổ tiền, trần hoàn ở CSDL, dữ liệu thẻ (BB-02, BB-10, TC-PAY-21, BR-PAY-04)');
+  await scenarioInvariants();
 } catch (error) {
   check('Script chạy hết không lỗi ngoài ý muốn', false, error instanceof Error ? error.stack : String(error));
 } finally {
