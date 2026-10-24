@@ -55,6 +55,13 @@ const apiEnvSchema = z.object({
   // Chỉ để quyết định fail-fast (production không được chạy adapter mô phỏng). `loadConfig` đọc từ env.
   NODE_ENV: z.enum(['development', 'test', 'production']).optional(),
   LOG_LEVEL: z.enum(logLevels).default('info'),
+  // Thư giao dịch của API (HB-028: đặt lại mật khẩu khách). Thiếu `SMTP_URL` ⇒ API vẫn chạy nhưng việc gửi thư
+  // lỗi `MAIL_NOT_CONFIGURED` (được log + audit, phản hồi vẫn 202). `SMTP_FROM` bỏ trống ⇒ địa chỉ dev
+  // `no-reply@localhost` — production **phải** đặt. `GUEST_WEB_BASE_URL` là gốc customer web dùng dựng link
+  // (`<gốc>/account/reset-password?token=…`); không ghi cứng trong mã. Worker có cặp riêng `NOTI_SMTP_*`.
+  SMTP_URL: urlWithProtocol('smtp:', 'smtps:').optional(),
+  SMTP_FROM: z.string().min(3).max(200).optional(),
+  GUEST_WEB_BASE_URL: urlWithProtocol('http:', 'https:').optional(),
   // Quan sát (HB-181): endpoint OTLP bỏ trống ⇒ **không** bật exporter (mặc định dev); trace vẫn lan
   // truyền qua `traceparent`. Ứng dụng xuất **đủ** span — lấy mẫu (≥ 10%, giữ 100% lỗi/thanh toán) là việc
   // của collector (`infra/observability/otel-collector.yml`). `OTEL_SAMPLE_RATIO` chỉ đặt cờ sampled của
