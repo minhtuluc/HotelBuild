@@ -252,7 +252,7 @@ test('documented §3 DDL and business constraints', async (t) => {
 
   await run('BR-PAY-03 / BR-PAY-09: payment sign and scoped business idempotency enforced', async (f) => {
     const b = await f.booking();
-    const p = await insert(db, 'payments', { booking_id: b.id, type: 'DEPOSIT', method: 'BANK_TRANSFER', amount: 100000, idempotency_key: 'deposit-1' });
+    const p = await insert(db, 'payments', { booking_id: b.id, type: 'DEPOSIT', method: 'BANK_TRANSFER', amount: 100000, status: 'SUCCEEDED', paid_at: '2030-01-01', idempotency_key: 'deposit-1' });
     await rejectsSQL(db, 'UPDATE payments SET amount=-1 WHERE id=$1', [p.id], '23514');
     await rejectsSQL(db, "INSERT INTO payments (booking_id,type,method,amount,idempotency_key) VALUES ($1,'DEPOSIT','BANK_TRANSFER',100000,'deposit-1')", [b.id], '23505');
     await insert(db, 'payments', { booking_id: b.id, type: 'REFUND', method: 'BANK_TRANSFER', amount: -100000, idempotency_key: 'refund-1' });
