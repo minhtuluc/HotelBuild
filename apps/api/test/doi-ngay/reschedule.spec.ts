@@ -16,6 +16,7 @@ import {
   bookingRow,
   chargesOf,
   createBooking,
+  day,
   errorCode,
   login,
   refundRequestsOf,
@@ -91,9 +92,9 @@ describe('HB-098 đổi ngày lưu trú', () => {
       checkOut: shifted.checkOut,
     });
     expect(appended.payload_json.nights.map((night) => night.date)).toEqual([
-      '2026-11-08',
-      '2026-11-09',
-      '2026-11-10',
+      shifted.checkIn,
+      day(29),
+      day(30),
     ]);
     expect(appended.payload_json.reschedule).toMatchObject({
       previousCheckIn: stay.checkIn,
@@ -165,13 +166,13 @@ describe('HB-098 đổi ngày lưu trú', () => {
   test('BR-BOOK-13/BR-CANCEL-08: giá kỳ mới thấp hơn ⇒ không hạ cam kết cũ, không sinh hoàn', async () => {
     const token = await login();
     const { booking } = await createBooking(
-      { checkIn: '2026-11-01', checkOut: '2026-11-04' },
+      { checkIn: stay.checkIn, checkOut: stay.checkOut },
       { token },
     );
     const response = await rescheduleRequest(
       token,
       booking.id,
-      { checkIn: '2026-11-01', checkOut: '2026-11-03' },
+      { checkIn: stay.checkIn, checkOut: day(23) },
       { tag: await versionOf(token, booking.id) },
     );
     expect(response.status, JSON.stringify(response.body)).toBe(200);
@@ -204,7 +205,7 @@ describe('HB-098 đổi ngày lưu trú', () => {
       "UPDATE room_types SET base_price=133000,min_price=133000,max_price=133000 WHERE code='STD'",
     );
     const { booking } = await createBooking(
-      { ratePlanCode: 'NONREF', checkIn: '2026-11-01', checkOut: '2026-11-03' },
+      { ratePlanCode: 'NONREF', checkIn: stay.checkIn, checkOut: day(23) },
       { token },
     );
     expect(booking.depositPercent).toBe(100);
@@ -213,7 +214,7 @@ describe('HB-098 đổi ngày lưu trú', () => {
     const response = await rescheduleRequest(
       token,
       booking.id,
-      { checkIn: '2026-11-01', checkOut: '2026-11-04', reason: 'Kéo dài kỳ lưu trú' },
+      { checkIn: stay.checkIn, checkOut: stay.checkOut, reason: 'Kéo dài kỳ lưu trú' },
       { tag: await versionOf(token, booking.id) },
     );
     expect(response.status, JSON.stringify(response.body)).toBe(200);
@@ -269,7 +270,7 @@ describe('HB-098 đổi ngày lưu trú', () => {
     const stale = await rescheduleRequest(
       token,
       booking.id,
-      { checkIn: '2026-11-20', checkOut: '2026-11-23' },
+      { checkIn: day(40), checkOut: day(43) },
       { tag: version },
     );
     expect(stale.status).toBe(412);
@@ -311,7 +312,7 @@ describe('HB-098 đổi ngày lưu trú', () => {
     const second = await rescheduleRequest(
       token,
       booking.id,
-      { checkIn: '2026-11-10', checkOut: '2026-11-13' },
+      { checkIn: day(30), checkOut: day(33) },
       { tag: await versionOf(token, booking.id) },
     );
     expect(second.status).toBe(409);
@@ -319,21 +320,18 @@ describe('HB-098 đổi ngày lưu trú', () => {
     expect(bodyOf(second.body).message).toContain('huỷ');
 
     // E3: dưới `rescheduleMinHours` (mặc định 168) tính theo **giờ CSDL** so với kỳ cũ.
-    const soon = await createBooking({ checkIn: '2026-10-20', checkOut: '2026-10-22' }, { token });
+    const soon = await createBooking({ checkIn: day(2), checkOut: day(4) }, { token });
     const tooLate = await rescheduleRequest(
       token,
       soon.booking.id,
-      { checkIn: '2026-10-23', checkOut: '2026-10-25' },
+      { checkIn: day(5), checkOut: day(7) },
       { tag: await versionOf(token, soon.booking.id) },
     );
     expect(tooLate.status).toBe(409);
     expect(errorCode(tooLate.body)).toBe('E_BOOK_INVALID_STATE');
 
     // BR-BOOK-13: đã nhận phòng thì phải check-out rồi tạo booking mới (kỳ riêng để không vướng tồn).
-    const checkedIn = await createBooking(
-      { checkIn: '2026-11-15', checkOut: '2026-11-18' },
-      { token },
-    );
+    const checkedIn = await createBooking({ checkIn: day(35), checkOut: day(38) }, { token });
     await rows("UPDATE bookings SET status='CHECKED_IN' WHERE id=$1::uuid", [checkedIn.booking.id]);
     const immutable = await rescheduleRequest(
       token,
@@ -346,7 +344,7 @@ describe('HB-098 đổi ngày lưu trú', () => {
 
     // BR-RATE-20: `rescheduleAllowed` là dữ liệu của gói giá.
     await rows("UPDATE rate_plans SET reschedule_allowed=false WHERE code='FLEX7'");
-    const plan = await createBooking({ checkIn: '2026-11-20', checkOut: '2026-11-23' }, { token });
+    const plan = await createBooking({ checkIn: day(40), checkOut: day(43) }, { token });
     const denied = await rescheduleRequest(
       token,
       plan.booking.id,
@@ -357,10 +355,7 @@ describe('HB-098 đổi ngày lưu trú', () => {
     expect(errorCode(denied.body)).toBe('E_BOOK_INVALID_STATE');
 
     // Trạng thái kết thúc (BR-BOOK-06) cũng bị chặn.
-    const cancelled = await createBooking(
-      { checkIn: '2026-11-25', checkOut: '2026-11-28' },
-      { token },
-    );
+    const cancelled = await createBooking({ checkIn: day(45), checkOut: day(48) }, { token });
     await rows(
       "UPDATE bookings SET status='CANCELLED', cancelled_at=clock_timestamp() WHERE id=$1::uuid",
       [cancelled.booking.id],

@@ -12,6 +12,7 @@ import {
   bookingRow,
   chargesOf,
   createBooking,
+  day,
   deleteRequest,
   errorCode,
   login,
@@ -85,7 +86,7 @@ describe('HB-098 xoá cứng DRAFT/HELD', () => {
     expect(errorCode(denied.body)).toBe('E_BOOK_HARD_DELETE_FORBIDDEN');
     expect(await bookingRow(confirmed.booking.id)).toBeTruthy();
 
-    const draft = await createBooking({ checkIn: '2026-11-20', checkOut: '2026-11-22' }, { token });
+    const draft = await createBooking({ checkIn: day(40), checkOut: day(42) }, { token });
     await toDraft(draft.booking.id);
     const removed = await deleteRequest(token, draft.booking.id, { reason: 'Bản nháp của quầy' });
     expect(removed.status, JSON.stringify(removed.body)).toBe(204);

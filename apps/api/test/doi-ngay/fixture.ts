@@ -35,19 +35,29 @@ import {
   room2Id,
   roomId,
   rows,
-  stay,
   typeId,
   userId,
 } from '../room-blocks/inventory-seed.js';
 import { resetConfig, seedFlexTiers, seedNonrefPlan } from './seed.js';
 
-export { clock, propertyId, room2Id, roomId, rows, stay, typeId, userId };
+export { clock, propertyId, room2Id, roomId, rows, typeId, userId };
 export { resetConfig, seedPayment, toDraft, blockRooms } from './seed.js';
 
 /** Hạn giữ chỗ của kênh `WEB` trong fixture (> 0 ⇒ `POST /bookings` vào `HELD`, BR-BOOK-07). */
 export const WEB_HOLD_MINUTES = 20;
+const DAY_MS = 86_400_000;
+/**
+ * Ngày nghiệp vụ suy từ **ngày thật lúc chạy**: luật 168 giờ của BR-BOOK-12 đọc `clock_timestamp()`
+ * của CSDL chứ không đọc đồng hồ tiêm, nên ngày ghi cứng trong bộ này "hết hạn" theo lịch — cả vùng
+ * đổi ngày đỏ ngày 25/10/2026 khi hôm nay vượt `2026-11-01 − 168 giờ`. Neo lại theo hôm nay:
+ * kỳ gốc `stay` cách 21 ngày (dư mốc 168 giờ), `shifted` dời đúng 7 ngày nên cùng thứ trong tuần.
+ */
+export const day = (offset: number) =>
+  new Date(Date.now() + offset * DAY_MS).toISOString().slice(0, 10);
+/** Kỳ gốc của bộ HB-098 — mọi kỳ khác trong bộ suy ra từ đây qua `day`. */
+export const stay = { checkIn: day(21), checkOut: day(24) };
 /** Kỳ mới dùng cho ca "dời nguyên kỳ": **dời đúng 7 ngày** nên cùng thứ trong tuần và cùng mức giá nền. */
-export const shifted = { checkIn: '2026-11-08', checkOut: '2026-11-11' };
+export const shifted = { checkIn: day(28), checkOut: day(31) };
 
 let app: NestFastifyApplication;
 let redis: Redis;
