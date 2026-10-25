@@ -24,7 +24,7 @@ locked_sha:
   - 8fd072ffc775970e6ff832563136835bd19e58866e7fe6fcfe3d720a613bc005 apps/api/test/password-reset/reset-data.ts
   - 40c0667a2a1e5518e2f13a570dc75f915e19f4d25405aa46511ad799e5410944 apps/api/test/password-reset/reset-mail.ts
   - bffde9298e6d9977bd71241f4ac38c9cc7a3c1adf009c237e9531175dbef9a00 apps/api/test/password-reset/reset-oracle.fixture.ts
-  - a357e4d7c9ef8c4f535a7f9cb38e80bcde3ed43f7f9a30e9f7fffa80d8793bbd apps/api/test/password-reset/reset-request.spec.ts
+  - 2640fef3066561567a9050b09b75b4436a07cc8e42405d87eaf5b09f17178b99 apps/api/test/password-reset/reset-request.spec.ts
 ---
 
 # HB-028 — Quên mật khẩu qua email
@@ -40,8 +40,10 @@ Khách có email nhận link đặt lại mật khẩu; khách không có email 
 
 ## Hai giai đoạn
 
-- **A — Codex** (nhánh ứng viên `ticket/HB-028-quen-mat-khau-a`, ghim bởi Opus 23/10): `reset-request.spec.ts`, `reset-confirm.spec.ts`, `reset-controls.spec.ts` + `reset-data.ts`, `reset-mail.ts`, `reset-oracle.fixture.ts` dùng Mailpit thật (API `http://127.0.0.1:8025/api/v1`) hoặc cổng mail giả có ghi nhận. Ca: SĐT có tài khoản + email → 202, đúng 1 thư chứa link; SĐT không tồn tại / không có email → **cùng** 202, 0 thư; token dùng hai lần → lần hai `E_AUTH_RESET_TOKEN_INVALID`; quá 30 phút → bị từ chối; đặt lại xong → mọi phiên khách bị thu hồi, đăng nhập bằng mật khẩu mới được; quá 3 yêu cầu/giờ/SĐT → 429; token không có trong log.
+- **A — Codex** (nhánh ứng viên `ticket/HB-028-quen-mat-khau-a`, ghim bởi Opus 23/10; **ghim lại `reset-request.spec.ts` 24/10** — xem ghi chú cuối mục): `reset-request.spec.ts`, `reset-confirm.spec.ts`, `reset-controls.spec.ts` + `reset-data.ts`, `reset-mail.ts`, `reset-oracle.fixture.ts` dùng Mailpit thật (API `http://127.0.0.1:8025/api/v1`) hoặc cổng mail giả có ghi nhận. Ca: SĐT có tài khoản + email → 202, đúng 1 thư chứa link; SĐT không tồn tại / không có email → **cùng** 202, 0 thư; token dùng hai lần → lần hai `E_AUTH_RESET_TOKEN_INVALID`; quá 30 phút → bị từ chối; đặt lại xong → mọi phiên khách bị thu hồi, đăng nhập bằng mật khẩu mới được; quá 3 yêu cầu/giờ/SĐT → 429; token không có trong log.
 - **B — DeepSeek** (`ticket/HB-028-quen-mat-khau`): hiện thực tới khi test khoá xanh.
+
+> **Ghim lại oracle 24/10 (Opus, QĐ-07 mục 6).** Ca *"real SMTP refusal keeps 202 and committed token, with failure log and durable audit"* đọc hàng `audit_logs` **ngay sau** phản hồi, tức ngầm buộc việc gửi thư phải **chặn** phản hồi — đúng cái làm lộ tồn tại tài khoản qua thời gian (review F1). Oracle nay **đợi có giới hạn** (tối đa 100 × 20 ms) cho tới khi nhật ký gửi lỗi xuất hiện; **mọi điều được khẳng định giữ nguyên** (202, token đã commit, audit gửi lỗi, log mức ≥ 40), chỉ bỏ yêu cầu ngầm về thời điểm. Năm tệp khoá còn lại giữ nguyên hash.
 
 ## Tiêu chí nghiệm thu
 

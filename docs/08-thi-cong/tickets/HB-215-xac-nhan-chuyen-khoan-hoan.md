@@ -18,7 +18,7 @@ allow:
 
 # HB-215 — Xác nhận chuyển khoản hoàn tiền tay
 
-> **⚠️ Cần chủ dự án phê chuẩn trước khi thi công** (AGENTS §4: đổi cách tiền **ra** khỏi hệ thống). Opus đã chốt phương án (QĐ-07 mục 5); ticket này chỉ được thực hiện sau khi chủ dự án đồng ý.
+> **✅ Chủ dự án đã phê chuẩn ngày 24/10/2026** (AGENTS §4: đổi cách tiền **ra** khỏi hệ thống). Ticket này **được thi công**; giữ nguyên các ràng buộc bằng chứng/PIN/khác người duyệt ở dưới.
 
 ## Mục tiêu
 
