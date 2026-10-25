@@ -30,6 +30,11 @@ export function invalidCredentials(): AppError {
   return new AppError(401, 'E_AUTH_INVALID_CREDENTIALS', 'Tên đăng nhập hoặc mật khẩu không đúng.');
 }
 
+/** Phiên khách (HB-017) hợp lệ nhưng không có quyền nào trên tuyến nhân viên. */
+function guestSessionForbidden(): AppError {
+  return new AppError(403, 'E_RBAC_FORBIDDEN', 'Bạn không có quyền thực hiện thao tác này.');
+}
+
 function passwordChangeRequired(): AppError {
   return new AppError(
     403,
@@ -116,7 +121,7 @@ export class AuthGuard implements CanActivate {
     if (
       session === null ||
       session.revoked_at !== null ||
-      session.user_id !== userId ||
+      (session.principal_type === 'GUEST' ? session.guest_id : session.user_id) !== userId ||
       session.expires_at.getTime() <= now.getTime()
     ) {
       throw invalidCredentials();
@@ -133,6 +138,8 @@ export class AuthGuard implements CanActivate {
         data: { last_seen_at: now },
       });
     }
+    // Phiên khách (HB-017) đã kiểm đủ (chưa thu hồi, đúng chủ, còn hạn) nhưng mọi tuyến có guard là tuyến nhân viên.
+    if (session.principal_type === 'GUEST') throw guestSessionForbidden();
     return session;
   }
 }
