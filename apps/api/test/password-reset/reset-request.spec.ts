@@ -103,6 +103,9 @@ test('request cannot alter existing guest credential or active sessions', async 
   await seedSession(id, 'GUEST_ANDROID');
   const before = await snapshot(id);
   expect((await requestReset()).status).toBe(202);
+  // Thư gửi SAU phản hồi (bịt kênh thời gian lộ tồn tại tài khoản, QĐ-07 mục 6) nên phải **đợi** hiệu ứng
+  // phụ của chính ca này trước khi kết thúc, nếu không thư còn bay sẽ rơi vào ca sau.
+  await tokenFromMail();
   const after = await snapshot(id);
   expect(after.credential).toEqual(before.credential);
   expect(after.sessions).toEqual(before.sessions);
@@ -142,9 +145,17 @@ test('real SMTP refusal keeps202 and committed token, with failure log and durab
   expect(await rows('SELECT id FROM guest_password_resets WHERE guest_id=$1', [id])).toHaveLength(
     1,
   );
-  const audit = await rows(
-    'SELECT after_json,action,reason FROM audit_logs ORDER BY chain_seq DESC LIMIT 1',
-  );
+  // Thư gửi SAU phản hồi (bịt kênh thời gian lộ tồn tại tài khoản, QĐ-07 mục 6) nên nhật ký gửi lỗi
+  // có thể tới muộn hơn phản hồi: đợi có giới hạn cho tới khi hàng nhật ký **là** lỗi gửi, không đổi
+  // điều gì được khẳng định.
+  let audit: unknown[] = [];
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    audit = await rows(
+      'SELECT after_json,action,reason FROM audit_logs ORDER BY chain_seq DESC LIMIT 1',
+    );
+    if (audit.length === 1 && isDeliveryFailure(audit[0])) break;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
   expect(await auditCount()).toBeGreaterThan(before);
   // Failure must be observable independently of the generic HTTP202 access log; event names are internal.
   expect(audit).toHaveLength(1);

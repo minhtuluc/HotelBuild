@@ -83,7 +83,10 @@ export class PasswordResetService {
     if (retryAfter !== null)
       throw new AppError(429, 'E_GEN_RATE_LIMITED', RATE_LIMITED_MESSAGE, retryAfter);
     const issued = await this.prisma.$transaction((tx) => this.issue(tx, phone, context));
-    if (issued !== null) await this.deliver(issued, context);
+    // Thư gửi **sau commit** và **không** chặn phản hồi: nếu `await` ở đây thì nhánh "có tài khoản + email"
+    // chậm hơn nhánh "không có" một khoảng đo được ⇒ lộ tồn tại tài khoản qua thời gian (QĐ-07 mục 6).
+    // `deliver` tự nuốt lỗi (log + audit riêng) nên không bao giờ reject.
+    if (issued !== null) void this.deliver(issued, context);
   }
 
   /** `null` khi SĐT không có tài khoản mật khẩu + email: không ghi gì, không gửi thư. */
