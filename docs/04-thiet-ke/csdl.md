@@ -1613,9 +1613,21 @@ CREATE TRIGGER trg_payments_identity BEFORE UPDATE ON payments
 
 -- HB-214 (migration 0008): trần hoàn luỹ kế ép ở CSDL (TC-PAY-21, BR-CANCEL-17, BR-PAY-07).
 -- Dòng REFUND âm (`ck_payments_sign`) nên tổng đã hoàn = `-sum(amount)` của REFUND **chưa FAILED**;
--- tổng đã thu = `sum(amount)` của các dòng thu SUCCEEDED (cùng tập `type` với ledger). Khoá `bookings`
--- trước `payments` (ADR-014) rồi mới đọc tổng, nên hai REFUND đồng thời cùng booking không cùng lọt.
--- Migration 0008 kiểm dữ liệu hiện có trước khi bật trigger (§10.4).
+-- tổng đã thu = `sum(amount)` của các dòng thu SUCCEEDED (cùng tập `type` với ledger).
+-- BEFORE chỉ khoá `bookings` trước `payments` (ADR-014) để tuần tự hoá các lần ghi REFUND;
+-- AFTER mới đọc tổng sau khi cả câu lệnh ghi xong, nên hai REFUND đồng thời không cùng lọt và một
+-- `INSERT` nhiều VALUES cũng không chia nhỏ được trần. Migration 0008 kiểm dữ liệu có sẵn trước (§10.4).
+CREATE FUNCTION fn_lock_refund_booking() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.type <> 'REFUND' OR NEW.status = 'FAILED' THEN
+    RETURN NEW;
+  END IF;
+  PERFORM 1 FROM bookings WHERE id = NEW.booking_id FOR UPDATE;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_payments_refund_cap BEFORE INSERT OR UPDATE ON payments
+  FOR EACH ROW EXECUTE FUNCTION fn_lock_refund_booking();
+
 CREATE FUNCTION fn_guard_refund_cap() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE
   v_refunded  bigint;
@@ -1624,14 +1636,8 @@ BEGIN
   IF NEW.type <> 'REFUND' OR NEW.status = 'FAILED' THEN
     RETURN NEW;
   END IF;
-  PERFORM 1 FROM bookings WHERE id = NEW.booking_id FOR UPDATE;
-  IF NOT FOUND THEN
-    RETURN NEW; -- FK `payments.booking_id` báo lỗi, không che bằng lỗi trần hoàn.
-  END IF;
   SELECT coalesce(-sum(p.amount), 0) INTO v_refunded FROM payments p
-   WHERE p.booking_id = NEW.booking_id AND p.type = 'REFUND'
-     AND p.status <> 'FAILED' AND (TG_OP = 'INSERT' OR p.id <> NEW.id);
-  v_refunded := v_refunded - NEW.amount;
+   WHERE p.booking_id = NEW.booking_id AND p.type = 'REFUND' AND p.status <> 'FAILED';
   SELECT coalesce(sum(p.amount), 0) INTO v_collected FROM payments p
    WHERE p.booking_id = NEW.booking_id AND p.status = 'SUCCEEDED'
      AND p.type IN ('DEPOSIT','BALANCE','PENALTY','EXTRA_SERVICE','RESCHEDULE_FEE');
@@ -1641,7 +1647,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END $$;
-CREATE TRIGGER trg_payments_refund_cap BEFORE INSERT OR UPDATE ON payments
+CREATE TRIGGER trg_payments_refund_cap_check AFTER INSERT OR UPDATE ON payments
   FOR EACH ROW EXECUTE FUNCTION fn_guard_refund_cap();
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -1996,7 +2002,9 @@ REVOKE UPDATE, DELETE, TRUNCATE ON price_snapshots, refund_approvals FROM app_rw
 REVOKE DELETE, TRUNCATE ON refund_allocations, payments, refund_requests FROM app_rw, app_ro, analytics_ro;
 
 -- TD-12: hàm bảo vệ mới không mở EXECUTE cho PUBLIC; chỉ vai trò chạy trigger (app_rw) giữ quyền.
+REVOKE ALL ON FUNCTION fn_lock_refund_booking() FROM PUBLIC;
 REVOKE ALL ON FUNCTION fn_guard_refund_cap() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION fn_lock_refund_booking() TO app_rw;
 GRANT EXECUTE ON FUNCTION fn_guard_refund_cap() TO app_rw;
 
 -- Quyền mặc định cho bảng tạo về sau; mọi migration PHẢI chạy lại khối REVOKE ở trên
@@ -2581,15 +2589,17 @@ sinh lại bằng `prisma db pull` cho hai bảng này.
 
 ## 10.4. Migration 0008 — trần hoàn luỹ kế ép ở CSDL (HB-214)
 
-Migration tiến thuần: thêm hàm `fn_guard_refund_cap`, trigger `trg_payments_refund_cap` (§3.3) và khối
-`REVOKE`/`GRANT` EXECUTE cho hàm (§3.5); không đổi bảng, cột hay trạng thái nghiệp vụ nào. Hàm từ chối
-`INSERT`/`UPDATE` dòng `payments` `type='REFUND'`, `status<>'FAILED'` khi `Σ REFUND` (chưa `FAILED`) của
-booking lớn hơn `Σ thu SUCCEEDED` cùng booking, ném `23514` với thông điệp `BR-CANCEL-17/BR-PAY-07`.
-Hàm khoá dòng `bookings` (`FOR UPDATE`) trước khi đọc tổng — đúng thứ tự `booking → payments` của ADR-014
-và trùng `loadLocked()`/worker chi hoàn — nên hai REFUND đồng thời không cùng lọt. Trước khi bật trigger,
-migration quét dữ liệu hiện có; nếu có booking đã vi phạm thì **dừng** (nêu số booking + mẫu ID), không tự
-sửa tiền. Test `apps/api/test/migration/refund-cap-guard.spec.ts` phủ từ chối khi vượt, chấp nhận khi bằng,
-đồng thời hai kết nối, REFUND `FAILED` và quyền EXECUTE của `app_rw`.
+Migration tiến thuần: thêm hai hàm và hai trigger (§3.3) cùng khối `REVOKE`/`GRANT` EXECUTE (§3.5);
+không đổi bảng, cột hay trạng thái nghiệp vụ nào. `fn_lock_refund_booking` gắn `BEFORE` chỉ khoá dòng
+`bookings` (`FOR UPDATE`) theo thứ tự ADR-014, nên hai lần ghi REFUND đồng thời của cùng booking xếp
+hàng trên một khoá. `fn_guard_refund_cap` gắn `AFTER` mới đọc tổng — lúc đó cả câu lệnh đã ghi xong, nên
+`INSERT` nhiều VALUES không chia nhỏ được trần — và từ chối `payments` `type='REFUND'`, `status<>'FAILED'`
+khi `Σ REFUND` (chưa `FAILED`) của booking lớn hơn `Σ thu SUCCEEDED` cùng booking, ném `23514` với thông
+điệp `BR-CANCEL-17/BR-PAY-07`.
+Trước khi bật trigger, migration quét dữ liệu hiện có; nếu có booking đã vi phạm thì **dừng** (nêu số
+booking + mẫu ID), không tự sửa tiền. Test `apps/api/test/migration/refund-cap-guard.spec.ts` phủ từ chối
+khi vượt, chấp nhận khi bằng, hai kết nối đồng thời, `INSERT` nhiều dòng, REFUND `FAILED` và quyền EXECUTE
+của `app_rw`.
 
 ## 11. Đề xuất bổ sung
 

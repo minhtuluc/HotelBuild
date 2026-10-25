@@ -193,6 +193,29 @@ describe('HB-214 refund cap guard (BR-CANCEL-17, BR-PAY-07, TC-PAY-21)', () => {
     expect(rows.rowCount).toBe(1);
   });
 
+  it('rejects a single multi-row INSERT whose rows together exceed the cap', async () => {
+    const row = await makeBooking();
+    await collected(row.id, 1_000);
+    let error: ReturnType<typeof failureOf> = undefined;
+    try {
+      await client().query(
+        `INSERT INTO payments (booking_id, type, method, amount, status, idempotency_key)
+         VALUES ($1, 'REFUND', 'BANK_TRANSFER', -600, 'PENDING', $2),
+                ($1, 'REFUND', 'BANK_TRANSFER', -600, 'PENDING', $3)`,
+        [row.id, `hb214-multi-a:${++serial}`, `hb214-multi-b:${++serial}`],
+      );
+    } catch (caught) {
+      error = failureOf(caught);
+    }
+    expect(error?.code).toBe('23514');
+    expect(error?.message).toContain('BR-CANCEL-17');
+    const rows = await client().query(
+      "SELECT id FROM payments WHERE booking_id=$1 AND type='REFUND'",
+      [row.id],
+    );
+    expect(rows.rowCount).toBe(0);
+  });
+
   it('ignores FAILED refunds and rejects promoting one past the cap', async () => {
     const row = await makeBooking();
     await collected(row.id, 1_000);
@@ -210,18 +233,28 @@ describe('HB-214 refund cap guard (BR-CANCEL-17, BR-PAY-07, TC-PAY-21)', () => {
   });
 
   it('registers the trigger on payments and revokes PUBLIC execute per TD-12', async () => {
-    const trigger = await client().query<{ table: string }>(
+    const triggers = await client().query<{ table: string }>(
       `SELECT tgrelid::regclass::text AS table FROM pg_trigger
-        WHERE tgname='trg_payments_refund_cap' AND NOT tgisinternal`,
+        WHERE tgname IN ('trg_payments_refund_cap', 'trg_payments_refund_cap_check')
+          AND NOT tgisinternal ORDER BY tgname`,
     );
-    expect(trigger.rows).toEqual([{ table: 'payments' }]);
-    const acl = await client().query<{ public_execute: boolean; app_rw_execute: boolean }>(
-      `SELECT
-         EXISTS (SELECT 1 FROM pg_proc p, aclexplode(p.proacl) a
-                  WHERE p.proname='fn_guard_refund_cap' AND a.grantee=0
-                    AND a.privilege_type='EXECUTE') AS public_execute,
-         has_function_privilege('app_rw', 'fn_guard_refund_cap()', 'EXECUTE') AS app_rw_execute`,
+    expect(triggers.rows).toEqual([{ table: 'payments' }, { table: 'payments' }]);
+    const acl = await client().query<{
+      name: string;
+      public_execute: boolean;
+      app_rw_execute: boolean;
+    }>(
+      `SELECT p.proname AS name,
+         EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                  WHERE a.grantee=0 AND a.privilege_type='EXECUTE') AS public_execute,
+         has_function_privilege('app_rw', p.oid, 'EXECUTE') AS app_rw_execute
+         FROM pg_proc p
+        WHERE p.proname IN ('fn_lock_refund_booking', 'fn_guard_refund_cap')
+        ORDER BY p.proname`,
     );
-    expect(acl.rows[0]).toEqual({ public_execute: false, app_rw_execute: true });
+    expect(acl.rows).toEqual([
+      { name: 'fn_guard_refund_cap', public_execute: false, app_rw_execute: true },
+      { name: 'fn_lock_refund_booking', public_execute: false, app_rw_execute: true },
+    ]);
   });
 });
