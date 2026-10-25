@@ -11,6 +11,7 @@ import {
   blockRooms,
   bookingRow,
   createBooking,
+  day,
   errorCode,
   getBooking,
   issueQuote,
@@ -151,16 +152,16 @@ describe('HB-098 đổi ngày lưu trú — hợp đồng và báo giá', () => 
   test('E1/BR-INV-02: kỳ mới không đủ tồn ⇒ 409 và rollback toàn bộ, giữ nguyên kỳ cũ', async () => {
     const token = await login();
     const { booking } = await createBooking(
-      { checkIn: '2026-11-01', checkOut: '2026-11-02' },
+      { checkIn: stay.checkIn, checkOut: day(22) },
       { token },
     );
     const before = await bookingRow(booking.id);
-    await blockRooms([roomId, room2Id], '2026-11-05', '2026-11-06');
+    await blockRooms([roomId, room2Id], day(25), day(26));
 
     const response = await rescheduleRequest(
       token,
       booking.id,
-      { checkIn: '2026-11-05', checkOut: '2026-11-06' },
+      { checkIn: day(25), checkOut: day(26) },
       { tag: await versionOf(token, booking.id) },
     );
     expect(response.status).toBe(409);
@@ -177,6 +178,6 @@ describe('HB-098 đổi ngày lưu trú — hợp đồng và báo giá', () => 
         reason: row.release_reason,
         bed: row.bed_no,
       })),
-    ).toEqual([{ start: stay.checkIn, end: '2026-11-02', released: false, reason: null, bed: 0 }]);
+    ).toEqual([{ start: stay.checkIn, end: day(22), released: false, reason: null, bed: 0 }]);
   });
 });
