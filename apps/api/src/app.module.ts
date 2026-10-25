@@ -46,7 +46,9 @@ import { PostgresHealthProbe } from './infrastructure/health/postgres-health-pro
 import { RedisHealthProbe } from './infrastructure/health/redis-health-probe.js';
 import { RbacModule } from './common/rbac/rbac.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { GuestAuthModule } from './modules/auth/guest/module.js';
 import { PinModule } from './modules/auth/pin/module.js';
+import { UsersModule } from './modules/auth/users/module.js';
 import { SysModule } from './modules/sys/sys.module.js';
 import { IdempotencyModule } from './modules/sys/idempotency/idempotency.module.js';
 import { IdempotencyInterceptor } from './common/idempotency/interceptor.js';
@@ -134,7 +136,9 @@ export class AppModule {
         PrismaModule.register(),
         RedisModule.register(),
         AuthModule,
+        GuestAuthModule,
         PinModule,
+        UsersModule,
         RbacModule,
         IdempotencyModule,
         RoomBlocksModule,

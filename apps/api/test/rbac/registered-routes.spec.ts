@@ -172,6 +172,9 @@ function independentOracle(): Record<string, Expected> {
   // HB-209 / api.md §2.9: xem trước no-show dùng đúng quyền của lệnh ghi; thân oracle hỏng ⇒ 400.
   // prettier-ignore
   keyed[`${RequestMethod.POST}:front-office/no-show/preview`] = { roles: ['FRONT_DESK'], status: 400, method: RequestMethod.POST };
+  // HB-016 / api.md §2.1, §6.3: người dùng nội bộ (đọc MANAGER+, ghi OWNER/SYSADMIN; thiếu If-Match ⇒ 428). Một dòng: trần max-lines.
+  // prettier-ignore
+  Object.assign(keyed, { [`${RequestMethod.GET}:users`]: { roles: ['MANAGER', 'OWNER', 'SYSADMIN'], status: 200, method: RequestMethod.GET }, [`${RequestMethod.POST}:users`]: { roles: ['OWNER', 'SYSADMIN'], status: 400, method: RequestMethod.POST }, [`${RequestMethod.PUT}:users/:userId/access`]: { roles: ['OWNER', 'SYSADMIN'], status: 428, method: RequestMethod.PUT } });
   // HB-036 / UC-SYS-01,02: explicit grants, independent of route permission providers.
   keyed[`${RequestMethod.GET}:audit-logs`] = {
     roles: ['MANAGER', 'OWNER'],
