@@ -23,6 +23,8 @@ import type { ActorContext } from '../../../common/actor/actor-context.js';
 import type { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import { BookingLedger } from '../ledger/service.js';
 import { loadLocked } from '../ledger/load.js';
+import { planReceiptAllocation } from '../ledger/receipt-allocation.js';
+import type { ReceiptCharge } from '../ledger/receipt-allocation.js';
 import type { PspMethod } from '../psp/port.js';
 import type { CallbackDecision } from './contract.js';
 
@@ -45,6 +47,9 @@ export interface ApplyOutcome {
   /** `null` = đóng inbox bằng `PROCESSED`; ngược lại đây là mã lý do ghi vào `last_error`. */
   readonly note: { readonly reason: string; readonly terminal: boolean } | null;
 }
+
+/** Thứ tự phân bổ của khoản thu trực tuyến: tiền phòng trước, rồi phạt → dịch vụ → phí đổi (BR-PAY-02). */
+const RECEIPT_ALLOCATION_ORDER = ['ROOM', 'PENALTY', 'EXTRA_SERVICE', 'RESCHEDULE_FEE'] as const;
 
 /** Booking đã kết thúc: tiền thu muộn phải hoàn, giữ trạng thái kết thúc (BR-PAY-11). */
 const CLOSED: Readonly<Record<string, true>> = {
@@ -289,9 +294,10 @@ async function requestRefund(
 }
 
 /**
- * Phân bổ khoản thu vào các nghĩa vụ còn thiếu, thứ tự `booking_charges.id` tăng dần, **một câu SQL**
- * (đọc và ghi trong cùng phát): phần dư không vượt qua bất kỳ nghĩa vụ nào, và tính vào phần phân bổ
- * còn hiệu lực đã có (`amount - released_amount`) để không trùng như `LEDGER_DUPLICATE` của sổ.
+ * Phân bổ khoản thu theo **trọng số phòng** (BR-CANCEL-19, HB-211) bằng allocator chung của sổ tiền.
+ * `applyVerifiedEvent` đã khoá booking → payments (ADR-014) trước khi tới đây nên đọc rồi ghi trong cùng
+ * transaction là an toàn. Chỉ ghi khi còn nghĩa vụ (`amount − voided − đã phân bổ còn hiệu lực`), nên
+ * khoản thu không bao giờ vượt nghĩa vụ của một dòng phí và không đụng các phân bổ đã ghi.
  */
 async function allocateReceipt(
   tx: Prisma.TransactionClient,
@@ -299,20 +305,37 @@ async function allocateReceipt(
   paymentId: string,
   bookingId: string,
 ): Promise<void> {
-  await tx.$executeRaw`
-    INSERT INTO payment_allocations(payment_id, charge_id, amount, created_at, updated_at)
-    SELECT ${paymentId}::uuid, debt.id, LEAST(debt.outstanding, ${event.amount} - debt.before),
-           ${event.now}::timestamptz, ${event.now}::timestamptz
-      FROM (
-        SELECT c.id, c.amount - c.voided_amount - coalesce(a.applied, 0) AS outstanding,
-               coalesce(sum(c.amount - c.voided_amount - coalesce(a.applied, 0)) OVER (ORDER BY c.id), 0)
-                 - (c.amount - c.voided_amount - coalesce(a.applied, 0)) AS before
-          FROM booking_charges c
-          LEFT JOIN (SELECT charge_id, sum(amount - released_amount) AS applied
-                       FROM payment_allocations GROUP BY charge_id) a ON a.charge_id = c.id
-         WHERE c.booking_id = ${bookingId}::uuid
-      ) debt
-     WHERE debt.outstanding > 0 AND debt.before < ${event.amount}`;
+  const rows = await tx.$queryRaw<
+    { id: string; kind: string; room_id: string | null; amount: bigint; outstanding: bigint }[]
+  >`
+    SELECT c.id,
+           c.kind,
+           c.booking_room_id AS room_id,
+           c.amount,
+           ((c.amount - c.voided_amount) - COALESCE(SUM(a.amount - a.released_amount), 0))::bigint AS outstanding
+      FROM booking_charges c
+      LEFT JOIN payment_allocations a ON a.charge_id = c.id
+     WHERE c.booking_id = ${bookingId}::uuid
+     GROUP BY c.id, c.kind, c.booking_room_id, c.amount
+     ORDER BY c.id`;
+  const charges: readonly ReceiptCharge[] = rows.map((row) => ({
+    id: row.id,
+    kind: row.kind,
+    roomId: row.room_id,
+    weight: row.amount,
+    outstanding: row.outstanding,
+  }));
+  const lines = planReceiptAllocation(event.amount, charges, RECEIPT_ALLOCATION_ORDER);
+  if (!lines.length) return;
+  await tx.payment_allocations.createMany({
+    data: lines.map((line) => ({
+      payment_id: paymentId,
+      charge_id: line.chargeId,
+      amount: line.amount,
+      created_at: event.now,
+      updated_at: event.now,
+    })),
+  });
 }
 
 /** Vết audit cho **từng** sự kiện (event canonical, provider, trạng thái, kết quả); không PII. */

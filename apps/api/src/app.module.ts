@@ -49,6 +49,8 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { GuestAuthModule } from './modules/auth/guest/module.js';
 import { PinModule } from './modules/auth/pin/module.js';
 import { UsersModule } from './modules/auth/users/module.js';
+// HB-028: quên mật khẩu khách qua email (route công khai, không cần oracle RBAC).
+import { GuestPasswordResetModule } from './modules/auth/guest/password-reset/module.js';
 import { SysModule } from './modules/sys/sys.module.js';
 import { IdempotencyModule } from './modules/sys/idempotency/idempotency.module.js';
 import { IdempotencyInterceptor } from './common/idempotency/interceptor.js';
@@ -139,6 +141,7 @@ export class AppModule {
         GuestAuthModule,
         PinModule,
         UsersModule,
+        GuestPasswordResetModule,
         RbacModule,
         IdempotencyModule,
         RoomBlocksModule,

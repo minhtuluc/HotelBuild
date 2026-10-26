@@ -7,11 +7,13 @@
  * Các loại phí `PENALTY`/`EXTRA_SERVICE`/`RESCHEDULE_FEE` là nghĩa vụ riêng của quầy nên vẫn tính theo
  * `kind` tương ứng; `REFUND`/`COMPENSATION` là đường **chi**, không thu tại quầy.
  *
- * Phân bổ tiền: thứ tự bất biến ROOM → PENALTY → EXTRA_SERVICE → RESCHEDULE_FEE (BR-PAY-02). Khi
- * allocator chuẩn vào `pay/ledger` (P2-9), thay `allocationPlan` bằng hàm đó.
+ * Phân bổ tiền: thứ tự bất biến ROOM → PENALTY → EXTRA_SERVICE → RESCHEDULE_FEE (BR-PAY-02); nhóm ROOM
+ * chia theo trọng số phòng bằng allocator chuẩn của `pay/ledger` (một công thức với engine huỷ, HB-211).
  */
-import { obligationDue } from '../ledger/obligation.js';
 import type { PaymentCreateRequest } from '@pinehill/contracts';
+import { obligationDue } from '../ledger/obligation.js';
+import { planReceiptAllocation } from '../ledger/receipt-allocation.js';
+import type { AllocationLine, ReceiptCharge } from '../ledger/receipt-allocation.js';
 
 /** Loại thu tại quầy được phép (không gồm đường chi REFUND/COMPENSATION). */
 export const COUNTER_TYPES = [
@@ -33,11 +35,7 @@ const COUNTER_TYPE_BY_NAME: Readonly<Record<string, true>> = {
   RESCHEDULE_FEE: true,
 };
 
-export interface ChargeLine {
-  readonly id: string;
-  readonly kind: string;
-  readonly outstanding: bigint;
-}
+export type ChargeLine = ReceiptCharge;
 
 /** Dữ kiện đủ cho mọi loại thu: bối cảnh booking (cho hàm chung) + nghĩa vụ từng `kind`. */
 export interface CounterObligationFacts {
@@ -92,35 +90,16 @@ export function dueAmount(type: CounterType, facts: CounterObligationFacts): big
   return outstandingOfKinds(facts, ALLOCATION_ORDER[type] ?? []);
 }
 
-export interface AllocationLine {
-  readonly chargeId: string;
-  readonly amount: bigint;
-}
-
 /**
- * Chia một khoản thu cho các nghĩa vụ theo thứ tự ổn định `(kind ưu tiên, id)` — không vượt quá
- * nghĩa vụ còn lại của từng dòng và tổng không vượt số tiền thu.
+ * Chia một khoản thu cho các nghĩa vụ theo thứ tự ổn định `(kind ưu tiên, id)`; nhóm ROOM chia theo
+ * trọng số phòng. Tổng không vượt số tiền thu và không vượt nghĩa vụ còn lại của từng dòng.
  */
 export function allocationPlan(
   type: CounterType,
   amount: bigint,
   facts: CounterObligationFacts,
 ): readonly AllocationLine[] {
-  const kinds = ALLOCATION_ORDER[type] ?? [];
-  const lines: AllocationLine[] = [];
-  let remaining = amount;
-  for (const kind of kinds) {
-    const candidates = facts.outstanding
-      .filter((line) => line.kind === kind && line.outstanding > 0n)
-      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-    for (const line of candidates) {
-      if (remaining === 0n) return lines;
-      const take = remaining < line.outstanding ? remaining : line.outstanding;
-      lines.push({ chargeId: line.id, amount: take });
-      remaining -= take;
-    }
-  }
-  return lines;
+  return planReceiptAllocation(amount, facts.outstanding, ALLOCATION_ORDER[type] ?? []);
 }
 
 /** Kiểu hợp đồng nhỏ để hàm thuần dùng lại được ở test mà không cần request. */
