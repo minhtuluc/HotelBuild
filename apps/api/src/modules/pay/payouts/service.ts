@@ -185,10 +185,11 @@ export class PayoutService {
    * HB-215 / api.md §2.6 — kế toán xác nhận **đã chuyển khoản** cho mọi leg đang chờ đối soát.
    *
    * Một transaction, khoá theo ADR-014 (`booking → payments → refund_requests → refund_allocations →
-   * refund_payout_operations`): chứng từ chi + operation → `SUCCEEDED` với `provider_txn_id =
-   * bankReference`, hồ sơ → `PAID` khi mọi leg xong, đồng bộ `bookings.refunded_amount`, `RefundPaid`
-   * ra outbox và `REFUND_TRANSFER_CONFIRMED` vào `audit_logs`. Gửi lại **cùng** mã trả lại đúng view
-   * (không sinh chứng từ/audit thứ hai); mã khác là xung đột.
+   * refund_payout_operations`): chứng từ chi → `SUCCEEDED` + `paid_at`, operation → `SUCCEEDED` +
+   * `provider_txn_id = bankReference`, hồ sơ → `PAID` khi mọi leg xong, đồng bộ
+   * `bookings.refunded_amount`, `RefundPaid` ra outbox và `REFUND_TRANSFER_CONFIRMED` vào
+   * `audit_logs`. Gửi lại **cùng** mã trả lại đúng view (không sinh chứng từ/audit thứ hai); mã khác
+   * là xung đột.
    *
    * Duyệt và xác nhận là hai người (BR-CANCEL-15/16): người duyệt hồ sơ không tự xác nhận đã chi.
    */

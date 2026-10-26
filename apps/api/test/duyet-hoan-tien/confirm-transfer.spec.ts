@@ -61,14 +61,18 @@ beforeEach(async () => {
 });
 
 /** Chứng từ thu **chưa phân bổ** (đủ quỹ giữ hạn mức hoàn) theo phương thức gốc của ca. */
-async function receipt(bookingId: string, method: 'CASH' | 'VNPAY'): Promise<string> {
+async function receipt(
+  bookingId: string,
+  method: 'CASH' | 'VNPAY',
+  amount = AMOUNT,
+): Promise<string> {
   return String(
     (
       await rows(
         `INSERT INTO payments(booking_id,type,method,amount,status,idempotency_key,paid_at,created_by)
          VALUES($1::uuid,'DEPOSIT',$2,$3,'SUCCEEDED',$4,clock_timestamp(),$5::uuid)
          RETURNING id`,
-        [bookingId, method, AMOUNT, randomUUID(), userId],
+        [bookingId, method, amount, randomUUID(), userId],
       )
     )[0]!.id,
   );
@@ -102,17 +106,11 @@ const confirm = (token: string, id: string, body: object) =>
     .set('Idempotency-Key', randomUUID())
     .send(body);
 
-/** Hồ sơ `APPROVED` từ chứng từ tiền mặt (chi hoàn bằng chuyển khoản tay — BR-PAY-08). */
-async function approvedRefund(): Promise<{
-  bookingId: string;
-  refundId: string;
-  netRefund: number;
-}> {
-  const created = await booking({ status: 'CONFIRMED', price: AMOUNT, nights: 3 });
-  const paymentId = await receipt(created.id, 'CASH');
+/** Lập + duyệt hồ sơ hoàn cho booking đã có nguồn thu (maker–checker khác người). */
+async function openApproved(bookingId: string, paymentId: string) {
   const maker = await login('h029-first', 'FRONT_DESK');
   const opened = await openRefund(maker, {
-    bookingId: created.id,
+    bookingId,
     paymentId,
     reason: 'GUEST_REQUEST',
     isForceMajeure: false,
@@ -120,18 +118,31 @@ async function approvedRefund(): Promise<{
   expect(opened.status).toBe(201);
   const view = refundRequestSchema.parse(opened.body);
   const checker = await login('h029-second', 'MANAGER');
-  const checkerPin = await pinToken(checker, created.id);
+  const checkerPin = await pinToken(checker, bookingId);
   const approved = await approve(checker, view.id, {
     approvedAmount: view.requestedAmount,
     pinToken: checkerPin,
   });
   expect(approved.status).toBe(200);
-  return { bookingId: created.id, refundId: view.id, netRefund: view.netRefund ?? 0 };
+  return { bookingId, refundId: view.id, netRefund: view.netRefund ?? 0 };
 }
 
-/** Tạo leg `READY` bằng `/pay` rồi mô phỏng worker dừng chờ đối soát tay (HB-100 `psp.ts`). */
-async function parkedRefund() {
-  const refund = await approvedRefund();
+/** Hồ sơ `APPROVED` từ **một** chứng từ tiền mặt (chi hoàn bằng chuyển khoản tay — BR-PAY-08). */
+async function approvedRefund() {
+  const created = await booking({ status: 'CONFIRMED', price: AMOUNT, nights: 3 });
+  return openApproved(created.id, await receipt(created.id, 'CASH'));
+}
+
+/** Hồ sơ có **hai** nguồn thu tiền mặt ⇒ hai leg cùng phương thức chuyển khoản tay. */
+async function multiSourceRefund() {
+  const created = await booking({ status: 'CONFIRMED', price: AMOUNT, nights: 3 });
+  const first = await receipt(created.id, 'CASH', AMOUNT / 2);
+  await receipt(created.id, 'CASH', AMOUNT / 2);
+  return openApproved(created.id, first);
+}
+
+/** `/pay` tạo đủ leg rồi mô phỏng worker dừng chờ đối soát tay **mọi** leg (HB-100 `psp.ts`). */
+async function parkedLegs(refund: { bookingId: string; refundId: string; netRefund: number }) {
   const cashier = await login('h029-first', 'ACCOUNTANT');
   const payPin = await pinToken(cashier, refund.bookingId);
   const started = await pay(cashier, refund.refundId, {
@@ -149,6 +160,9 @@ async function parkedRefund() {
   );
   return { ...refund, cashier };
 }
+
+/** Ca một leg (hoàn từ một chứng từ). */
+const parkedRefund = async () => parkedLegs(await approvedRefund());
 
 const operations = (refundId: string) =>
   rows('SELECT * FROM refund_payout_operations WHERE refund_request_id=$1::uuid', [refundId]);
@@ -208,10 +222,12 @@ test('xác nhận chuyển khoản: hồ sơ PAID có bằng chứng, audit + ou
 
   const payments = await refundPayments(refund.bookingId);
   expect(payments).toHaveLength(1);
+  // BR-PAY-04: `provider_txn_id` của Payment là mã giao dịch PSP, không phải mã chuyển khoản ngân
+  // hàng; bằng chứng nằm ở operation (cột không unique) + audit + outbox.
   expect(payments[0]).toMatchObject({
     status: 'SUCCEEDED',
     method: 'BANK_TRANSFER',
-    provider_txn_id: BANK_REFERENCE,
+    provider_txn_id: null,
     amount: String(-refund.netRefund),
   });
   expect(payments[0]!.paid_at).not.toBeNull();
@@ -247,6 +263,51 @@ test('xác nhận chuyển khoản: hồ sơ PAID có bằng chứng, audit + ou
   expect(
     (await refundList(refund.cashier, refund.bookingId)).find((row) => row.id === refund.refundId),
   ).toMatchObject({ status: 'PAID', awaitingTransferConfirmation: false });
+});
+
+test('một mã chuyển khoản chốt nhiều leg cùng phương thức; payments.provider_txn_id vẫn NULL', async () => {
+  const refund = await parkedLegs(await multiSourceRefund());
+  expect(await operations(refund.refundId)).toHaveLength(2);
+  const first = await confirm(refund.cashier, refund.refundId, {
+    bankReference: BANK_REFERENCE,
+    note: 'Chuyển một lần cho hai nguồn thu',
+    pinToken: await pinToken(refund.cashier, refund.bookingId),
+  });
+  expect(first.status).toBe(200);
+  const view = refundPayoutViewSchema.parse(first.body);
+  expect(view.status).toBe('PAID');
+  expect(view.operations).toHaveLength(2);
+  // UNIQUE `(method, provider_txn_id)` của `payments` không bị đụng: mã ngân hàng chỉ ở operation.
+  expect(
+    view.operations.every(
+      (operation) => operation.status === 'SUCCEEDED' && operation.providerTxnId === BANK_REFERENCE,
+    ),
+  ).toBe(true);
+  const payments = await refundPayments(refund.bookingId);
+  expect(payments).toHaveLength(2);
+  for (const payment of payments)
+    expect(payment).toMatchObject({
+      status: 'SUCCEEDED',
+      method: 'BANK_TRANSFER',
+      provider_txn_id: null,
+    });
+  expect((await refundRequests(refund.bookingId))[0]).toMatchObject({ status: 'PAID' });
+  expect(await transferAudits(refund.refundId)).toHaveLength(1);
+  const events = await paidEvents(refund.refundId);
+  expect(events).toHaveLength(1);
+  expect(refundPaidSchema.parse(events[0]!.payload_json).legs).toHaveLength(2);
+
+  // Replay trên hồ sơ hai leg: cùng mã ⇒ 200, không thêm chứng từ/audit/operation.
+  const replay = await confirm(refund.cashier, refund.refundId, {
+    bankReference: BANK_REFERENCE,
+    note: 'Chuyển một lần cho hai nguồn thu',
+    pinToken: await pinToken(refund.cashier, refund.bookingId),
+  });
+  expect(replay.status).toBe(200);
+  expect(replay.body).toEqual(first.body);
+  expect(await transferAudits(refund.refundId)).toHaveLength(1);
+  expect(await refundPayments(refund.bookingId)).toHaveLength(2);
+  expect(await operations(refund.refundId)).toHaveLength(2);
 });
 
 test('thiếu mã tham chiếu, hoặc thiếu cả note lẫn evidence: 400 và không đổi trạng thái', async () => {

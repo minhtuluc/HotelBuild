@@ -119,11 +119,16 @@ export type { Tx };
 export { refundFailure };
 
 /**
- * HB-215 — chốt một leg đã được kế toán xác nhận chuyển khoản. Port đúng chuỗi SQL của worker
+ * HB-215 — chốt một leg đã được kế toán xác nhận chuyển khoản. Port chuỗi SQL của worker
  * (`apps/worker/src/jobs/refund-payout/settle.ts`) vì API không import được worker: chứng từ
- * `Payment REFUND` → `SUCCEEDED` + `provider_txn_id` + `paid_at`, operation → `SUCCEEDED` +
- * `provider_txn_id` + `finished_at`, xoá `last_error`. `WHERE … status = 'PENDING'/'UNKNOWN'` là
- * hàng rào chống chốt hai lần; lệch trạng thái ⇒ rollback và đối soát tay (TD trùng lặp mã nguồn).
+ * `Payment REFUND` → `SUCCEEDED` + `paid_at`, operation → `SUCCEEDED` + `provider_txn_id =
+ * bankReference` + `finished_at`, xoá `last_error`. `WHERE … status = 'PENDING'/'UNKNOWN'` là hàng
+ * rào chống chốt hai lần; lệch trạng thái ⇒ rollback và đối soát tay (TD trùng lặp mã nguồn).
+ *
+ * **Không** ghi `bankReference` vào `payments.provider_txn_id`: cột đó theo BR-PAY-04 là mã giao dịch
+ * của cổng PSP và có `uq_payments_provider_txn UNIQUE (method, provider_txn_id)` — một lệnh chuyển
+ * khoản trả cho nhiều leg/hai hồ sơ sẽ vi phạm UNIQUE. Bằng chứng ngân hàng nằm ở operation (không
+ * unique) + audit + outbox.
  */
 export async function settleTransferLeg(
   tx: Tx,
@@ -133,8 +138,7 @@ export async function settleTransferLeg(
 ): Promise<void> {
   const paid = await tx.$executeRaw`
     UPDATE payments
-       SET status = 'SUCCEEDED', provider_txn_id = ${bankReference}, paid_at = ${now}::timestamptz,
-           updated_at = ${now}::timestamptz
+       SET status = 'SUCCEEDED', paid_at = ${now}::timestamptz, updated_at = ${now}::timestamptz
      WHERE id = ${operation.refund_payment_id}::uuid AND status = 'PENDING'`;
   if (paid !== 1)
     throw payoutError('gateway', 'Chứng từ chi không còn chờ; cần đối soát thủ công.');
@@ -148,8 +152,10 @@ export async function settleTransferLeg(
 }
 
 /**
- * Hồ sơ chỉ `PAID` khi **mọi** allocation có chứng từ chi `SUCCEEDED` — cùng luật
- * `markPaidIfComplete` của worker; trigger `fn_guard_refund_request` kiểm lại tổng đã chi.
+ * Hồ sơ chỉ `PAID` khi **mọi** allocation của hồ sơ có chứng từ chi `SUCCEEDED` — `LEFT JOIN` để
+ * allocation **chưa có** `refund_payment_id` cũng bị tính là chưa xong (trả `'APPROVED'`, không đổi
+ * trạng thái) thay vì để trigger `fn_guard_refund_request` ném lỗi CSDL thô. Cùng luật
+ * `markPaidIfComplete` của worker.
  */
 export async function markPaidIfComplete(
   tx: Tx,
@@ -158,8 +164,10 @@ export async function markPaidIfComplete(
 ): Promise<string> {
   const remaining = await tx.$queryRaw<{ pending: bigint }[]>`
     SELECT count(*)::bigint AS pending
-      FROM refund_allocations a JOIN payments p ON p.id = a.refund_payment_id
-     WHERE a.refund_request_id = ${refundRequestId}::uuid AND p.status <> 'SUCCEEDED'`;
+      FROM refund_allocations a
+      LEFT JOIN payments p ON p.id = a.refund_payment_id
+     WHERE a.refund_request_id = ${refundRequestId}::uuid
+       AND p.status IS DISTINCT FROM 'SUCCEEDED'`;
   if (BigInt(remaining[0]?.pending ?? 0n) !== 0n) return 'APPROVED';
   await tx.$executeRaw`
     UPDATE refund_requests SET status = 'PAID', paid_at = ${now}::timestamptz,
