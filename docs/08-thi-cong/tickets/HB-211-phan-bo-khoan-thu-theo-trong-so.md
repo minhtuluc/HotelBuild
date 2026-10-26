@@ -28,7 +28,7 @@ Hiện tượng (F5-QA-04): DLX 2 phòng × 3 đêm, tổng 6.900.000, cọc 2.0
 
 ## Tiêu chí nghiệm thu (mỗi dòng ↔ một test)
 
-1. Khi một khoản thu (cọc/số dư) được gán vào `payment_allocations`, phần của mỗi `BookingRoom` chia theo **trọng số giá phòng–đêm** của chính booking đó; `Σ` phần = số tiền khoản thu; phần dư làm tròn VND dồn vào phòng **cuối** (theo thứ tự id); không phần nào âm. Booking một phòng giữ nguyên kết quả cũ.
+1. Khi một khoản thu (cọc/số dư) được gán vào `payment_allocations`, phần của mỗi `BookingRoom` chia theo **trọng số giá phòng–đêm** của chính booking đó; `Σ` phần = số tiền khoản thu; phần dư làm tròn VND rải **+1 theo `id` tăng dần**, đúng phép chia `allocatePayment` của domain mà engine huỷ dùng (**QĐ-07 §1 sửa 26/10**: không dồn phòng cuối — `calculateCancellation` từ chối phân bổ khác `allocatePayment` và sẽ tái sinh `422`); không phần nào âm. Booking một phòng giữ nguyên kết quả cũ.
 2. `refundBase` của huỷ một phần và **trần hoàn theo phòng** đọc **cùng** phân bổ ⇒ `POST /bookings/{id}/cancel-preview` và lệnh huỷ luôn khớp số; **không** còn `422 E_PAY_REFUND_EXCEEDS_PAID` ở bất kỳ phòng nào.
 3. Huỷ lần lượt từng phòng theo **mọi** thứ tự ⇒ tổng hoàn = đã thu − phí (BR-CANCEL-04/05/11); huỷ nốt phòng cuối ⇒ booking `CANCELLED` toàn phần.
 4. Phân bổ đã ghi là **bất biến**: thanh toán thêm sau đó (số dư tại quầy) tạo phân bổ mới theo cùng trọng số, **không** sửa dòng phân bổ cũ.

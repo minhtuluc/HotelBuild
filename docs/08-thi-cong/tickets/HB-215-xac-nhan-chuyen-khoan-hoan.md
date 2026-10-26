@@ -33,7 +33,7 @@ Hoàn bằng `BANK_TRANSFER` hiện dừng ở operation `UNKNOWN` / `MANUAL_TRA
 
 1. `POST /refund-requests/{refundRequestId}/confirm-transfer` 🔒 PIN, vai trò `ACCOUNTANT` (api.md §6.3), phạm vi theo cơ sở; thân lệnh **bắt buộc** có `bankReference` (mã tham chiếu giao dịch) và `note`/`evidenceRefs[]`; thiếu ⇒ 400 và **không** đổi trạng thái.
 2. Chỉ áp cho hồ sơ đã duyệt và operation đang ở `MANUAL_TRANSFER_AWAITING_CONFIRMATION`; trạng thái khác ⇒ `409` (nêu mã hiện hành, không thêm mã mới nếu api.md đã có).
-3. Cùng **một** transaction: operation → `PAID`, ghi sổ cái/khoản chi, audit (`REFUND_TRANSFER_CONFIRMED`, có `bankReference`), outbox. Lỗi bất kỳ ⇒ rollback toàn bộ.
+3. Cùng **một** transaction: chứng từ chi `Payment REFUND` → `SUCCEEDED` + `paid_at`; operation → `SUCCEEDED` + `provider_txn_id = bankReference` + `finished_at`; hồ sơ → `PAID` khi **mọi** leg xong; đồng bộ `refunded_amount`; audit (`REFUND_TRANSFER_CONFIRMED`, có `bankReference`); outbox `RefundPaid`. **Không** ghi mã ngân hàng vào `payments.provider_txn_id` — cột đó là mã giao dịch PSP (BR-PAY-04) và có `UNIQUE (method, provider_txn_id)`, trong khi một lệnh chuyển khoản có thể trả nhiều leg/hồ sơ. Lỗi bất kỳ ⇒ rollback toàn bộ.
 4. **Không** cho người đã duyệt hồ sơ (`approved_by`) tự xác nhận — khác người (BR-CANCEL-15/16); không cho xác nhận hai lần (gửi lại ⇒ cùng phản hồi, không sinh giao dịch thứ hai).
 5. Không lộ số tài khoản thô/`pinToken` trong phản hồi, audit hay log; `bankReference` được chuẩn hoá và **không** nhận chuỗi rỗng.
 6. SCR-38 có lối "Xác nhận đã chuyển khoản" chỉ hiện khi hồ sơ ở trạng thái chờ xác nhận, kèm ô nhập mã tham chiếu; báo lỗi máy chủ nguyên văn (không tự suy `PAID`).
