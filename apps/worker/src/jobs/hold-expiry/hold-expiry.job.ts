@@ -59,6 +59,7 @@ export function createHoldExpiryJob(deps: HoldExpiryJobDeps = {}): JobHandler {
         `quét hết hạn (${payload.data.mode}): ${report.scanned} đến hạn, ${report.expired} hết hạn, ` +
         `${report.skipped} bỏ qua (đã đổi trạng thái/khoá bởi giao dịch khác), ${report.failed} lỗi, ` +
         `nhả ${report.releasedAssignments} phân công + ${report.releasedAllotments} hàng allotment, ` +
+        `lập ${report.refundRequests} hồ sơ hoàn (${report.refundedAmount} VND), ` +
         `${report.missed} quá hạn SLA, ${report.pages} trang`,
     });
     if (!reconcile) return;

@@ -15,6 +15,8 @@
  *    đường giữ chỗ/huỷ nên không tạo chu trình khoá.
  * 3. Ghi nguyên tử: nhả mọi `room_assignments` còn hoạt động + booking → `EXPIRED` +
  *    `booking_status_history` + `audit_logs` (BR-GEN-07) + `outbox_events` + nhả `channel_allotments.used`.
+ * 4. HB-212: booking đã thu tiền mà hết hạn thì **cùng** transaction lập một `RefundRequest` hoàn đúng số
+ *    đã thu (`refund.ts`, BR-BOOK-18/QĐ-05 §1) — không tự duyệt, đi qua maker–checker như mọi hồ sơ.
  *
  * Danh sách ứng viên đọc bằng **một** câu `SELECT` không khoá (giờ CSDL); mỗi booking chạy trong
  * transaction riêng nên một booking hỏng không kéo cả lượt quét xuống (lượt sau nhặt lại).
@@ -22,6 +24,7 @@
 import type { PrismaClient } from '@prisma/client';
 import { currentTraceFields } from '../../tracing/trace-context.js';
 import type { JobContext } from '../types.js';
+import { settleCollectedMoney } from './refund.js';
 
 /** Hàng đợi khai ở `queues.ts`; chạy lặp theo `HOLD_EXPIRY_INTERVAL_SECONDS`. */
 export const HOLD_QUEUE = 'q.hold-expiry';
@@ -60,6 +63,10 @@ export interface SweepReport {
   readonly failed: number;
   readonly releasedAssignments: number;
   readonly releasedAllotments: number;
+  /** HB-212: số hồ sơ hoàn lập thêm cho tiền đã thu (không tính hồ sơ đã có từ lượt trước). */
+  readonly refundRequests: number;
+  /** HB-212: tổng tiền của các hồ sơ hoàn vừa lập (VND nguyên). */
+  readonly refundedAmount: bigint;
   /** Số booking bị bỏ sót quá hạn SLA ở lượt này (0 là bình thường). */
   readonly missed: number;
   readonly pages: number;
@@ -70,6 +77,7 @@ interface HoldRow {
   readonly property_id: string;
   readonly room_type_id: string;
   readonly channel_id: string;
+  readonly rate_plan_id: string;
   readonly check_in: Date;
   readonly check_out: Date;
   readonly room_count: number;
@@ -90,6 +98,10 @@ export interface ExpireOutcome {
   readonly overdueSeconds: number;
   /** Trạng thái **trước** khi hết hạn (`HELD`/`PENDING_PAYMENT`), `null` khi bỏ qua. */
   readonly fromStatus: string | null;
+  /** Hồ sơ hoàn vừa lập cho tiền đã thu (HB-212); `null` khi không có tiền hoặc đã có hồ sơ. */
+  readonly refundRequestId: string | null;
+  /** Tổng tiền của hồ sơ hoàn vừa lập (VND nguyên); `0n` khi không lập. */
+  readonly refundAmount: bigint;
 }
 
 const SKIPPED: ExpireOutcome = {
@@ -98,6 +110,8 @@ const SKIPPED: ExpireOutcome = {
   releasedAllotments: 0,
   overdueSeconds: 0,
   fromStatus: null,
+  refundRequestId: null,
+  refundAmount: 0n,
 };
 
 /**
@@ -131,8 +145,8 @@ export async function expireHold(db: PrismaClient, bookingId: string): Promise<E
   return db.$transaction(async (tx) => {
     // 1. Khoá Booking trước (ADR-014). Chờ transaction đang giữ khoá rồi đọc lại trạng thái + hạn.
     const rows = await tx.$queryRaw<HoldRow[]>`
-      SELECT id, property_id, room_type_id, channel_id, check_in, check_out, room_count, status,
-             hold_expires_at
+      SELECT id, property_id, room_type_id, channel_id, rate_plan_id, check_in, check_out,
+             room_count, status, hold_expires_at
         FROM bookings WHERE id = ${bookingId}::uuid FOR UPDATE`;
     const booking = rows[0];
     if (booking === undefined) return SKIPPED;
@@ -184,6 +198,9 @@ export async function expireHold(db: PrismaClient, bookingId: string): Promise<E
          AND room_type_id = ${booking.room_type_id}::uuid
          AND date >= ${booking.check_in}::date AND date < ${booking.check_out}::date
          AND used > 0`;
+    // HB-212 — tiền đã thu mà hold hết hạn: lập **một** hồ sơ hoàn đúng số đã thu trong **cùng**
+    // transaction (BR-BOOK-18, QĐ-05 §1). Không có chứng từ thu ⇒ không chạm gì (hồi quy HB-078).
+    const refund = await settleCollectedMoney(tx, booking, now.now);
     // Audit hệ thống (HB-009 cùng hình dạng: chain_seq/row_hash do trigger cấp; actor_id null, role SYSTEM).
     await tx.$executeRaw`
       INSERT INTO audit_logs(chain_seq, actor_id, actor_role, action, entity_type, entity_id,
@@ -229,6 +246,8 @@ export async function expireHold(db: PrismaClient, bookingId: string): Promise<E
       releasedAllotments,
       overdueSeconds: Math.floor((now.now.getTime() - booking.hold_expires_at.getTime()) / 1000),
       fromStatus: booking.status,
+      refundRequestId: refund.refundRequestId,
+      refundAmount: refund.requestedAmount,
     };
   });
 }
@@ -264,6 +283,8 @@ export async function sweepDueHolds(
   let failed = 0;
   let releasedAssignments = 0;
   let releasedAllotments = 0;
+  let refundRequests = 0;
+  let refundedAmount = 0n;
   let missed = 0;
   let pages = 0;
   const attempted = new Set<string>();
@@ -285,6 +306,10 @@ export async function sweepDueHolds(
         expired += 1;
         releasedAssignments += outcome.releasedAssignments;
         releasedAllotments += outcome.releasedAllotments;
+        if (outcome.refundRequestId !== null) {
+          refundRequests += 1;
+          refundedAmount += outcome.refundAmount;
+        }
         if (outcome.overdueSeconds > options.missedGraceSeconds) missed += 1;
       } catch (error) {
         failed += 1;
@@ -305,6 +330,8 @@ export async function sweepDueHolds(
     failed,
     releasedAssignments,
     releasedAllotments,
+    refundRequests,
+    refundedAmount,
     missed,
     pages,
   };

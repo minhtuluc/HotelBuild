@@ -61,7 +61,9 @@ describe('HB-078 — quét hết hạn giữ chỗ', () => {
     expect(state.allotmentUsed).toEqual([0, 0]);
     const summary = h.logs.at(-1) ?? '';
     expect(summary).toContain('quét hết hạn (SWEEP): 1 đến hạn, 1 hết hạn');
-    expect(summary).toContain('nhả 2 phân công + 2 hàng allotment, 0 quá hạn SLA');
+    expect(summary).toContain(
+      'nhả 2 phân công + 2 hàng allotment, lập 0 hồ sơ hoàn (0 VND), 0 quá hạn SLA',
+    );
 
     // Phòng thật sự trở về tồn khả dụng: ràng buộc loại trừ `WHERE released_at IS NULL` cho gán lại.
     await expect(
