@@ -7,7 +7,9 @@ import type { PrismaClient } from '@prisma/client';
 import type { Clock } from '@pinehill/domain';
 import { refundDecisionSchema } from '@pinehill/contracts';
 import type {
+  ListPage,
   RefundDecision,
+  RefundListQuery,
   RefundRequest,
   RefundRequestCreateRequest,
 } from '@pinehill/contracts';
@@ -17,6 +19,7 @@ import { PIN_PURPOSE_FINANCIAL, requirePinToken } from '../../auth/pin/consume.j
 import { readFacts, type CancelFacts } from '../../book/cancel/context.js';
 import { decide } from '../../book/cancel/engine.js';
 import { BookingLedger } from '../ledger/service.js';
+import { listRefunds } from './list.js';
 import { approveInput, cancelInput, refundError, rejectInput } from './validation.js';
 import { payoutDeadline, requestView, vnd } from './view.js';
 import {
@@ -85,6 +88,14 @@ export class RefundService {
         if (!found) throw refundError('missing');
         await this.authorize(db, actor, found.booking_id);
       });
+  }
+
+  /**
+   * HB-213 — danh sách hồ sơ hoàn (SCR-38). Tuyến đọc: không khoá, không ghi audit; phạm vi cơ sở
+   * và bộ lọc được áp **trong** truy vấn (`list.ts`), cursor là id hồ sơ thuộc đúng bộ lọc.
+   */
+  list(actor: AuthorizedActor, query: RefundListQuery): Promise<ListPage<RefundRequest>> {
+    return listRefunds(this.db, actor, query);
   }
 
   /** Phiên còn hiệu lực và còn phạm vi cơ sở của booking (BR-RBAC-02, OWNER toàn chuỗi). */

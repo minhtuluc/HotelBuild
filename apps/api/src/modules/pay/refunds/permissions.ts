@@ -9,8 +9,12 @@ import type { PermissionRules } from '../../../common/rbac/permissions.js';
 const staff = ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'] as const;
 const decider = ['MANAGER', 'OWNER'] as const;
 
+/** api.md §6.3 — đọc hồ sơ hoàn: tập vận hành + ACCOUNTANT đối soát; không cấp HOUSEKEEPING/SYSADMIN. */
+const reader = [...staff, 'ACCOUNTANT'] as const;
+
 /** Khai báo thuần để test bất biến (vai trò ⊆ `userRoleSchema`) đọc lại được. */
 export const refundPermissionRules: PermissionRules = {
+  'refunds.read': reader,
   'refunds.create': staff,
   'refunds.approve': decider,
   'refunds.reject': decider,

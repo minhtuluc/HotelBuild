@@ -1,12 +1,25 @@
 /** Controller hoàn tiền (HB-099, api.md §3.6/§3.7): 4 lệnh ghi đều đòi `Idempotency-Key`. */
-import { Body, Controller, Headers, HttpCode, Inject, Param, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  Headers,
+  HttpCode,
+  Inject,
+  Param,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
+import type { ListPage, RefundRequest } from '@pinehill/contracts';
 import { Permission } from '../../../common/rbac/permissions.js';
 import { Idempotent } from '../../../common/idempotency/decorators.js';
 import { IdempotencyContext } from '../../../common/idempotency/context.js';
 import { RefundAccess } from './access.js';
 import { RefundService } from './service.js';
-import { commandKey, createInput, refundId, requestActor } from './validation.js';
+import { commandKey, createInput, listQuery, refundId, requestActor } from './validation.js';
 
 @Controller('refund-requests')
 export class RefundController {
@@ -14,6 +27,17 @@ export class RefundController {
     @Inject(RefundService) private readonly service: RefundService,
     @Inject(IdempotencyContext) private readonly context: IdempotencyContext,
   ) {}
+
+  /**
+   * HB-213 / api.md §2.6 — danh sách hồ sơ hoàn cho SCR-38. Tuyến đọc: `Cache-Control: no-store`,
+   * không trả `pinToken`/số tài khoản thô; phạm vi cơ sở lọc trong truy vấn, đúng `refundListQuerySchema`.
+   */
+  @Get()
+  @Header('Cache-Control', 'no-store')
+  @Permission('refunds.read')
+  list(@Query() query: unknown, @Req() request: FastifyRequest): Promise<ListPage<RefundRequest>> {
+    return this.service.list(requestActor(request), listQuery(query));
+  }
 
   /** Lập hồ sơ hoàn PENDING + giữ hạn mức NET; `Idempotency-Key` cũng làm `event_key` ổn định. */
   @Post()
