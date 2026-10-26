@@ -322,11 +322,11 @@ function independentOracle(): Record<string, Expected> {
   };
   // HB-100 / api.md §2.6, §6.1: chi hoàn là tuyến **ACCOUNTANT**, đúng cơ sở, chỉ hồ sơ APPROVED;
   // thân oracle thiếu `method` ⇒ 400 trước khi chạm tài nguyên.
-  keyed[`${RequestMethod.POST}:refund-requests/:refundRequestId/pay`] = {
-    roles: ['ACCOUNTANT'],
-    status: 400,
-    method: RequestMethod.POST,
-  };
+  // prettier-ignore
+  keyed[`${RequestMethod.POST}:refund-requests/:refundRequestId/pay`] = { roles: ['ACCOUNTANT'], status: 400, method: RequestMethod.POST };
+  // HB-213 / api.md §2.6, §6.3: danh sách hồ sơ hoàn cho quầy/điều phối/MANAGER/OWNER + ACCOUNTANT đối soát.
+  // prettier-ignore
+  keyed[`${RequestMethod.GET}:refund-requests`] = { roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER', 'ACCOUNTANT'], status: 200, method: RequestMethod.GET };
   // HB-168 / api.md §2.11: danh sách và gửi lại thông báo (lý do bắt buộc ở thân lệnh).
   keyed[`${RequestMethod.GET}:notifications`] = {
     roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],

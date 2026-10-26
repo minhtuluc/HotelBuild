@@ -29,22 +29,23 @@ async function sourcePayment(tx: Tx, row: RefundRow): Promise<string | null> {
   return first?.original_payment_id ?? null;
 }
 
+/** Sự kiện tính sẵn cho một hồ sơ: nguồn giữ, NET toàn sự kiện và ngưỡng kiểm soát. */
+interface ViewFacts {
+  readonly paymentId: string;
+  readonly eventNet: bigint;
+  readonly threshold: bigint;
+}
+
 /**
  * Hợp đồng đòi `paymentId`/`appliedTierId`/`requestedBy` khác rỗng nên nguồn giữ đầu tiên và token
  * bậc (vì `applied_tier_id` rỗng cho quyết định ngoài bảng bậc) được chọn như hàm trên; thiếu dữ
  * liệu là hồ sơ lỗi → `E_GEN_NOT_FOUND`, không tự chế giá trị tiền.
  */
-export async function requestView(tx: Tx, row: RefundRow): Promise<RefundRequest> {
-  const [paymentId, eventNet, threshold] = await Promise.all([
-    sourcePayment(tx, row),
-    settlementNet(tx, row.booking_id),
-    thresholdAmount(tx),
-  ]);
-  if (!paymentId) throw refundError('missing');
+function render(row: RefundRow, facts: ViewFacts): RefundRequest {
   return refundRequestSchema.parse({
     id: row.id,
     bookingId: row.booking_id,
-    paymentId,
+    paymentId: facts.paymentId,
     policyId: row.policy_id,
     hoursBeforeCheckIn: Math.round(Number(row.hours_before_check_in) * 100) / 100,
     appliedTierId: tierToken(row),
@@ -53,8 +54,8 @@ export async function requestView(tx: Tx, row: RefundRow): Promise<RefundRequest
     approvedAmount: row.approved_amount === null ? null : vnd(row.approved_amount),
     refundFee: vnd(row.refund_fee),
     netRefund: vnd(row.net_refund),
-    eventNetRefund: vnd(eventNet),
-    requiresThresholdControl: eventNet > threshold,
+    eventNetRefund: vnd(facts.eventNet),
+    requiresThresholdControl: facts.eventNet > facts.threshold,
     status: row.status,
     isForceMajeure: row.is_force_majeure,
     reason: row.reason,
@@ -64,6 +65,52 @@ export async function requestView(tx: Tx, row: RefundRow): Promise<RefundRequest
     decidedAt: row.decided_at?.toISOString() ?? null,
     paidAt: row.paid_at?.toISOString() ?? null,
     createdAt: row.created_at.toISOString(),
+  });
+}
+
+/** Một hồ sơ: ba lượt đọc (nguồn giữ, NET toàn sự kiện, ngưỡng) rồi dựng hợp đồng. */
+export async function requestView(tx: Tx, row: RefundRow): Promise<RefundRequest> {
+  const [paymentId, eventNet, threshold] = await Promise.all([
+    sourcePayment(tx, row),
+    settlementNet(tx, row.booking_id),
+    thresholdAmount(tx),
+  ]);
+  if (!paymentId) throw refundError('missing');
+  return render(row, { paymentId, eventNet, threshold });
+}
+
+/**
+ * Cùng projection cho cả trang danh sách (HB-213): gom NET theo booking và nguồn giữ theo lô để
+ * không N+1. Trường trả về **không** khác `requestView` vì UI decode cùng `refundRequestSchema`.
+ */
+export async function requestViews(tx: Tx, rows: readonly RefundRow[]): Promise<RefundRequest[]> {
+  if (rows.length === 0) return [];
+  const bookingIds = [...new Set(rows.map((row) => row.booking_id))];
+  const missing = rows.filter((row) => !row.payment_id).map((row) => row.id);
+  const threshold = await thresholdAmount(tx);
+  const settlement = await tx.refund_requests.groupBy({
+    by: ['booking_id'],
+    where: { booking_id: { in: bookingIds }, status: { in: ['PENDING', 'APPROVED', 'PAID'] } },
+    _sum: { net_refund: true },
+  });
+  const legs =
+    missing.length === 0
+      ? []
+      : await tx.refund_allocations.findMany({
+          where: { refund_request_id: { in: missing } },
+          orderBy: [{ refund_request_id: 'asc' }, { id: 'asc' }],
+          select: { refund_request_id: true, original_payment_id: true },
+        });
+  const nets = new Map(settlement.map((row) => [row.booking_id, row._sum.net_refund ?? 0n]));
+  // Hồ sơ nhiều nguồn: nguồn giữ **đầu tiên** (id nhỏ nhất) là nguồn gốc, giống `sourcePayment`.
+  const sources = new Map<string, string>();
+  for (const leg of legs)
+    if (!sources.has(leg.refund_request_id))
+      sources.set(leg.refund_request_id, leg.original_payment_id);
+  return rows.map((row) => {
+    const paymentId = row.payment_id ?? sources.get(row.id);
+    if (!paymentId) throw refundError('missing');
+    return render(row, { paymentId, eventNet: nets.get(row.booking_id) ?? 0n, threshold });
   });
 }
 

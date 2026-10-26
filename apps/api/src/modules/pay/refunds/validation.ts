@@ -3,10 +3,12 @@ import { z } from 'zod';
 import {
   refundApproveRequestSchema,
   refundCancelRequestSchema,
+  refundListQuerySchema,
   refundRejectRequestSchema,
   refundRequestCreateRequestSchema,
   type RefundApproveRequest,
   type RefundCancelRequest,
+  type RefundListQuery,
   type RefundRejectRequest,
   type RefundRequestCreateRequest,
 } from '@pinehill/contracts';
@@ -48,6 +50,36 @@ export function refundId(value: unknown): string {
   const result = uuidSchema.safeParse(value);
   if (!result.success) throw refundError('missing');
   return result.data;
+}
+
+/** Tham số lọc là UUID; sai định dạng là lỗi hợp đồng `400`, không phải "không tìm thấy". */
+function filterId(value: string): string {
+  const result = uuidSchema.safeParse(value);
+  if (!result.success) throw refundError('invalid');
+  return result.data;
+}
+
+/** `from`/`to` là mốc thời gian ghi UTC (§1.5); không đọc được hoặc khoảng ngược là lỗi hợp đồng. */
+function checkRange(from: string | undefined, to: string | undefined): void {
+  for (const value of [from, to])
+    if (value !== undefined && !Number.isFinite(Date.parse(value))) throw refundError('invalid');
+  if (from !== undefined && to !== undefined && Date.parse(from) > Date.parse(to))
+    throw refundError('invalid');
+}
+
+/** `GET /refund-requests` (HB-213): đúng `refundListQuerySchema`; cursor là id hồ sơ (§1.5). */
+export function listQuery(value: unknown): RefundListQuery {
+  const result = refundListQuerySchema.safeParse(value);
+  if (!result.success) throw refundError('invalid');
+  checkRange(result.data.from, result.data.to);
+  return {
+    ...result.data,
+    ...(result.data.bookingId === undefined ? {} : { bookingId: filterId(result.data.bookingId) }),
+    ...(result.data.propertyId === undefined
+      ? {}
+      : { propertyId: filterId(result.data.propertyId) }),
+    ...(result.data.cursor === undefined ? {} : { cursor: filterId(result.data.cursor) }),
+  };
 }
 
 /** DB có CHECK `NOT is_force_majeure OR reason = 'FORCE_MAJEURE'`; chặn sớm tại cổng vào. */
