@@ -119,6 +119,8 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['post', '/api/v1/refund-requests/{refundRequestId}/approve', 'bearer'],
   ['post', '/api/v1/refund-requests/{refundRequestId}/reject', 'bearer'],
   ['post', '/api/v1/refund-requests/{refundRequestId}/cancel', 'bearer'],
+  // HB-215: kế toán xác nhận đã chuyển khoản cho leg chi hoàn đang chờ đối soát.
+  ['post', '/api/v1/refund-requests/{refundRequestId}/confirm-transfer', 'bearer'],
   ['post', '/api/v1/refund-requests/{refundRequestId}/pay', 'bearer'],
   // F7 (HB-140): tiền sảnh, buồng phòng, khách tại quầy, chốt đối soát.
   ['post', '/api/v1/front-office/check-in', 'bearer'],
@@ -167,7 +169,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 92 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151 và 3 path HB-204)', () => {
+  it('có đủ 93 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151, 3 path HB-204 và confirm-transfer HB-215)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -235,6 +237,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/refund-requests/{refundRequestId}/approve',
         '/api/v1/refund-requests/{refundRequestId}/reject',
         '/api/v1/refund-requests/{refundRequestId}/cancel',
+        '/api/v1/refund-requests/{refundRequestId}/confirm-transfer',
         '/api/v1/refund-requests/{refundRequestId}/pay',
         '/api/v1/front-office/check-in',
         '/api/v1/front-office/check-out',
