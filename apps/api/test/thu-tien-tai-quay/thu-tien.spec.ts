@@ -374,8 +374,8 @@ test('nghĩa vụ dùng chung: cọc chặn bởi ROOM, số dư/phạt và th�
     holdExpiresAt: new Date(now.getTime() + 60_000),
     now,
     outstanding: [
-      { id: 'b', kind: 'PENALTY', outstanding: 93_000n },
-      { id: 'a', kind: 'ROOM', outstanding: 907_000n },
+      { id: 'b', kind: 'PENALTY', roomId: null, weight: 93_000n, outstanding: 93_000n },
+      { id: 'a', kind: 'ROOM', roomId: 'room-1', weight: 907_000n, outstanding: 907_000n },
     ],
   };
   expect(dueAmount('DEPOSIT', base)).toBe(107_000n);
@@ -388,7 +388,9 @@ test('nghĩa vụ dùng chung: cọc chặn bởi ROOM, số dư/phạt và th�
     ...base,
     depositAmount: 1_000_000n,
     depositPaid: 500_000n,
-    outstanding: [{ id: 'a', kind: 'ROOM', outstanding: 400_000n }],
+    outstanding: [
+      { id: 'a', kind: 'ROOM', roomId: 'room-1', weight: 907_000n, outstanding: 400_000n },
+    ],
   };
   expect(dueAmount('DEPOSIT', capped)).toBe(400_000n);
   expect(dueAmount('DEPOSIT', capped)).toBe(

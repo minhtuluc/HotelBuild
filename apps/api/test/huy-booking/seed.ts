@@ -4,6 +4,7 @@
  */
 import { randomBytes } from 'node:crypto';
 import { rows, roomId, userId, propertyId, clock, stay } from '../room-blocks/inventory-seed.js';
+import { planReceiptAllocation } from '../../src/modules/pay/ledger/receipt-allocation.js';
 
 /** Bậc huỷ của FLEX7 (§6.1) đúng như seed gói giá dùng trong test. */
 export async function flexPolicy(): Promise<string> {
@@ -247,7 +248,10 @@ export async function booking(input: BookingInput = {}) {
   return { id, rooms: bookingRooms, total, checkIn, checkOut: day(nights), price: BigInt(price) };
 }
 
-/** Thu tiền thật: Payment SUCCEEDED + phân bổ vào nghĩa vụ phòng theo tỷ lệ (như luồng nhận cọc). */
+/**
+ * Thu tiền thật: Payment SUCCEEDED + phân bổ theo **đúng allocator của production** (trọng số phòng,
+ * HB-211) để fixture không có công thức thứ hai.
+ */
 export async function pay(bookingId: string, amount: bigint, type = 'DEPOSIT'): Promise<string> {
   const payment = String(
     (
@@ -259,21 +263,31 @@ export async function pay(bookingId: string, amount: bigint, type = 'DEPOSIT'): 
     )[0]!.id,
   );
   const charges = await rows(
-    "SELECT id,amount FROM booking_charges WHERE booking_id=$1::uuid AND kind='ROOM' ORDER BY id",
+    `SELECT c.id, c.booking_room_id, c.amount,
+            (c.amount - c.voided_amount - coalesce(sum(a.amount - a.released_amount), 0))::bigint
+              AS outstanding
+       FROM booking_charges c
+       LEFT JOIN payment_allocations a ON a.charge_id = c.id
+      WHERE c.booking_id=$1::uuid AND c.kind='ROOM'
+      GROUP BY c.id
+      ORDER BY c.id`,
     [bookingId],
   );
-  const weights = charges.map((charge) => BigInt(String(charge.amount)));
-  const sum = weights.reduce((total, value) => total + value, 0n);
-  let left = amount;
-  for (const [index, charge] of charges.entries()) {
-    const slice = index === charges.length - 1 ? left : (amount * weights[index]!) / sum;
-    if (slice <= 0n) continue;
-    left -= slice;
+  for (const line of planReceiptAllocation(
+    amount,
+    charges.map((charge) => ({
+      id: String(charge.id),
+      kind: 'ROOM',
+      roomId: charge.booking_room_id === null ? null : String(charge.booking_room_id),
+      weight: BigInt(String(charge.amount)),
+      outstanding: BigInt(String(charge.outstanding)),
+    })),
+    ['ROOM'],
+  ))
     await rows(
       'INSERT INTO payment_allocations(payment_id,charge_id,amount) VALUES($1::uuid,$2::uuid,$3)',
-      [payment, String(charge.id), slice.toString()],
+      [payment, line.chargeId, line.amount.toString()],
     );
-  }
   await rows(
     `UPDATE bookings SET paid_amount=(SELECT coalesce(sum(amount),0) FROM payments
         WHERE booking_id=$1::uuid AND status='SUCCEEDED' AND type<>'REFUND' AND type<>'COMPENSATION'),

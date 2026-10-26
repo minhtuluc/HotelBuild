@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import type { Prisma as PrismaTypes } from '@prisma/client';
+import { roomWeights } from '../../pay/ledger/receipt-allocation.js';
 import { notAllowed } from './validation.js';
 
 type Tx = PrismaTypes.TransactionClient;
@@ -190,14 +191,10 @@ async function loadRooms(tx: Tx, bookingId: string, checkIn: string): Promise<Ro
     where: { booking_id: bookingId, kind: 'ROOM' },
     select: { booking_room_id: true, stay_date: true, amount: true },
   });
-  const weights = new Map<string, bigint>();
+  const weights = roomWeights(charges);
   const first = new Map<string, bigint>();
   for (const charge of charges) {
     if (!charge.booking_room_id || !charge.stay_date) continue;
-    weights.set(
-      charge.booking_room_id,
-      (weights.get(charge.booking_room_id) ?? 0n) + charge.amount,
-    );
     if (charge.stay_date.toISOString().slice(0, 10) === checkIn)
       first.set(charge.booking_room_id, (first.get(charge.booking_room_id) ?? 0n) + charge.amount);
   }

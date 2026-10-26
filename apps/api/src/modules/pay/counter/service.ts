@@ -200,16 +200,26 @@ function assertCollectible(status: string, holdExpiresAt: Date | null, now: Date
  * `Decimal`) — mọi giá trị đều là số nguyên VND.
  */
 async function outstandingCharges(tx: Tx, bookingId: string): Promise<readonly ChargeLine[]> {
-  const rows = await tx.$queryRaw<{ id: string; kind: string; outstanding: bigint }[]>`
+  const rows = await tx.$queryRaw<
+    { id: string; kind: string; room_id: string | null; amount: bigint; outstanding: bigint }[]
+  >`
     SELECT c.id,
            c.kind,
+           c.booking_room_id AS room_id,
+           c.amount,
            ((c.amount - c.voided_amount) - COALESCE(SUM(a.amount - a.released_amount), 0))::bigint AS outstanding
       FROM booking_charges c
       LEFT JOIN payment_allocations a ON a.charge_id = c.id
      WHERE c.booking_id = ${bookingId}::uuid
-     GROUP BY c.id, c.kind
+     GROUP BY c.id, c.kind, c.booking_room_id, c.amount
      ORDER BY c.id`;
-  return rows.map((row) => ({ id: row.id, kind: row.kind, outstanding: row.outstanding }));
+  return rows.map((row) => ({
+    id: row.id,
+    kind: row.kind,
+    roomId: row.room_id,
+    weight: row.amount,
+    outstanding: row.outstanding,
+  }));
 }
 
 async function collectedByTypes(
