@@ -80,6 +80,8 @@ describe('HB-078 — lượt quét: lỗi một booking không chặn các booki
       failed: 1,
       releasedAssignments: 0,
       releasedAllotments: 0,
+      refundRequests: 0,
+      refundedAmount: 0n,
       missed: 0,
       pages: 1,
     });
@@ -98,6 +100,8 @@ describe('HB-078 — lượt quét: lỗi một booking không chặn các booki
           releasedAllotments: 0,
           overdueSeconds: 0,
           fromStatus: null,
+          refundRequestId: null,
+          refundAmount: 0n,
         }),
       },
       options,
@@ -110,6 +114,8 @@ describe('HB-078 — lượt quét: lỗi một booking không chặn các booki
       failed: 0,
       releasedAssignments: 0,
       releasedAllotments: 0,
+      refundRequests: 0,
+      refundedAmount: 0n,
       missed: 0,
       pages: 1,
     });
@@ -125,6 +131,8 @@ describe('HB-078 — lượt quét: lỗi một booking không chặn các booki
           releasedAllotments: 3,
           overdueSeconds: 120,
           fromStatus: 'HELD',
+          refundRequestId: null,
+          refundAmount: 0n,
         }),
       },
       options,
@@ -137,9 +145,32 @@ describe('HB-078 — lượt quét: lỗi một booking không chặn các booki
       failed: 0,
       releasedAssignments: 2,
       releasedAllotments: 3,
+      refundRequests: 0,
+      refundedAmount: 0n,
       missed: 1,
       pages: 1,
     });
+  });
+
+  it('HB-212: booking vừa lập hồ sơ hoàn ⇒ cộng số hồ sơ và đúng số tiền đã thu', async () => {
+    const report = await sweepDueHolds(
+      {
+        dueIds: async () => ['44444444-4444-4444-4444-444444444444'],
+        expire: async () => ({
+          expired: true,
+          releasedAssignments: 1,
+          releasedAllotments: 1,
+          overdueSeconds: 10,
+          fromStatus: 'PENDING_PAYMENT',
+          refundRequestId: '55555555-5555-5555-5555-555555555555',
+          // Số lẻ (không bội 1.000) — BR-GEN-03: booking chưa xác nhận hoàn **đúng** số đã thu.
+          refundAmount: 1_234_567n,
+        }),
+      },
+      options,
+      () => undefined,
+    );
+    expect(report).toMatchObject({ refundRequests: 1, refundedAmount: 1_234_567n, expired: 1 });
   });
 });
 
