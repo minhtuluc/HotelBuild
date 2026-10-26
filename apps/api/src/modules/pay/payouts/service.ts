@@ -8,19 +8,29 @@
  */
 import type { PrismaClient } from '@prisma/client';
 import type { Clock } from '@pinehill/domain';
-import type { RefundPayRequest } from '@pinehill/contracts';
+import type { RefundConfirmTransferRequest, RefundPayRequest } from '@pinehill/contracts';
 import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
 import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import { PIN_PURPOSE_FINANCIAL, requirePinToken } from '../../auth/pin/consume.js';
 import { BookingLedger } from '../ledger/service.js';
-import { lockRefund } from '../refunds/writes.js';
+import {
+  lockRefund,
+  MANUAL_TRANSFER_AWAITING_CONFIRMATION,
+  type RefundRow,
+} from '../refunds/writes.js';
 import { checkIntent, legMethods, payoutError } from './validation.js';
 import { payoutView, type RefundPayoutView } from './view.js';
 import {
   insertPayoutLeg,
+  insertRefundPaidEvent,
   legsOf,
+  lockAllocations,
+  lockPayoutOperations,
+  markPaidIfComplete,
   payoutOperations,
   refundFailure,
+  settleTransferLeg,
+  syncRefundedAmount,
   type PayoutRow,
   type RefundLegRow,
   type Tx,
@@ -30,6 +40,37 @@ import {
 function assertNoOrphanLegs(legs: readonly RefundLegRow[]): void {
   if (legs.some((leg) => leg.refund_payment_id !== null))
     throw payoutError('gateway', 'Hồ sơ đã có chứng từ chi chưa gắn thao tác; cần đối soát.');
+}
+
+/**
+ * HB-215: hồ sơ chờ xác nhận chuyển khoản tay ⇔ có operation và **mọi** leg đang `UNKNOWN` với
+ * `last_error = MANUAL_TRANSFER_AWAITING_CONFIRMATION` (worker dừng trước khi chi thật).
+ */
+function awaitingTransfer(operations: readonly PayoutRow[]): boolean {
+  return (
+    operations.length > 0 &&
+    operations.every(
+      (operation) =>
+        operation.status === 'UNKNOWN' &&
+        operation.last_error === MANUAL_TRANSFER_AWAITING_CONFIRMATION,
+    )
+  );
+}
+
+/**
+ * Lệnh gửi lại trên hồ sơ đã chốt: chỉ coi là replay khi **mọi** leg `SUCCEEDED` và cùng
+ * `provider_txn_id = bankReference`; mã khác là xung đột (không đổi gì).
+ */
+function transferReplay(
+  row: RefundRow,
+  operations: readonly PayoutRow[],
+  bankReference: string,
+): RefundPayoutView | null {
+  if (operations.length === 0) return null;
+  const sameReference = operations.every(
+    (operation) => operation.status === 'SUCCEEDED' && operation.provider_txn_id === bankReference,
+  );
+  return sameReference ? payoutView(row.id, row.status, operations) : null;
 }
 
 export class PayoutService {
@@ -135,6 +176,79 @@ export class PayoutService {
         reason: 'Chuẩn bị chi hoàn',
       });
       return payoutView(row.id, row.status, created);
+    } catch (error) {
+      return refundFailure(error);
+    }
+  }
+
+  /**
+   * HB-215 / api.md §2.6 — kế toán xác nhận **đã chuyển khoản** cho mọi leg đang chờ đối soát.
+   *
+   * Một transaction, khoá theo ADR-014 (`booking → payments → refund_requests → refund_allocations →
+   * refund_payout_operations`): chứng từ chi + operation → `SUCCEEDED` với `provider_txn_id =
+   * bankReference`, hồ sơ → `PAID` khi mọi leg xong, đồng bộ `bookings.refunded_amount`, `RefundPaid`
+   * ra outbox và `REFUND_TRANSFER_CONFIRMED` vào `audit_logs`. Gửi lại **cùng** mã trả lại đúng view
+   * (không sinh chứng từ/audit thứ hai); mã khác là xung đột.
+   *
+   * Duyệt và xác nhận là hai người (BR-CANCEL-15/16): người duyệt hồ sơ không tự xác nhận đã chi.
+   */
+  async confirmTransfer(
+    tx: Tx,
+    actor: AuthorizedActor,
+    refundRequestId: string,
+    input: RefundConfirmTransferRequest,
+  ): Promise<RefundPayoutView> {
+    try {
+      const found = await tx.refund_requests.findUnique({
+        where: { id: refundRequestId },
+        select: { booking_id: true },
+      });
+      if (!found) throw payoutError('missing');
+      await this.authorize(tx, actor, found.booking_id);
+      await this.ledger.read(tx, found.booking_id);
+      const row = await lockRefund(tx, refundRequestId);
+      await lockAllocations(tx, refundRequestId);
+      const existing = await lockPayoutOperations(tx, refundRequestId);
+      if (row.approved_by !== null && row.approved_by === actor.id)
+        throw payoutError('selfApproval', 'Người duyệt hồ sơ không được tự xác nhận đã chi.');
+      // PIN tiêu thụ **trước** khi trả kết quả replay: lệnh 🔒 không được trả trạng thái chi khi
+      // thiếu PIN (cùng luật với `pay`; replay cùng `Idempotency-Key` do interceptor phục vụ).
+      await requirePinToken(tx, {
+        userId: actor.id,
+        token: input.pinToken,
+        purpose: PIN_PURPOSE_FINANCIAL,
+        bookingId: row.booking_id,
+        now: this.clock.now(),
+      });
+      const replayed = transferReplay(row, existing, input.bankReference);
+      if (replayed !== null) return replayed;
+      if (row.status !== 'APPROVED' || !awaitingTransfer(existing)) throw payoutError('notPending');
+      const now = this.clock.now();
+      for (const operation of existing)
+        await settleTransferLeg(tx, operation, input.bankReference, now);
+      const status = await markPaidIfComplete(tx, row.id, now);
+      await syncRefundedAmount(tx, row.booking_id, now);
+      if (status === 'PAID') await insertRefundPaidEvent(tx, row.id, row.booking_id, now);
+      await this.audit.record(tx, {
+        actor,
+        action: 'REFUND_TRANSFER_CONFIRMED',
+        entityType: 'RefundRequest',
+        entityId: row.id,
+        beforeJson: { status: row.status },
+        afterJson: {
+          bookingId: row.booking_id,
+          status,
+          // Chỉ mã tham chiếu + chứng từ kỹ thuật; KHÔNG số tài khoản thô, `bankNote` hay `pinToken`.
+          bankReference: input.bankReference,
+          operations: existing.map((operation) => ({
+            operationId: operation.id,
+            amount: operation.amount.toString(),
+            method: operation.method,
+          })),
+        },
+        reason: 'Kế toán xác nhận đã chuyển khoản hoàn tiền',
+      });
+      return payoutView(row.id, status, await payoutOperations(tx, row.id));
     } catch (error) {
       return refundFailure(error);
     }

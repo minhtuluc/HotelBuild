@@ -1,16 +1,30 @@
 /** Cổng vào lệnh chi hoàn (HB-100; api.md §2.6, BR-CANCEL-16, BR-PAY-08/09). */
-import { refundPayRequestSchema, type ErrorCode, type RefundPayRequest } from '@pinehill/contracts';
+import {
+  refundConfirmTransferRequestSchema,
+  refundPayRequestSchema,
+  type ErrorCode,
+  type RefundConfirmTransferRequest,
+  type RefundPayRequest,
+} from '@pinehill/contracts';
 import { AppError } from '../../../common/app-error.js';
 
 /**
  * Mã lỗi lấy đúng bộ đã chốt ở api.md §4.2 — không thêm mã mới ngoài hợp đồng. `E_PAY_GATEWAY_ERROR`
  * dùng cho lần chi trước đã thất bại dứt điểm (phải đối soát tay trước khi chi lại).
+ * HB-215 dùng lại `409 E_PAY_REFUND_NOT_PENDING` cho "không còn leg chờ xác nhận" và
+ * `403 E_PAY_SELF_APPROVAL` cho người duyệt tự xác nhận — cả hai đã có trong hợp đồng.
  */
 const ERRORS = {
   missing: [404, 'E_GEN_NOT_FOUND', 'Không tìm thấy hồ sơ hoàn tiền.'],
   invalid: [400, 'E_GEN_VALIDATION_FAILED', 'Lệnh chi hoàn không hợp lệ.'],
   forbidden: [403, 'E_RBAC_FORBIDDEN', 'Bạn không được chi tiền hoàn.'],
   notApproved: [409, 'E_PAY_REFUND_NOT_APPROVED', 'Chỉ chi hồ sơ đã được duyệt.'],
+  notPending: [
+    409,
+    'E_PAY_REFUND_NOT_PENDING',
+    'Hồ sơ không còn khoản chi tay nào chờ xác nhận chuyển khoản.',
+  ],
+  selfApproval: [403, 'E_PAY_SELF_APPROVAL', 'Người duyệt hồ sơ không được tự xác nhận đã chi.'],
   gateway: [502, 'E_PAY_GATEWAY_ERROR', 'Lần chi trước thất bại dứt điểm; cần đối soát thủ công.'],
 } as const satisfies Record<string, readonly [number, ErrorCode, string]>;
 
@@ -25,6 +39,29 @@ export function payInput(value: unknown): RefundPayRequest {
   const result = refundPayRequestSchema.safeParse(value);
   if (!result.success) throw payoutError('invalid');
   return result.data;
+}
+
+/**
+ * HB-215: `bankReference` bắt buộc (schema đã trim) **và** phải kèm `note` hoặc `evidenceRefs[]` —
+ * một mã trần không đủ bằng chứng để tiền ra khỏi hệ thống. Chuỗi rỗng ở cả hai ⇒ `400`, không đổi
+ * trạng thái (cổng này chạy trước khi khoá chống trùng claim).
+ */
+export function confirmInput(value: unknown): RefundConfirmTransferRequest {
+  const result = refundConfirmTransferRequestSchema.safeParse(value);
+  if (!result.success)
+    throw payoutError('invalid', 'Cần mã tham chiếu giao dịch ngân hàng hợp lệ.');
+  const note = (result.data.note ?? '').trim();
+  const evidence = (result.data.evidenceRefs ?? [])
+    .map((reference) => reference.trim())
+    .filter((reference) => reference.length > 0);
+  if (note.length === 0 && evidence.length === 0)
+    throw payoutError('invalid', 'Cần ghi chú hoặc chứng từ chuyển khoản kèm mã tham chiếu.');
+  return {
+    bankReference: result.data.bankReference,
+    ...(note.length === 0 ? {} : { note }),
+    ...(evidence.length === 0 ? {} : { evidenceRefs: evidence }),
+    ...(result.data.pinToken === undefined ? {} : { pinToken: result.data.pinToken }),
+  };
 }
 
 /** Phương thức chi suy từ **phương thức gốc** (BR-PAY-08): tiền mặt → chuyển khoản, OTA giữ tiền thì không tự chi. */

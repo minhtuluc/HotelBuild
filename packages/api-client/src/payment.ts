@@ -12,8 +12,10 @@ import {
   paymentStatusViewSchema,
   refundApproveRequestSchema,
   refundCancelRequestSchema,
+  refundConfirmTransferRequestSchema,
   refundDecisionSchema,
   refundPayRequestSchema,
+  refundPayoutViewSchema,
   refundRejectRequestSchema,
   refundRequestCreateRequestSchema,
   refundRequestSchema,
@@ -25,8 +27,10 @@ import {
   type PaymentStatusView,
   type RefundApproveRequest,
   type RefundCancelRequest,
+  type RefundConfirmTransferRequest,
   type RefundDecision,
   type RefundPayRequest,
+  type RefundPayoutView,
   type RefundRejectRequest,
   type RefundRequest,
   type RefundRequestCreateRequest,
@@ -95,6 +99,15 @@ export interface RefundApi {
     input: RefundPayRequest,
     options?: { idempotencyKey: string },
   ): Promise<ApiResponse<RefundRequest>>;
+  /**
+   * 🔒 HB-215: xác nhận đã chuyển khoản tay bằng mã tham chiếu ngân hàng cho leg chờ đối soát.
+   * Chỉ hợp lệ khi server báo `awaitingTransferConfirmation`.
+   */
+  confirmTransfer(
+    refundRequestId: string,
+    input: RefundConfirmTransferRequest,
+    options?: { idempotencyKey: string },
+  ): Promise<ApiResponse<RefundPayoutView>>;
 }
 
 export function createRefundApi(client: ApiClient): RefundApi {
@@ -144,6 +157,15 @@ export function createRefundApi(client: ApiClient): RefundApi {
         ...(options === undefined ? {} : { idempotencyKey: options.idempotencyKey }),
         pinProtected: true,
         decoder: refundRequestSchema,
+      }),
+    confirmTransfer: (refundRequestId, input, options) =>
+      client.request({
+        method: 'POST',
+        path: `/refund-requests/${encodeURIComponent(refundRequestId)}/confirm-transfer`,
+        body: refundConfirmTransferRequestSchema.parse(input),
+        ...(options === undefined ? {} : { idempotencyKey: options.idempotencyKey }),
+        pinProtected: true,
+        decoder: refundPayoutViewSchema,
       }),
   };
 }

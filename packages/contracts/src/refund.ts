@@ -33,6 +33,12 @@ export const refundRequestSchema = z.object({
   eventNetRefund: z.number().int().safe().min(0).optional(),
   /** Cờ theo ngưỡng cấu hình của server, không hardcode SystemSetting ở frontend. */
   requiresThresholdControl: z.boolean().optional(),
+  /**
+   * HB-215: hồ sơ `APPROVED` có leg chuyển khoản tay đang chờ kế toán xác nhận
+   * (`refund_payout_operations.status='UNKNOWN'` + `last_error='MANUAL_TRANSFER_AWAITING_CONFIRMATION'`).
+   * Do server tính; optional để phản hồi cũ vẫn đọc được.
+   */
+  awaitingTransferConfirmation: z.boolean().optional(),
   /** Nguồn hoàn và Payment REFUND riêng, không sửa Payment thu gốc (BR-PAY-08/09). */
   refundAllocations: z
     .array(
@@ -80,6 +86,52 @@ export const refundPayRequestSchema = z.strictObject({
   pinToken: z.string().min(16).optional(),
 });
 
+/**
+ * 🔒 HB-215 / api.md §2.6: kế toán xác nhận **đã chuyển khoản** cho leg chờ đối soát. `bankReference`
+ * là mã tham chiếu giao dịch ngân hàng (bắt buộc, không nhận chuỗi rỗng); ngoài mã, phải có **thêm**
+ * `note` hoặc `evidenceRefs[]` làm bằng chứng chứ không chỉ một mã trần.
+ */
+export const refundConfirmTransferRequestSchema = z.strictObject({
+  bankReference: z.string().trim().min(1).max(64),
+  note: z.string().max(500).optional(),
+  evidenceRefs: z.array(z.string().min(1)).optional(),
+  pinToken: z.string().min(16).optional(),
+});
+
+/** Trạng thái **kỹ thuật** của một leg chi (`refund_payout_operations.status`, ADR-016). */
+export const payoutOperationStatusSchema = z.enum([
+  'READY',
+  'IN_FLIGHT',
+  'UNKNOWN',
+  'SUCCEEDED',
+  'FAILED_FINAL',
+]);
+
+/**
+ * HB-215: phản hồi của `/pay` và `/confirm-transfer`. `lastError` là mã lý do kỹ thuật để kế toán
+ * biết leg đang chờ xác nhận chuyển khoản tay; không chứa số tài khoản hay `pinToken`.
+ */
+export const refundPayoutOperationSchema = z.object({
+  id: z.string().min(1),
+  status: payoutOperationStatusSchema,
+  method: paymentMethodSchema,
+  amount: z.number().int().safe().min(0),
+  originalPaymentId: z.string().min(1),
+  refundPaymentId: z.string().min(1),
+  bankNote: z.string().nullable(),
+  attempts: z.number().int().min(0),
+  providerTxnId: z.string().nullable(),
+  lastError: z.string().nullable(),
+  createdAt: isoUtcTimestampSchema,
+  finishedAt: isoUtcTimestampSchema.nullable(),
+});
+
+export const refundPayoutViewSchema = z.object({
+  refundRequestId: z.string().min(1),
+  status: refundStatusSchema,
+  operations: z.array(refundPayoutOperationSchema),
+});
+
 /** Phản hồi duyệt (§3.7). */
 export const refundDecisionSchema = z.object({
   id: z.string().min(1),
@@ -106,5 +158,8 @@ export type RefundApproveRequest = z.infer<typeof refundApproveRequestSchema>;
 export type RefundRejectRequest = z.infer<typeof refundRejectRequestSchema>;
 export type RefundCancelRequest = z.infer<typeof refundCancelRequestSchema>;
 export type RefundPayRequest = z.infer<typeof refundPayRequestSchema>;
+export type RefundConfirmTransferRequest = z.infer<typeof refundConfirmTransferRequestSchema>;
+export type RefundPayoutOperation = z.infer<typeof refundPayoutOperationSchema>;
+export type RefundPayoutView = z.infer<typeof refundPayoutViewSchema>;
 export type RefundDecision = z.infer<typeof refundDecisionSchema>;
 export type RefundListQuery = z.infer<typeof refundListQuerySchema>;

@@ -1,6 +1,12 @@
 /** SCR-38 presentation guards; the server authorizes every command and computes money. */
 import type { RefundRequest, UserMe, Payment } from '@pinehill/contracts';
-export type RefundAction = 'approve' | 'reject' | 'cancel' | 'pay';
+export type RefundAction = 'approve' | 'reject' | 'cancel' | 'pay' | 'confirm-transfer';
+
+/**
+ * Lỗi cấp biểu mẫu UI tự kiểm trước khi gửi (`REFERENCE`/`NOTE` cho lệnh xác nhận chuyển khoản —
+ * HB-215). Máy chủ vẫn là nơi chặn cuối; câu chữ ở `lib/i18n.ts`.
+ */
+export type RefundIssue = 'FORMAT' | 'OVER' | 'REASON' | 'RECIPIENT' | 'REFERENCE' | 'NOTE';
 const money = (value: number | undefined): value is number =>
   value !== undefined && Number.isSafeInteger(value) && value >= 0;
 function validSource(
@@ -45,9 +51,15 @@ export function payoutMethod(request: RefundRequest): Payment['method'] | null {
 export function refundDecisionReady(request: RefundRequest): boolean {
   return refundFactsReady(request) && typeof request.requiresThresholdControl === 'boolean';
 }
+/** Hồ sơ đã duyệt: chỉ ACCOUNTANT thao tác, và chỉ một đường (xác nhận chuyển khoản tay hoặc chi). */
+function approvedActions(request: RefundRequest, user: UserMe): RefundAction[] {
+  if (user.role !== 'ACCOUNTANT') return [];
+  // HB-215: server báo leg chuyển khoản tay đang chờ xác nhận ⇒ kế toán xác nhận, không chi lại.
+  if (request.awaitingTransferConfirmation === true) return ['confirm-transfer'];
+  return payoutMethod(request) === null ? [] : ['pay'];
+}
 export function refundActions(request: RefundRequest, user: UserMe): RefundAction[] {
-  if (request.status === 'APPROVED')
-    return user.role === 'ACCOUNTANT' && payoutMethod(request) !== null ? ['pay'] : [];
+  if (request.status === 'APPROVED') return approvedActions(request, user);
   if (request.status !== 'PENDING') return [];
   const checker = ['MANAGER', 'OWNER'].includes(user.role);
   const result: RefundAction[] =
@@ -93,4 +105,13 @@ export function paidEvidence(request: RefundRequest): boolean {
     new Set(ids).size === allocations.length &&
     allocations.every((value) => successfulProof(request, value))
   );
+}
+
+/**
+ * HB-215: lệnh chi cũ còn dấu trong trình duyệt cần tra cứu **trừ khi** server đã báo leg đang chờ
+ * kế toán xác nhận chuyển khoản — trạng thái đó là đã biết, không phải "chưa xác định kết quả", nên
+ * màn hình phải mở lại nội dung để hiện lệnh xác nhận.
+ */
+export function payoutLookupRequired(request: RefundRequest): boolean {
+  return !paidEvidence(request) && request.awaitingTransferConfirmation !== true;
 }

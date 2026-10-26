@@ -11,6 +11,12 @@ import { refundError } from './validation.js';
 
 export type Tx = PrismaTypes.TransactionClient;
 
+/**
+ * HB-215: operation `UNKNOWN` + mã này nghĩa là leg chuyển khoản tay đang chờ kế toán xác nhận
+ * (worker `refund-payout/psp.ts` đặt mã, API xác nhận ở `/confirm-transfer`).
+ */
+export const MANUAL_TRANSFER_AWAITING_CONFIRMATION = 'MANUAL_TRANSFER_AWAITING_CONFIRMATION';
+
 /** `SELECT *` trên `refund_requests`; cột `numeric` được đổi kiểu số trước khi trả hợp đồng. */
 export interface RefundRow {
   id: string;

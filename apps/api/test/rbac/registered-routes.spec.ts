@@ -289,11 +289,8 @@ function independentOracle(): Record<string, Expected> {
   };
   // HB-077 / api.md §2.5, §6.3: xác nhận booking là tuyến FRONT_DESK trở lên, đúng cơ sở;
   // thân oracle thiếu `paymentId` → 400 trước khi tra tài nguyên.
-  keyed[`${RequestMethod.POST}:bookings/:bookingId/confirm`] = {
-    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
-    status: 400,
-    method: RequestMethod.POST,
-  };
+  // prettier-ignore
+  keyed[`${RequestMethod.POST}:bookings/:bookingId/confirm`] = { roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'], status: 400, method: RequestMethod.POST };
   // HB-151 / UC-BOOK-02 + api.md §2.5, §6.3: walk-in tạo booking kênh WALKIN là tuyến nhân viên
   // (`bookings.create`); thân oracle không hợp lệ ⇒ 400 sau khi qua quyền, trước khi chạm dữ liệu.
   keyed[`${RequestMethod.POST}:walk-in`] = {
@@ -324,6 +321,10 @@ function independentOracle(): Record<string, Expected> {
   // thân oracle thiếu `method` ⇒ 400 trước khi chạm tài nguyên.
   // prettier-ignore
   keyed[`${RequestMethod.POST}:refund-requests/:refundRequestId/pay`] = { roles: ['ACCOUNTANT'], status: 400, method: RequestMethod.POST };
+  // HB-215 / api.md §2.6, §6.1: xác nhận chuyển khoản tay cũng là tuyến **ACCOUNTANT**, đúng cơ sở;
+  // thân oracle thiếu `bankReference` ⇒ 400 sau khi qua quyền, trước khi chạm tài nguyên.
+  // prettier-ignore
+  keyed[`${RequestMethod.POST}:refund-requests/:refundRequestId/confirm-transfer`] = { roles: ['ACCOUNTANT'], status: 400, method: RequestMethod.POST };
   // HB-213 / api.md §2.6, §6.3: danh sách hồ sơ hoàn cho quầy/điều phối/MANAGER/OWNER + ACCOUNTANT đối soát.
   // prettier-ignore
   keyed[`${RequestMethod.GET}:refund-requests`] = { roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER', 'ACCOUNTANT'], status: 200, method: RequestMethod.GET };

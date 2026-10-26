@@ -39,6 +39,11 @@ export const refundsCatalog = {
   'ops.refunds.action.reject': 'Từ chối hoàn',
   'ops.refunds.action.cancel': 'Rút yêu cầu',
   'ops.refunds.action.pay': 'Chi tiền hoàn',
+  // HB-215 — xác nhận chuyển khoản tay khi leg đang chờ đối soát (server báo `awaitingTransferConfirmation`).
+  'ops.refunds.action.confirm-transfer': 'Xác nhận đã chuyển khoản',
+  'ops.refunds.bankReference': 'Mã tham chiếu giao dịch',
+  'ops.refunds.transferNote': 'Ghi chú / chứng từ chuyển khoản',
+  'ops.refunds.field.bankReference': 'Mã tham chiếu chuyển khoản',
   'ops.refunds.amount': 'Tiền hoàn gộp được duyệt (VND)',
   'ops.refunds.note': 'Lý do / ghi chú',
   'ops.refunds.recipient': 'Đã xác minh người nhận',
@@ -49,6 +54,8 @@ export const refundsCatalog = {
   'ops.refunds.issue.OVER': 'Mức duyệt không vượt tiền hoàn gộp yêu cầu.',
   'ops.refunds.issue.REASON': 'Cần lý do khi giảm mức duyệt, từ chối hoặc rút yêu cầu.',
   'ops.refunds.issue.RECIPIENT': 'Cần ghi chú chuyển khoản và xác minh người nhận.',
+  'ops.refunds.issue.REFERENCE': 'Nhập mã tham chiếu giao dịch ngân hàng.',
+  'ops.refunds.issue.NOTE': 'Cần ghi chú hoặc chứng từ chuyển khoản kèm mã tham chiếu.',
   'ops.refunds.payment': 'Khoản thu gốc',
   'ops.refunds.noPayments':
     'Chưa có chứng từ thu đủ điều kiện. Tải lại đơn hoặc đối soát khoản thu.',

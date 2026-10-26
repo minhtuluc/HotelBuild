@@ -5,6 +5,7 @@
 import { refundFailure } from '../refunds/writes.js';
 import type { Tx } from '../refunds/writes.js';
 import { refundError } from '../refunds/validation.js';
+import { payoutError } from './validation.js';
 
 /** Một nguồn hoàn của hồ sơ: allocation + chứng từ thu gốc. */
 export interface RefundLegRow {
@@ -49,6 +50,24 @@ export async function payoutOperations(tx: Tx, refundRequestId: string): Promise
     SELECT * FROM refund_payout_operations
      WHERE refund_request_id = ${refundRequestId}::uuid
      ORDER BY created_at, id`;
+}
+
+/**
+ * Khoá `refund_allocations` của hồ sơ theo thứ tự ADR-014 trước khi chốt leg; `BookingLedger.read`
+ * đã khoá booking → payments → refund_requests nên dãy khoá vẫn đúng thứ tự quy định.
+ */
+export async function lockAllocations(tx: Tx, refundRequestId: string): Promise<void> {
+  await tx.$queryRaw`
+    SELECT id FROM refund_allocations
+     WHERE refund_request_id = ${refundRequestId}::uuid ORDER BY id FOR UPDATE`;
+}
+
+/** Khoá operation của hồ sơ (`FOR UPDATE`) — bước cuối trong thứ tự khoá ADR-014. */
+export async function lockPayoutOperations(tx: Tx, refundRequestId: string): Promise<PayoutRow[]> {
+  return tx.$queryRaw<PayoutRow[]>`
+    SELECT * FROM refund_payout_operations
+     WHERE refund_request_id = ${refundRequestId}::uuid
+     ORDER BY created_at, id FOR UPDATE`;
 }
 
 export interface NewPayoutLeg {
@@ -98,3 +117,107 @@ export async function insertPayoutLeg(tx: Tx, leg: NewPayoutLeg): Promise<Payout
 
 export type { Tx };
 export { refundFailure };
+
+/**
+ * HB-215 — chốt một leg đã được kế toán xác nhận chuyển khoản. Port đúng chuỗi SQL của worker
+ * (`apps/worker/src/jobs/refund-payout/settle.ts`) vì API không import được worker: chứng từ
+ * `Payment REFUND` → `SUCCEEDED` + `provider_txn_id` + `paid_at`, operation → `SUCCEEDED` +
+ * `provider_txn_id` + `finished_at`, xoá `last_error`. `WHERE … status = 'PENDING'/'UNKNOWN'` là
+ * hàng rào chống chốt hai lần; lệch trạng thái ⇒ rollback và đối soát tay (TD trùng lặp mã nguồn).
+ */
+export async function settleTransferLeg(
+  tx: Tx,
+  operation: PayoutRow,
+  bankReference: string,
+  now: Date,
+): Promise<void> {
+  const paid = await tx.$executeRaw`
+    UPDATE payments
+       SET status = 'SUCCEEDED', provider_txn_id = ${bankReference}, paid_at = ${now}::timestamptz,
+           updated_at = ${now}::timestamptz
+     WHERE id = ${operation.refund_payment_id}::uuid AND status = 'PENDING'`;
+  if (paid !== 1)
+    throw payoutError('gateway', 'Chứng từ chi không còn chờ; cần đối soát thủ công.');
+  const settled = await tx.$executeRaw`
+    UPDATE refund_payout_operations
+       SET status = 'SUCCEEDED', provider_txn_id = ${bankReference}, finished_at = ${now}::timestamptz,
+           lease_token = NULL, lease_expires_at = NULL, last_error = NULL,
+           updated_at = ${now}::timestamptz
+     WHERE id = ${operation.id}::uuid AND status = 'UNKNOWN'`;
+  if (settled !== 1) throw payoutError('gateway', 'Thao tác chi đã đổi trạng thái; cần đối soát.');
+}
+
+/**
+ * Hồ sơ chỉ `PAID` khi **mọi** allocation có chứng từ chi `SUCCEEDED` — cùng luật
+ * `markPaidIfComplete` của worker; trigger `fn_guard_refund_request` kiểm lại tổng đã chi.
+ */
+export async function markPaidIfComplete(
+  tx: Tx,
+  refundRequestId: string,
+  now: Date,
+): Promise<string> {
+  const remaining = await tx.$queryRaw<{ pending: bigint }[]>`
+    SELECT count(*)::bigint AS pending
+      FROM refund_allocations a JOIN payments p ON p.id = a.refund_payment_id
+     WHERE a.refund_request_id = ${refundRequestId}::uuid AND p.status <> 'SUCCEEDED'`;
+  if (BigInt(remaining[0]?.pending ?? 0n) !== 0n) return 'APPROVED';
+  await tx.$executeRaw`
+    UPDATE refund_requests SET status = 'PAID', paid_at = ${now}::timestamptz,
+           updated_at = ${now}::timestamptz
+     WHERE id = ${refundRequestId}::uuid AND status = 'APPROVED'`;
+  const current = await tx.$queryRaw<{ status: string }[]>`
+    SELECT status FROM refund_requests WHERE id = ${refundRequestId}::uuid`;
+  return current[0]?.status ?? 'PAID';
+}
+
+/** Giữ đúng định nghĩa `BookingLedger`: tổng allocation có chứng từ chi SUCCEEDED của booking. */
+export async function syncRefundedAmount(tx: Tx, bookingId: string, now: Date): Promise<void> {
+  await tx.$executeRaw`
+    UPDATE bookings b
+       SET refunded_amount = (
+             SELECT coalesce(sum(a.amount), 0) FROM refund_allocations a
+               JOIN refund_requests r ON r.id = a.refund_request_id
+               JOIN payments p ON p.id = a.refund_payment_id
+              WHERE r.booking_id = b.id AND p.status = 'SUCCEEDED'),
+           updated_at = ${now}::timestamptz
+     WHERE b.id = ${bookingId}::uuid`;
+}
+
+/**
+ * `RefundPaid` cùng payload với worker (`settle.ts`): tổng `net_refund` + mọi leg `SUCCEEDED`, để
+ * consumer/đối soát không phân biệt leg được chốt bởi PSP hay bởi kế toán xác nhận tay.
+ */
+export async function insertRefundPaidEvent(
+  tx: Tx,
+  refundRequestId: string,
+  bookingId: string,
+  now: Date,
+): Promise<void> {
+  const request = await tx.$queryRaw<{ net_refund: bigint | null }[]>`
+    SELECT net_refund FROM refund_requests WHERE id = ${refundRequestId}::uuid`;
+  const legs = await tx.$queryRaw<
+    { amount: bigint; method: string; provider_txn_id: string | null }[]
+  >`
+    SELECT amount, method, provider_txn_id FROM refund_payout_operations
+     WHERE refund_request_id = ${refundRequestId}::uuid AND status = 'SUCCEEDED'
+     ORDER BY created_at, id`;
+  await tx.outbox_events.create({
+    data: {
+      event_type: 'RefundPaid',
+      aggregate_type: 'RefundRequest',
+      aggregate_id: refundRequestId,
+      payload_json: {
+        refundRequestId,
+        bookingId,
+        amount: BigInt(request[0]?.net_refund ?? 0n).toString(),
+        legs: legs.map((leg) => ({
+          amount: leg.amount.toString(),
+          method: leg.method,
+          providerTxnId: leg.provider_txn_id,
+        })),
+      },
+      created_at: now,
+      updated_at: now,
+    },
+  });
+}

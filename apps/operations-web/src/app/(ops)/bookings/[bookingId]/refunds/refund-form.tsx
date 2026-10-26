@@ -17,7 +17,13 @@ function RefundFields({
   const intent = c.intent;
   if (!intent) return null;
   const cash = cashPayout(intent);
+  const confirmTransfer = intent.action === 'confirm-transfer';
   const payments = eligiblePayments(booking.payments);
+  const noteLabel = confirmTransfer
+    ? t('ops.refunds.transferNote')
+    : cash
+      ? t('ops.refunds.bankNote')
+      : t('ops.refunds.note');
   return (
     <>
       {intent.action !== 'create' ? null : (
@@ -53,8 +59,20 @@ function RefundFields({
           />
         </label>
       )}
+      {confirmTransfer ? (
+        <label style={{ display: 'grid', gap: 4 }}>
+          {t('ops.refunds.bankReference')}
+          <input
+            name="bankReference"
+            maxLength={64}
+            value={c.bankReference}
+            disabled={c.blocked}
+            onChange={(event) => c.setBankReference(event.target.value)}
+          />
+        </label>
+      ) : null}
       <label style={{ display: 'grid', gap: 4 }}>
-        {cash ? t('ops.refunds.bankNote') : t('ops.refunds.note')}
+        {noteLabel}
         <textarea
           name="note"
           maxLength={500}

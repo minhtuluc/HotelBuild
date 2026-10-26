@@ -266,7 +266,10 @@ theo `tiers[i].hoursBeforeCheckIn/refundPercent/chargeFirstNight` chỉ ra dòng
 | POST | `/api/v1/refund-requests/{refundRequestId}/reject` | Từ chối PENDING, ghi lý do và trả hạn mức hoàn | MANAGER/OWNER | `note`, `pinToken` 🔒 | UC-PAY-04 | BR-CANCEL-15,17 |
 | POST | `/api/v1/refund-requests/{refundRequestId}/cancel` | Rút yêu cầu còn PENDING; không khôi phục booking hay assignment | Người tạo hoặc MANAGER/OWNER | `reason` | UC-PAY-04 | BR-CANCEL-18 |
 | POST | `/api/v1/refund-requests/{refundRequestId}/pay` | Chi tiền hoàn về phương thức gốc | ACCOUNTANT | `method`, `bankNote`, `pinToken` 🔒 | UC-PAY-04 | BR-CANCEL-12,16, BR-PAY-08,09 |
+| POST | `/api/v1/refund-requests/{refundRequestId}/confirm-transfer` | **Xác nhận đã chuyển khoản tay** bằng mã tham chiếu ngân hàng cho leg chờ đối soát | ACCOUNTANT | `bankReference`, `note`, `evidenceRefs[]`, `pinToken` 🔒 | UC-PAY-04 | BR-CANCEL-12,16, BR-PAY-08,09 |
 | POST | `/api/v1/reconciliation/daily/close` | Chốt ca/ngày, ghi nhận chênh lệch | ACCOUNTANT | `propertyId`, `businessDate`, `countedCash`, `note` | UC-PAY-05 | BR-PAY-06,10 |
+
+**HB-215 — xác nhận chuyển khoản tay.** Hoàn bằng `BANK_TRANSFER` không có adapter PSP nên worker dừng ở operation `UNKNOWN` + `last_error = MANUAL_TRANSFER_AWAITING_CONFIRMATION` (§2.6, TD-25). Kế toán xác nhận bằng `bankReference` **bắt buộc** kèm `note` hoặc `evidenceRefs[]`; thiếu một trong hai ⇒ `400 E_GEN_VALIDATION_FAILED` và **không** đổi trạng thái. Chỉ áp cho hồ sơ `APPROVED` có **mọi** leg đang chờ xác nhận; trạng thái khác ⇒ `409 E_PAY_REFUND_NOT_PENDING`. Người duyệt hồ sơ (`approved_by`) không được tự xác nhận ⇒ `403 E_PAY_SELF_APPROVAL`. Trong **một** transaction: chứng từ `Payment REFUND` và operation → `SUCCEEDED` với `provider_txn_id = bankReference`, `paid_at`/`finished_at`, hồ sơ → `PAID` khi mọi leg xong, đồng bộ `bookings.refunded_amount`, audit `REFUND_TRANSFER_CONFIRMED` + `RefundPaid` ra outbox. `bankNote` cũ của `/pay` **không** thay thế `bankReference`; phản hồi/audit/log không chứa số tài khoản thô hay `pinToken`. Gửi lại **cùng** `bankReference` trên hồ sơ đã chốt trả lại đúng trạng thái kỹ thuật (không sinh chứng từ/audit thứ hai); mã khác ⇒ `409`.
 
 ### 2.7. CHAN — Kênh bán (3 UC)
 
@@ -917,6 +920,7 @@ sequenceDiagram
 | `POST /refund-requests` | FRONT_DESK | `booking.propertyId ∈ propertyScope` | `isForceMajeure` yêu cầu `MANAGER`+ và lý do ≥ 20 ký tự (BR-CANCEL-13) |
 | `POST /refund-requests/{id}/approve` | MANAGER | Cơ sở của booking | Người duyệt MANAGER/OWNER ≠ người tạo, đúng scope; hai cấp là người lập + người duyệt độc lập, không phải MANAGER rồi OWNER (BR-CANCEL-15) |
 | `POST /refund-requests/{id}/pay` | ACCOUNTANT | Cơ sở của booking | Chỉ khi `APPROVED`; hoàn về phương thức gốc (BR-CANCEL-16, BR-PAY-08) |
+| `POST /refund-requests/{id}/confirm-transfer` | ACCOUNTANT | Cơ sở của booking | PIN; chỉ leg `MANUAL_TRANSFER_AWAITING_CONFIRMATION`; `bankReference` + `note`/`evidenceRefs[]`; người duyệt ≠ người xác nhận (HB-215) |
 | `GET /reconciliation/**` | ACCOUNTANT | Cơ sở trong phạm vi; `OWNER` xem toàn chuỗi | Chênh lệch > 50.000 VND phải báo `MANAGER` (BR-PAY-10) |
 | `POST /room-moves` | FRONT_DESK | Cả cơ sở đi và cơ sở đến thuộc phạm vi | `MANAGER`+ duyệt khi có bồi thường; khác thành phố cần đồng thuận (BR-OVER-06,07) |
 | `POST /room-moves/{id}/execute` | FRONT_DESK | Cơ sở của booking | PIN; khách `CHECKED_IN` cần `MANAGER`+ (BR-OVER-09) |

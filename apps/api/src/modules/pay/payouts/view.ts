@@ -12,6 +12,11 @@ export interface PayoutOperationView {
   bankNote: string | null;
   attempts: number;
   providerTxnId: string | null;
+  /**
+   * HB-215: lý do kỹ thuật gần nhất (vd. `MANUAL_TRANSFER_AWAITING_CONFIRMATION`); `null` khi chốt
+   * xong. Không chứa số tài khoản hay `pinToken`.
+   */
+  lastError: string | null;
   createdAt: string;
   finishedAt: string | null;
 }
@@ -34,6 +39,7 @@ function operationView(row: PayoutRow): PayoutOperationView {
     bankNote: row.bank_note,
     attempts: row.attempts,
     providerTxnId: row.provider_txn_id,
+    lastError: row.last_error,
     createdAt: row.created_at.toISOString(),
     finishedAt: row.finished_at?.toISOString() ?? null,
   };

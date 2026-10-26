@@ -3,6 +3,7 @@ import type { RefundRequest, UserMe } from '@pinehill/contracts';
 import {
   refundActions,
   paidEvidence,
+  payoutLookupRequired,
   approvalIssue,
   payoutMethod,
 } from '../../src/app/(ops)/bookings/[bookingId]/refunds/refund-model';
@@ -160,4 +161,27 @@ test('missing server threshold decision disables approval even with money facts'
   expect(refundActions({ ...request, requiresThresholdControl: undefined }, user)).toEqual([
     'cancel',
   ]);
+});
+test('only accountant sees confirm-transfer, and only when the server reports a parked leg', () => {
+  const approved = { ...request, status: 'APPROVED' as const, approvedAmount: 150000 };
+  const parked = { ...approved, awaitingTransferConfirmation: true };
+  const accountant = { ...user, role: 'ACCOUNTANT' as const };
+  expect(refundActions(parked, accountant)).toEqual(['confirm-transfer']);
+  expect(refundActions(parked, user)).toEqual([]);
+  expect(refundActions(parked, { ...user, userId: 'maker', role: 'OWNER' })).toEqual([]);
+  // Cờ tắt ⇒ quay lại đường chi thường; đã PAID hoặc chưa duyệt ⇒ không có nút nào.
+  expect(refundActions({ ...parked, awaitingTransferConfirmation: false }, accountant)).toEqual([
+    'pay',
+  ]);
+  expect(refundActions({ ...parked, awaitingTransferConfirmation: undefined }, accountant)).toEqual(
+    ['pay'],
+  );
+  expect(refundActions({ ...parked, status: 'PAID' }, accountant)).toEqual([]);
+  expect(refundActions({ ...parked, status: 'PENDING' }, accountant)).toEqual([]);
+});
+test('leg chờ xác nhận chuyển khoản không còn bị coi là lệnh chi chưa rõ kết quả', () => {
+  const approved = { ...request, status: 'APPROVED' as const, approvedAmount: 150000 };
+  expect(payoutLookupRequired(approved)).toBe(true);
+  expect(payoutLookupRequired({ ...approved, awaitingTransferConfirmation: true })).toBe(false);
+  expect(payoutLookupRequired(paid())).toBe(false);
 });
