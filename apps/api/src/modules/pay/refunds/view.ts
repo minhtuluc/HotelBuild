@@ -1,6 +1,12 @@
 /** Dựng hợp đồng trả về của hồ sơ hoàn (api.md §2.6, HB-110 read facts): tính hết ở server. */
 import { refundRequestSchema, type RefundRequest } from '@pinehill/contracts';
-import { settlementNet, thresholdAmount, type RefundRow, type Tx } from './writes.js';
+import {
+  MANUAL_TRANSFER_AWAITING_CONFIRMATION,
+  settlementNet,
+  thresholdAmount,
+  type RefundRow,
+  type Tx,
+} from './writes.js';
 import { refundError } from './validation.js';
 
 const DAY = 24 * 3_600_000;
@@ -34,6 +40,21 @@ interface ViewFacts {
   readonly paymentId: string;
   readonly eventNet: bigint;
   readonly threshold: bigint;
+  /** HB-215: có leg chuyển khoản tay chờ kế toán xác nhận. */
+  readonly awaitingTransfer: boolean;
+}
+
+/**
+ * HB-215 — một truy vấn cho **cả trang**: hồ sơ nào có operation `UNKNOWN` mang mã chờ xác nhận
+ * chuyển khoản tay. Không N+1 ở danh sách; cờ chỉ đúng khi hồ sơ còn `APPROVED` (do `render` quyết).
+ */
+async function awaitingTransfers(tx: Tx, ids: readonly string[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const rows = await tx.$queryRaw<{ refund_request_id: string }[]>`
+    SELECT DISTINCT refund_request_id FROM refund_payout_operations
+     WHERE refund_request_id = ANY(${ids}::uuid[]) AND status = 'UNKNOWN'
+       AND last_error = ${MANUAL_TRANSFER_AWAITING_CONFIRMATION}`;
+  return new Set(rows.map((row) => row.refund_request_id));
 }
 
 /**
@@ -56,6 +77,7 @@ function render(row: RefundRow, facts: ViewFacts): RefundRequest {
     netRefund: vnd(row.net_refund),
     eventNetRefund: vnd(facts.eventNet),
     requiresThresholdControl: facts.eventNet > facts.threshold,
+    awaitingTransferConfirmation: row.status === 'APPROVED' && facts.awaitingTransfer,
     status: row.status,
     isForceMajeure: row.is_force_majeure,
     reason: row.reason,
@@ -68,15 +90,21 @@ function render(row: RefundRow, facts: ViewFacts): RefundRequest {
   });
 }
 
-/** Một hồ sơ: ba lượt đọc (nguồn giữ, NET toàn sự kiện, ngưỡng) rồi dựng hợp đồng. */
+/** Một hồ sơ: bốn lượt đọc (nguồn giữ, NET toàn sự kiện, ngưỡng, leg chờ xác nhận) rồi dựng hợp đồng. */
 export async function requestView(tx: Tx, row: RefundRow): Promise<RefundRequest> {
-  const [paymentId, eventNet, threshold] = await Promise.all([
+  const [paymentId, eventNet, threshold, transfers] = await Promise.all([
     sourcePayment(tx, row),
     settlementNet(tx, row.booking_id),
     thresholdAmount(tx),
+    awaitingTransfers(tx, [row.id]),
   ]);
   if (!paymentId) throw refundError('missing');
-  return render(row, { paymentId, eventNet, threshold });
+  return render(row, {
+    paymentId,
+    eventNet,
+    threshold,
+    awaitingTransfer: transfers.has(row.id),
+  });
 }
 
 /**
@@ -88,6 +116,11 @@ export async function requestViews(tx: Tx, rows: readonly RefundRow[]): Promise<
   const bookingIds = [...new Set(rows.map((row) => row.booking_id))];
   const missing = rows.filter((row) => !row.payment_id).map((row) => row.id);
   const threshold = await thresholdAmount(tx);
+  // Một truy vấn cho cả trang (HB-215) — không N+1 trên danh sách SCR-38.
+  const transfers = await awaitingTransfers(
+    tx,
+    rows.map((row) => row.id),
+  );
   const settlement = await tx.refund_requests.groupBy({
     by: ['booking_id'],
     where: { booking_id: { in: bookingIds }, status: { in: ['PENDING', 'APPROVED', 'PAID'] } },
@@ -110,7 +143,12 @@ export async function requestViews(tx: Tx, rows: readonly RefundRow[]): Promise<
   return rows.map((row) => {
     const paymentId = row.payment_id ?? sources.get(row.id);
     if (!paymentId) throw refundError('missing');
-    return render(row, { paymentId, eventNet: nets.get(row.booking_id) ?? 0n, threshold });
+    return render(row, {
+      paymentId,
+      eventNet: nets.get(row.booking_id) ?? 0n,
+      threshold,
+      awaitingTransfer: transfers.has(row.id),
+    });
   });
 }
 

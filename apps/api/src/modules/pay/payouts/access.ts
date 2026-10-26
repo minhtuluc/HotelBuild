@@ -6,7 +6,7 @@ import { z } from 'zod';
 import type { IdempotencyAccess } from '../../../common/idempotency/decorators.js';
 import { refundId, requestActor } from '../refunds/validation.js';
 import { PayoutService } from './service.js';
-import { payInput } from './validation.js';
+import { confirmInput, payInput } from './validation.js';
 
 @Injectable()
 export class PayoutAccess implements IdempotencyAccess {
@@ -18,7 +18,9 @@ export class PayoutAccess implements IdempotencyAccess {
     const params = z.object({ refundRequestId: z.unknown() }).parse(request.params);
     const id = refundId(params.refundRequestId);
     // Kiểm cú pháp trước khi khoá chống trùng: thân sai → 400, replay không ăn thân khác.
-    payInput(request.body);
+    // Hai lệnh chi dùng chung cổng khoá nên chọn bộ phân tích theo tuyến (HB-215).
+    if (request.url.split('?')[0]!.endsWith('/confirm-transfer')) confirmInput(request.body);
+    else payInput(request.body);
     await this.service.authorizeRefundFor(this.service.db, actor, id);
     return { type: 'USER' as const, id: actor.id };
   }

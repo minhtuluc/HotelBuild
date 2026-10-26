@@ -28,9 +28,11 @@ import {
 import {
   refundApproveRequestSchema,
   refundCancelRequestSchema,
+  refundConfirmTransferRequestSchema,
   refundDecisionSchema,
   refundListQuerySchema,
   refundPayRequestSchema,
+  refundPayoutViewSchema,
   refundRejectRequestSchema,
   refundRequestCreateRequestSchema,
   refundRequestSchema,
@@ -273,6 +275,28 @@ export function registerF5Paths(registry: OpenAPIRegistry, errorBodyComponent: z
       401: errorResponse('E_AUTH_PIN_REQUIRED'),
       403: errorResponse('E_RBAC_FORBIDDEN', 'E_PAY_REFUND_FORCE_MAJEURE_FORBIDDEN'),
       409: errorResponse('E_PAY_REFUND_NOT_APPROVED'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/refund-requests/{refundRequestId}/confirm-transfer',
+    operationId: 'refundRequestsConfirmTransfer',
+    summary:
+      'Xác nhận đã chuyển khoản tay bằng mã tham chiếu ngân hàng — 🔒 PIN, chỉ leg chờ đối soát (HB-215)',
+    ...bearerWrite(['refund']),
+    parameters: [...idempotencyHeaders, pathParam('refundRequestId')],
+    request: { body: jsonBody(refundConfirmTransferRequestSchema) },
+    responses: {
+      200: {
+        description: 'Trạng thái kỹ thuật của các leg chi',
+        ...jsonBody(refundPayoutViewSchema),
+      },
+      400: errorResponse('E_GEN_VALIDATION_FAILED'),
+      401: errorResponse('E_AUTH_PIN_REQUIRED'),
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_PAY_SELF_APPROVAL'),
+      404: errorResponse('E_GEN_NOT_FOUND'),
+      409: errorResponse('E_PAY_REFUND_NOT_PENDING'),
     },
   });
 

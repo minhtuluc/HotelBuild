@@ -13595,6 +13595,9 @@
                     "requiresThresholdControl": {
                       "type": "boolean"
                     },
+                    "awaitingTransferConfirmation": {
+                      "type": "boolean"
+                    },
                     "refundAllocations": {
                       "type": "array",
                       "items": {
@@ -14134,6 +14137,9 @@
                             "minimum": 0
                           },
                           "requiresThresholdControl": {
+                            "type": "boolean"
+                          },
+                          "awaitingTransferConfirmation": {
                             "type": "boolean"
                           },
                           "refundAllocations": {
@@ -14816,6 +14822,9 @@
                     "requiresThresholdControl": {
                       "type": "boolean"
                     },
+                    "awaitingTransferConfirmation": {
+                      "type": "boolean"
+                    },
                     "refundAllocations": {
                       "type": "array",
                       "items": {
@@ -15290,6 +15299,9 @@
                       "minimum": 0
                     },
                     "requiresThresholdControl": {
+                      "type": "boolean"
+                    },
+                    "awaitingTransferConfirmation": {
                       "type": "boolean"
                     },
                     "refundAllocations": {
@@ -15771,6 +15783,9 @@
                     "requiresThresholdControl": {
                       "type": "boolean"
                     },
+                    "awaitingTransferConfirmation": {
+                      "type": "boolean"
+                    },
                     "refundAllocations": {
                       "type": "array",
                       "items": {
@@ -16113,6 +16128,258 @@
           },
           "409": {
             "description": "E_PAY_REFUND_NOT_APPROVED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/refund-requests/{refundRequestId}/confirm-transfer": {
+      "post": {
+        "operationId": "refundRequestsConfirmTransfer",
+        "summary": "Xác nhận đã chuyển khoản tay bằng mã tham chiếu ngân hàng — 🔒 PIN, chỉ leg chờ đối soát (HB-215)",
+        "tags": [
+          "refund"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "refundRequestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bankReference": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "evidenceRefs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "pinToken": {
+                    "type": "string",
+                    "minLength": 16
+                  }
+                },
+                "required": [
+                  "bankReference"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Trạng thái kỹ thuật của các leg chi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "refundRequestId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "APPROVED",
+                        "REJECTED",
+                        "PAID",
+                        "CANCELLED"
+                      ]
+                    },
+                    "operations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "READY",
+                              "IN_FLIGHT",
+                              "UNKNOWN",
+                              "SUCCEEDED",
+                              "FAILED_FINAL"
+                            ]
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "VNPAY",
+                              "MOMO",
+                              "CASH",
+                              "BANK_TRANSFER",
+                              "OTA_COLLECT"
+                            ]
+                          },
+                          "amount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "originalPaymentId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "refundPaymentId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "bankNote": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "attempts": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "providerTxnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "lastError": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "finishedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "status",
+                          "method",
+                          "amount",
+                          "originalPaymentId",
+                          "refundPaymentId",
+                          "bankNote",
+                          "attempts",
+                          "providerTxnId",
+                          "lastError",
+                          "createdAt",
+                          "finishedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "refundRequestId",
+                    "status",
+                    "operations"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "E_GEN_VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "E_AUTH_PIN_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_PAY_SELF_APPROVAL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_PAY_REFUND_NOT_PENDING",
             "content": {
               "application/json": {
                 "schema": {

@@ -1,5 +1,5 @@
 import type { RefundRequest } from '@pinehill/contracts';
-import { paidEvidence } from './refund-model';
+import { payoutLookupRequired } from './refund-model';
 // A browser guard, not a replacement for the server's durable payout operation.
 // Only an opaque namespace and a random command key persist; no financial/session data.
 async function namespace(id: string): Promise<string> {
@@ -28,7 +28,7 @@ export async function pendingPayout(refunds: RefundRequest[]): Promise<RefundReq
   for (const refund of refunds) {
     const present = await locked(refund.id, (name) => {
       // Keep the opaque marker after success: a stale prepared tab must not claim a new key.
-      return !paidEvidence(refund) && localStorage.getItem(name) !== null;
+      return payoutLookupRequired(refund) && localStorage.getItem(name) !== null;
     });
     if (present) pending ??= refund;
   }

@@ -7,7 +7,7 @@ import { IdempotencyContext } from '../../../common/idempotency/context.js';
 import { refundId, requestActor } from '../refunds/validation.js';
 import { PayoutAccess } from './access.js';
 import { PayoutService } from './service.js';
-import { payInput } from './validation.js';
+import { confirmInput, payInput } from './validation.js';
 
 @Controller('refund-requests')
 export class PayoutController {
@@ -34,6 +34,28 @@ export class PayoutController {
       requestActor(request),
       refundId(id),
       payInput(body),
+    );
+  }
+
+  /**
+   * HB-215 / api.md §2.6 — kế toán xác nhận **đã chuyển khoản tay** bằng mã tham chiếu ngân hàng.
+   * Chỉ áp cho hồ sơ `APPROVED` có leg `MANUAL_TRANSFER_AWAITING_CONFIRMATION`; người duyệt không tự
+   * xác nhận. Trả **200** trạng thái kỹ thuật của các leg (hồ sơ `PAID` khi mọi leg xong).
+   */
+  @Post(':refundRequestId/confirm-transfer')
+  @HttpCode(200)
+  @Permission('refunds.pay')
+  @Idempotent(PayoutAccess)
+  confirmTransfer(
+    @Param('refundRequestId') id: unknown,
+    @Body() body: unknown,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.service.confirmTransfer(
+      this.context.transaction(),
+      requestActor(request),
+      refundId(id),
+      confirmInput(body),
     );
   }
 }

@@ -16,6 +16,8 @@ import {
   canCommand,
   commandResolved,
   executeRefund,
+  isRefundPayoutView,
+  transferFailure,
 } from './refund-command';
 export interface RefundIntent {
   action: RefundAction | 'create';
@@ -43,6 +45,7 @@ export function useRefundActions(workspace: RefundWorkspace) {
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const [bankReference, setBankReference] = useState('');
   const [paymentId, setPaymentId] = useState('');
   const [recipient, setRecipient] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -108,6 +111,7 @@ export function useRefundActions(workspace: RefundWorkspace) {
       clearGrant();
       setIntent(null);
       setNote('');
+      setBankReference('');
       setAmount('');
       setPaymentId('');
       setRecipient(false);
@@ -119,6 +123,7 @@ export function useRefundActions(workspace: RefundWorkspace) {
     clearGrant();
     setIntent(null);
     setNote('');
+    setBankReference('');
     setRecipient(false);
     setState(null);
   };
@@ -141,6 +146,7 @@ export function useRefundActions(workspace: RefundWorkspace) {
     setState(null);
     setAmount(String(next.target?.requestedAmount ?? ''));
     setNote('');
+    setBankReference('');
     setRecipient(false);
     setPaymentId(firstPayment(workspace.data));
   };
@@ -198,7 +204,7 @@ export function useRefundActions(workspace: RefundWorkspace) {
       }
     }
   };
-  const issue = intentIssue(intent, amount, note, recipient);
+  const issue = intentIssue(intent, amount, note, recipient, bankReference);
   const lookup = async () => {
     const pending = unknown.current;
     if (!pending) return;
@@ -221,6 +227,13 @@ export function useRefundActions(workspace: RefundWorkspace) {
       setState(null);
       return;
     }
+    // HB-215: 400/409/422 của lệnh xác nhận chuyển khoản hiện **nguyên văn** câu của máy chủ.
+    const verbatim =
+      pending.action === 'confirm-transfer' && isApiError(caught) ? transferFailure(caught) : null;
+    if (verbatim !== null) {
+      setState(verbatim);
+      return;
+    }
     const failure = writeFailureState(caught, {
       attemptedVersion: '—',
       onReload: () => {
@@ -240,10 +253,34 @@ export function useRefundActions(workspace: RefundWorkspace) {
     clearGrant();
     setIntent(null);
     setNote('');
+    setBankReference('');
     if (pending.action === 'pay' && !paidEvidence(result)) {
       unknown.current = pending;
       setState({ kind: 'unknownOutcome', referenceId: result.id, onLookup: () => void lookup() });
     } else setState({ kind: 'success' });
+  };
+  /**
+   * Máy chủ đã nhận lệnh xác nhận chuyển khoản: **không tự suy `PAID`** — đọc lại hồ sơ, chỉ báo
+   * thành công khi máy chủ trả `PAID`; ngược lại giữ trạng thái "chưa xác định" để tra cứu.
+   */
+  const settleTransfer = async (pending: RefundIntent, stamp: number) => {
+    clearGrant();
+    setIntent(null);
+    setNote('');
+    setBankReference('');
+    const loaded = await reload();
+    if (!current(stamp) || loaded === null) return;
+    const found = loaded.refunds.find((value) => value.id === pending.target?.id);
+    if (found !== undefined && found.status === 'PAID') {
+      setState({ kind: 'success' });
+      return;
+    }
+    unknown.current = pending;
+    setState({
+      kind: 'unknownOutcome',
+      referenceId: pending.target?.id ?? '—',
+      onLookup: () => void lookupRef.current(),
+    });
   };
   const grantReady = (pending: RefundIntent) =>
     !requiresPin(pending) || pinGrantValid(grant.current, Date.now());
@@ -286,8 +323,18 @@ export function useRefundActions(workspace: RefundWorkspace) {
   const performSend = async (pending: RefundIntent, stamp: number) => {
     const payoutKey = await preparePayout(pending, stamp);
     if (payoutKey === null || !current(stamp)) return;
-    const result = await executeRefund(workspace, pending, { amount, note, paymentId, payoutKey });
+    const result = await executeRefund(workspace, pending, {
+      amount,
+      note,
+      paymentId,
+      payoutKey,
+      bankReference,
+    });
     if (!current(stamp)) return;
+    if (isRefundPayoutView(result)) {
+      await settleTransfer(pending, stamp);
+      return;
+    }
     settleResult(result, pending);
     await reload();
   };
@@ -326,6 +373,8 @@ export function useRefundActions(workspace: RefundWorkspace) {
     setAmount,
     note,
     setNote,
+    bankReference,
+    setBankReference,
     paymentId,
     setPaymentId,
     recipient,
