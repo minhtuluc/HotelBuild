@@ -175,8 +175,32 @@ export async function scenarioPayout(ctxIn) {
   const bk = await bookingRow(b1.id);
   const opRow = (await sql('SELECT status, last_error, attempts FROM refund_payout_operations WHERE refund_request_id = $1::uuid', [r1.id]))[0];
   check('PAYOUT-CASH: worker thật chạy ≥ 4 chu kỳ: chuyển khoản tay KHÔNG tự thành PAID; REFUND không SUCCEEDED; refunded_amount = 0', after.status === 'APPROVED' && pays2[0].status !== 'SUCCEEDED' && num(bk.refunded_amount) === 0, JSON.stringify({ after: after.status, pays2, refunded: bk.refunded_amount, opRow }));
-  if (after.status === 'APPROVED' && pays2.length === 1) finding('F5-QA-02', 'Hoàn tiền cho khoản gốc tiền mặt (BANK_TRANSFER) không có đường API nào để kế toán ghi nhận "đã chuyển khoản" ⇒ hồ sơ không thể tới PAID: operation dừng UNKNOWN (`MANUAL_TRANSFER_AWAITING_CONFIRMATION`) và không có endpoint xác nhận/đối soát.',
-    `Sau /pay BANK_TRANSFER và ≥ 4 chu kỳ worker: refund_requests.status=${after.status}, payments(REFUND).status=${pays2[0]?.status}, operation.status=${opRow?.status}/${opRow?.last_error}. Routes chi hoàn chỉ có approve/reject/cancel/pay (refunds/controller.ts, payouts/controller.ts). Liên quan TD-25.`);
+  // HB-215: dừng ở `MANUAL_TRANSFER_AWAITING_CONFIRMATION` là **đúng thiết kế** — kế toán xác nhận bằng mã
+  // tham chiếu ngân hàng; hồ sơ chỉ `PAID` khi **mọi** leg xong. Thay finding F5-QA-02 (đã đóng bằng HB-215).
+  const bankReference = `FT-QA-${Date.now()}`;
+  const confirmBody = { bankReference, note: 'Uỷ nhiệm chi QA F5', pinToken: await mintPin('accountant', b1.id) };
+  const confirmKey = randomUUID();
+  const confirm = async (body, key) => call(`/refund-requests/${r1.id}/confirm-transfer`, { token: await login('accountant'), method: 'POST', body, key });
+  const cf = await confirm(confirmBody, confirmKey);
+  const cfRow = (await refundRows(b1.id))[0];
+  const cfPay = (await refundPayments(b1.id))[0];
+  const cfOp = (await sql('SELECT status, provider_txn_id, finished_at FROM refund_payout_operations WHERE refund_request_id = $1::uuid', [r1.id]))[0];
+  const cfBooking = await bookingRow(b1.id);
+  check(`PAYOUT-CASH: kế toán xác nhận chuyển khoản tay (HB-215) ⇒ 200, hồ sơ PAID, REFUND SUCCEEDED, mã ngân hàng ở operation (${bankReference}), refunded_amount = ${money(b1.paid)}`,
+    cf.status === 200 && cfRow.status === 'PAID' && cfPay.status === 'SUCCEEDED' && cfPay.provider_txn_id === null && cfOp?.provider_txn_id === bankReference && cfOp.status === 'SUCCEEDED' && Boolean(cfOp.finished_at) && num(cfBooking.refunded_amount) === b1.paid,
+    JSON.stringify({ http: cf.status, refund: cfRow.status, pay: cfPay, op: cfOp, refunded: cfBooking.refunded_amount }));
+  const cfReplay = await confirm(confirmBody, confirmKey);
+  check('PAYOUT-CASH: replay xác nhận cùng Idempotency-Key ⇒ cùng phản hồi, không sinh Payment REFUND thứ hai',
+    cfReplay.status === cf.status && (await refundPayments(b1.id)).length === 1 && num((await bookingRow(b1.id)).refunded_amount) === b1.paid,
+    `HTTP ${cfReplay.status} payments=${(await refundPayments(b1.id)).length}`);
+  const cfAgain = await confirm({ ...confirmBody, pinToken: await mintPin('accountant', b1.id) }, randomUUID());
+  check('PAYOUT-CASH: xác nhận lặp bằng khoá mới + **cùng** mã tham chiếu ⇒ 200 trả lại cùng trạng thái, không sinh giao dịch thứ hai (AC4)',
+    cfAgain.status === 200 && JSON.stringify(cfAgain.body) === JSON.stringify(cf.body) && (await refundPayments(b1.id)).length === 1,
+    `HTTP ${cfAgain.status} ${JSON.stringify(cfAgain.body)?.slice(0, 200)}`);
+  const cfWrongRef = await confirm({ ...confirmBody, bankReference: `${bankReference}-KHAC`, note: 'Mã sai', pinToken: await mintPin('accountant', b1.id) }, randomUUID());
+  check('PAYOUT-CASH: xác nhận lần hai với mã tham chiếu khác ⇒ 409 E_PAY_REFUND_NOT_PENDING, không sinh giao dịch thứ hai',
+    cfWrongRef.status === 409 && errCode(cfWrongRef) === 'E_PAY_REFUND_NOT_PENDING' && (await refundPayments(b1.id)).length === 1,
+    `HTTP ${cfWrongRef.status} ${errCode(cfWrongRef)}`);
 
   // ---- gốc VNPAY: chi qua cổng mô phỏng, PAID chỉ sau bằng chứng ----
   const vp = await approvedByPsp('PAYOUT-VNPAY', 'VNPAY', { type: 'SUP', offset: 20 });
