@@ -1,0 +1,4 @@
+{
+  "note": "Baseline vi phạm serious/critical đã biết của lượt quét HB-185 (axe 4.13, WCAG 2.1 A/AA). Rỗng nghĩa là toàn bộ màn quét được đều sạch. Chỉ thêm dòng khi lỗi đã được lead chấp nhận và có đề xuất sửa trong docs/07-ban-giao/bang-chung-a11y.md; xoá dòng ngay khi sửa xong.",
+  "violations": []
+}
