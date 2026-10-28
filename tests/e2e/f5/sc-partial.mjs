@@ -67,8 +67,12 @@ export async function scenarioPartialCancel() {
   const row = await bookingRow(b.id);
   const refunds = await refundRows(b.id);
   const cancelledNow = first.cx.status === 200 ? small.id : big.id;
-  const roomTotal = Number(weights[rooms.findIndex((r) => r.id === cancelledNow)]);
-  check(`PART-2R: totalAmount giảm đúng giá phòng đã huỷ (${money(b.total)} → ${money(b.total - roomTotal)}); phòng còn lại giữ nguyên đơn giá`, num(row.total_amount) === b.total - roomTotal && num((await sql('SELECT price_per_night FROM booking_rooms WHERE id = $1::uuid', [order[1] === cancelledNow ? order[0] : order[1]]))[0].price_per_night) === num(rooms.find((r) => r.id !== cancelledNow).price_per_night), JSON.stringify(row));
+  // `booking_rooms.price_per_night` là bình quân **làm tròn xuống** nên trọng số (price_per_night × nights) lệch
+  // dưới `nights` VND so với Σ dòng phí ROOM. Tổng sau huỷ phải theo **dòng phí còn hiệu lực** — đúng bất biến
+  // `Σ ROOM == bookings.total_amount` mà `book/cancel/writes.ts` ghi (`sum(amount - voided_amount)`), không theo trọng số.
+  const remainTotal = num((await sql(`SELECT coalesce(sum(amount - voided_amount), 0)::bigint AS s FROM booking_charges WHERE booking_id = $1::uuid AND kind = 'ROOM' AND voided_amount < amount`, [b.id]))[0].s);
+  const voidedRoomTotal = num((await sql(`SELECT coalesce(sum(amount - voided_amount), 0)::bigint AS s FROM booking_charges WHERE booking_room_id = $1::uuid AND kind = 'ROOM'`, [cancelledNow]))[0].s);
+  check(`PART-2R: totalAmount = Σ dòng phí ROOM còn hiệu lực (${money(b.total)} → ${money(remainTotal)}); phòng huỷ bị void hết (${money(voidedRoomTotal)}), phòng còn lại giữ nguyên đơn giá`, num(row.total_amount) === remainTotal && voidedRoomTotal === 0 && num((await sql('SELECT price_per_night FROM booking_rooms WHERE id = $1::uuid', [order[1] === cancelledNow ? order[0] : order[1]]))[0].price_per_night) === num(rooms.find((r) => r.id !== cancelledNow).price_per_night), JSON.stringify({ row, remainTotal, voidedRoomTotal }));
   const after = await snapshots(b.id);
   check('PART-2R: thêm snapshot PARTIAL_CANCEL (seq tăng) và GIỮ NGUYÊN bản ORIGINAL (nội dung bất biến, BR-RATE-16)', after.length === 2 && after[1].kind === 'PARTIAL_CANCEL' && after[1].seq > after[0].seq && md5(after[0].payload_json) === originalHash, JSON.stringify(after.map((s) => [s.seq, s.kind])));
   const stale = await attempt(cancelledNow);
