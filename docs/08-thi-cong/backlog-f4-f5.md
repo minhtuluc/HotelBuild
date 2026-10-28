@@ -67,7 +67,7 @@ Mục lục: [backlog](backlog.md) · [lộ trình đến deploy](lo-trinh-den-d
 | [HB-115](tickets/HB-115-scr83-ho-so-android.md) | SCR-83 hồ sơ khách (customer Android) — cắt được | R1 | DeepSeek | HB-113 | SCR-83; UC-CRM-01 | — |
 | [HB-116](tickets/HB-116-api-gia-f5.md) | API giả E2E F5 (callback muộn, timeout) | R2 | Codex | HB-079, HB-090 | api.md §5.2; TC-PAY-22, TC-BOOK-28 | E2E cũ vẫn xanh |
 | [HB-117](tickets/HB-117-qa-f5.md) | QA F5: 2 web + 2 Android, callback PSP, maker-checker | R0 | Gemini | HB-101…HB-116 | TC-BOOK-23, TC-BOOK-27, TC-PAY-22, TC-PAY-23, TC-SYS-10 | Không hiển thị dữ liệu thẻ |
-| [HB-118](tickets/HB-118-nghiem-thu-f5.md) | Nghiệm thu F5 (mốc M6) | — | lead | HB-117 | lộ trình §7.7 | Bằng chứng đủ |
+| [HB-118](tickets/HB-118-nghiem-thu-f5.md) | Nghiệm thu F5 (mốc M6) | — | lead | HB-117 | lộ trình §7.7 | Bằng chứng đủ — **ĐẠT 28/10/2026**: 225/225 PASS · 0 FAIL · 0 FINDING trên `main` `9ee00d9`, 5/5 phát hiện F5 đã đóng ([bằng chứng §8](../07-ban-giao/bang-chung-f5.md)) |
 | HB-119 | Dự phòng tách ticket | — | lead cấp | — | — | — |
 
 ## Khoảng trống tài liệu
