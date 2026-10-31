@@ -19,6 +19,8 @@ function redisOptions(url: string): ConnectionOptions {
     host: parsed.hostname,
     port: Number(parsed.port) || 6379,
     db: parsed.pathname.length > 1 ? Number(parsed.pathname.slice(1)) : 0,
+    enableReadyCheck: false,
+    disableClientInfo: true,
     ...(parsed.username ? { username: parsed.username } : {}),
     ...(parsed.password ? { password: parsed.password } : {}),
   };
@@ -29,12 +31,19 @@ function redisOptions(url: string): ConnectionOptions {
  * `jobId = operationId` để một thao tác không bao giờ sinh hai job (đẩy lại là no-op).
  */
 export function createExportQueue(redisUrl: string): ExportQueue {
-  const queue = new Queue(REPORT_EXPORT_QUEUE, { connection: redisOptions(redisUrl) });
+  let queue: Queue | undefined;
+  const getQueue = (): Queue => {
+    if (queue === undefined) {
+      queue = new Queue(REPORT_EXPORT_QUEUE, { connection: redisOptions(redisUrl) });
+      queue.on('error', () => undefined);
+    }
+    return queue;
+  };
   return {
     enqueue: async (operationId) => {
       // Ngữ cảnh trace đi cùng dữ liệu job nên lượt thử lại (BullMQ giữ nguyên `data`) vẫn cùng trace.
       const trace = currentTraceFields();
-      await queue.add(
+      await getQueue().add(
         'report-export',
         {
           operationId,
@@ -52,7 +61,9 @@ export function createExportQueue(redisUrl: string): ExportQueue {
       );
     },
     close: async () => {
-      await queue.close();
+      if (queue !== undefined) {
+        await queue.close();
+      }
     },
   };
 }

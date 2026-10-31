@@ -47,15 +47,34 @@ export function notificationQueueConnection(url: string): ConnectionOptions {
     host: parsed.hostname,
     port: Number(parsed.port) || 6379,
     db,
+    enableReadyCheck: false,
+    disableClientInfo: true,
     ...(parsed.username ? { username: parsed.username } : {}),
     ...(parsed.password ? { password: parsed.password } : {}),
   };
 }
 
 export class BullNotificationQueue implements NotificationQueuePort, OnApplicationShutdown {
-  constructor(readonly queue: Queue) {
-    // Lỗi kết nối nền không gây sập tiến trình; lỗi của từng lệnh phát báo ở chỗ gọi `enqueue`.
-    this.queue.on('error', () => undefined);
+  private instance: Queue | undefined;
+
+  constructor(private readonly queueOrFactory: Queue | (() => Queue)) {
+    if (queueOrFactory instanceof Queue) {
+      // Lỗi kết nối nền không gây sập tiến trình; lỗi của từng lệnh phát báo ở chỗ gọi `enqueue`.
+      queueOrFactory.on('error', () => undefined);
+      this.instance = queueOrFactory;
+    }
+  }
+
+  private getQueue(): Queue {
+    if (this.instance === undefined) {
+      if (typeof this.queueOrFactory !== 'function') {
+        throw new Error('Notification queue factory is required');
+      }
+      const created = this.queueOrFactory();
+      created.on('error', () => undefined);
+      this.instance = created;
+    }
+    return this.instance;
   }
 
   async enqueue(notificationId: string): Promise<void> {
@@ -66,7 +85,7 @@ export class BullNotificationQueue implements NotificationQueuePort, OnApplicati
         ? {}
         : { traceparent: trace.traceparent, correlationId: trace.correlationId }),
     };
-    await this.queue.add(NOTIFICATION_JOB_NAME, data, {
+    await this.getQueue().add(NOTIFICATION_JOB_NAME, data, {
       attempts: NOTIFICATION_MAX_ATTEMPTS,
       backoff: { type: 'fixed', delay: NOTIFICATION_RESEND_DELAY_MS },
       removeOnComplete: { count: 200 },
@@ -75,7 +94,9 @@ export class BullNotificationQueue implements NotificationQueuePort, OnApplicati
   }
 
   async onApplicationShutdown(): Promise<void> {
-    await this.queue.close();
+    if (this.instance !== undefined) {
+      await this.instance.close();
+    }
   }
 }
 
@@ -84,8 +105,9 @@ export const notificationQueueProvider: Provider = {
   inject: [CONFIG],
   useFactory: (config: ApiConfig): NotificationQueuePort =>
     new BullNotificationQueue(
-      new Queue(NOTIFICATION_QUEUE_NAME, {
-        connection: notificationQueueConnection(config.REDIS_URL),
-      }),
+      () =>
+        new Queue(NOTIFICATION_QUEUE_NAME, {
+          connection: notificationQueueConnection(config.REDIS_URL),
+        }),
     ),
 };

@@ -16,17 +16,9 @@ export type RedisClient = Redis;
 class RedisLifecycle implements OnApplicationShutdown {
   constructor(@Inject(REDIS) readonly client: RedisClient) {}
 
-  async onApplicationShutdown(): Promise<void> {
+  onApplicationShutdown(): void {
     if (this.client.status === 'end') return;
-    if (this.client.status !== 'ready') {
-      this.client.disconnect();
-      return;
-    }
-    try {
-      await this.client.quit();
-    } catch {
-      this.client.disconnect();
-    }
+    this.client.disconnect();
   }
 }
 
