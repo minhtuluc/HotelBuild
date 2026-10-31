@@ -95,8 +95,8 @@ function seedValues(seed: NotificationSeed): unknown[] {
 }
 
 const SEED_NOTIFICATION_SQL = `INSERT INTO notifications(booking_id,recipient,channel,template,payload_json,status,
-                                sent_at,retry_count,error_message)
-     VALUES($1::uuid,$2,$3,$4,$5::jsonb,$6,$7::timestamptz,$8,$9)
+                                sent_at,retry_count,error_message,created_at)
+     VALUES($1::uuid,$2,$3,$4,$5::jsonb,$6,$7::timestamptz,$8,$9,date_trunc('milliseconds', clock_timestamp()))
      RETURNING id`;
 
 /** Gieo một `notifications` thô; mặc định `PENDING`, `retry_count` 0, payload rỗng. */

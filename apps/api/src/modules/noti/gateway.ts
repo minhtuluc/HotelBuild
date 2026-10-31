@@ -69,6 +69,7 @@ export class NotificationGateway {
         template: dispatch.template,
         payload_json: payloadJsonSchema.parse(message.data),
         status: 'PENDING',
+        created_at: this.clock.now(),
       },
       select: { id: true },
     });
