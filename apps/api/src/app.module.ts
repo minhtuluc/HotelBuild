@@ -74,6 +74,7 @@ import { PspModule } from './modules/pay/psp/module.js';
 // lead — không đổi API hiện có; khai ở đây vì `check:scope` tính cả file ngoài allow của HB-094.
 import { OnlinePaymentsModule } from './modules/pay/online/module.js';
 import { PspWebhooksModule } from './modules/pay/webhooks/module.js';
+import { ReconciliationModule } from './modules/pay/reconciliation/module.js';
 
 /**
  * Request của một dòng log pino-http (`{ res, responseTime }`): `res.req` là request gốc, nơi `customProps`
@@ -182,6 +183,7 @@ export class AppModule {
         PspWebhooksModule,
         RefundModule,
         PayoutModule,
+        ReconciliationModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },

@@ -325,6 +325,8 @@ function independentOracle(): Record<string, Expected> {
   // thân oracle thiếu `bankReference` ⇒ 400 sau khi qua quyền, trước khi chạm tài nguyên.
   // prettier-ignore
   keyed[`${RequestMethod.POST}:refund-requests/:refundRequestId/confirm-transfer`] = { roles: ['ACCOUNTANT'], status: 400, method: RequestMethod.POST };
+  // prettier-ignore
+  keyed[`${RequestMethod.POST}:reconciliation/daily/close`] = { roles: ['FRONT_DESK', 'ACCOUNTANT'], status: 400, method: RequestMethod.POST };
   // HB-213 / api.md §2.6, §6.3: danh sách hồ sơ hoàn cho quầy/điều phối/MANAGER/OWNER + ACCOUNTANT đối soát.
   // prettier-ignore
   keyed[`${RequestMethod.GET}:refund-requests`] = { roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER', 'ACCOUNTANT'], status: 200, method: RequestMethod.GET };
