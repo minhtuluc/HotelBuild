@@ -9,9 +9,9 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node --conditions=pinehill-dist dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
+    "test": "vitest run --no-file-parallelism",
     "test:integration": "node ../../scripts/test-integration.mjs worker",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage --no-file-parallelism"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.10.0",

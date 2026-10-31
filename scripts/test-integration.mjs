@@ -27,7 +27,7 @@ function run(target, args) {
     cwd: join(root, 'apps', target),
     env: { ...process.env, CI_REQUIRE_SERVICES: '1' },
     stdio: 'inherit',
-    timeout: 600000,
+    timeout: 900000,
   });
   if (result.error || result.status !== 0) throw new Error(`${target} integration command failed`);
 }

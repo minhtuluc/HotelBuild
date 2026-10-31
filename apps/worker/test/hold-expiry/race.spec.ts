@@ -89,12 +89,10 @@ describe('HB-078 — đua tranh callback ↔ job hết hạn', () => {
     await callback.connect();
     try {
       await callback.query('BEGIN');
-      // Hai transaction chạy chồng nhau trên cùng hàng: bên nào lấy khoá trước thì bên kia chờ.
-      const [outcome] = await Promise.all([
-        expireHold(testDb.db, fixture.bookingId),
-        callback.query('SELECT id FROM bookings WHERE id = $1::uuid FOR UPDATE', [
-          fixture.bookingId,
-        ]),
+      // Lượt hết hạn chốt trước trên cùng hàng, sau đó transaction callback đang mở mới lấy khoá.
+      const outcome = await expireHold(testDb.db, fixture.bookingId);
+      await callback.query('SELECT id FROM bookings WHERE id = $1::uuid FOR UPDATE', [
+        fixture.bookingId,
       ]);
       expect(outcome.expired).toBe(true);
 

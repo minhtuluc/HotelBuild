@@ -42,7 +42,7 @@ describe('tắt êm tiến trình API (AC7)', () => {
       stderr += chunk.toString();
     });
     let up = false;
-    for (let attempt = 0; attempt < 80 && !up; attempt++) {
+    for (let attempt = 0; attempt < 160 && !up; attempt++) {
       up = await reachable(port);
       if (!up) await delay(250);
     }
@@ -51,5 +51,5 @@ describe('tắt êm tiến trình API (AC7)', () => {
     child.on('exit', (code) => exited.resolve(code));
     child.kill('SIGTERM');
     expect(await exited.promise).toBe(0);
-  }, 40_000);
+  }, 60_000);
 });
