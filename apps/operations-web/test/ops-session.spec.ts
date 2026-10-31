@@ -45,16 +45,20 @@ test('without a session no data request leaves the browser and the screen is den
   expect(readFailureState(caught)).toEqual({ kind: 'forbidden' });
 });
 
-test('with a session the read goes through the BFF and never to the API origin', async () => {
-  browser = installOpsBrowser(async (input) =>
-    String(input).endsWith('/refresh') ? issuedSession() : emptyList(),
-  );
+test('with a session the read goes through the BFF with x-session-request and never to the API origin', async () => {
+  let seenMarker: string | null = null;
+  browser = installOpsBrowser(async (input, init) => {
+    if (String(input).endsWith('/refresh')) return issuedSession();
+    seenMarker = new Headers(init?.headers).get('x-session-request');
+    return emptyList();
+  });
   await createBookingApi(browser.open('/bookings').client).list();
 
   expect(browser.calls).toEqual([
     '/api/session/refresh',
     `http://ops.test${OPS_BFF_ROOT}/bookings`,
   ]);
+  expect(seenMarker).toBe('1');
 });
 
 test('a request outside the declared module is refused locally', async () => {

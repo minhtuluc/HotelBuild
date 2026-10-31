@@ -52,6 +52,23 @@ test('loadProfile reads GET /auth/me through the BFF and validates it', async ()
   expect(calls[0]?.url.pathname).toBe('/api/session/sys/auth/me');
 });
 
+test('loadProfile maps 403 E_AUTH_PASSWORD_CHANGE_REQUIRED to a mustChangePassword profile (TD-69)', async () => {
+  const { api } = client(() =>
+    Response.json(
+      {
+        code: 'E_AUTH_PASSWORD_CHANGE_REQUIRED',
+        message: 'Bắt buộc đổi mật khẩu.',
+        traceId: 't',
+        timestamp: '2026-10-31T00:00:00.000Z',
+        path: '/api/v1/auth/me',
+      },
+      { status: 403 },
+    ),
+  );
+  const profile = await loadProfile(api);
+  expect(profile.mustChangePassword).toBe(true);
+});
+
 test('loadProfile rejects a body that is not a profile', async () => {
   const { api } = client(() => Response.json({ userId: 'u1' }));
   await expect(loadProfile(api)).rejects.toBeInstanceOf(ApiError);

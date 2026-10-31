@@ -16,8 +16,24 @@ import type { PropertyOption } from './gate';
 const PAGE_LIMIT = 100;
 const MAX_PAGES = 10;
 
+const MUST_CHANGE_PROFILE: UserMe = {
+  userId: 'must-change-password',
+  username: 'must-change-password',
+  fullName: '',
+  role: 'FRONT_DESK',
+  propertyScope: [],
+  hasPin: false,
+  mustChangePassword: true,
+};
+
 export async function loadProfile(client: ApiClient): Promise<UserMe> {
-  return (await client.request({ method: 'GET', path: '/auth/me', decoder: userMeSchema })).data;
+  try {
+    return (await client.request({ method: 'GET', path: '/auth/me', decoder: userMeSchema })).data;
+  } catch (error) {
+    if (isApiError(error) && error.code === 'E_AUTH_PASSWORD_CHANGE_REQUIRED')
+      return MUST_CHANGE_PROFILE;
+    throw error;
+  }
 }
 
 /** Đọc hết các trang; thiếu một trang là thất bại, không bao giờ trả danh sách cụt để chọn cơ sở. */

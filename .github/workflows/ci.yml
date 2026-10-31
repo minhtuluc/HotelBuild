@@ -32,8 +32,20 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
     env:
       DATABASE_MIGRATION_URL: postgresql://postgres:hb007_ci_owner@localhost:5432/pinehill_ci
+      DATABASE_URL: postgresql://app_rw:hb007_ci_runtime@localhost:5432/pinehill_ci
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: development
     steps:
       - uses: actions/checkout@v4
         with:
@@ -61,6 +73,10 @@ jobs:
         run: pnpm lint
       - name: Format check
         run: pnpm format:check
+      - name: Migrate database cho bộ test coverage
+        run: pnpm migrate
+      - name: Cấu hình vai trò runtime app_rw
+        run: pnpm db:dev-roles
       - name: Unit + contract test kèm ngưỡng coverage
         run: pnpm products:test:coverage
       - name: Build hai web app

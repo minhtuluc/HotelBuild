@@ -130,4 +130,25 @@ describe('GET /api/v1/system/health', () => {
     const res = await request(server).get('/api/v1/system/health').set('X-Correlation-Id', ok);
     expect(errorBodySchema.parse(res.body).traceId).toBe(ok);
   });
+  it('trả 204 preflight và gắn header CORS cho origin được phép (TD-68)', async () => {
+    const server = await start([up('postgres'), up('redis')]);
+    const preflight = await request(server)
+      .options('/api/v1/public/properties')
+      .set('Origin', 'http://127.0.0.1:3001')
+      .set('Access-Control-Request-Method', 'GET');
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers['access-control-allow-origin']).toBe('http://127.0.0.1:3001');
+    expect(preflight.headers['access-control-allow-methods']).toContain('POST');
+
+    const getRes = await request(server)
+      .get('/api/v1/system/health')
+      .set('Origin', 'http://127.0.0.1:3001');
+    expect(getRes.status).toBe(200);
+    expect(getRes.headers['access-control-allow-origin']).toBe('http://127.0.0.1:3001');
+
+    const denied = await request(server)
+      .get('/api/v1/system/health')
+      .set('Origin', 'https://untrusted.example');
+    expect(denied.headers['access-control-allow-origin']).toBeUndefined();
+  });
 });

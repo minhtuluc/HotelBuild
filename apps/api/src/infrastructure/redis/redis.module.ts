@@ -18,6 +18,10 @@ class RedisLifecycle implements OnApplicationShutdown {
 
   async onApplicationShutdown(): Promise<void> {
     if (this.client.status === 'end') return;
+    if (this.client.status !== 'ready') {
+      this.client.disconnect();
+      return;
+    }
     try {
       await this.client.quit();
     } catch {
@@ -38,6 +42,8 @@ export class RedisModule {
         const client = new Redis(config.REDIS_URL, {
           maxRetriesPerRequest: 1,
           enableOfflineQueue: false,
+          enableReadyCheck: false,
+          disableClientInfo: true,
         });
         client.on('error', () => {
           // Lỗi kết nối được xử lý tại chỗ gọi (fallback deny/giới hạn), không làm sập tiến trình.

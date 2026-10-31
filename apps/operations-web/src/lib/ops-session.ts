@@ -89,7 +89,8 @@ function opsFetch(modules: readonly string[], origin: string): typeof fetch {
       throw new ApiError({ kind: 'protocol', message: `Tuyến ngoài phạm vi phiên: ${pathname}` });
     const headers = new Headers(init?.headers);
     if (!headers.has('authorization')) return Promise.resolve(missingSession(pathname));
-    return fetch(input, init);
+    headers.set('x-session-request', '1');
+    return fetch(input, { ...init, headers });
   };
 }
 

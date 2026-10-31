@@ -62,6 +62,8 @@ const apiEnvSchema = z.object({
   SMTP_URL: urlWithProtocol('smtp:', 'smtps:').optional(),
   SMTP_FROM: z.string().min(3).max(200).optional(),
   GUEST_WEB_BASE_URL: urlWithProtocol('http:', 'https:').optional(),
+  // Danh sách origin trình duyệt được phép gọi trực tiếp `/api/v1/*` (TD-68, phẩy ngăn cách).
+  CORS_ALLOWED_ORIGINS: z.string().min(1).optional(),
   // Quan sát (HB-181): endpoint OTLP bỏ trống ⇒ **không** bật exporter (mặc định dev); trace vẫn lan
   // truyền qua `traceparent`. Ứng dụng xuất **đủ** span — lấy mẫu (≥ 10%, giữ 100% lỗi/thanh toán) là việc
   // của collector (`infra/observability/otel-collector.yml`). `OTEL_SAMPLE_RATIO` chỉ đặt cờ sampled của
