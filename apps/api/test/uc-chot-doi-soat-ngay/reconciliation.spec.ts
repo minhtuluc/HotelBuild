@@ -44,6 +44,15 @@ function closeRequest(body: object, options: { token?: string | null; key?: stri
   return call.send(body);
 }
 
+async function createCollectibleBooking(options: Parameters<typeof createBooking>[0] = {}) {
+  const result = await createBooking(options);
+  await rows('UPDATE bookings SET hold_expires_at = $1 WHERE id = $2', [
+    new Date(clock.now().getTime() + 3600_000),
+    result.booking.id,
+  ]);
+  return result;
+}
+
 /** Ngày nghiệp vụ theo múi giờ Việt Nam (`Asia/Ho_Chi_Minh`, UTC+7) của đồng hồ giả lập hiện hành. */
 function currentVnBusinessDate(): string {
   const vnTime = new Date(clock.now().getTime() + 7 * 3600 * 1000);
@@ -58,9 +67,9 @@ test('AC1: tổng thu tiền mặt theo (người thu, ngày VN) khớp sổ cá
   const secondToken = await staffToken('FRONT_DESK', 'h029-second');
   const guest = await issueGuest('+84900000150', 'HB-150 Guest 1');
 
-  const first = await createBooking({ token: guest.token, phone: '0900000151' });
-  const second = await createBooking({ token: guest.token, phone: '0900000152' });
-  const third = await createBooking({ token: guest.token, phone: '0900000153' });
+  const first = await createCollectibleBooking({ token: guest.token, phone: '0900000151' });
+  const second = await createCollectibleBooking({ token: guest.token, phone: '0900000152' });
+  const third = await createCollectibleBooking({ token: guest.token, phone: '0900000153' });
 
   // Khoản 1: tiền mặt do h029-first thu trong ngày 2026-11-01
   const pin1 = await pinTokenFor(token, first.booking.id);
@@ -157,7 +166,7 @@ test('AC1: countedCash lệch quá ngưỡng tham số hệ thống ⇒ managerN
 
   const fdToken = await staffToken('FRONT_DESK', 'h029-first');
   const guest = await issueGuest('+84900000155', 'HB-150 Guest 2');
-  const { booking } = await createBooking({ token: guest.token, phone: '0900000154' });
+  const { booking } = await createCollectibleBooking({ token: guest.token, phone: '0900000154' });
   const collectPin = await pinTokenFor(fdToken, booking.id);
   const collected = await collectRequest(
     {
