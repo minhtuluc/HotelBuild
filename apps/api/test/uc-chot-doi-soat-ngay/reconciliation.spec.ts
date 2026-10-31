@@ -24,6 +24,7 @@ import {
   collectRequest,
   createBooking,
   http,
+  issueGuest,
   otherPropertyId,
   pinTokenFor,
   propertyId,
@@ -50,15 +51,16 @@ function currentVnBusinessDate(): string {
 }
 
 test('AC1: tổng thu tiền mặt theo (người thu, ngày VN) khớp sổ cái HB-093; lệch trong ngưỡng ⇒ managerNotified = false', async () => {
+  const businessDate = '2026-11-01';
+  // Đặt đồng hồ về 2026-11-01 10:00:00 giờ VN (03:00:00 UTC) trước khi phát token
+  clock.value = Date.parse(`${businessDate}T03:00:00.000Z`);
   const token = await staffToken('FRONT_DESK', 'h029-first');
   const secondToken = await staffToken('FRONT_DESK', 'h029-second');
-  const businessDate = '2026-11-01';
-  // Đặt đồng hồ về 2026-11-01 10:00:00 giờ VN (03:00:00 UTC)
-  clock.value = Date.parse(`${businessDate}T03:00:00.000Z`);
+  const guest = await issueGuest('+84900000150', 'HB-150 Guest 1');
 
-  const first = await createBooking({ phone: '0900000151' });
-  const second = await createBooking({ phone: '0900000152' });
-  const third = await createBooking({ phone: '0900000153' });
+  const first = await createBooking({ token: guest.token, phone: '0900000151' });
+  const second = await createBooking({ token: guest.token, phone: '0900000152' });
+  const third = await createBooking({ token: guest.token, phone: '0900000153' });
 
   // Khoản 1: tiền mặt do h029-first thu trong ngày 2026-11-01
   const pin1 = await pinTokenFor(token, first.booking.id);
@@ -154,7 +156,8 @@ test('AC1: countedCash lệch quá ngưỡng tham số hệ thống ⇒ managerN
   expect(currentVnBusinessDate()).toBe(businessDate);
 
   const fdToken = await staffToken('FRONT_DESK', 'h029-first');
-  const { booking } = await createBooking({ phone: '0900000154' });
+  const guest = await issueGuest('+84900000155', 'HB-150 Guest 2');
+  const { booking } = await createBooking({ token: guest.token, phone: '0900000154' });
   const collectPin = await pinTokenFor(fdToken, booking.id);
   const collected = await collectRequest(
     {
