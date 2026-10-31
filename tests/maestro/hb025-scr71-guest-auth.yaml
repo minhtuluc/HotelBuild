@@ -1,0 +1,70 @@
+appId: vn.pinehill.customer
+---
+# SCR-71 (HB-025) — đăng ký, đăng nhập và quên mật khẩu trên Customer Android, API thật + Mailpit.
+#
+# Điều kiện chạy (thiết bị/emulator THẬT trỏ vào API thật):
+#   • biến môi trường: GUEST_PHONE (dạng +84XXXXXXXXX hoặc 0XXXXXXXXX, CHƯA có hồ sơ),
+#     GUEST_FULL_NAME, GUEST_PASSWORD (8–128 ký tự).
+#   • thư đặt lại mật khẩu đi qua SMTP thật (Mailpit ở dev) — luồng này chỉ kiểm phản hồi trên màn hình;
+#     đọc thư/đổi mật khẩu bằng token là phần của lượt web (qa-f1-web.mjs).
+# Lượt chạy trên host này: BLOCKED — không có `adb`/emulator (xem docs/07-ban-giao/bang-chung-f1.md).
+- launchApp:
+    clearState: true
+
+# 1) Đăng ký: chuyển sang chế độ đăng ký rồi gửi
+- assertVisible:
+    id: "phone"
+- tapOn:
+    id: "toggle-mode"
+- assertVisible:
+    id: "fullname"
+- tapOn:
+    id: "phone"
+- inputText: "${GUEST_PHONE}"
+- tapOn:
+    id: "fullname"
+- inputText: "${GUEST_FULL_NAME}"
+- tapOn:
+    id: "password"
+- inputText: "${GUEST_PASSWORD}"
+- hideKeyboard
+- tapOn:
+    id: "submit"
+- extendedWaitUntil:
+    visible: "Pine Hill — Khách"
+    timeout: 30000
+- assertVisible:
+    id: "logout"
+
+# 2) Đăng xuất rồi đăng nhập lại bằng đúng SĐT/mật khẩu
+- tapOn:
+    id: "logout"
+- extendedWaitUntil:
+    visible:
+      id: "phone"
+    timeout: 20000
+- tapOn:
+    id: "phone"
+- inputText: "${GUEST_PHONE}"
+- tapOn:
+    id: "password"
+- inputText: "${GUEST_PASSWORD}"
+- hideKeyboard
+- tapOn:
+    id: "submit"
+- extendedWaitUntil:
+    visible: "Pine Hill — Khách"
+    timeout: 30000
+
+# 3) Quên mật khẩu: phản hồi trung tính (không lộ SĐT có hồ sơ hay không)
+- tapOn:
+    id: "logout"
+- extendedWaitUntil:
+    visible:
+      id: "forgot"
+    timeout: 20000
+- tapOn:
+    id: "forgot"
+- extendedWaitUntil:
+    visible: "Đã gửi liên kết (nếu số điện thoại có hồ sơ)."
+    timeout: 20000

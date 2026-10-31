@@ -1,0 +1,64 @@
+appId: vn.pinehill.operations
+---
+# SCR-56 (HB-025) — đăng nhập Operations Android, đặt PIN lần đầu, rồi sai PIN 3 lần (TC-AUTH-03).
+#
+# Điều kiện chạy (thiết bị/emulator THẬT trỏ vào API thật + seed HB-018):
+#   • biến môi trường: STAFF_USERNAME, STAFF_PASSWORD, STAFF_PIN (6 số, KHÁC `123456`).
+#   • tài khoản dùng cho lượt chạy PHẢI chưa có PIN (màn `pin-1` phải hiện). Dev seed không tạo PIN;
+#     muốn chạy lại thì `DELETE FROM user_pins WHERE user_id = (SELECT id FROM users WHERE username = …)`
+#     hoặc xoá PIN bằng SCR-15.
+#   • nút "Thử thao tác cần PIN" trên màn chính dùng PIN cố định `123456`, nên khi PIN đã đặt là
+#     `${STAFF_PIN}` ≠ `123456` mỗi lần chạm là một lần SAI PIN: lần 3 khoá PIN 15 phút.
+# Lượt chạy trên host này: BLOCKED — không có `adb`/emulator (xem docs/07-ban-giao/bang-chung-f1.md).
+- launchApp:
+    clearState: true
+
+# 1) Đăng nhập nội bộ
+- assertVisible:
+    id: "login-submit"
+- tapOn:
+    id: "username"
+- inputText: "${STAFF_USERNAME}"
+- tapOn:
+    id: "password"
+- inputText: "${STAFF_PASSWORD}"
+- tapOn:
+    id: "login-submit"
+
+# 2) Đặt PIN lần đầu (bỏ qua an toàn nếu tài khoản đã có PIN)
+- runFlow:
+    when:
+      visible:
+        id: "pin-1"
+    commands:
+      - tapOn:
+          id: "pin-1"
+      - inputText: "${STAFF_PIN}"
+      - tapOn:
+          id: "pin-2"
+      - inputText: "${STAFF_PIN}"
+      - tapOn:
+          id: "pin-submit"
+
+# 3) Vào màn chính (PIN đã đặt ⇒ không còn màn chọn PIN)
+- assertVisible:
+    id: "pin-demo"
+- assertVisible: "Pine Hill — Vận hành"
+
+# 4) Sai PIN 3 lần: 2 lần đầu báo E_AUTH_PIN_REQUIRED, lần 3 khoá PIN 15 phút
+- tapOn:
+    id: "pin-demo"
+- extendedWaitUntil:
+    visible: "Đăng nhập thất bại: E_AUTH_PIN_REQUIRED"
+    timeout: 20000
+- tapOn:
+    id: "pin-demo"
+- extendedWaitUntil:
+    visible: "Đăng nhập thất bại: E_AUTH_PIN_REQUIRED"
+    timeout: 20000
+- tapOn:
+    id: "pin-demo"
+- extendedWaitUntil:
+    visible: "PIN tạm khoá."
+    timeout: 20000
+- assertNotVisible: "Đã mở khoá PIN: demo"
