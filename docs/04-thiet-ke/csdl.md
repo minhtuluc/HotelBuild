@@ -981,7 +981,6 @@ CREATE TABLE overbooking_cases (
   delay_reason    text,
   resolved_by     uuid REFERENCES users(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT ck_overbooking_resolved CHECK (status <> 'RESOLVED' OR (resolved_at IS NOT NULL AND resolved_by IS NOT NULL)),
   CONSTRAINT ck_overbooking_escalated CHECK (status <> 'ESCALATED' OR escalated_at IS NOT NULL)
 );
 
@@ -1008,7 +1007,8 @@ CREATE TABLE room_moves (
   status           text NOT NULL DEFAULT 'PROPOSED' CHECK (status IN ('PROPOSED','APPROVED','EXECUTED','REJECTED','CANCELLED')),
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT ck_room_moves_target CHECK (to_room_id IS NOT NULL OR move_type = 'WALK_OUT'),
-  CONSTRAINT ck_room_moves_approval CHECK (status NOT IN ('APPROVED','EXECUTED') OR approved_by IS NOT NULL),
+  CONSTRAINT ck_room_moves_approval CHECK (status NOT IN ('APPROVED','EXECUTED')
+    OR compensation_amount + transport_cost <= 0 OR approved_by IS NOT NULL),
   CONSTRAINT ck_room_moves_price_lock CHECK (price_locked),
   CONSTRAINT ck_room_moves_walkout_doc CHECK (move_type <> 'WALK_OUT' OR status <> 'EXECUTED' OR walk_out_doc_no IS NOT NULL)
 );
@@ -1016,7 +1016,8 @@ CREATE TABLE room_moves (
 CREATE TABLE room_merges (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   primary_booking_id uuid NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
-  secondary_booking_id uuid NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  -- F6-D01: MERGE_CONNECTING là MỘT booking với hai phòng; chỉ MERGE_SHARE có booking thứ hai.
+  secondary_booking_id uuid REFERENCES bookings(id) ON DELETE CASCADE,
   room_id            uuid NOT NULL REFERENCES rooms(id) ON DELETE RESTRICT,
   move_type          text NOT NULL CHECK (move_type IN ('MERGE_SHARE','MERGE_CONNECTING')),
   consent_primary    boolean NOT NULL DEFAULT false,
@@ -1027,9 +1028,12 @@ CREATE TABLE room_merges (
   status             text NOT NULL DEFAULT 'PENDING_CONSENT'
                      CHECK (status IN ('PENDING_CONSENT','APPROVED','ACTIVE','CANCELLED')),
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT ck_room_merges_distinct CHECK (primary_booking_id <> secondary_booking_id),
-  CONSTRAINT ck_room_merges_consent CHECK (status NOT IN ('APPROVED','ACTIVE')
-    OR (consent_primary AND consent_secondary AND approved_by IS NOT NULL))
+  CONSTRAINT ck_room_merges_distinct CHECK (
+    secondary_booking_id IS NULL OR primary_booking_id <> secondary_booking_id),
+  -- Chỉ SHARE cần hai consent; ngoại lệ khác giới/UNSPECIFIED do service cưỡng chế (BR-OVER-14).
+  CONSTRAINT ck_room_merges_consent CHECK (
+    move_type <> 'MERGE_SHARE' OR status NOT IN ('APPROVED','ACTIVE')
+    OR (consent_primary AND consent_secondary))
 );
 ```
 
@@ -1323,8 +1327,9 @@ ALTER TABLE pin_grants ADD CONSTRAINT fk_pin_grants_booking FOREIGN KEY (booking
 (xuất báo cáo trước, sao lưu sau này) ghi lại người yêu cầu và **ảnh chụp phạm vi cơ sở** để job chạy sau vẫn
 chỉ chạm dữ liệu người yêu cầu được xem (BR-RBAC-02). `payload_json` giữ tham số yêu cầu, `result_json` là
 ảnh chụp kết quả cho worker sinh tệp (job xoá sau khi ghi tệp), `result_path`/`result_expires_at` là tệp tạm
-và hạn tải. Bảng được đọc/ghi bằng **SQL thô** trong `modules/sys/operations` và `modules/rep/export`, không
-khai trong Prisma schema để tránh sinh lại client trong cùng migration.
+và hạn tải. Bảng được đọc/ghi bằng **SQL thô** trong `modules/sys/operations` và `modules/rep/export`; nó
+vẫn có trong `schema.prisma` như mọi bảng khác (sinh bằng `prisma db pull`) để cổng drift không báo lệch,
+nhưng không module nào dùng Prisma Client cho bảng này.
 
 ```sql
 CREATE TABLE operations (
@@ -1411,6 +1416,102 @@ CREATE TABLE refund_payout_simulator_transfers (
 );
 ```
 
+#### 3.2.9. F6 — Bền vững thứ tự OTA, đóng bán và lượt quét (migration `0009_f6_chan_over`)
+
+Bốn bảng dưới đây là gap F6 đã chứng minh (HB-121 AC7/AC8), không thay thế `webhook_inbox`/`event_deliveries`
+của HB-005. Inbox bị dọn sau 7 ngày nên watermark và tombstone huỷ phải nằm ở bảng riêng, khoá theo
+**kênh + tài khoản đối tác + mã booking nhà cung cấp**; hai tài khoản dùng chung mã booking không được gộp.
+Redis chỉ là vận chuyển, không phải nguồn bền (ADR-017).
+
+```sql
+-- AC8 closure provenance: `is_closed` on `channel_allotments` stays the effective published flag
+-- (HB-035 writers unchanged); the source of each closure is persisted with actor/reason/time and a
+-- manual reopen keeps history instead of deleting it.
+CREATE TABLE channel_sales_closures (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  channel_id    uuid NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+  room_type_id  uuid NOT NULL REFERENCES room_types(id) ON DELETE CASCADE,
+  date          date NOT NULL,
+  source        text NOT NULL CHECK (source IN ('MANUAL','AUTOMATIC')),
+  reason        text,
+  closed_by     uuid REFERENCES users(id) ON DELETE SET NULL,
+  closed_at     timestamptz NOT NULL DEFAULT now(),
+  reopened_at   timestamptz,
+  reopened_by   uuid REFERENCES users(id) ON DELETE SET NULL,
+  version       bigint NOT NULL DEFAULT 1 CHECK (version > 0),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT ck_channel_sales_closures_reopen CHECK (
+    reopened_at IS NULL OR reopened_at >= closed_at),
+  CONSTRAINT ck_channel_sales_closures_reopener CHECK (
+    (reopened_at IS NULL AND reopened_by IS NULL)
+    OR (reopened_at IS NOT NULL AND reopened_by IS NOT NULL))
+);
+-- Một lần đóng đang hiệu lực cho mỗi nguồn: mở tay không gỡ được đóng tự động (HB-131).
+CREATE UNIQUE INDEX uq_channel_sales_closures_active
+  ON channel_sales_closures (channel_id, room_type_id, date, source)
+  WHERE reopened_at IS NULL;
+CREATE INDEX idx_channel_sales_closures_open
+  ON channel_sales_closures (channel_id, date) WHERE reopened_at IS NULL;
+
+CREATE TABLE channel_sync_watermarks (
+  channel_id      uuid NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+  account_key     text NOT NULL CHECK (length(btrim(account_key)) > 0),
+  provider        text NOT NULL CHECK (length(btrim(provider)) > 0),
+  watermark_at    timestamptz NOT NULL,
+  last_event_id   text,
+  last_success_at timestamptz NOT NULL DEFAULT now(),
+  version         bigint NOT NULL DEFAULT 1 CHECK (version > 0),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (channel_id, account_key)
+);
+
+CREATE TABLE channel_cancel_tombstones (
+  channel_id            uuid NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+  account_key           text NOT NULL CHECK (length(btrim(account_key)) > 0),
+  provider_booking_code text NOT NULL CHECK (length(btrim(provider_booking_code)) > 0),
+  provider_updated_at   timestamptz NOT NULL,
+  cancelled_at          timestamptz NOT NULL,
+  cancel_reason         text NOT NULL DEFAULT 'OTA_CANCELLATION'
+                        CHECK (length(btrim(cancel_reason)) > 0),
+  booking_id            uuid REFERENCES bookings(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (channel_id, account_key, provider_booking_code)
+);
+
+-- AC7/AC8: lần quét thành công/gần nhất là dữ liệu bền, để danh sách rỗng chỉ hiện sau một lượt
+-- quét đã xác minh; lượt lỗi giữ nguyên mốc thành công trước đó.
+CREATE TABLE overbooking_scan_runs (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  property_id     uuid NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  status          text NOT NULL DEFAULT 'RUNNING'
+                  CHECK (status IN ('RUNNING','SUCCEEDED','FAILED')),
+  started_at      timestamptz NOT NULL DEFAULT now(),
+  finished_at     timestamptz,
+  duration_ms     integer CHECK (duration_ms >= 0),
+  scanned_count   integer NOT NULL DEFAULT 0 CHECK (scanned_count >= 0),
+  case_count      integer NOT NULL DEFAULT 0 CHECK (case_count >= 0),
+  failure_code    text,
+  failure_message text,
+  version         bigint NOT NULL DEFAULT 1 CHECK (version > 0),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT ck_overbooking_scan_runs_finished CHECK (
+    status = 'RUNNING' OR finished_at IS NOT NULL),
+  CONSTRAINT ck_overbooking_scan_runs_failed CHECK (
+    status <> 'FAILED' OR failure_code IS NOT NULL),
+  CONSTRAINT ck_overbooking_scan_runs_duration CHECK (
+    status = 'RUNNING' OR duration_ms IS NOT NULL)
+);
+
+CREATE UNIQUE INDEX uq_overbooking_scan_runs_running
+  ON overbooking_scan_runs (property_id) WHERE status = 'RUNNING';
+CREATE INDEX idx_overbooking_scan_runs_success
+  ON overbooking_scan_runs (property_id, finished_at DESC) WHERE status = 'SUCCEEDED';
+```
+
 ### 3.3. Ràng buộc loại trừ, trigger bảo vệ bất biến
 
 ```sql
@@ -1450,6 +1551,43 @@ END $$;
 -- `trg_refund_requests_guard`); trigger `updated_at` vẫn do vòng lặp chung cuối §3.3 sinh ra.
 CREATE TRIGGER trg_refund_payout_operations_version BEFORE UPDATE ON refund_payout_operations
   FOR EACH ROW EXECUTE FUNCTION fn_increment_version();
+
+-- Migration 0009 (HB-121): cột/CHECK bổ sung sau baseline, khai bằng `ALTER` đúng thứ tự triển khai
+-- (sau cột `version` do vòng lặp trên thêm) để catalog §3 khớp CSDL đã migrate từng cột một.
+ALTER TABLE room_merges ADD COLUMN secondary_room_id uuid REFERENCES rooms(id) ON DELETE RESTRICT;
+ALTER TABLE room_merges ADD CONSTRAINT ck_room_merges_secondary CHECK (
+  (move_type = 'MERGE_CONNECTING' AND secondary_booking_id IS NULL AND secondary_room_id IS NOT NULL)
+  OR (move_type = 'MERGE_SHARE' AND secondary_booking_id IS NOT NULL AND secondary_room_id IS NULL));
+
+ALTER TABLE room_moves DROP CONSTRAINT ck_room_moves_approval;
+ALTER TABLE room_moves ADD CONSTRAINT ck_room_moves_approval CHECK (status NOT IN ('APPROVED','EXECUTED')
+  OR compensation_amount + transport_cost <= 0 OR approved_by IS NOT NULL);
+
+ALTER TABLE overbooking_cases ADD COLUMN resolution_source text
+  CHECK (resolution_source IN ('USER','SYSTEM'));
+ALTER TABLE overbooking_cases ADD CONSTRAINT ck_overbooking_resolved CHECK (
+  status <> 'RESOLVED'
+  OR (resolved_at IS NOT NULL
+      AND ((resolution_source = 'SYSTEM' AND resolved_by IS NULL)
+           OR (resolution_source = 'USER' AND resolved_by IS NOT NULL)))
+);
+ALTER TABLE overbooking_cases ADD CONSTRAINT ck_overbooking_resolution_source CHECK (
+  resolution_source IS NULL OR status = 'RESOLVED'
+);
+
+ALTER TABLE payments ADD COLUMN room_move_id uuid REFERENCES room_moves(id) ON DELETE RESTRICT;
+ALTER TABLE payments ADD CONSTRAINT ck_payments_compensation CHECK (room_move_id IS NULL
+  OR (type = 'COMPENSATION' AND method IN ('CASH','BANK_TRANSFER')));
+
+ALTER TABLE bookings ADD COLUMN duplicate_suspected_by uuid REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE bookings ADD COLUMN duplicate_suspected_reason text;
+ALTER TABLE bookings ADD COLUMN duplicate_suspected_at timestamptz;
+ALTER TABLE bookings ADD COLUMN duplicate_suspected_version bigint NOT NULL DEFAULT 0
+  CHECK (duplicate_suspected_version >= 0);
+-- BR-BOOK-16 cũ chỉ bật cờ; tuyến review F6 ghi actor/lý do/thời điểm nguyên tử, nên actor phải có mốc.
+ALTER TABLE bookings ADD CONSTRAINT ck_bookings_duplicate_flag CHECK (
+  duplicate_suspected_by IS NULL OR duplicate_suspected_at IS NOT NULL
+);
 
 CREATE FUNCTION fn_immutable_record() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
@@ -1879,6 +2017,36 @@ BEGIN
   RETURN NEW;
 END $$;
 
+-- AC7/AC8 (migration 0009): quyết định nghi trùng có bộ đếm do CSDL tăng, không nhận timestamp client.
+CREATE FUNCTION fn_bump_duplicate_flag_version() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF ROW(NEW.duplicate_suspected, NEW.duplicate_suspected_by,
+         NEW.duplicate_suspected_reason, NEW.duplicate_suspected_at)
+     IS DISTINCT FROM
+     ROW(OLD.duplicate_suspected, OLD.duplicate_suspected_by,
+         OLD.duplicate_suspected_reason, OLD.duplicate_suspected_at) THEN
+    NEW.duplicate_suspected_version := OLD.duplicate_suspected_version + 1;
+  ELSE
+    NEW.duplicate_suspected_version := OLD.duplicate_suspected_version;
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_bookings_duplicate_flag BEFORE UPDATE ON bookings
+  FOR EACH ROW EXECUTE FUNCTION fn_bump_duplicate_flag_version();
+
+-- Watermark thứ tự OTA chỉ tiến; sự kiện cũ hơn không được kéo lùi mốc.
+CREATE FUNCTION fn_guard_channel_watermark() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.watermark_at < OLD.watermark_at THEN
+    RAISE EXCEPTION 'watermark must advance monotonically for channel % account %',
+      NEW.channel_id, NEW.account_key USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_channel_sync_watermarks_monotonic
+  BEFORE UPDATE ON channel_sync_watermarks
+  FOR EACH ROW EXECUTE FUNCTION fn_guard_channel_watermark();
+
 DO $$
 DECLARE t record;
 BEGIN
@@ -1951,10 +2119,20 @@ CREATE INDEX idx_notifications_pending
 -- Buồng phòng, điều chuyển, công suất (BR-FO-06, UC-OVER-02, BR-RATE-04.3)
 CREATE INDEX idx_housekeeping_date_status ON housekeeping_tasks (business_date, status);
 CREATE INDEX idx_room_moves_booking ON room_moves (booking_id, created_at DESC);
-CREATE UNIQUE INDEX uq_room_merges_active_secondary
-  ON room_merges (secondary_booking_id) WHERE status = 'ACTIVE';
 CREATE UNIQUE INDEX uq_room_merges_active_primary
   ON room_merges (primary_booking_id) WHERE status = 'ACTIVE';
+CREATE UNIQUE INDEX uq_room_merges_active_secondary
+  ON room_merges (secondary_booking_id)
+  WHERE status = 'ACTIVE' AND secondary_booking_id IS NOT NULL;
+-- F6-D01: ghép nối phòng chiếm hai phòng nhưng vẫn chỉ một ghép ACTIVE cho mỗi phòng.
+CREATE UNIQUE INDEX uq_room_merges_active_room
+  ON room_merges (room_id) WHERE status = 'ACTIVE';
+CREATE UNIQUE INDEX uq_room_merges_active_secondary_room
+  ON room_merges (secondary_room_id)
+  WHERE status = 'ACTIVE' AND secondary_room_id IS NOT NULL;
+-- F6-D06: một khoản chi bồi thường cho mỗi RoomMove (PENDING giữ chỗ, SUCCEEDED chốt sổ).
+CREATE UNIQUE INDEX uq_payments_room_move
+  ON payments (room_move_id) WHERE room_move_id IS NOT NULL AND status IN ('PENDING','SUCCEEDED');
 CREATE INDEX idx_rate_calendars_lookup
   ON rate_calendars (room_type_id, date, priority DESC, channel_code, created_at);
 CREATE INDEX idx_payments_collector_vn_day
@@ -2152,12 +2330,12 @@ Hai mã **không** sinh từ SQLSTATE, do tầng nghiệp vụ/job trả về:
 | 19 | Khi cấu hình, `allotment` không vượt đơn vị ACTIVE; `used` có thể vượt do OTA đã xác nhận | Trigger capacity chỉ cho thay đổi cấu hình; dịch vụ đóng bán khi quota hết, không từ chối nhập cam kết ngoài | BR-INV-05, BR-CHAN-01/08 |
 | 20 | Khoá phòng không chồng lấn lịch hoạt động (trừ `MANAGER`+ có lý do) | Trigger `trg_room_blocks_overlap_guard` / `trg_room_assignments_block_guard` ném `23P01` | BR-INV-06 |
 | 21 | Một ca quá tải chưa xử lý cho mỗi `(cơ sở, ngày, loại phòng)` | `UNIQUE` từng phần `uq_overbooking_open_case … WHERE status <> 'RESOLVED'` | BR-OVER-05 |
-| 22 | Ca `RESOLVED` có người và thời điểm; ca `ESCALATED` có mốc leo thang (case quá hạn không tự đóng) | `CHECK ck_overbooking_resolved`, `ck_overbooking_escalated` | BR-OVER-04, **BR-OVER-16** |
+| 22 | Ca `RESOLVED` có thời điểm và actor `USER`, hoặc `resolution_source = 'SYSTEM'` với `resolved_by` NULL (không tạo user giả); ca `ESCALATED` có mốc leo thang (case quá hạn không tự đóng) | `CHECK ck_overbooking_resolved`, `ck_overbooking_resolution_source`, `ck_overbooking_escalated` | BR-OVER-04, **BR-OVER-16**, F6-D07 |
 | 23 | Điều chuyển giữ nguyên giá gốc | `CHECK ck_room_moves_price_lock (price_locked)` | BR-OVER-08 |
-| 24 | Move APPROVED/EXECUTED phải có người duyệt; REJECTED/CANCELLED không bắt buộc; WALK_OUT EXECUTED mới bắt buộc biên bản | `ck_room_moves_approval`, `ck_room_moves_target`, `ck_room_moves_walkout_doc` | BR-OVER-06 |
+| 24 | Move APPROVED/EXECUTED chỉ bắt buộc người duyệt khi `compensation_amount + transport_cost > 0` (cùng cơ sở zero-cost không duyệt; CHECKED_IN bất khả kháng/khác thành phố do service + HB-124); WALK_OUT EXECUTED mới bắt buộc biên bản | `ck_room_moves_approval`, `ck_room_moves_target`, `ck_room_moves_walkout_doc` | BR-OVER-06/07/09, F6-D04 |
 | 25 | `keepScore` nằm trong miền giá trị của công thức | `CHECK (keep_score BETWEEN 0 AND 173)` | BR-OVER-11 |
-| 26 | Ghép phòng chỉ `APPROVED`/`ACTIVE` khi cả hai đồng ý **và** `MANAGER`+ đã duyệt | `CHECK ck_room_merges_consent` | BR-OVER-13/14 |
-| 27 | Một booking không nằm trong hai ghép đang hoạt động (mỗi vai) | `uq_room_merges_active_primary`, `…_secondary` | BR-OVER-13 |
+| 26 | Ghép `MERGE_SHARE` chỉ `APPROVED`/`ACTIVE` khi cả hai booking đồng ý (duyệt khác giới do service + HB-124); `MERGE_CONNECTING` không cần consent và luôn có `secondary_room_id` | `CHECK ck_room_merges_consent`, `ck_room_merges_secondary` | BR-OVER-13/14, F6-D01 |
+| 27 | Mỗi booking **và** mỗi phòng chỉ nằm trong một ghép `ACTIVE`, tính cả phòng thứ hai của connecting | `uq_room_merges_active_primary`, `…_secondary`, `…_room`, `…_secondary_room` | BR-OVER-13, F6-D01 |
 | 28 | `HELD`/`PENDING_PAYMENT` có `hold_expires_at`; `CANCELLED` có `cancelled_at` | `CHECK ck_bookings_hold`, `ck_bookings_cancelled` | BR-BOOK-07/14/18 |
 | 29 | Không xoá cứng booking đã phát sinh thanh toán | FK `payments.booking_id ON DELETE RESTRICT` | BR-BOOK-14 |
 | 30 | Xoá cứng `DRAFT`/`HELD` vẫn giữ vết nhật ký | `audit_logs.entity_id` không FK + `before_json` ghi trước khi xoá | **BR-BOOK-17**, BR-GEN-07 |
@@ -2174,6 +2352,10 @@ Hai mã **không** sinh từ SQLSTATE, do tầng nghiệp vụ/job trả về:
 | 41 | `AuditLog` append-only với vai trò ứng dụng | Trigger + REVOKE; superuser/owner DB vẫn có thể vô hiệu hoá trigger, cần kiểm soát vận hành độc lập | BR-SYS-01, NFR-SEC-04 |
 | 42 | Chuỗi băm `AuditLog` liền mạch | Trigger `trg_audit_logs_hash_chain` (SHA-256 qua `prev_hash`) | NFR-SEC-04 |
 | 43 | Mọi bảng đều có `updated_at` tự cập nhật | Trigger `trg_<bảng>_touch` (trừ `AuditLog`) | Quy ước §1 |
+| 44 | Mỗi `RoomMove` chỉ có **một** khoản chi bồi thường còn hiệu lực; Payment bồi thường không dùng quỹ REFUND | `uq_payments_room_move` từng phần `status IN ('PENDING','SUCCEEDED')`, `ck_payments_compensation`; không FK sang `refund_allocations` | F6-D06, BR-PAY-02/09 |
+| 45 | Watermark thứ tự OTA đơn điệu theo `(kênh, tài khoản)`; tombstone huỷ bền vững theo `(kênh, tài khoản, mã booking NCC)` kể cả sau khi dọn inbox 7 ngày | Trigger `trg_channel_sync_watermarks_monotonic`; PK `channel_cancel_tombstones`, `channel_sync_watermarks` | BR-CHAN-03/04, NFR-REL-06 |
+| 46 | Cờ nghi trùng có actor/lý do/thời điểm và bộ đếm do CSDL tăng (actor phải đi kèm mốc thời gian) | `ck_bookings_duplicate_flag`, `trg_bookings_duplicate_flag` | BR-BOOK-16 |
+| 47 | Mỗi đêm/kênh có tối đa một lần đóng bán đang hiệu lực **theo từng nguồn** `MANUAL`/`AUTOMATIC`; mở lại giữ lịch sử | `uq_channel_sales_closures_active`, `ck_channel_sales_closures_reopener` | BR-CHAN-01, BR-INV-05 |
 
 **Bất biến thiết kế này giao cho transaction ứng dụng + kiểm thử/đối chiếu** (có thể hiện thực thêm deferred trigger; DDL hiện tại không tự bảo vệ đầy đủ):
 
@@ -2275,6 +2457,8 @@ Lưu trữ: nhật ký giữ **5 năm**, booking/thanh toán **10 năm** (BR-SYS
 |--------|-----------|----------|-------|
 | 0001 | `0001_baseline` | Toàn bộ §3: 42 bảng, extension, sequence, hàm, khoá, `CHECK`, `EXCLUDE`, cột sinh, chỉ mục, trigger và quyền `app_rw` | Đầu ra `extract:sql` từ SHA nguồn ghi trong SQL; đóng băng sau khi tạo (QĐ-02) |
 | 0002 | `0002_auth_sessions` | Hai cột users và 5 bảng credential/phiên/PIN/grant/reset; CHECK/FK/hash UNIQUE/index/updated-at trigger; §3 hiện có 47 bảng | HB-010, QĐ-03; không sửa baseline0001 |
+| 0003 | `0003_f6_chan_over` | Cột `version` + trigger cho `channel_mappings`, `overbooking_cases` (§3.3) | HB-121 AC7 |
+| 0009 | `0009_f6_chan_over` | Gap F6: D01 connecting, D04 duyệt có điều kiện, D06 `payments.room_move_id`, D07 `resolution_source`; cờ nghi trùng, watermark/tombstone OTA, provenance đóng bán, metadata lượt quét (§3.2.9, §10.5) | HB-121, D01/D04/D06/D07 |
 | Sau baseline | Migration tiến mới | Mỗi thay đổi schema có file migration mới **và** cập nhật §3 trong cùng PR; Prisma Migrate áp SQL và ghi lịch sử, `schema.prisma` sinh bằng `prisma db pull` | QĐ-02 mục 2–3 |
 
 Seed dữ liệu tham chiếu thuộc HB-018; phân mảnh `audit_logs` là công việc tương lai, không nằm trong baseline.
@@ -2545,7 +2729,7 @@ Giả định thiết kế: **75 đơn vị bán** (34 + 23 + 18 — BR-PROP-03)
 | Chủ đề | Quyết định |
 |--------|-----------|
 | Dung lượng 10 năm | ≈ 4,5 GB dữ liệu + chỉ mục — gọn trong một máy chủ, chưa cần sharding |
-| `audit_logs` là bảng lớn nhất | Phân mảnh khai báo theo tháng (migration 0009); mỗi mảnh áp lại `REVOKE` + trigger; mảnh quá 5 năm detach sang schema lưu trữ lạnh |
+| `audit_logs` là bảng lớn nhất | Phân mảnh khai báo theo tháng (migration tương lai, chưa có trong 0001…0009); mỗi mảnh áp lại `REVOKE` + trigger; mảnh quá 5 năm detach sang schema lưu trữ lạnh |
 | `outbox_events` | Hàng đợi ngắn hạn: xoá `PUBLISHED` quá 30 ngày và `DEAD_LETTER` quá 90 ngày (sau khi xử lý tay) |
 | `idempotency_keys` | Bảng chỉ có giá trị trong 24 giờ: job xoá bản ghi hết hạn mỗi giờ; giữ chỉ mục `expires_at` để job quét nhanh |
 | Báo cáo (BR-REP-01) | `ADR`, `RevPAR`, công suất, tỷ lệ huỷ và chi phí xử lý quá tải tính **theo đơn vị bán** (DOR theo giường); công thức do BR-REP-01 định nghĩa, báo cáo **không** tự định nghĩa lại |
@@ -2600,6 +2784,32 @@ Trước khi bật trigger, migration quét dữ liệu hiện có; nếu có bo
 booking + mẫu ID), không tự sửa tiền. Test `apps/api/test/migration/refund-cap-guard.spec.ts` phủ từ chối
 khi vượt, chấp nhận khi bằng, hai kết nối đồng thời, `INSERT` nhiều dòng, REFUND `FAILED` và quyền EXECUTE
 của `app_rw`.
+
+## 10.5. Migration 0009 — gap F6 CHAN/OVER (HB-121)
+
+Migration tiến `0009_f6_chan_over` chỉ áp các quyết định F6-D01/D04/D06/D07 và gap AC7/AC8 đã chứng
+minh; `0001_baseline` và `0003_f6_chan_over` (version `channel_mappings`/`overbooking_cases`) giữ nguyên.
+
+- **D01:** `room_merges.secondary_booking_id` cho phép NULL, thêm `secondary_room_id`; `ck_room_merges_distinct`
+  chỉ áp khi có booking thứ hai, `ck_room_merges_consent` chỉ buộc consent cho `MERGE_SHARE`, và bốn UNIQUE
+  từng phần bảo đảm một ghép `ACTIVE` cho mỗi booking **và** mỗi phòng, tính cả phòng thứ hai của connecting.
+- **D04:** `ck_room_moves_approval` chỉ buộc `approved_by` khi `APPROVED`/`EXECUTED` và
+  `compensation_amount + transport_cost > 0`; CHECKED_IN bất khả kháng/khác thành phố/khác giới do service
+  cưỡng chế (HB-124), không nới CHECK thành vô điều kiện.
+- **D06:** `payments.room_move_id` FK nullable + UNIQUE từng phần một khoản chi `PENDING`/`SUCCEEDED` cho mỗi
+  `room_move_id`; `ck_payments_compensation` giữ Payment bồi thường là `COMPENSATION` qua `CASH`/`BANK_TRANSFER`.
+  Không dùng `refund_allocations`/REFUND làm quỹ chi bồi thường.
+- **D07:** `overbooking_cases.resolution_source ∈ {USER, SYSTEM}`; `ck_overbooking_resolved` cho `resolved_by`
+  NULL khi `SYSTEM`, dữ liệu `RESOLVED` cũ được backfill `USER` — không tạo user giả.
+- **AC7/AC8:** cờ nghi trùng có `duplicate_suspected_by/reason/at/version` (+ trigger tăng bộ đếm);
+  `channel_sync_watermarks` (PK kênh + tài khoản, watermark đơn điệu) và `channel_cancel_tombstones`
+  (PK kênh + tài khoản + mã booking NCC) bền vững qua việc dọn inbox 7 ngày; `channel_sales_closures`
+  lưu nguồn đóng bán `MANUAL`/`AUTOMATIC` kèm actor/reason/lịch sử mở lại (không đổi cột của
+  `channel_allotments`, `is_closed` vẫn là cờ hiệu lực HB-035);
+  `overbooking_scan_runs` lưu trạng thái/lần quét thành công để API phân biệt chưa quét với rỗng thật.
+
+Test `apps/api/test/migration/chan-over-audit.spec.ts` chạy `scripts/migrate.mjs` trên PostgreSQL 16 thật,
+so catalog với §3 (CSDL tham chiếu dựng từ chính các khối SQL §3) và phủ AC1…AC10.
 
 ## 11. Đề xuất bổ sung
 
