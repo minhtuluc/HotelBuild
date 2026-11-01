@@ -124,7 +124,7 @@ cần pin lại trừ khi A/B thật sự sửa nội dung — khi đó phải c
 Áp tuần tự, dừng ở nhánh đầu tiên đúng:
 
 1. `paidAmount = 0` → **0** (kể cả `totalAmount`/`depositAmount` = 0).
-2. `totalAmount > 0` và `paidAmount ≥ totalAmount` → **20**.
+2. `paidAmount > 0` và `paidAmount ≥ totalAmount` → **20** (bao gồm `totalAmount = 0` mà đã trả dư: không còn nợ).
 3. `paidAmount > 0` và (`depositAmount = 0` hoặc `paidAmount ≥ depositAmount`) → **10**.
 4. còn lại (`0 < paidAmount < depositAmount`) → **0**.
 

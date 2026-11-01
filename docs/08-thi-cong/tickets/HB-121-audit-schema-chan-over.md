@@ -9,6 +9,7 @@ allow:
   - apps/api/prisma/migrations/*_f6_chan_over/**
   - apps/api/prisma/schema.prisma
   - docs/04-thiet-ke/csdl.md
+  - apps/api/test/migration/f6-versions.spec.ts
 locked:
   - apps/api/prisma/migrations/0001_baseline/**
   - apps/api/test/migration/baseline.spec.ts

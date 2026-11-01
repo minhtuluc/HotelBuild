@@ -22,6 +22,9 @@ allow:
   - packages/ui-web/src/errors.ts
   - packages/ui-native/src/stateMessages.ts
   - docs/04-thiet-ke/api.md
+  - packages/contracts/src/overbooking-move.ts
+  - packages/contracts/src/openapi/paths/f6-over.ts
+  - packages/contracts/test/openapi.spec.ts
 ---
 
 # HB-120 — Hợp đồng CHAN + OVER

@@ -23,6 +23,16 @@ locked:
   - apps/api/test/over/compensation.locked.spec.ts
   - apps/api/test/over/helpers/**
   - packages/domain/test/overbooking/**
+locked_sha:
+  - 62f2684615a8baaeaca5fcbbef18bee848a91678e41e3547d9646cb91e0e5b4f apps/api/test/over/compensation.locked.spec.ts
+  - 2bfabcf0e8b25ccb6cd401f4b73f8a9f55251f6fd060c056e293dbff6707788f apps/api/test/over/helpers/actions.ts
+  - 775bddfbdaee24a1c220632d20275924b260301a7848e37a42b3c53edeaf88b9 apps/api/test/over/helpers/harness.ts
+  - 3c5156fb3e35b3c6af1029ea203580d2ceef8599bd5dc5fbebfae044c72165b4 apps/api/test/over/helpers/payouts.ts
+  - cdb27fb24ca98115bca130fc9896aac83ce7d6c9cb4b2866ddbbc7c120d9e4b6 apps/api/test/over/helpers/seed.ts
+  - 25bfc589ab0f8bd1b69c275b8bbf00adec3541377f6179fc07f6e37df40a2e4a apps/api/test/over/helpers/views.ts
+  - 444a9530f5f4c11b824cbc3b0e389a7b8dc5b1bf2e018a6406cc344d8193514c apps/api/test/over/merge.locked.spec.ts
+  - d0906e7b296a26993c1615c5afd0cd0d854a2afcb061f2c5c8013b32d98c72c2 apps/api/test/over/relocation.locked.spec.ts
+  - 48597b8fec3506f0ea650f2f3aeae5d4d3bbb5433e213add35af49a07b490824 apps/api/test/over/walkout.locked.spec.ts
 ---
 
 # HB-125 — Use case và endpoint OVER

@@ -24,6 +24,13 @@ locked:
   - apps/api/test/over/detection.locked.spec.ts
   - apps/api/test/over/detection-queries.locked.spec.ts
   - apps/api/test/over/detection-helpers/**
+locked_sha:
+  - e0d50967ff5b6c902e79763859097319f431a273c394cbeadb15f7dcd28757ff apps/api/test/over/detection-helpers/contract.ts
+  - f4026dd8e1c0cbbbbedb79b66d2620f40aef113619ae9076e29e3033741ecbc8 apps/api/test/over/detection-helpers/fixture.ts
+  - 6e86f3ab37fa6c06d859d4b6ba7c55dbe09fec77da60e19c8681bb22332358eb apps/api/test/over/detection-helpers/index.ts
+  - f83287522b21027d953a3e1aa6b4dcf3272313d7f3221d6d676f1329dd426aa6 apps/api/test/over/detection-helpers/scenario.ts
+  - d275edf3a935873f79feeff3737088e9606cadc9f97734bff5c307f2cace003c apps/api/test/over/detection-queries.locked.spec.ts
+  - 0fb5e8c644f7ee08d532e78b2f5d5a8aede25cd97c182a017133b24c8a13cbea apps/api/test/over/detection.locked.spec.ts
 ---
 
 # HB-127 — Worker q.overbooking-scan
