@@ -45,6 +45,7 @@ const ALERT_SUBJECTS: Readonly<Record<string, string>> = {
   'alert-channel-degraded': 'Cảnh báo: kênh đồng bộ suy giảm — Pine Hill',
   'alert-login-abnormal': 'Cảnh báo: đăng nhập bất thường — Pine Hill',
   'alert-refund-sla': 'Cảnh báo: hoàn tiền quá hạn cam kết — Pine Hill',
+  'alert-reconciliation-discrepancy': 'Cảnh báo: chênh lệch quỹ cuối ngày — Pine Hill',
 };
 
 function subjectOf(template: string, message: NotificationMessage): string {
