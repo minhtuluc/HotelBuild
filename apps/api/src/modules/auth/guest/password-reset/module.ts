@@ -5,6 +5,7 @@ import { AuditWriter } from '../../../../infrastructure/audit/audit-writer.js';
 import { MailModule } from '../../../../infrastructure/mail/mail.module.js';
 import { CLOCK } from '../../../../infrastructure/ports.js';
 import { PasswordResetAttempts } from './attempts.js';
+import { PasswordResetConfirmLimit } from './confirm-limit.js';
 import { PasswordResetController } from './controller.js';
 import { PasswordResetService } from './service.js';
 
@@ -18,6 +19,11 @@ const auditWriterProvider: Provider = {
 @Module({
   imports: [MailModule],
   controllers: [PasswordResetController],
-  providers: [PasswordResetService, PasswordResetAttempts, auditWriterProvider],
+  providers: [
+    PasswordResetService,
+    PasswordResetAttempts,
+    PasswordResetConfirmLimit,
+    auditWriterProvider,
+  ],
 })
 export class GuestPasswordResetModule {}

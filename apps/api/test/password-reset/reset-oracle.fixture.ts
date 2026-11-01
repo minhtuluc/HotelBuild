@@ -186,6 +186,11 @@ beforeAll(async () => {
   app.setGlobalPrefix('api/v1');
   await app.listen(0, '127.0.0.1');
 }, 60000);
+/** Redis chạy của lượt kiểm thử (DB `/6`) — cho ca kiểm trực tiếp bộ đếm hạn mức. */
+export function counters() {
+  if (!leased || !redis) throw new Error('HB028 Redis unavailable');
+  return redis;
+}
 export async function clearAttempts() {
   if (!leased || !leases || (await leases.get(leaseKey)) !== lease)
     throw new Error('HB028 lease lost');

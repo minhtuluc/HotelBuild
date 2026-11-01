@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { passwordResetConfirmRequestSchema } from '@pinehill/contracts';
 import { AppError } from '../../../../common/app-error.js';
 import { Public } from '../../../../common/guards/decorators.js';
+import { PasswordResetConfirmLimit } from './confirm-limit.js';
 import { PasswordResetService } from './service.js';
 import type { RequestContext } from './service.js';
 
@@ -29,7 +30,10 @@ function contextOf(request: FastifyRequest): RequestContext {
 
 @Controller('guest-auth/password-reset')
 export class PasswordResetController {
-  constructor(@Inject(PasswordResetService) private readonly service: PasswordResetService) {}
+  constructor(
+    @Inject(PasswordResetService) private readonly service: PasswordResetService,
+    @Inject(PasswordResetConfirmLimit) private readonly limit: PasswordResetConfirmLimit,
+  ) {}
 
   @Public()
   @Post('request')
@@ -44,6 +48,7 @@ export class PasswordResetController {
   @Post('confirm')
   @HttpCode(204)
   async confirm(@Body() body: unknown, @Req() request: FastifyRequest): Promise<void> {
+    await this.limit.assertAllowed(contextOf(request).ip ?? 'unknown');
     const parsed = passwordResetConfirmRequestSchema.safeParse(body);
     if (!parsed.success) throw validationError();
     await this.service.confirm(parsed.data.token, parsed.data.newPassword, contextOf(request));
