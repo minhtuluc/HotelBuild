@@ -11,6 +11,7 @@ allow:
   - apps/api/src/modules/over/permissions.ts
   - apps/api/src/app.module.ts
   - apps/api/test/over/detection-routes.spec.ts
+  - apps/api/src/modules/book/bookings/service.ts
 locked:
   - apps/api/test/over/detection.locked.spec.ts
   - apps/api/test/over/detection-queries.locked.spec.ts
@@ -19,6 +20,16 @@ locked:
   - apps/api/test/over/relocation.locked.spec.ts
   - apps/api/test/over/merge.locked.spec.ts
   - apps/api/test/over/walkout.locked.spec.ts
+locked_sha:
+  - e0d50967ff5b6c902e79763859097319f431a273c394cbeadb15f7dcd28757ff apps/api/test/over/detection-helpers/contract.ts
+  - f4026dd8e1c0cbbbbedb79b66d2620f40aef113619ae9076e29e3033741ecbc8 apps/api/test/over/detection-helpers/fixture.ts
+  - 6e86f3ab37fa6c06d859d4b6ba7c55dbe09fec77da60e19c8681bb22332358eb apps/api/test/over/detection-helpers/index.ts
+  - f83287522b21027d953a3e1aa6b4dcf3272313d7f3221d6d676f1329dd426aa6 apps/api/test/over/detection-helpers/scenario.ts
+  - d275edf3a935873f79feeff3737088e9606cadc9f97734bff5c307f2cace003c apps/api/test/over/detection-queries.locked.spec.ts
+  - 0fb5e8c644f7ee08d532e78b2f5d5a8aede25cd97c182a017133b24c8a13cbea apps/api/test/over/detection.locked.spec.ts
+  - 444a9530f5f4c11b824cbc3b0e389a7b8dc5b1bf2e018a6406cc344d8193514c apps/api/test/over/merge.locked.spec.ts
+  - d0906e7b296a26993c1615c5afd0cd0d854a2afcb061f2c5c8013b32d98c72c2 apps/api/test/over/relocation.locked.spec.ts
+  - 48597b8fec3506f0ea650f2f3aeae5d4d3bbb5433e213add35af49a07b490824 apps/api/test/over/walkout.locked.spec.ts
 ---
 
 # HB-126 — Phát hiện quá tải và đọc ca

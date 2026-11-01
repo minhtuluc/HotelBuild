@@ -23,6 +23,19 @@ locked:
   - apps/api/test/channel-sync/inventory.locked.spec.ts
   - apps/worker/test/channel-sync/scheduler.locked.spec.ts
   - apps/worker/test/channel-sync/failures.locked.spec.ts
+  - apps/api/test/channel-sync/fixture.ts
+  - apps/api/test/channel-sync/http.ts
+  - apps/api/test/channel-sync/schemas.ts
+  - apps/worker/test/channel-sync/harness.ts
+locked_sha:
+  - 4c3bb979c22b013f77322cddbfdd90a63c140f978d0b9f201a0b05c4bbc647ca apps/api/test/channel-sync/endpoints.locked.spec.ts
+  - 3e8c0b3d607d2f4e0b15d09ec54e0659775e969bbf0bbcd43bf4646f12261c73 apps/api/test/channel-sync/fixture.ts
+  - 59900b23f3259702f96baf385ee974198b4d6bd8b30e9f1a7df836b52294bd7a apps/api/test/channel-sync/http.ts
+  - ec686751aefad0ae6c01c41e513e316b358358dc146eef719f4230a2a750386b apps/api/test/channel-sync/inventory.locked.spec.ts
+  - f2e948bbf155700d54d219b6d07ea44fe779a0f1d6d08af9baeef0efb8480474 apps/api/test/channel-sync/schemas.ts
+  - e94e9d0e1cc88bde591d2338b69a2f74e7455ed0c79028fffc4cbd28f42ad586 apps/worker/test/channel-sync/failures.locked.spec.ts
+  - dd4dbc84ea96ba6c4702018512cdda6e8d4f98a138b36cd3069263347f156a51 apps/worker/test/channel-sync/harness.ts
+  - cb4a31bedccc37b1ed94e8e1edd5c61f2ba6aaf3550c356c0d783aafc0461258 apps/worker/test/channel-sync/scheduler.locked.spec.ts
 ---
 
 # HB-131 — Endpoint CHAN và đồng bộ tồn/giá

@@ -350,7 +350,7 @@ keepScore = điểm hạng khách + điểm thanh toán + điểm số đêm + �
 | Thành phần | Giá trị |
 |-----------|---------|
 | Hạng khách | PLATINUM 100 · GOLD 80 · SILVER 50 · MEMBER 20 · GUEST 0 |
-| Thanh toán | Áp tuần tự: `paid = 0` → **0** · `paid ≥ total` (>0) → **20** · `paid > 0` và (`deposit = 0` hoặc `paid ≥ deposit`) → **10** · `0 < paid < deposit` → **0**. Tổng = 0 và đã trả dư > 0 tính **20** (không còn nợ) |
+| Thanh toán | Áp tuần tự: `paid = 0` → **0** · `paid > 0` và `paid ≥ total` → **20** · `paid > 0` và (`deposit = 0` hoặc `paid ≥ deposit`) → **10** · `0 < paid < deposit` → **0**. Tổng = 0 và đã trả dư > 0 tính **20** (không còn nợ); nhánh 2 đứng trước nên không rơi xuống 10 |
 | Số đêm | `min(số đêm, 14) × 2` |
 | Khách quay lại | ≥ 3 lần lưu trú trong 12 tháng: **15** |
 | Đã tới nơi | đã check-in, hoặc còn ≤ 6 giờ tới giờ nhận phòng: **10** |
