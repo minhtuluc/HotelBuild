@@ -86,60 +86,66 @@ model booking_status_history {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model bookings {
-  id                                                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code                                                   String                   @unique
-  seq                                                    BigInt                   @unique @default(autoincrement())
-  guest_id                                               String                   @db.Uuid
-  property_id                                            String                   @db.Uuid
-  room_type_id                                           String                   @db.Uuid
-  rate_plan_id                                           String                   @db.Uuid
-  channel_id                                             String                   @db.Uuid
-  check_in                                               DateTime                 @db.Date
-  check_out                                              DateTime                 @db.Date
-  nights                                                 Int?                     @default(dbgenerated("((check_out - check_in))::smallint")) @db.SmallInt
-  adults                                                 Int                      @db.SmallInt
-  children                                               Int                      @default(0) @db.SmallInt
-  status                                                 String                   @default("DRAFT")
-  room_count                                             Int                      @default(1) @db.SmallInt
-  total_amount                                           BigInt                   @default(0)
-  deposit_percent                                        Decimal                  @db.Decimal(5, 2)
-  deposit_amount                                         BigInt                   @default(0)
-  paid_amount                                            BigInt                   @default(0)
-  refunded_amount                                        BigInt                   @default(0)
-  penalty_amount                                         BigInt                   @default(0)
-  balance_due                                            BigInt                   @default(0)
-  currency                                               String                   @default("VND") @db.Char(3)
-  hold_expires_at                                        DateTime?                @db.Timestamptz(6)
-  oversold                                               Boolean                  @default(false)
-  duplicate_suspected                                    Boolean                  @default(false)
-  price_locked                                           Boolean                  @default(false)
+  id                                                     String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                                                   String                      @unique
+  seq                                                    BigInt                      @unique @default(autoincrement())
+  guest_id                                               String                      @db.Uuid
+  property_id                                            String                      @db.Uuid
+  room_type_id                                           String                      @db.Uuid
+  rate_plan_id                                           String                      @db.Uuid
+  channel_id                                             String                      @db.Uuid
+  check_in                                               DateTime                    @db.Date
+  check_out                                              DateTime                    @db.Date
+  nights                                                 Int?                        @default(dbgenerated("((check_out - check_in))::smallint")) @db.SmallInt
+  adults                                                 Int                         @db.SmallInt
+  children                                               Int                         @default(0) @db.SmallInt
+  status                                                 String                      @default("DRAFT")
+  room_count                                             Int                         @default(1) @db.SmallInt
+  total_amount                                           BigInt                      @default(0)
+  deposit_percent                                        Decimal                     @db.Decimal(5, 2)
+  deposit_amount                                         BigInt                      @default(0)
+  paid_amount                                            BigInt                      @default(0)
+  refunded_amount                                        BigInt                      @default(0)
+  penalty_amount                                         BigInt                      @default(0)
+  balance_due                                            BigInt                      @default(0)
+  currency                                               String                      @default("VND") @db.Char(3)
+  hold_expires_at                                        DateTime?                   @db.Timestamptz(6)
+  oversold                                               Boolean                     @default(false)
+  duplicate_suspected                                    Boolean                     @default(false)
+  price_locked                                           Boolean                     @default(false)
   external_ref                                           String?
   channel_policy_code                                    String?
-  reschedule_count                                       Int                      @default(0) @db.SmallInt
+  reschedule_count                                       Int                         @default(0) @db.SmallInt
   note                                                   String?
-  created_by                                             String?                  @db.Uuid
-  created_at                                             DateTime                 @default(now()) @db.Timestamptz(6)
-  updated_at                                             DateTime                 @default(now()) @db.Timestamptz(6)
-  cancelled_at                                           DateTime?                @db.Timestamptz(6)
+  created_by                                             String?                     @db.Uuid
+  created_at                                             DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_at                                             DateTime                    @default(now()) @db.Timestamptz(6)
+  cancelled_at                                           DateTime?                   @db.Timestamptz(6)
   cancel_reason                                          String?
-  version                                                BigInt                   @default(1)
+  version                                                BigInt                      @default(1)
+  duplicate_suspected_by                                 String?                     @db.Uuid
+  duplicate_suspected_reason                             String?
+  duplicate_suspected_at                                 DateTime?                   @db.Timestamptz(6)
+  duplicate_suspected_version                            BigInt                      @default(0)
   booking_charges                                        booking_charges[]
   booking_rooms                                          booking_rooms[]
   booking_status_history                                 booking_status_history[]
-  channels                                               channels                 @relation(fields: [channel_id], references: [id], onUpdate: NoAction)
-  users                                                  users?                   @relation(fields: [created_by], references: [id], onUpdate: NoAction)
-  guests                                                 guests                   @relation(fields: [guest_id], references: [id], onUpdate: NoAction)
-  properties                                             properties               @relation(fields: [property_id], references: [id], onUpdate: NoAction)
-  rate_plans                                             rate_plans               @relation(fields: [rate_plan_id], references: [id], onUpdate: NoAction)
-  room_types                                             room_types               @relation(fields: [room_type_id], references: [id], onUpdate: NoAction)
+  channels                                               channels                    @relation(fields: [channel_id], references: [id], onUpdate: NoAction)
+  users                                                  users?                      @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+  users_bookings_duplicate_suspected_byTousers           users?                      @relation("bookings_duplicate_suspected_byTousers", fields: [duplicate_suspected_by], references: [id], onUpdate: NoAction)
+  guests                                                 guests                      @relation(fields: [guest_id], references: [id], onUpdate: NoAction)
+  properties                                             properties                  @relation(fields: [property_id], references: [id], onUpdate: NoAction)
+  rate_plans                                             rate_plans                  @relation(fields: [rate_plan_id], references: [id], onUpdate: NoAction)
+  room_types                                             room_types                  @relation(fields: [room_type_id], references: [id], onUpdate: NoAction)
+  channel_cancel_tombstones                              channel_cancel_tombstones[]
   loyalty_transactions                                   loyalty_transactions[]
   notifications                                          notifications[]
   payments                                               payments[]
   pin_grants                                             pin_grants[]
   price_snapshots                                        price_snapshots[]
   refund_requests                                        refund_requests[]
-  room_merges_room_merges_primary_booking_idTobookings   room_merges[]            @relation("room_merges_primary_booking_idTobookings")
-  room_merges_room_merges_secondary_booking_idTobookings room_merges[]            @relation("room_merges_secondary_booking_idTobookings")
+  room_merges_room_merges_primary_booking_idTobookings   room_merges[]               @relation("room_merges_primary_booking_idTobookings")
+  room_merges_room_merges_secondary_booking_idTobookings room_merges[]               @relation("room_merges_secondary_booking_idTobookings")
   room_moves                                             room_moves[]
 
   @@index([guest_id, created_at(sort: Desc)], map: "idx_bookings_guest_created")
@@ -215,7 +221,6 @@ model channel_allotments {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model channel_mappings {
-  version                 BigInt     @default(1)
   id                      String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   channel_id              String     @db.Uuid
   room_type_id            String     @db.Uuid
@@ -224,6 +229,7 @@ model channel_mappings {
   status                  String     @default("ACTIVE")
   created_at              DateTime   @default(now()) @db.Timestamptz(6)
   updated_at              DateTime   @default(now()) @db.Timestamptz(6)
+  version                 BigInt     @default(1)
   channels                channels   @relation(fields: [channel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   room_types              room_types @relation(fields: [room_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -270,8 +276,11 @@ model channels {
   bookings                  bookings[]
   channel_allotment_scopes  channel_allotment_scopes[]
   channel_allotments        channel_allotments[]
+  channel_cancel_tombstones channel_cancel_tombstones[]
   channel_mappings          channel_mappings[]
   channel_property_settings channel_property_settings[]
+  channel_sales_closures    channel_sales_closures[]
+  channel_sync_watermarks   channel_sync_watermarks[]
   outbox_events             outbox_events[]
   rate_calendars            rate_calendars[]
 }
@@ -450,23 +459,24 @@ model outbox_events {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model overbooking_cases {
-  version        BigInt     @default(1)
-  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  property_id    String     @db.Uuid
-  date           DateTime   @db.Date
-  room_type_id   String     @db.Uuid
-  shortage_count Int        @db.SmallInt
-  status         String     @default("OPEN")
-  detected_at    DateTime   @default(now()) @db.Timestamptz(6)
-  resolved_at    DateTime?  @db.Timestamptz(6)
-  escalated_at   DateTime?  @db.Timestamptz(6)
-  delay_reason   String?
-  resolved_by    String?    @db.Uuid
-  created_at     DateTime   @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime   @default(now()) @db.Timestamptz(6)
-  properties     properties @relation(fields: [property_id], references: [id], onUpdate: NoAction)
-  users          users?     @relation(fields: [resolved_by], references: [id], onUpdate: NoAction)
-  room_types     room_types @relation(fields: [room_type_id], references: [id], onUpdate: NoAction)
+  id                String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  property_id       String     @db.Uuid
+  date              DateTime   @db.Date
+  room_type_id      String     @db.Uuid
+  shortage_count    Int        @db.SmallInt
+  status            String     @default("OPEN")
+  detected_at       DateTime   @default(now()) @db.Timestamptz(6)
+  resolved_at       DateTime?  @db.Timestamptz(6)
+  escalated_at      DateTime?  @db.Timestamptz(6)
+  delay_reason      String?
+  resolved_by       String?    @db.Uuid
+  created_at        DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime   @default(now()) @db.Timestamptz(6)
+  version           BigInt     @default(1)
+  resolution_source String?
+  properties        properties @relation(fields: [property_id], references: [id], onUpdate: NoAction)
+  users             users?     @relation(fields: [resolved_by], references: [id], onUpdate: NoAction)
+  room_types        room_types @relation(fields: [room_type_id], references: [id], onUpdate: NoAction)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -501,14 +511,16 @@ model payments {
   note                                                                            String?
   created_at                                                                      DateTime                   @default(now()) @db.Timestamptz(6)
   updated_at                                                                      DateTime                   @default(now()) @db.Timestamptz(6)
+  room_move_id                                                                    String?                    @db.Uuid
   payment_allocations                                                             payment_allocations[]
   bookings                                                                        bookings                   @relation(fields: [booking_id], references: [id], onUpdate: NoAction)
   users                                                                           users?                     @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+  room_moves                                                                      room_moves?                @relation(fields: [room_move_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
   refund_allocations_refund_allocations_original_payment_idTopayments             refund_allocations[]       @relation("refund_allocations_original_payment_idTopayments")
   refund_allocations_refund_allocations_refund_payment_idTopayments               refund_allocations?        @relation("refund_allocations_refund_payment_idTopayments")
-  refund_requests                                                                 refund_requests[]
   refund_payout_operations_refund_payout_operations_original_payment_idTopayments refund_payout_operations[] @relation("refund_payout_operations_original_payment_idTopayments")
   refund_payout_operations_refund_payout_operations_refund_payment_idTopayments   refund_payout_operations?  @relation("refund_payout_operations_refund_payment_idTopayments")
+  refund_requests                                                                 refund_requests[]
 
   @@unique([booking_id, type, idempotency_key], map: "uq_payments_idempotency")
   @@unique([method, provider_txn_id], map: "uq_payments_provider_txn")
@@ -580,6 +592,7 @@ model properties {
   channel_property_settings                          channel_property_settings[]
   occupancy_snapshots                                occupancy_snapshots[]
   overbooking_cases                                  overbooking_cases[]
+  overbooking_scan_runs                              overbooking_scan_runs[]
   rate_calendars                                     rate_calendars[]
   room_moves_room_moves_from_property_idToproperties room_moves[]                @relation("room_moves_from_property_idToproperties")
   room_moves_room_moves_to_property_idToproperties   room_moves[]                @relation("room_moves_to_property_idToproperties")
@@ -746,8 +759,8 @@ model refund_requests {
   updated_at                                DateTime                   @default(now()) @db.Timestamptz(6)
   version                                   BigInt                     @default(1)
   refund_allocations                        refund_allocations[]
-  refund_payout_operations                  refund_payout_operations[]
   refund_approvals                          refund_approvals[]
+  refund_payout_operations                  refund_payout_operations[]
   cancellation_tiers                        cancellation_tiers?        @relation(fields: [applied_tier_id], references: [id], onUpdate: NoAction)
   users_refund_requests_approved_byTousers  users?                     @relation("refund_requests_approved_byTousers", fields: [approved_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
   bookings                                  bookings                   @relation(fields: [booking_id], references: [id], onUpdate: NoAction)
@@ -794,24 +807,26 @@ model room_blocks {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model room_merges {
-  id                                                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  primary_booking_id                                  String   @db.Uuid
-  secondary_booking_id                                String   @db.Uuid
-  room_id                                             String   @db.Uuid
+  id                                                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  primary_booking_id                                  String    @db.Uuid
+  secondary_booking_id                                String?   @db.Uuid
+  room_id                                             String    @db.Uuid
   move_type                                           String
-  consent_primary                                     Boolean  @default(false)
-  consent_secondary                                   Boolean  @default(false)
-  discount_pct                                        Decimal  @db.Decimal(5, 2)
-  discount_amount                                     BigInt   @default(0)
-  approved_by                                         String?  @db.Uuid
-  status                                              String   @default("PENDING_CONSENT")
-  created_at                                          DateTime @default(now()) @db.Timestamptz(6)
-  updated_at                                          DateTime @default(now()) @db.Timestamptz(6)
-  version                                             BigInt   @default(1)
-  users                                               users?   @relation(fields: [approved_by], references: [id], onUpdate: NoAction)
-  bookings_room_merges_primary_booking_idTobookings   bookings @relation("room_merges_primary_booking_idTobookings", fields: [primary_booking_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  rooms                                               rooms    @relation(fields: [room_id], references: [id], onUpdate: NoAction)
-  bookings_room_merges_secondary_booking_idTobookings bookings @relation("room_merges_secondary_booking_idTobookings", fields: [secondary_booking_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  consent_primary                                     Boolean   @default(false)
+  consent_secondary                                   Boolean   @default(false)
+  discount_pct                                        Decimal   @db.Decimal(5, 2)
+  discount_amount                                     BigInt    @default(0)
+  approved_by                                         String?   @db.Uuid
+  status                                              String    @default("PENDING_CONSENT")
+  created_at                                          DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at                                          DateTime  @default(now()) @db.Timestamptz(6)
+  version                                             BigInt    @default(1)
+  secondary_room_id                                   String?   @db.Uuid
+  users                                               users?    @relation(fields: [approved_by], references: [id], onUpdate: NoAction)
+  bookings_room_merges_primary_booking_idTobookings   bookings  @relation("room_merges_primary_booking_idTobookings", fields: [primary_booking_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  rooms                                               rooms     @relation(fields: [room_id], references: [id], onUpdate: NoAction)
+  bookings_room_merges_secondary_booking_idTobookings bookings? @relation("room_merges_secondary_booking_idTobookings", fields: [secondary_booking_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  rooms_room_merges_secondary_room_idTorooms          rooms?    @relation("room_merges_secondary_room_idTorooms", fields: [secondary_room_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -837,6 +852,7 @@ model room_moves {
   created_at                                         DateTime      @default(now()) @db.Timestamptz(6)
   updated_at                                         DateTime      @default(now()) @db.Timestamptz(6)
   version                                            BigInt        @default(1)
+  payments                                           payments[]
   users                                              users?        @relation(fields: [approved_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
   bookings                                           bookings      @relation(fields: [booking_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   booking_rooms                                      booking_rooms @relation(fields: [booking_room_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -869,6 +885,7 @@ model room_types {
   channel_allotment_scopes channel_allotment_scopes[]
   channel_allotments       channel_allotments[]
   channel_mappings         channel_mappings[]
+  channel_sales_closures   channel_sales_closures[]
   occupancy_snapshots      occupancy_snapshots[]
   overbooking_cases        overbooking_cases[]
   rate_calendars           rate_calendars[]
@@ -880,28 +897,29 @@ model room_types {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model rooms {
-  id                                        String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  property_id                               String               @db.Uuid
-  room_type_id                              String               @db.Uuid
-  code                                      String
-  name                                      String
-  floor                                     Int                  @default(0) @db.SmallInt
-  status                                    String               @default("ACTIVE")
-  connecting_room_id                        String?              @db.Uuid
-  bed_count                                 Int                  @default(1) @db.SmallInt
-  note                                      String?
-  created_at                                DateTime             @default(now()) @db.Timestamptz(6)
-  updated_at                                DateTime             @default(now()) @db.Timestamptz(6)
-  housekeeping_tasks                        housekeeping_tasks[]
-  room_assignments                          room_assignments[]
-  room_blocks                               room_blocks[]
-  room_merges                               room_merges[]
-  room_moves_room_moves_from_room_idTorooms room_moves[]         @relation("room_moves_from_room_idTorooms")
-  room_moves_room_moves_to_room_idTorooms   room_moves[]         @relation("room_moves_to_room_idTorooms")
-  rooms                                     rooms?               @relation("roomsTorooms", fields: [connecting_room_id], references: [id], onUpdate: NoAction)
-  other_rooms                               rooms[]              @relation("roomsTorooms")
-  properties                                properties           @relation(fields: [property_id], references: [id], onUpdate: NoAction)
-  room_types                                room_types           @relation(fields: [room_type_id], references: [id], onUpdate: NoAction)
+  id                                               String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  property_id                                      String               @db.Uuid
+  room_type_id                                     String               @db.Uuid
+  code                                             String
+  name                                             String
+  floor                                            Int                  @default(0) @db.SmallInt
+  status                                           String               @default("ACTIVE")
+  connecting_room_id                               String?              @db.Uuid
+  bed_count                                        Int                  @default(1) @db.SmallInt
+  note                                             String?
+  created_at                                       DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at                                       DateTime             @default(now()) @db.Timestamptz(6)
+  housekeeping_tasks                               housekeeping_tasks[]
+  room_assignments                                 room_assignments[]
+  room_blocks                                      room_blocks[]
+  room_merges                                      room_merges[]
+  room_merges_room_merges_secondary_room_idTorooms room_merges[]        @relation("room_merges_secondary_room_idTorooms")
+  room_moves_room_moves_from_room_idTorooms        room_moves[]         @relation("room_moves_from_room_idTorooms")
+  room_moves_room_moves_to_room_idTorooms          room_moves[]         @relation("room_moves_to_room_idTorooms")
+  rooms                                            rooms?               @relation("roomsTorooms", fields: [connecting_room_id], references: [id], onUpdate: NoAction)
+  other_rooms                                      rooms[]              @relation("roomsTorooms")
+  properties                                       properties           @relation(fields: [property_id], references: [id], onUpdate: NoAction)
+  room_types                                       room_types           @relation(fields: [room_type_id], references: [id], onUpdate: NoAction)
 
   @@unique([property_id, code], map: "uq_rooms_property_code")
 }
@@ -955,40 +973,44 @@ model user_property_scopes {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model users {
-  id                                                  String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  username                                            String                   @unique
-  password_hash                                       String
-  full_name                                           String
-  role                                                String
-  phone                                               String?
-  is_active                                           Boolean                  @default(true)
-  failed_login_count                                  Int                      @default(0) @db.SmallInt
-  locked_until                                        DateTime?                @db.Timestamptz(6)
-  last_login_at                                       DateTime?                @db.Timestamptz(6)
-  created_at                                          DateTime                 @default(now()) @db.Timestamptz(6)
-  updated_at                                          DateTime                 @default(now()) @db.Timestamptz(6)
-  must_change_password                                Boolean                  @default(false)
-  password_changed_at                                 DateTime?                @db.Timestamptz(6)
-  audit_logs                                          audit_logs[]
-  auth_sessions                                       auth_sessions[]
-  booking_status_history                              booking_status_history[]
-  bookings                                            bookings[]
-  guest_notes                                         guest_notes[]
-  housekeeping_tasks                                  housekeeping_tasks[]
-  idempotency_keys                                    idempotency_keys[]
-  overbooking_cases                                   overbooking_cases[]
-  payments                                            payments[]
-  pin_grants                                          pin_grants[]
-  rate_calendars                                      rate_calendars[]
-  refund_approvals                                    refund_approvals[]
-  refund_requests_refund_requests_approved_byTousers  refund_requests[]        @relation("refund_requests_approved_byTousers")
-  refund_requests_refund_requests_requested_byTousers refund_requests[]        @relation("refund_requests_requested_byTousers")
-  room_blocks                                         room_blocks[]
-  room_merges                                         room_merges[]
-  room_moves                                          room_moves[]
-  system_settings                                     system_settings[]
-  user_pins                                           user_pins?
-  user_property_scopes                                user_property_scopes[]
+  id                                                               String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username                                                         String                   @unique
+  password_hash                                                    String
+  full_name                                                        String
+  role                                                             String
+  phone                                                            String?
+  is_active                                                        Boolean                  @default(true)
+  failed_login_count                                               Int                      @default(0) @db.SmallInt
+  locked_until                                                     DateTime?                @db.Timestamptz(6)
+  last_login_at                                                    DateTime?                @db.Timestamptz(6)
+  created_at                                                       DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at                                                       DateTime                 @default(now()) @db.Timestamptz(6)
+  must_change_password                                             Boolean                  @default(false)
+  password_changed_at                                              DateTime?                @db.Timestamptz(6)
+  audit_logs                                                       audit_logs[]
+  auth_sessions                                                    auth_sessions[]
+  booking_status_history                                           booking_status_history[]
+  bookings                                                         bookings[]
+  bookings_bookings_duplicate_suspected_byTousers                  bookings[]               @relation("bookings_duplicate_suspected_byTousers")
+  channel_sales_closures_channel_sales_closures_closed_byTousers   channel_sales_closures[] @relation("channel_sales_closures_closed_byTousers")
+  channel_sales_closures_channel_sales_closures_reopened_byTousers channel_sales_closures[] @relation("channel_sales_closures_reopened_byTousers")
+  guest_notes                                                      guest_notes[]
+  housekeeping_tasks                                               housekeeping_tasks[]
+  idempotency_keys                                                 idempotency_keys[]
+  operations                                                       operations[]
+  overbooking_cases                                                overbooking_cases[]
+  payments                                                         payments[]
+  pin_grants                                                       pin_grants[]
+  rate_calendars                                                   rate_calendars[]
+  refund_approvals                                                 refund_approvals[]
+  refund_requests_refund_requests_approved_byTousers               refund_requests[]        @relation("refund_requests_approved_byTousers")
+  refund_requests_refund_requests_requested_byTousers              refund_requests[]        @relation("refund_requests_requested_byTousers")
+  room_blocks                                                      room_blocks[]
+  room_merges                                                      room_merges[]
+  room_moves                                                       room_moves[]
+  system_settings                                                  system_settings[]
+  user_pins                                                        user_pins?
+  user_property_scopes                                             user_property_scopes[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -1090,4 +1112,99 @@ model user_pins {
   created_at   DateTime  @default(now()) @db.Timestamptz(6)
   updated_at   DateTime  @default(now()) @db.Timestamptz(6)
   users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model channel_cancel_tombstones {
+  channel_id            String    @db.Uuid
+  account_key           String
+  provider_booking_code String
+  provider_updated_at   DateTime  @db.Timestamptz(6)
+  cancelled_at          DateTime  @db.Timestamptz(6)
+  cancel_reason         String    @default("OTA_CANCELLATION")
+  booking_id            String?   @db.Uuid
+  created_at            DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime  @default(now()) @db.Timestamptz(6)
+  bookings              bookings? @relation(fields: [booking_id], references: [id], onUpdate: NoAction)
+  channels              channels  @relation(fields: [channel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([channel_id, account_key, provider_booking_code])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model channel_sync_watermarks {
+  channel_id      String   @db.Uuid
+  account_key     String
+  provider        String
+  watermark_at    DateTime @db.Timestamptz(6)
+  last_event_id   String?
+  last_success_at DateTime @default(now()) @db.Timestamptz(6)
+  version         BigInt   @default(1)
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+  channels        channels @relation(fields: [channel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([channel_id, account_key])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model operations {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind              String
+  status            String    @default("PENDING")
+  requested_by      String    @db.Uuid
+  property_scope    String[]  @default([]) @db.Uuid
+  payload_json      Json
+  result_json       Json?
+  result_ref        String?
+  result_path       String?
+  result_expires_at DateTime? @db.Timestamptz(6)
+  error_code        String?
+  error_message     String?
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime  @default(now()) @db.Timestamptz(6)
+  started_at        DateTime? @db.Timestamptz(6)
+  finished_at       DateTime? @db.Timestamptz(6)
+  users             users     @relation(fields: [requested_by], references: [id], onUpdate: NoAction)
+
+  @@index([requested_by, created_at(sort: Desc)], map: "idx_operations_requested_by")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model overbooking_scan_runs {
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  property_id     String     @db.Uuid
+  status          String     @default("RUNNING")
+  started_at      DateTime   @default(now()) @db.Timestamptz(6)
+  finished_at     DateTime?  @db.Timestamptz(6)
+  duration_ms     Int?
+  scanned_count   Int        @default(0)
+  case_count      Int        @default(0)
+  failure_code    String?
+  failure_message String?
+  version         BigInt     @default(1)
+  created_at      DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime   @default(now()) @db.Timestamptz(6)
+  properties      properties @relation(fields: [property_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model channel_sales_closures {
+  id                                              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  channel_id                                      String     @db.Uuid
+  room_type_id                                    String     @db.Uuid
+  date                                            DateTime   @db.Date
+  source                                          String
+  reason                                          String?
+  closed_by                                       String?    @db.Uuid
+  closed_at                                       DateTime   @default(now()) @db.Timestamptz(6)
+  reopened_at                                     DateTime?  @db.Timestamptz(6)
+  reopened_by                                     String?    @db.Uuid
+  version                                         BigInt     @default(1)
+  created_at                                      DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at                                      DateTime   @default(now()) @db.Timestamptz(6)
+  channels                                        channels   @relation(fields: [channel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_channel_sales_closures_closed_byTousers   users?     @relation("channel_sales_closures_closed_byTousers", fields: [closed_by], references: [id], onUpdate: NoAction)
+  users_channel_sales_closures_reopened_byTousers users?     @relation("channel_sales_closures_reopened_byTousers", fields: [reopened_by], references: [id], onUpdate: NoAction)
+  room_types                                      room_types @relation(fields: [room_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }

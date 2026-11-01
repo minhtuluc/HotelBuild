@@ -114,7 +114,12 @@ describe('HB121 AC6/7 schema versions (not endpoint or complete F6 acceptance)',
           ids[table],
         ])
       ).rows[0]!;
-      expect(row).toEqual({ ...original[table], version: '1' });
+      // 0009 adds a nullable resolution_source to resolved-case provenance; existing rows keep NULL.
+      expect(row).toEqual({
+        ...original[table],
+        version: '1',
+        ...(table === 'overbooking_cases' ? { resolution_source: null } : {}),
+      });
       const column = (
         await client().query(
           "SELECT data_type,is_nullable,column_default FROM information_schema.columns WHERE table_schema='public' AND table_name=$1 AND column_name='version'",
