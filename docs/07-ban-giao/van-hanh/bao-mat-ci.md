@@ -57,6 +57,20 @@ python3 -c 'import yaml; [yaml.safe_load(open(f)) for f in __import__("glob").gl
 node --check .github/workflows/security-audit-gate.mjs
 ```
 
+## Đứng sau reverse proxy — quyết định triển khai (01/11/2026)
+
+Hạn mức theo IP (TD-60) chỉ đúng khi API biết IP khách. Chốt:
+
+- API production **PHẢI** chạy sau **một luồng reverse proxy tin cậy** kết thúc TLS (nền tảng hosting do
+  HB-174 chọn). Không mở cổng API trực tiếp ra Internet.
+- `FastifyAdapter` đặt `trustProxy` theo **số hop tin cậy của nền tảng** (hoặc danh sách CIDR) đọc từ biến
+  môi trường, ví dụ `TRUST_PROXY_HOPS`/`TRUST_PROXY_CIDRS`; mặc định `false` ở dev/test. **Cấm** đặt
+  `trustProxy: true` (tin mọi `X-Forwarded-For`, cho phép giả IP và vượt hạn mức).
+- HB-175 (IaC) sở hữu việc bật cấu hình và ghi bằng chứng staging: gửi `X-Forwarded-For` giả từ ngoài,
+  xác nhận `request.ip` vẫn là IP kết nối thật; log/metric hạn mức dùng `request.ip` đó.
+- Trước khi HB-175 xong, coi TD-60 là "đã hiện thực, chưa nghiệm thu production" — không tuyên bố hạn mức
+  IP bảo vệ được API sau proxy.
+
 ## Bằng chứng cục bộ ngày 22/10/2026, nền `350f079` — chỉ cục bộ/tĩnh
 
 - 5 tệp `.github/workflows/*.yml` parse được bằng PyYAML 6.0.3; `node --check` và `eslint` trên script cổng đều mã 0.
@@ -68,8 +82,8 @@ node --check .github/workflows/security-audit-gate.mjs
 
 ## Chưa nghiệm thu
 
-- **GitHub Actions tắt ở cấp repo**: không có run hosted, không có kết quả trên tab Security. Cần chủ repo
-  bật Actions, bật code scanning/GHAS cho repo private và đặt check bắt buộc; thiếu thì giữ BLOCKED.
+- **GitHub Actions đã bật lại (31/10/2026)**, code scanning/GHAS hoạt động; PR #216 đã làm xanh audit +
+  Trivy. Repo không bật được branch protection (GitHub Free) nên vẫn dựa vào `pnpm pr:merge` làm hàng rào.
 - **CodeQL và Trivy chưa chạy cục bộ**: máy này không có `codeql`/`trivy`, Trivy cần CSDL tải từ mạng;
   phần đã kiểm chỉ là YAML + tham số. Kết quả quét thật phải đến từ runner.
 - **Còn 2 advisory waive có ngày** (`decode-uri-component`, `zod` 3 — TD-70) sau khi đã vá `node-forge`,

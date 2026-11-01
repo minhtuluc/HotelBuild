@@ -264,7 +264,7 @@ tier   = bậc có offsetHours LỚN NHẤT mà hoursBeforeCheckIn ≥ offsetHou
 | BR-CANCEL-11 | **Phí xử lý hoàn tiền:** mặc định 0 VND, cấu hình được qua `SystemSetting`. Nếu > 0, phí trừ vào tiền hoàn, không thu thêm khách. |
 | BR-CANCEL-12 | **Cam kết hoàn tiền:** xử lý trong 3 ngày làm việc, tối đa 7 ngày kể từ khi `RefundRequest` được duyệt. |
 | BR-CANCEL-13 | **Bất khả kháng** (thiên tai, dịch bệnh, cơ sở đóng cửa, lỗi hệ thống): được hoàn **100% `paidAmount`**, miễn phụ thu, miễn phí xử lý. Chỉ `MANAGER`+ được tạo, PHẢI có lý do ≥ 20 ký tự và đính kèm minh chứng (tuỳ chọn). Mọi ca bất khả kháng vào báo cáo riêng. |
-| BR-CANCEL-14 | **Huỷ do khách sạn (walk-out):** hoàn 100% + bồi thường theo BR-OVER-06. Khách từ chối phương án điều chuyển được xử lý như walk-out. |
+| BR-CANCEL-14 | **Huỷ do khách sạn (walk-out):** hoàn 100% theo BR-CANCEL-05 (làm tròn xuống 1.000, trừ `refundFee` theo BR-CANCEL-11; **chỉ** BR-CANCEL-13 miễn phí xử lý) + bồi thường theo BR-OVER-06. Khách từ chối phương án điều chuyển được xử lý như walk-out. |
 | BR-CANCEL-15 | **Hai cấp = lập và duyệt (maker–checker)**, không phải hai lượt duyệt nối tiếp MANAGER→OWNER. Với mọi mức tiền, người duyệt là MANAGER hoặc OWNER có phạm vi và **khác người tạo**; trên 5.000.000 VND bắt buộc hiển thị kiểm soát ngưỡng trên `netRefund`, không có ngoại lệ tự duyệt. Lưu người lập, approvedBy, decidedAt, số tiền và lý do trong AuditLog. Cấm chia cùng một sự kiện hoàn để né ngưỡng; xét tổng thực chi của sự kiện. ACCOUNTANT chỉ chi sau APPROVED; không tự có quyền duyệt. OWNER cũng không vượt qua maker–checker. |
 | BR-CANCEL-16 | Hoàn tiền **chỉ** được chi sau khi `RefundRequest` ở trạng thái `APPROVED`; mọi thay đổi trạng thái ghi `AuditLog` kèm lý do. |
 | BR-CANCEL-17 | Khóa booking và các Payment gốc khi lập/duyệt/chi hoàn. Tiền đã hoàn SUCCEEDED + tiền giữ cho các yêu cầu PENDING/APPROVED không vượt tiền thực thu đủ điều kiện; kiểm tra cả theo booking lẫn từng Payment gốc. REJECTED/CANCELLED giải phóng phần giữ; khi PAID chuyển phần giữ thành đã chi, không trừ hai lần. Không giảm số phải hoàn hợp lệ một cách im lặng nếu quỹ đang bị yêu cầu khác giữ; báo xung đột để đối soát. |
@@ -350,7 +350,7 @@ keepScore = điểm hạng khách + điểm thanh toán + điểm số đêm + �
 | Thành phần | Giá trị |
 |-----------|---------|
 | Hạng khách | PLATINUM 100 · GOLD 80 · SILVER 50 · MEMBER 20 · GUEST 0 |
-| Thanh toán | đã trả ≥ 100% tổng tiền: **20** · đã trả ≥ tiền cọc: **10** · chưa trả gì: **0** |
+| Thanh toán | Áp tuần tự: `paid = 0` → **0** · `paid ≥ total` (>0) → **20** · `paid > 0` và (`deposit = 0` hoặc `paid ≥ deposit`) → **10** · `0 < paid < deposit` → **0**. Tổng = 0 và đã trả dư > 0 tính **20** (không còn nợ) |
 | Số đêm | `min(số đêm, 14) × 2` |
 | Khách quay lại | ≥ 3 lần lưu trú trong 12 tháng: **15** |
 | Đã tới nơi | đã check-in, hoặc còn ≤ 6 giờ tới giờ nhận phòng: **10** |
@@ -365,7 +365,7 @@ keepScore = điểm hạng khách + điểm thanh toán + điểm số đêm + �
 | `MoveType` | Nghĩa nghiệp vụ | Điều kiện |
 |-----------|-----------------|-----------|
 | `MERGE_SHARE` | Ghép hai booking độc lập vào **cùng một phòng** (áp dụng cho phòng Dorm/nhiều giường) | Cả hai booking PHẢI đồng ý; cùng giới tính hoặc cùng nhóm đi cùng nhau; tổng số người ≤ sức chứa; giảm **20%** cho mỗi bên |
-| `MERGE_CONNECTING` | Ghép hai phòng **thông nhau** thành một đơn vị bán cho gia đình/nhóm | Hai phòng PHẢI có `connectingRoomId` trỏ vào nhau; giá = tổng giá hai phòng, giảm **10%** |
+| `MERGE_CONNECTING` | Ghép hai phòng **thông nhau** thành một đơn vị bán cho gia đình/nhóm **trong cùng một booking** (hai `BookingRoom`) | Hai phòng PHẢI có `connectingRoomId` trỏ vào nhau; không cần consent của bên thứ hai; giá = tổng giá hai phòng, giảm **10%** |
 | `SPLIT_ROOMS` | Tách một booking nhiều phòng sang phòng khác do quá tải/hỏng phòng | Áp dụng BR-OVER-08 (giữ giá gốc) |
 
 | Mã | Quy tắc |
