@@ -23,9 +23,10 @@ hạn mức trong một cửa sổ, đúng như hợp đồng đã công bố; t
 
 ## Căn cứ
 
-- Quy tắc nghiệp vụ: BR-AUTH-07 (chống dò token đặt lại mật khẩu); QĐ-03 T7 (luồng quên mật khẩu khách).
-- API: `POST /api/v1/guest-auth/password-reset/confirm` — `packages/contracts/openapi.json` đã liệt kê
-  `429` với `E_GEN_RATE_LIMITED` cho tuyến này, nhưng **mã chưa từng trả 429** (TD-60).
+- Quy tắc nghiệp vụ: **NFR-SEC-05** (giới hạn tần suất theo IP, vượt ngưỡng trả `429` kèm `Retry-After`);
+  QĐ-03 T7 (luồng quên mật khẩu khách). Không có BR riêng cho tuyến này.
+- API: `POST /api/v1/guest-auth/password-reset/confirm` (api.md §2.1) — `packages/contracts/openapi.json`
+  đã liệt kê `429` với `E_GEN_RATE_LIMITED` cho tuyến này, nhưng **mã chưa từng trả 429** (TD-60).
 - Mẫu sẵn có: `apps/api/src/modules/inv/availability/rate-limit.ts` (một `INCR` nguyên tử + `EXPIRE`, cửa sổ
   suy từ `Clock`), `modules/auth/login-attempts.ts`, `password-reset/attempts.ts` (cửa sổ trượt theo SĐT).
 - Màn hình: SCR-11 (quên mật khẩu khách) — nút "Đặt lại mật khẩu" phải hiển thị thông điệp chờ khi gặp 429.
