@@ -6,6 +6,19 @@ export type {
   ActiveOversellFailure,
 } from './planner/active-oversell.js';
 
+export { keepScore, rankRelocations } from './planner/keep-score.js';
+export type {
+  LoyaltyTier,
+  KeepScoreBookingStatus,
+  RelocationChannelCode,
+  KeepPriorityGroup,
+  KeepScoreFactors,
+  KeepScoreBreakdown,
+  KeepScoreFailure,
+  RelocationCandidate,
+  RelocationRank,
+} from './planner/keep-score.js';
+
 export { evaluateRoomMerge } from './merge/policy.js';
 export type {
   GuestGender,
