@@ -1,0 +1,10 @@
+# Trivy waiver — HB-183/NFR-SEC-06 (lead, 2026-11-01). Rà lại khi nâng Expo/expo-router.
+#
+# CVE-2026-118664 (decode-uri-component@0.2.2): chỉ qua query-string 7 → expo-router trong bundle
+# Android. Bản vá 0.5.1 (và cả 0.4.1) là ESM-only trong khi query-string 7 là CJS; nâng
+# query-string/expo-router là thay đổi major của chuỗi bundle nên chưa gộp vào PR hạ tầng này —
+# theo dõi TD-70. Trivy không có cơ chế waiver theo ngày như security-audit-gate nên ghi ở đây.
+CVE-2026-118664
+#
+# Các CVE node-forge/uuid cũ và next/markdown-it/vite/dompurify đã xử lý bằng override/nâng phiên
+# bản trong package.json — không cần waiver.

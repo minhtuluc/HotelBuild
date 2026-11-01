@@ -17,7 +17,7 @@
     "@pinehill/api-client": "workspace:*",
     "@pinehill/contracts": "workspace:*",
     "@pinehill/ui-web": "workspace:*",
-    "next": "^15.5.26",
+    "next": "^15.5.28",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "@pinehill/web-session": "workspace:*"
