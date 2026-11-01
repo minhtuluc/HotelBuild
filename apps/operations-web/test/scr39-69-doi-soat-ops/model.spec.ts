@@ -29,7 +29,7 @@ describe('HB-111 SCR-39 & SCR-69 pure model', () => {
     expect(canCloseReconciliation('verified', null, '', '2026-12-24')).toBe(false);
   });
 
-  it('builds reconciliation close payload and detects > 50,000 VND discrepancy', () => {
+  it('builds reconciliation close payload and shows the server-decided discrepancy warning', () => {
     expect(
       reconciliationRequestOf({
         propertyId: 'p1',
@@ -43,7 +43,8 @@ describe('HB-111 SCR-39 & SCR-69 pure model', () => {
       countedCash: 900_000,
       note: 'Lệch nhẹ',
     });
-    expect(hasDiscrepancyWarning({ difference: -50_000, managerNotified: false })).toBe(false);
+    // Ngưỡng nằm ở system_settings phía máy chủ: UI chỉ hiện cảnh báo khi server đã báo MANAGER.
+    expect(hasDiscrepancyWarning({ difference: -500_001, managerNotified: false })).toBe(false);
     expect(hasDiscrepancyWarning({ difference: -50_001, managerNotified: true })).toBe(true);
   });
 

@@ -4,7 +4,7 @@ import { makeTranslate } from '@pinehill/ui-web/messages';
 const messages = {
   reconcileTitle: 'Đối soát doanh thu và chốt quỹ cuối ngày',
   reconcileIntro:
-    'Chốt quỹ theo (người thu, ngày nghiệp vụ VN — BR-PAY-06). Lệch trên 50.000 ₫ tự động cảnh báo quản lý (BR-PAY-10).',
+    'Chốt quỹ theo (người thu, ngày nghiệp vụ VN — BR-PAY-06). Chênh lệch vượt ngưỡng cấu hình tự động cảnh báo quản lý (BR-PAY-10).',
   property: 'Cơ sở',
   businessDate: 'Ngày nghiệp vụ (VN)',
   reload: 'Tải dữ liệu',
@@ -27,7 +27,7 @@ const messages = {
   countedCashResult: 'Tiền mặt thực đếm: {amount}',
   difference: 'Chênh lệch (thực đếm − kỳ vọng): {amount}',
   discrepancyAlert:
-    'Cảnh báo lệch quỹ vượt ngưỡng 50.000 ₫! Hệ thống đã ghi nhận cảnh báo gửi quản lý cơ sở (BR-PAY-10).',
+    'Cảnh báo chênh lệch quỹ vượt ngưỡng! Hệ thống đã ghi nhận cảnh báo gửi quản lý cơ sở (BR-PAY-10).',
   auditRef: 'Mã nhật ký kiểm toán: {id}',
   earlyTitle: 'Xử lý trả phòng sớm',
   earlyIntro:

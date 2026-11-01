@@ -194,7 +194,7 @@ async function stubReconcileAndEarlyCheckout(page: Page): Promise<{
   return { reconcileBodies, checkoutBodies };
 }
 
-test('SCR-39 — chốt quỹ theo (người thu, ngày VN), đòi PIN và cảnh báo lệch > 50.000 ₫ (AC1)', async ({
+test('SCR-39 — chốt quỹ theo (người thu, ngày VN), đòi PIN và cảnh báo khi máy chủ báo lệch (AC1)', async ({
   page,
 }) => {
   const spy = await stubReconcileAndEarlyCheckout(page);
@@ -212,7 +212,9 @@ test('SCR-39 — chốt quỹ theo (người thu, ngày VN), đòi PIN và cản
   await page.getByTestId('reconciliation-submit').click();
 
   await expect(page.getByTestId('reconciliation-result')).toBeVisible();
-  await expect(page.getByTestId('reconciliation-discrepancy-warning')).toContainText('50.000 ₫');
+  await expect(page.getByTestId('reconciliation-discrepancy-warning')).toContainText(
+    'vượt ngưỡng',
+  );
   expect(spy.reconcileBodies).toHaveLength(1);
   expect(spy.reconcileBodies[0]).toContain('"countedCash":1900000');
   expect(spy.reconcileBodies[0]).toContain('"pinToken":"pin-token-hb111-1234567890"');

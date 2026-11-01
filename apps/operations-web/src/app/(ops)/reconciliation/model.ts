@@ -59,11 +59,14 @@ export function reconciliationRequestOf(input: {
   };
 }
 
-/** Cảnh báo chênh lệch quỹ vượt ngưỡng hoặc đã báo quản lý (BR-PAY-10, UI-17). */
+/**
+ * Cảnh báo chênh lệch quỹ vượt ngưỡng (BR-PAY-10, UI-17). Ngưỡng là tham số `system_settings` phía
+ * máy chủ nên màn hình **không** tự so số: máy chủ đã quyết định qua `managerNotified`.
+ */
 export function hasDiscrepancyWarning(
   result: Pick<ReconciliationCloseResponse, 'difference' | 'managerNotified'>,
 ): boolean {
-  return result.managerNotified || Math.abs(result.difference) > 50_000;
+  return result.managerNotified;
 }
 
 export function earlyCheckoutPreviewRequestOf(
