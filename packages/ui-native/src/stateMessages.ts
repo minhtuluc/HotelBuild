@@ -40,6 +40,22 @@ export const stateMessages = {
   'error.boundary.title': 'Màn hình gặp lỗi không mong đợi',
   'error.accountLocked': 'Tài khoản đang tạm khoá. Thử lại sau {minutes} phút.',
   'error.rateLimited': 'Bạn đã gửi quá nhiều yêu cầu. Thử lại sau {minutes} phút.',
+  'error.channelSignature':
+    'Chữ ký webhook kênh bán không hợp lệ hoặc timestamp ngoài cửa sổ cho phép.',
+  'error.channelReplay':
+    'Mã sự kiện OTA đã dùng với nội dung khác. Cách ly và đối soát trước khi xử lý tiếp.',
+  'error.channelSyncFailed': 'Đồng bộ lên kênh bán thất bại. Hệ thống sẽ tự thử lại.',
+  'error.overNoConsent': 'Cần đồng thuận của cả hai khách trước khi ghép phòng.',
+  'error.overMergeGender': 'Chưa được quản lý duyệt để ghép khách khác giới tính.',
+  'error.overNoPlan': 'Không còn phương án điều chuyển khả dụng; chuyển sang walk-out.',
+  'error.overMoveNotAllowed':
+    'Khách đã nhận phòng: cần căn cứ bất khả kháng và quản lý duyệt mới điều chuyển được.',
+  'error.overApprovalRequired': 'Cần quản lý duyệt chi phí điều chuyển trước khi thực thi.',
+  'error.overCrossCity': 'Khách chưa đồng ý bằng văn bản việc sang cơ sở khác thành phố.',
+  'error.overCaseDeadline':
+    'Ca quá tải đã quá hạn T−24h và đã leo thang. Vẫn xử lý sự cố tại chỗ, không tự đóng ca.',
+  'error.compensationUnknown':
+    'Chưa xác định kết quả chi bồi thường. Không chi lần mới; tra theo mã {reference}.',
   'error.boundary.body':
     'Không hiển thị chi tiết kỹ thuật. Thử lại; nếu vẫn lỗi, gửi mã tham chiếu cho hỗ trợ.',
   'error.boundary.retry': 'Thử lại',
@@ -67,6 +83,33 @@ export function waitMessage(code: string, retryAfterSeconds: number): string | u
   const key = WAIT_MESSAGES[code];
   if (key === undefined) return undefined;
   return nativeTranslate(key, { minutes: Math.max(1, Math.ceil(retryAfterSeconds / 60)) });
+}
+
+/** Câu chữ F6 (CHAN + OVER) theo mã api.md §4.2 — cùng khoá với bản web. */
+const F6_MESSAGE_KEYS: Readonly<Record<string, StateMessageKey>> = {
+  E_CHAN_SIGNATURE_INVALID: 'error.channelSignature',
+  E_CHAN_REPLAY_DETECTED: 'error.channelReplay',
+  E_CHAN_SYNC_FAILED: 'error.channelSyncFailed',
+  E_OVER_NO_CONSENT: 'error.overNoConsent',
+  E_OVER_MERGE_GENDER: 'error.overMergeGender',
+  E_OVER_NO_PLAN_AVAILABLE: 'error.overNoPlan',
+  E_OVER_MOVE_NOT_ALLOWED: 'error.overMoveNotAllowed',
+  E_OVER_APPROVAL_REQUIRED: 'error.overApprovalRequired',
+  E_OVER_CROSS_CITY_NO_CONSENT: 'error.overCrossCity',
+  E_OVER_CASE_DEADLINE_PASSED: 'error.overCaseDeadline',
+};
+
+export function f6ErrorMessage(
+  code: string,
+  vars?: Readonly<Record<string, string | number>>,
+): string | undefined {
+  const key = F6_MESSAGE_KEYS[code];
+  return key === undefined ? undefined : nativeTranslate(key, vars);
+}
+
+/** Chi bồi thường timeout chưa rõ kết quả: tra theo `operationId`/`paymentId`, không tạo lần chi mới. */
+export function compensationUnknownMessage(reference: string): string {
+  return nativeTranslate('error.compensationUnknown', { reference });
 }
 
 /** Trạng thái hàng đợi ngoại tuyến là trạng thái UI cục bộ (§8.3), không phải trạng thái nghiệp vụ. */

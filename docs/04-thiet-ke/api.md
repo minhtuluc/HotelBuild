@@ -277,8 +277,14 @@ theo `tiers[i].hoursBeforeCheckIn/refundPercent/chargeFirstNight` chỉ ra dòng
 |--------|-----------|-------|-------------------|---------------|----|----|
 | POST | `/api/v1/channels/{channelId}/sync` | Đẩy tồn & giá lên một kênh (202) | MANAGER | `scope`, `from`, `to` | UC-CHAN-02 | BR-CHAN-02,06 |
 | PUT | `/api/v1/channels/{channelId}/mappings` | Ánh xạ loại phòng ↔ mã phòng OTA | OWNER | `roomTypeId`, `providerRoomTypeCode`, `allotmentPct` | UC-CHAN-01 | BR-CHAN-01,08 |
-| POST | `/api/v1/channels/{channelId}/sales-closure` | Đóng bán loại phòng theo ngày trên OTA | MANAGER | `roomTypeId`, `from`, `to`, `reason` | UC-CHAN-01 | BR-CHAN-05 |
+| POST | `/api/v1/channels/{channelId}/sales-closure` | Đóng bán loại phòng theo ngày trên OTA; `closed` mặc định `true` (HB-120 AC14) | MANAGER | `roomTypeId`, `from`, `to`, `reason`, `closed?` | UC-CHAN-01 | BR-CHAN-05 |
 | GET | `/api/v1/channels/{channelId}/ota-bookings` | Booking nhận từ OTA kèm trạng thái xử lý | MANAGER | `from`, `to`, `status`, `q` | UC-CHAN-03 | BR-CHAN-03,04 |
+| GET | `/api/v1/channels/{channelId}/sync-status` | Trạng thái đồng bộ, counter lỗi và lịch sử; success xác minh phục hồi `OK`/0 nhưng giữ lịch sử (HB-120 AC14) | MANAGER | — | UC-CHAN-02 | BR-CHAN-02,07 |
+| GET | `/api/v1/channels/{channelId}/outbox-deliveries` | Giao sự kiện ra kênh theo consumer; **che** payload/credentials (HB-120 AC11) | MANAGER | `status`, `consumerKey`, phân trang | UC-CHAN-02 | BR-CHAN-06,07 |
+| POST | `/api/v1/channels/{channelId}/outbox-deliveries/{deliveryId}/retry` | Gửi lại một delivery, **giữ** `eventId` + `consumerKey`; trả tác vụ 202 + `Location` (HB-120 AC11) | MANAGER | — (không body) | UC-CHAN-02 | BR-CHAN-06,07 |
+| POST | `/api/v1/channels/{channelId}/ota-bookings/{bookingId}/duplicate-flag` | Đánh dấu nghi trùng để soát; nhận `flagged`, `reason` + `If-Match`; **không** huỷ booking hay sửa tiền (HB-120 AC11) | MANAGER | `flagged`, `reason` | UC-CHAN-03 | BR-CHAN-03,04 |
+
+`GET /api/v1/channels` và `PATCH /api/v1/channels/{channelId}` đã phát hành ở F3 (§2.4); F6 tái sử dụng, không tạo DTO khác ngữ nghĩa. Lệnh ghi CHAN nhận `Idempotency-Key`; lệnh sửa đối tượng đã có version (`mappings`, `duplicate-flag`) bắt buộc `If-Match` và trả `ETag` (thiếu → 428, lệch → 412, key dùng lại khác payload → 409). Retry không có body nên không thể đổi `eventId`/`consumerKey`.
 
 ### 2.8. OVER — Quá tải & điều chuyển (5 UC)
 
@@ -286,15 +292,23 @@ theo `tiers[i].hoursBeforeCheckIn/refundPercent/chargeFirstNight` chỉ ra dòng
 |--------|-----------|-------|-------------------|---------------|----|----|
 | GET | `/api/v1/overbooking-cases` | **Danh sách ca quá tải** — §3.9 | MANAGER | `propertyId`, `status`, `dateFrom`, `dateTo`, `roomTypeId`, `overdueOnly` | UC-OVER-01 | BR-OVER-03,04,05 |
 | GET | `/api/v1/overbooking-cases/{caseId}` | Chi tiết ca quá tải + ứng viên điều chuyển đã xếp hạng | MANAGER | `includeCandidates` | UC-OVER-01 | BR-OVER-11,12 |
-| POST | `/api/v1/overbooking-cases/{caseId}/relocation-plan` | Tính thang xử lý 4 bậc và thứ tự `keepScore` | MANAGER | `strategy` (`AUTO`/`MANUAL`) | UC-OVER-02 | BR-OVER-06,11,12 |
-| POST | `/api/v1/overbooking-cases/{caseId}/resolve` | Đóng ca quá tải sau khi xử lý xong | MANAGER | `resolutionNote` | UC-OVER-01 | BR-OVER-04 |
-| POST | `/api/v1/room-moves` | **Thực hiện điều chuyển phòng** — §3.10 | FRONT_DESK | `overbookingCaseId`, `bookingId`, `bookingRoomId`, `moveType`, `toRoomId`, `reason`, `compensationAmount`, `transportCost`, `consent` | UC-OVER-02, UC-OVER-04 | BR-OVER-06…10, BR-BOOK-11 |
-| POST | `/api/v1/room-moves/{roomMoveId}/approve` | Duyệt điều chuyển và chi phí bồi thường | MANAGER | `compensationAmount`, `transportCost`, `note`, `pinToken` 🔒 | UC-OVER-02, UC-OVER-05 | BR-OVER-06,07 |
-| POST | `/api/v1/room-moves/{roomMoveId}/execute` | Giải phóng phòng cũ, gán phòng mới, gửi thông báo | FRONT_DESK | `pinToken` 🔒 | UC-OVER-02 | BR-OVER-08,10, BR-BOOK-11 |
-| POST | `/api/v1/room-merges` | Tạo phương án ghép phòng (`MERGE_SHARE`/`MERGE_CONNECTING`) | FRONT_DESK | `primaryBookingId`, `secondaryBookingId`, `roomId`, `discountPct` | UC-OVER-03 | BR-OVER-13,14,15 |
-| POST | `/api/v1/room-merges/{roomMergeId}/consent` | Ghi nhận đồng thuận của từng bên | FRONT_DESK | `side` (`PRIMARY`/`SECONDARY`), `consented`, `evidenceUrl` | UC-OVER-03 | BR-OVER-13 |
-| POST | `/api/v1/room-merges/{roomMergeId}/approve` | Duyệt ghép phòng (bắt buộc khi khác giới tính) | MANAGER | `reason` | UC-OVER-03 | BR-OVER-14 |
-| POST | `/api/v1/room-merges/{roomMergeId}/execute` | Kiểm tra lại consent, sức chứa, version và gán tất cả đơn vị trong một TX | FRONT_DESK | — | UC-OVER-03 | BR-OVER-13,14,15 |
+| POST | `/api/v1/overbooking-cases/{caseId}/relocation-plan` | Tính thang xử lý **4 bậc** và thứ tự `keepScore`; trả phương án `PROPOSED`, **chưa gán phòng** | MANAGER | `strategy` (`AUTO`/`MANUAL`) | UC-OVER-02 | BR-OVER-06,11,12 |
+| POST | `/api/v1/overbooking-cases/{caseId}/resolve` | Đóng ca quá tải sau khi xử lý xong; ca `ESCALATED`/quá hạn vẫn đóng được (BR-OVER-16) | MANAGER | `resolutionNote` | UC-OVER-01 | BR-OVER-04 |
+| POST | `/api/v1/room-moves` | **Lập phương án** điều chuyển phòng (`PROPOSED`, `priceLocked=true`); không đổi assignment — §3.10 | FRONT_DESK | `overbookingCaseId`, `bookingId`, `bookingRoomId`, `moveType`, `toRoomId`, `reason`, `compensationAmount`, `transportCost`, `consent` | UC-OVER-02, UC-OVER-04 | BR-OVER-06…10, BR-BOOK-11 |
+| GET | `/api/v1/room-moves/{roomMoveId}` | Đọc phương án để bàn giao/đối soát: `ETag`, `allowedActions`, chứng từ **đã che**; `?idempotencyKey=` tra ý định ghi (HB-120 AC12) | FRONT_DESK, MANAGER, OWNER | `idempotencyKey` | UC-OVER-02 | BR-OVER-08,10 |
+| POST | `/api/v1/room-moves/{roomMoveId}/approve` | Duyệt điều chuyển và chi phí bồi thường; 🔒 PIN, `If-Match` | MANAGER | `compensationAmount`, `transportCost`, `note`, `pinToken` 🔒 | UC-OVER-02, UC-OVER-05 | BR-OVER-06,07 |
+| POST | `/api/v1/room-moves/{roomMoveId}/execute` | Giải phóng phòng cũ, gán phòng mới, gửi thông báo; 🔒 PIN, `If-Match` | FRONT_DESK | `pinToken` 🔒 | UC-OVER-02 | BR-OVER-08,10, BR-BOOK-11 |
+| POST | `/api/v1/room-moves/{roomMoveId}/compensation-payments` | Chi **bồi thường** theo hợp đồng riêng F6: số tiền từ `compensationAmount` đã duyệt, client **không** khai `amount`; trả `state` tách `PENDING`/`UNKNOWN` khỏi `SUCCEEDED` + `id`/`operationId` bền (HB-120 AC13, F6-D06) | ACCOUNTANT | `method` (`CASH`/`BANK_TRANSFER`), `bankReference?`, `evidenceRefs[]`, `note`, `pinToken` 🔒 | UC-OVER-05 | BR-OVER-06, BR-PAY-02,09 |
+| GET | `/api/v1/room-moves/{roomMoveId}/compensation-payments` | Đọc chứng từ/trạng thái khoản bồi thường và `approvedAmount` theo projection nhiệm vụ; MANAGER/OWNER **không** được chi vì có quyền đọc (HB-120 AC13) | ACCOUNTANT, MANAGER, OWNER | — | UC-OVER-05 | BR-OVER-06 |
+| POST | `/api/v1/room-merges` | Tạo phương án ghép phòng. `MERGE_SHARE`: `primaryBookingId`/`secondaryBookingId`/`roomId`. `MERGE_CONNECTING`: **một** booking với `bookingId`/`roomIdA`/`roomIdB`, **không** `secondaryBookingId`, **không** consent (F6-D01) | FRONT_DESK | `moveType`, `discountPct?` + bộ trường theo loại ghép | UC-OVER-03 | BR-OVER-13,14,15 |
+| GET | `/api/v1/room-merges/{roomMergeId}` | Đọc phương án ghép: `ETag`, `allowedActions`, chứng từ đã che; `?idempotencyKey=` tra ý định ghi (HB-120 AC12) | FRONT_DESK, MANAGER, OWNER | `idempotencyKey` | UC-OVER-03 | BR-OVER-13…15 |
+| POST | `/api/v1/room-merges/{roomMergeId}/consent` | Ghi nhận đồng thuận của từng bên — **chỉ** `MERGE_SHARE` (D01); `If-Match` | FRONT_DESK | `side` (`PRIMARY`/`SECONDARY`), `consented`, `evidenceUrl` | UC-OVER-03 | BR-OVER-13 |
+| POST | `/api/v1/room-merges/{roomMergeId}/approve` | Duyệt ghép phòng (bắt buộc khi khác giới/`UNSPECIFIED`); `If-Match` | MANAGER | `reason` | UC-OVER-03 | BR-OVER-14 |
+| POST | `/api/v1/room-merges/{roomMergeId}/execute` | Kiểm tra lại consent, sức chứa, version và gán tất cả đơn vị trong một TX; `If-Match` | FRONT_DESK | — | UC-OVER-03 | BR-OVER-13,14,15 |
+| GET | `/api/v1/bookings/{bookingId}/relocation-options` | Phương án cho **đúng** booking này; không lộ bảng xếp hạng/`keepScore`/PII booking khác (HB-120 AC12) | FRONT_DESK | `overbookingCaseId`, `idempotencyKey` | UC-OVER-02 | BR-OVER-11,12 |
+| GET | `/api/v1/overbooking-alerts` | Cảnh báo quá tải cho lễ tân: chỉ projection booking cần xử lý, ngày và liên kết được phép; API case/`keepScore` toàn bộ vẫn MANAGER/OWNER (HB-120 AC12) | FRONT_DESK | `propertyId`, `date`, `overdueOnly` | UC-OVER-01 | BR-OVER-04,12 |
+
+Lệnh OVER sửa đối tượng đã tồn tại (`relocation-plan`, `resolve`, `approve`, `execute`, `consent`, `compensation-payments`) nhận `If-Match` + trả `ETag`; thiếu → 428, lệch → 412, key dùng lại khác payload → 409. Lệnh tạo mới (`room-moves`, `room-merges`) **không** bắt `If-Match`. `DELETE`/`PATCH` trên `/room-moves` và `/room-merges` **không tồn tại**: `PriceSnapshot` bất biến (§7.1), đổi ý định thì tạo lệnh mới. Không có route sửa `priceLocked`/`approvedBy`/`keepScore`/`oversold`.
 
 ### 2.9. FO — Tiền sảnh & buồng phòng (4 UC)
 
@@ -684,9 +698,13 @@ Response 200:
       ]
     }
   ],
-  "meta": { "limit": 20, "nextCursor": null, "hasMore": false, "overdueCount": 1 }
+  "meta": { "limit": 20, "nextCursor": null, "hasMore": false, "overdueCount": 1,
+    "scan": { "scanStatus": "OK", "lastSuccessfulScanAt": "2026-12-01T01:00:00Z",
+              "nextScanAt": "2026-12-01T02:00:00Z", "scannedThrough": "2027-01-01" } }
 }
 ```
+
+- `meta.scan` (HB-120 AC14) cho UI phân biệt "rỗng thật" với "chưa quét/scan lỗi": `scanStatus ∈ {OK, FAILED, UNKNOWN}`; `lastSuccessfulScanAt = null` + `UNKNOWN` nghĩa là chưa từng quét thành công. Không suy từ `data.length = 0`.
 
 - Job quét chạy theo `job.overbooking.scanIntervalMinutes`, nhìn trước 30 ngày, gộp trùng theo `(propertyId, date, roomTypeId)` (BR-OVER-05, BR-SYS-02).
 - `resolveDeadline = T−24h`; quá hạn → `overdue = true`, leo thang `OWNER` và hiện trên bảng điều khiển (BR-OVER-04, NFR-OBS-04). `status` dùng enum `OverbookingCaseStatus = OPEN | PROPOSED | RESOLVED | ESCALATED`.
@@ -724,8 +742,9 @@ Response 201:
 - Bậc 3 (khác cơ sở) **hiện không khả dụng** vì ba cơ sở cách nhau 160–300 km; nếu tương lai dùng cơ sở khác thì giới hạn bán kính, hỗ trợ đưa đón theo `overbooking.transportSupportCap`, và khác thành phố cần khách đồng ý bằng văn bản **và** `MANAGER`+ duyệt → `409 E_OVER_CROSS_CITY_NO_CONSENT` (BR-OVER-06,07). Bậc 4 `WALK_OUT`: hoàn 100% `paidAmount` + bồi thường 1 × giá đêm đầu theo giá gốc, kèm chứng từ `walkOutDocNo`, `guestSignatureRef`, `staffSignatureRef` (BR-OVER-06, BR-CANCEL-14).
 - Chi phí bồi thường/đưa đón phải được `MANAGER`+ duyệt trước khi chi → `PROPOSED` (`APPROVED` sau khi duyệt, `EXECUTED` sau khi thực thi) cho tới `POST /room-moves/{id}/approve` (BR-OVER-06). Khách `CHECKED_IN` **KHÔNG ĐƯỢC** điều chuyển, trừ bất khả kháng và phải `MANAGER`+ duyệt → `409 E_OVER_MOVE_NOT_ALLOWED` (BR-OVER-09).
 - Thực thi gửi thông báo cho khách trong thời hạn BR-OVER-10 và ghi `AuditLog`. Cạn bậc 1–3 → `409 E_OVER_NO_PLAN_AVAILABLE`.
-- Ghép phòng (`MERGE_SHARE`/`MERGE_CONNECTING`): cần **cả hai** bên đồng thuận **và** `MANAGER`+ duyệt; cùng giới tính theo `Guest.gender`, giá trị `UNSPECIFIED` coi như khác giới; thiếu đồng thuận → `409 E_OVER_NO_CONSENT`, đủ đồng thuận nhưng khác giới chưa duyệt → `409 E_OVER_MERGE_GENDER` (BR-OVER-13,14). Chiết khấu ghép phòng ghi vào `RoomMerge.discountAmount`, tổng hợp vào chi phí xử lý quá tải cho báo cáo UC-REP-04 (BR-OVER-15).
-- Mã lỗi: `403 E_OVER_APPROVAL_REQUIRED`, `409 E_OVER_CASE_DEADLINE_PASSED`, `401 E_AUTH_PIN_REQUIRED`.
+- Ghép phòng: `MERGE_SHARE` vẫn là **hai booking độc lập**, cần `consentPrimary` **và** `consentSecondary`; cùng giới tính theo `Guest.gender`, `UNSPECIFIED` coi như khác giới; thiếu đồng thuận → `409 E_OVER_NO_CONSENT`, đủ đồng thuận nhưng khác giới chưa duyệt → `409 E_OVER_MERGE_GENDER` (BR-OVER-13,14). `MERGE_CONNECTING` là **một** booking với hai `BookingRoom` ở hai phòng thông nhau: body chỉ `bookingId` + `roomIdA` + `roomIdB`, **không** `secondaryBookingId`, **không** consent bên thứ hai (F6-D01). Chiết khấu ghép phòng ghi vào `RoomMerge.discountAmount` (báo cáo UC-REP-04), không sửa `PriceSnapshot`/doanh thu (BR-OVER-15).
+- Chi bồi thường đi qua **route riêng** `POST /room-moves/{roomMoveId}/compensation-payments` (ACCOUNTANT + PIN + `If-Match`); số tiền bằng `compensationAmount` đã được `MANAGER`/`OWNER` duyệt, client **không** khai `amount`. **Không** dùng `/refund-requests/{refundRequestId}/pay` cho `COMPENSATION`; trạng thái `PENDING`/`UNKNOWN` trả `id` + `operationId` bền để tra lại, không tạo lần chi mới (F6-D06).
+- Mã lỗi: `403 E_OVER_APPROVAL_REQUIRED`, `401 E_AUTH_PIN_REQUIRED`, `409 E_OVER_MOVE_NOT_ALLOWED`, `409 E_OVER_NO_PLAN_AVAILABLE`, `409 E_INV_ROOM_TAKEN`. Quá hạn **KHÔNG** cấm execute: ca `ESCALATED`/quá hạn vẫn xử lý sự cố tại chỗ (BR-OVER-16); `409 E_OVER_CASE_DEADLINE_PASSED` chỉ dùng cho lệnh cần deadline của ca, không dùng để chặn mọi lệnh thực thi.
 
 ## 4. Mô hình lỗi thống nhất
 
@@ -852,7 +871,7 @@ Lỗi 5xx **PHẢI** có `traceId` và được ghi log JSON cùng mã đó, **k
 | Thử lại | Inbox xử lý lại có backoff, cạn lượt vào dead letter để vận hành xử lý. Đồng bộ **ra** dùng Outbox; 3 lỗi liên tiếp cảnh báo và DEGRADED theo BR-CHAN-07; 5 lần thử vận chuyển thất bại đưa sự kiện ra dead letter, không mất payload | BR-CHAN-07 |
 | Bán vượt | Tồn **chủ động đẩy ra** không vượt quota; booking OTA đã cam kết vẫn tiếp nhận theo BR-CHAN-03, used thực tế có thể vượt quota và phải cảnh báo | BR-CHAN-05,08 |
 
-HMAC và `X-Channel-Event-Id` ở bảng này là **hợp đồng simulator Pine Hill**, không tuyên bố là API thật của Booking.com/Agoda/Airbnb. Khi có hợp đồng đối tác, adapter ánh xạ sang sự kiện chuẩn và có contract test riêng. Khoá tự nhiên bao gồm tài khoản đối tác/cơ sở ngoài nếu mã booking không duy nhất toàn kênh. Sự kiện khác ID có cùng booking vẫn dùng UNIQUE nghiệp vụ; timestamp bằng nhau nhưng nội dung khác thì cách ly/đối soát, không đoán thứ tự. Huỷ đến trước tạo phải lưu tombstone để create cũ không hồi sinh booking.
+HMAC và `X-Channel-Event-Id` ở bảng này là **hợp đồng simulator Pine Hill**, không tuyên bố là API thật của Booking.com/Agoda/Airbnb. ACK của simulator dùng body `{ "duplicate": boolean, "eventId": string }`: `202` khi đã ghi Inbox bền (`duplicate = false`), `200` khi trùng cùng payload hash (`duplicate = true`, không xử lý lại); cùng `eventId` khác hash → `409 E_CHAN_REPLAY_DETECTED`, chữ ký/timestamp ngoài ±300 giây → `401 E_CHAN_SIGNATURE_INVALID` (HB-120 AC8). Khi có hợp đồng đối tác, adapter ánh xạ sang sự kiện chuẩn và có contract test riêng. Khoá tự nhiên bao gồm tài khoản đối tác/cơ sở ngoài nếu mã booking không duy nhất toàn kênh. Sự kiện khác ID có cùng booking vẫn dùng UNIQUE nghiệp vụ; timestamp bằng nhau nhưng nội dung khác thì cách ly/đối soát, không đoán thứ tự. Huỷ đến trước tạo phải lưu tombstone để create cũ không hồi sinh booking.
 
 ### 5.2. Nhóm B — Cổng thanh toán gọi về
 
@@ -965,6 +984,8 @@ Bảng này triển khai BR-RBAC-03, có hiệu lực cho các nhãn tóm tắt 
 | Người dùng/quyền | OWNER, SYSADMIN | Không tự cấp quyền nghiệp vụ, có audit, chống loại bỏ quản trị cuối; thay quyền/vô hiệu hoá thu hồi phiên |
 | Backup/restore/tham số kỹ thuật/health chi tiết | SYSADMIN | Tách credential hạ tầng; restore chỉ môi trường diễn tập; không gồm quyền thanh toán |
 | Audit | MANAGER, OWNER; SYSADMIN projection kỹ thuật | Lọc scope và che PII, không trả token/bí mật/payload thanh toán |
+
+**Ánh xạ F6 (HB-120).** Hợp đồng công bố `x-permissions` cho từng operation và **fail closed** khi thiếu (module không nạp được). CHAN: `POST /channels/{id}/sync`, `GET .../sync-status`, `GET .../outbox-deliveries`, `POST .../retry`, `GET .../ota-bookings`, `POST .../duplicate-flag`, `POST .../sales-closure` → MANAGER/OWNER; `PUT /channels/{id}/mappings` → OWNER; webhook `/integrations/ota/{channel}/bookings` → principal riêng `OTA_SIMULATOR_SERVICE` (xác thực bằng chữ ký, không bearer). OVER: case list/detail/`relocation-plan`/`resolve` và duyệt move/merge → MANAGER/OWNER; tạo + execute move/merge và consent → FRONT_DESK; đọc move/merge → FRONT_DESK + MANAGER/OWNER; `GET /bookings/{id}/relocation-options` và `GET /overbooking-alerts` → FRONT_DESK với projection tối giản; `POST /room-moves/{id}/compensation-payments` → **chỉ** ACCOUNTANT, `GET` cùng route → ACCOUNTANT + MANAGER/OWNER. SYSADMIN không mặc nhiên có quyền nghiệp vụ F6; quyền đọc không cấp quyền chi.
 
 Phiên refresh có token hash, family, expiry, revokedAt; rotation reuse thu hồi family. Web back-office phải cưỡng chế **idle timeout** ở máy chủ theo BR-RBAC-05, không chỉ dùng JWT có tuổi thọ cố định. Dùng cookie HttpOnly/Secure và bảo vệ CSRF nếu xác thực cookie; Android dùng secure storage. PIN có rate limit độc lập; token PIN một lần không được replay sang booking/amount khác, nhưng retry idempotent thành công được trả kết quả cũ sau kiểm quyền.
 

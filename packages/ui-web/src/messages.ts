@@ -39,6 +39,22 @@ export const viCatalog = {
   'error.boundary.title': 'Màn hình gặp lỗi không mong đợi',
   'error.accountLocked': 'Tài khoản đang tạm khoá. Thử lại sau {minutes} phút.',
   'error.rateLimited': 'Bạn đã gửi quá nhiều yêu cầu. Thử lại sau {minutes} phút.',
+  'error.channelSignature':
+    'Chữ ký webhook kênh bán không hợp lệ hoặc timestamp ngoài cửa sổ cho phép.',
+  'error.channelReplay':
+    'Mã sự kiện OTA đã dùng với nội dung khác. Cách ly và đối soát trước khi xử lý tiếp.',
+  'error.channelSyncFailed': 'Đồng bộ lên kênh bán thất bại. Hệ thống sẽ tự thử lại.',
+  'error.overNoConsent': 'Cần đồng thuận của cả hai khách trước khi ghép phòng.',
+  'error.overMergeGender': 'Chưa được quản lý duyệt để ghép khách khác giới tính.',
+  'error.overNoPlan': 'Không còn phương án điều chuyển khả dụng; chuyển sang walk-out.',
+  'error.overMoveNotAllowed':
+    'Khách đã nhận phòng: cần căn cứ bất khả kháng và quản lý duyệt mới điều chuyển được.',
+  'error.overApprovalRequired': 'Cần quản lý duyệt chi phí điều chuyển trước khi thực thi.',
+  'error.overCrossCity': 'Khách chưa đồng ý bằng văn bản việc sang cơ sở khác thành phố.',
+  'error.overCaseDeadline':
+    'Ca quá tải đã quá hạn T−24h và đã leo thang. Vẫn xử lý sự cố tại chỗ, không tự đóng ca.',
+  'error.compensationUnknown':
+    'Chưa xác định kết quả chi bồi thường. Không chi lần mới; tra theo mã {reference}.',
   'error.boundary.body':
     'Không hiển thị chi tiết kỹ thuật. Thử lại; nếu vẫn lỗi, gửi mã tham chiếu cho hỗ trợ.',
   'error.boundary.retry': 'Thử lại',

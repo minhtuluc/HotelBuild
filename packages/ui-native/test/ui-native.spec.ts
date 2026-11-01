@@ -7,7 +7,13 @@ import { makeTranslate as makeWebTranslate, viCatalog } from '@pinehill/ui-web/m
 import { formatDateTimeVn } from '../src/format.js';
 import { color, gridStatus, radius, space, touchTargetDp, typography } from '../src/tokens.js';
 import { makeTranslate } from '../src/translate.js';
-import { offlineQueueMessages, stateMessages, waitMessage } from '../src/stateMessages.js';
+import {
+  compensationUnknownMessage,
+  f6ErrorMessage,
+  offlineQueueMessages,
+  stateMessages,
+  waitMessage,
+} from '../src/stateMessages.js';
 
 function relativeLuminance(hex: string): number {
   const value = hex.replace('#', '');
@@ -114,5 +120,25 @@ describe('định dạng thời gian giống web (F0-08)', () => {
 
   it('từ chối mốc không hợp lệ thay vì hiện Invalid Date', () => {
     expect(() => formatDateTimeVn('khong-phai-ngay')).toThrow(RangeError);
+  });
+});
+
+describe('thông điệp F6 (CHAN + OVER)', () => {
+  it('ánh xạ mã lỗi đã công bố sang câu chữ native, mã lạ trả undefined', () => {
+    expect(f6ErrorMessage('E_CHAN_SIGNATURE_INVALID')).toBe(
+      stateMessages['error.channelSignature'],
+    );
+    expect(f6ErrorMessage('E_OVER_NO_CONSENT')).toBe(stateMessages['error.overNoConsent']);
+    expect(f6ErrorMessage('E_OVER_MERGE_GENDER')).toBe(stateMessages['error.overMergeGender']);
+    expect(f6ErrorMessage('E_OVER_CASE_DEADLINE_PASSED')).toBe(
+      stateMessages['error.overCaseDeadline'],
+    );
+    expect(f6ErrorMessage('E_GEN_VALIDATION_FAILED')).toBeUndefined();
+  });
+
+  it('chi bồi thường chưa rõ kết quả chèn mã tham chiếu, không kêu chi lại', () => {
+    const message = compensationUnknownMessage('op-123');
+    expect(message).toContain('op-123');
+    expect(message).toContain('Không chi lần mới');
   });
 });

@@ -53,6 +53,14 @@ const BY_CODE: Readonly<Record<string, UiAction>> = {
   E_FO_CHECKIN_NOT_ALLOWED: 'reload-and-diff',
   E_CRM_PHONE_INVALID: 'fix-fields',
   E_OVER_APPROVAL_REQUIRED: 'request-access',
+  E_OVER_NO_CONSENT: 'request-access',
+  E_OVER_MERGE_GENDER: 'request-access',
+  E_OVER_MOVE_NOT_ALLOWED: 'request-access',
+  E_OVER_CROSS_CITY_NO_CONSENT: 'request-access',
+  E_OVER_NO_PLAN_AVAILABLE: 'reload-and-reselect',
+  E_CHAN_SIGNATURE_INVALID: 'contact-support',
+  E_CHAN_REPLAY_DETECTED: 'contact-support',
+  E_CHAN_SYNC_FAILED: 'retry-later',
 };
 
 const BY_STATUS: Readonly<Record<number, UiAction>> = {
@@ -133,4 +141,34 @@ export function waitMessage(code: string, retryAfterSeconds: number): string | u
   const key = WAIT_MESSAGES[code];
   if (key === undefined) return undefined;
   return translate(key, { minutes: Math.max(1, Math.ceil(retryAfterSeconds / 60)) });
+}
+
+/**
+ * Câu chữ F6 (CHAN + OVER) theo mã api.md §4.2. Trả `undefined` khi mã không thuộc phạm vi F6 để UI
+ * rơi về thông điệp chung — UI **không** suy nghĩa từ `message` máy chủ (§8.1).
+ */
+const F6_MESSAGE_KEYS: Readonly<Record<string, MessageKey>> = {
+  E_CHAN_SIGNATURE_INVALID: 'error.channelSignature',
+  E_CHAN_REPLAY_DETECTED: 'error.channelReplay',
+  E_CHAN_SYNC_FAILED: 'error.channelSyncFailed',
+  E_OVER_NO_CONSENT: 'error.overNoConsent',
+  E_OVER_MERGE_GENDER: 'error.overMergeGender',
+  E_OVER_NO_PLAN_AVAILABLE: 'error.overNoPlan',
+  E_OVER_MOVE_NOT_ALLOWED: 'error.overMoveNotAllowed',
+  E_OVER_APPROVAL_REQUIRED: 'error.overApprovalRequired',
+  E_OVER_CROSS_CITY_NO_CONSENT: 'error.overCrossCity',
+  E_OVER_CASE_DEADLINE_PASSED: 'error.overCaseDeadline',
+};
+
+export function f6ErrorMessage(
+  code: string,
+  vars?: Readonly<Record<string, string | number>>,
+): string | undefined {
+  const key = F6_MESSAGE_KEYS[code];
+  return key === undefined ? undefined : translate(key, vars);
+}
+
+/** Chi bồi thường timeout chưa rõ kết quả: tra theo `operationId`/`paymentId`, không tạo lần chi mới. */
+export function compensationUnknownMessage(reference: string): string {
+  return translate('error.compensationUnknown', { reference });
 }
