@@ -252,7 +252,7 @@ flowchart TD
 | `BR-OVER-03` | Booking tạo khi hết phòng vật lý | `oversold = true` + mở ca **ngay**, không chờ job | Ca tồn tại trước cả khi job chạy |
 | `BR-OVER-04` | `now ≥ T−24h` mà ca chưa `RESOLVED` | Một ca mỗi đêm → **leo thang `OWNER`** + hiện trên bảng điều khiển | Không có ca nào quá T−24h mà vẫn ở trạng thái thường |
 | `BR-INV-06` | `RoomBlock` override chồng assignment | Mở ca cho các booking bị ảnh hưởng | Block gây thiếu phòng luôn sinh ca |
-| `BR-OVER-16` | Ngày thiếu phòng đã trôi qua mà ca còn `OPEN`/`PROPOSED`/`ESCALATED` | Chuyển `ESCALATED` và xử như **sự cố tại chỗ**: khách đã tới vẫn điều chuyển theo §6, hết phương án thì walk-out (§9); giữ `detectedAt`/`resolvedAt`/`resolvedBy`/`delayReason` | Ca quá hạn **không** bao giờ tự chuyển `RESOLVED`; job chỉ đóng ca khi còn thời gian trước ngày thiếu phòng |
+| `BR-OVER-16` | Ngày thiếu phòng đã trôi qua mà ca còn `OPEN`/`PROPOSED`/`ESCALATED` | Chuyển `ESCALATED` và xử như **sự cố tại chỗ**: khách đã tới vẫn điều chuyển theo §6, hết phương án thì walk-out (§9); giữ `detectedAt`/`resolvedAt`/`resolvedBy`/`delayReason` | Ca quá hạn **không** bao giờ tự chuyển `RESOLVED`; job chỉ được tự đóng khi **còn trước T−24h** và thiếu thực tế đã về 0. Từ T−24h trở đi (kể cả khi thiếu đã hết) ca do người xử lý; actor `SYSTEM` ghi `resolution_source = SYSTEM` với `resolvedBy` rỗng, không tạo user giả |
 
 Nguồn **giảm nhu cầu** hợp lệ là booking OTA bị chính sách OTA huỷ (`BR-CHAN-04`: `cancelReason = OTA_CANCELLATION`, không tạo `RefundRequest`) — lần quét sau `shortageCount` giảm và ca được đóng đúng đường; không được dùng đường huỷ OTA để "xoá" ca quá hạn.
 
@@ -407,6 +407,11 @@ Kiểm tra ràng buộc giá: chiết khấu 20% ≤ trần 30% (`BR-RATE-11`) �
 | Chiết khấu 10% | | −673.200 |
 | **Tổng (làm tròn xuống 1.000)** | | **6.058.000** |
 
+> Nghĩa vụ của khách sau ghép = `floor1000(tạm tính − chiết khấu)` (BR-RATE-01 bước 11):
+> `floor1000(1.163.200) = 1.163.000` cho SHARE và `floor1000(6.058.800) = 6.058.000` cho CONNECTING.
+> Doanh thu ghi nhận vẫn là tạm tính; `discountAmount` ghi đúng 290.800/bên và 673.200, không làm tròn
+> chiết khấu. Chênh lệch vài trăm VND là làm tròn bước 11, không phải chi phí xử lý quá tải.
+
 So sánh tham chiếu: một phòng FAM (4 khách) cùng 2 đêm có tạm tính 2.880.000 + 3.456.000 = **6.336.000** — phương án ghép thông nhau rẻ hơn 278.000 VND và dùng được khi FAM đã hết. Sức chứa kiểm tra: SUP 2 khách × 2 phòng = 4 ≥ 4 khách ✔.
 
 **`SPLIT_ROOMS` — CS-01, booking 3 phòng DLX, phòng CS01-301 hỏng.**
@@ -454,7 +459,8 @@ Biên bản là **chứng từ suy ra** từ các thực thể đã có (không 
 ### 9.3. Cách tính bồi thường
 
 ```
-refundAmount = floor(paidAmount × 100 / 100 / 1000) × 1000 = paidAmount       (BR-CANCEL-05, BR-CANCEL-14)
+refundAmount = floor(paidAmount × 100 / 100 / 1000) × 1000  (BR-CANCEL-05, BR-CANCEL-14)
+  = paidAmount nếu paidAmount là bội 1.000; lẻ 5.001 → 5.000 — không có ngoại lệ walk-out
 netRefund    = refundAmount − refundFee   (refundFee mặc định 0, BR-CANCEL-11)  (BR-CANCEL-05)
 bồi thường   = giá đêm đầu theo GIÁ GỐC trong PriceSnapshot (lưu từ khi rời DRAFT) (BR-OVER-05 bậc 4, BR-RATE-16)
 hỗ trợ đưa đón = chi phí tự nguyện của cơ sở ở bậc 4, MANAGER+ duyệt              (BR-OVER-06)

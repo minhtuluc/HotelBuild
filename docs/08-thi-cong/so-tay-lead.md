@@ -30,6 +30,10 @@ Từ QĐ-04, Codex/DeepSeek (và Gemini cho R0) **tự soạn** đặc tả tron
 4. `unlock` chỉ cho file được bảo vệ mà ticket thật sự phải sửa; liệt kê đủ ngay từ đầu (bài học HB-001, HB-005).
 5. `max_lines` theo bảng §5.
 6. R2 có test khoá: A do Codex viết trên nhánh `ticket/HB-nnn-*`, bàn giao commit/hash và log đỏ vì thiếu hành vi; không merge A đỏ. Lead công bố `locked_sha` (SHA-256 + đường dẫn) trong ticket trên main sau review A. B lấy commit A, giữ nguyên hash và merge/rebase main đã có pin vào nhánh A trước khi chạy scope (hoặc tạo nhánh từ main đã có pin rồi cherry-pick A); chỉ merge PR tích hợp A+B khi mọi cổng xanh. Không dùng nhánh lead để né scope.
+   - Lead **không** viết A thay người làm R2; việc của lead là review A rồi ghim.
+   - Một tệp khoá có thể bị nhiều ticket khoá: phải ghim cùng hash ở **mọi** ticket đó (xem bảng ở [F6-D05](f6-diem-cho-chot.md#f6-d05--bàn-giao-a-đỏ-a-ở-trên-nhánh-main-chỉ-nhận-ab-xanh)).
+   - `locked_sha` không nhận glob: mỗi tệp helper trong `helpers/**` phải có một dòng hash riêng; thiếu một tệp là `check:scope` chặn B.
+   - A và B dùng chung một ticket thì thứ tự là: A push → lead ghim trong ticket trên `main` → B rebase lên `main` rồi mới viết code.
 7. Chạy: `npm run check:docs` (mã định danh phải có thật) và parse thử ticket:
    ```sh
    node --input-type=module -e "import {parseTicket} from './scripts/lib/scope.mjs'; import {readFileSync} from 'node:fs'; console.log(parseTicket(readFileSync('docs/08-thi-cong/tickets/HB-nnn-x.md','utf8')))"
@@ -39,6 +43,12 @@ Từ QĐ-04, Codex/DeepSeek (và Gemini cho R0) **tự soạn** đặc tả tron
 ## 4. Xét cuối và merge
 
 Độ sâu theo hạng ([quy trình §2](README.md#2-hạng-rủi-ro--ai-làm-lead-xét-sâu-đến-đâu)). **Không bao giờ merge khi CI của PR chưa xanh** (bài học HB-005).
+
+**Quy tắc đỏ oan (TD-50/TD-61/TD-62):** chỉ khi log đỏ thuộc đúng nhóm lỗi đã biết (timeout 10 s của
+`redis.integration`/`hold-expiry/race`/`uc-check-in`/`orders-i18n-source`, deadline đọc `clock_timestamp()`,
+hoặc ca hạn mức vắt qua mốc phút) thì được **rerun một lần**. Rerun xanh → merge kèm ghi chú "đỏ oan TD-xx,
+rerun xanh". Đỏ lần hai trên cùng commit, hoặc đỏ ở tệp khác, hoặc đỏ do typecheck/lint/assertion nghiệp vụ
+→ là lỗi thật, chặn merge. Không dùng quy tắc này để bỏ qua Quality gate.
 
 **Chỉ merge bằng `pnpm pr:merge <số-PR>`**, không dùng `gh pr merge` trực tiếp. Repo private trên GitHub Free không bật được branch protection/rulesets (thử 02/10/2026: HTTP 403 "Upgrade to GitHub Pro"), nên lệnh này là hàng rào: từ chối PR nháp, xung đột, thiếu hoặc chưa xanh một trong ba check bắt buộc; merge xong chờ CI trên `main` và báo nếu đỏ. Khi nâng lên GitHub Pro thì bật branch protection với cùng ba check.
 
