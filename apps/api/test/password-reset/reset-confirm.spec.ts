@@ -12,7 +12,13 @@ import {
   error,
   rows,
   businessDb,
+  counters,
 } from './reset-oracle.fixture.js';
+import {
+  CONFIRM_IP_LIMIT,
+  CONFIRM_IP_WINDOW_MS,
+  PasswordResetConfirmLimit,
+} from '../../src/modules/auth/guest/password-reset/confirm-limit.js';
 import { tokenFromMail } from './reset-mail.js';
 import {
   seed,
@@ -173,3 +179,25 @@ for (const table of ['guest_credentials', 'auth_sessions', 'audit_logs'])
     expect((await confirm(issued.token)).status).toBe(204);
     await passwordMatches(id);
   });
+
+test('confirm is rate-limited per IP and the window frees it', async () => {
+  for (let attempt = 0; attempt < CONFIRM_IP_LIMIT; attempt += 1)
+    expect((await confirm('not-a-token')).status).toBe(400);
+
+  const limited = await confirm('not-a-token');
+  const retryAfter = Number(limited.headers['retry-after']);
+  error(limited, 429, 'E_GEN_RATE_LIMITED');
+  expect(retryAfter).toBeGreaterThan(0);
+  expect(retryAfter).toBeLessThanOrEqual(CONFIRM_IP_WINDOW_MS / 1000);
+
+  clock.value += CONFIRM_IP_WINDOW_MS;
+  expect((await confirm('not-a-token')).status).toBe(400);
+});
+test('the confirm limit counts each IP separately', async () => {
+  const limit = new PasswordResetConfirmLimit(counters(), clock);
+  for (let attempt = 0; attempt < CONFIRM_IP_LIMIT; attempt += 1)
+    await limit.assertAllowed('10.0.0.1');
+
+  await expect(limit.assertAllowed('10.0.0.1')).rejects.toMatchObject({ status: 429 });
+  await expect(limit.assertAllowed('10.0.0.2')).resolves.toBeUndefined();
+});
