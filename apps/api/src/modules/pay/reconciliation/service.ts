@@ -11,8 +11,9 @@
  * 5. Đọc các booking phát sinh khoản thu tiền mặt `SUCCEEDED` của `(người thu, ngày VN)` thuộc cơ sở,
  *    đối chiếu qua sổ cái `BookingLedger.read` (HB-093) và cộng tổng thực thu `expectedCash`;
  * 6. Đọc ngưỡng lệch từ `system_settings` (mặc định `50_000` VND theo BR-PAY-10); nếu
- *    `|countedCash - expectedCash| > threshold` thì bật `managerNotified = true` và ghi thông báo gửi
- *    `MANAGER` kèm danh sách giao dịch liên quan;
+ *    `|countedCash - expectedCash| > threshold` thì bật `managerNotified = true` và ghi một thông báo
+ *    `PENDING` qua `NotificationGateway` (EMAIL tới `alerts.recipient.manager`) rồi phát job gửi; không
+ *    đánh dấu `SENT` khi chưa gửi thật;
  * 7. Ghi `AuditLog` (`RECONCILIATION_DAILY_CLOSED`) cùng transaction và trả `auditLogId`.
  */
 import { Inject, Injectable } from '@nestjs/common';
@@ -24,6 +25,7 @@ import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js'
 import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import { CLOCK } from '../../../infrastructure/ports.js';
 import { PIN_PURPOSE_FINANCIAL, requirePinToken } from '../../auth/pin/consume.js';
+import { NotificationGateway } from '../../noti/gateway.js';
 import { BookingLedger } from '../ledger/service.js';
 import { maskOperationalText } from '../../prop/room-blocks/operational-text.js';
 import { alreadyClosed, missing } from './errors.js';
@@ -39,6 +41,10 @@ const THRESHOLD_KEYS = [
   'pay.reconciliation.discrepancyThreshold',
   'deal.threshold.minor',
 ] as const;
+/** Đích nhận cảnh báo lệch quỹ — cùng khoá/mặc định với danh mục cảnh báo HB-182 ở worker. */
+const MANAGER_RECIPIENT_KEY = 'alerts.recipient.manager';
+const DEFAULT_MANAGER_RECIPIENT = 'manager@pinehill.local';
+const DISCREPANCY_TEMPLATE = 'alert-reconciliation-discrepancy';
 
 interface CashReceiptRow {
   readonly id: string;
@@ -53,6 +59,7 @@ export class ReconciliationService {
   constructor(
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(AuditWriter) private readonly audit: AuditWriter,
+    @Inject(NotificationGateway) private readonly notifications: NotificationGateway,
   ) {
     this.ledger = new BookingLedger(clock);
   }
@@ -87,23 +94,26 @@ export class ReconciliationService {
     const expectedCash = await verifyAndSumWithLedger(tx, this.ledger, receipts);
     const countedCash = BigInt(command.countedCash);
     const difference = countedCash - expectedCash;
-    const threshold = await discrepancyThreshold(tx);
+    const { threshold, managerRecipient } = await reconciliationSettings(tx);
     const absDifference = difference < 0n ? -difference : difference;
     const managerNotified = absDifference > threshold;
     const paymentIds = receipts.map((r) => r.id);
     const note = command.note === undefined ? null : maskOperationalText(command.note);
 
     if (managerNotified) {
-      await notifyManagersOfDiscrepancy(tx, {
-        propertyId: command.propertyId,
-        businessDate: command.businessDate,
-        collectorId: actor.id,
-        expectedCash: Number(expectedCash),
-        countedCash: command.countedCash,
-        difference: Number(difference),
-        paymentIds,
-        now,
+      // Ghi PENDING qua gateway rồi phát job gửi: không đánh dấu SENT khi chưa gửi thật (SCR-51/BR-PAY-10).
+      const notificationId = await this.notifications.record(tx, {
+        bookingId: null,
+        recipient: managerRecipient,
+        channel: 'EMAIL',
+        template: DISCREPANCY_TEMPLATE,
+        message: {
+          reason:
+            `Chênh lệch quỹ ngày ${command.businessDate}: kỳ vọng ${expectedCash} ₫, ` +
+            `thực đếm ${command.countedCash} ₫, lệch ${difference} ₫ (${paymentIds.length} giao dịch).`,
+        },
       });
+      await this.notifications.publish(notificationId);
     }
 
     await this.audit.record(tx, {
@@ -222,57 +232,35 @@ async function verifyAndSumWithLedger(
   return total;
 }
 
-async function discrepancyThreshold(tx: Tx): Promise<bigint> {
+interface ReconciliationSettings {
+  readonly threshold: bigint;
+  readonly managerRecipient: string;
+}
+
+async function reconciliationSettings(tx: Tx): Promise<ReconciliationSettings> {
   const rows = await tx.system_settings.findMany({
-    where: { key: { in: [...THRESHOLD_KEYS] } },
+    where: { key: { in: [...THRESHOLD_KEYS, MANAGER_RECIPIENT_KEY] } },
     select: { key: true, value: true },
   });
   const byKey = new Map(rows.map((r) => [r.key, r.value]));
+  let threshold = DEFAULT_THRESHOLD_VND;
   for (const key of THRESHOLD_KEYS) {
     const raw = byKey.get(key);
     if (raw === undefined) continue;
     try {
       const parsed = BigInt(raw);
-      if (parsed >= 0n) return parsed;
+      if (parsed >= 0n) {
+        threshold = parsed;
+        break;
+      }
     } catch {
       // Ignore malformed setting and fall back
     }
   }
-  return DEFAULT_THRESHOLD_VND;
-}
-
-async function notifyManagersOfDiscrepancy(
-  tx: Tx,
-  params: {
-    readonly propertyId: string;
-    readonly businessDate: string;
-    readonly collectorId: string;
-    readonly expectedCash: number;
-    readonly countedCash: number;
-    readonly difference: number;
-    readonly paymentIds: readonly string[];
-    readonly now: Date;
-  },
-): Promise<void> {
-  await tx.notifications.create({
-    data: {
-      booking_id: null,
-      recipient: `MANAGER:${params.propertyId}`,
-      channel: 'PUSH',
-      template: 'RECONCILIATION_CASH_DISCREPANCY',
-      payload_json: {
-        propertyId: params.propertyId,
-        businessDate: params.businessDate,
-        collectorId: params.collectorId,
-        expectedCash: params.expectedCash,
-        countedCash: params.countedCash,
-        difference: params.difference,
-        paymentIds: [...params.paymentIds],
-      },
-      status: 'SENT',
-      sent_at: params.now,
-      created_at: params.now,
-      updated_at: params.now,
-    },
-  });
+  const recipient = byKey.get(MANAGER_RECIPIENT_KEY)?.trim();
+  return {
+    threshold,
+    managerRecipient:
+      recipient === undefined || recipient === '' ? DEFAULT_MANAGER_RECIPIENT : recipient,
+  };
 }

@@ -114,8 +114,9 @@ test('AC1: tổng thu tiền mặt theo (người thu, ngày VN) khớp sổ cá
   );
   expect(pay3.status).toBe(201);
 
-  // Chốt đối soát của h029-first với chênh lệch +30.000 VND (≤ ngưỡng 50.000 VND)
-  const closePin = await pinTokenFor(token);
+  // Kế toán chốt đối soát của người thu h029-first với chênh lệch +30.000 VND (≤ ngưỡng 50.000 VND)
+  const accountantToken = await staffToken('ACCOUNTANT', 'h029-first');
+  const closePin = await pinTokenFor(accountantToken);
   const countedCash = first.booking.depositAmount + 30_000;
   const response = await closeRequest(
     {
@@ -125,7 +126,7 @@ test('AC1: tổng thu tiền mặt theo (người thu, ngày VN) khớp sổ cá
       note: 'Chốt quỹ cuối ngày lễ tân ca sáng',
       pinToken: closePin,
     },
-    { token },
+    { token: accountantToken },
   );
   expect(response.status, JSON.stringify(response.body)).toBe(201);
   const closed = reconciliationCloseResponseSchema.parse(response.body);
@@ -179,7 +180,7 @@ test('AC1: countedCash lệch quá ngưỡng tham số hệ thống ⇒ managerN
     { token: fdToken },
   );
   expect(collected.status).toBe(201);
-  const payment = paymentSchema.parse(collected.body);
+  paymentSchema.parse(collected.body);
 
   // Tuỳ chỉnh ngưỡng lệch trong system_settings = 40.000 VND
   await rows(
@@ -211,28 +212,24 @@ test('AC1: countedCash lệch quá ngưỡng tham số hệ thống ⇒ managerN
   expect(body.managerNotified).toBe(true);
 
   const notifications = await rows(
-    `SELECT recipient, template, payload_json
+    `SELECT recipient, channel, template, payload_json, status, sent_at
        FROM notifications
-      WHERE template = 'RECONCILIATION_CASH_DISCREPANCY'
+      WHERE template = 'alert-reconciliation-discrepancy'
         AND recipient = $1
       ORDER BY created_at DESC LIMIT 1`,
-    [`MANAGER:${propertyId}`],
+    ['manager@pinehill.local'],
   );
   expect(notifications.length).toBe(1);
+  expect(notifications[0]!.channel).toBe('EMAIL');
+  expect(notifications[0]!.status).toBe('PENDING');
+  expect(notifications[0]!.sent_at).toBeNull();
   const payload = z
-    .object({
-      propertyId: z.string(),
-      businessDate: z.string(),
-      collectorId: z.string(),
-      difference: z.number(),
-      paymentIds: z.array(z.string()),
-    })
+    .object({ reason: z.string().min(1).max(500) })
     .parse(notifications[0]!.payload_json);
-  expect(payload.propertyId).toBe(propertyId);
-  expect(payload.businessDate).toBe(businessDate);
-  expect(payload.collectorId).toBe(userId);
-  expect(payload.difference).toBe(-45_000);
-  expect(payload.paymentIds).toEqual([payment.paymentId]);
+  expect(payload.reason).toContain('2026-11-02');
+  expect(payload.reason).toContain(booking.depositAmount.toString());
+  expect(payload.reason).toContain('-45000');
+  expect(payload.reason).toContain('1 giao dịch');
 });
 
 test('AC2: chốt lần hai cùng (người thu, ngày VN) ⇒ 409; thiếu/sai pinToken ⇒ 401; replay cùng Idempotency-Key ⇒ 201', async () => {
@@ -281,7 +278,7 @@ test('AC2: chốt lần hai cùng (người thu, ngày VN) ⇒ 409; thiếu/sai 
   expect(code(duplicateClose)).toBe('E_BOOK_INVALID_STATE');
 
   // 4. Người thu khác (`h029-second`) vẫn chốt được cùng ngày VN đó độc lập
-  const secondToken = await staffToken('FRONT_DESK', 'h029-second');
+  const secondToken = await staffToken('ACCOUNTANT', 'h029-second');
   const secondPin = await pinTokenFor(secondToken);
   const otherCollectorClose = await closeRequest(
     {
