@@ -124,6 +124,59 @@ export const guestGenderSchema = z.enum(['MALE', 'FEMALE', 'OTHER', 'UNSPECIFIED
 /** Trạng thái tác vụ bất đồng bộ (api.md §6, mọi lệnh 202). */
 export const operationStatusSchema = z.enum(['PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED']);
 
+/** Vòng đời phương án điều chuyển (csdl §3 `room_moves.status`); HB-120. */
+export const roomMoveStatusSchema = z.enum([
+  'PROPOSED',
+  'APPROVED',
+  'EXECUTED',
+  'REJECTED',
+  'CANCELLED',
+]);
+
+/** Vòng đời ghép phòng (csdl §3 `room_merges.status`); HB-120. */
+export const roomMergeStatusSchema = z.enum(['PENDING_CONSENT', 'APPROVED', 'ACTIVE', 'CANCELLED']);
+
+/** Bên ghi nhận đồng thuận ghép `MERGE_SHARE` (BR-OVER-13); D01 chỉ áp cho SHARE. */
+export const roomMergeSideSchema = z.enum(['PRIMARY', 'SECONDARY']);
+
+/** Nhóm ưu tiên giữ phòng theo BR-OVER-12: `WEAK` bị điều chuyển trước bất kể `keepScore`. */
+export const relocationPriorityGroupSchema = z.enum(['WEAK', 'STRONG']);
+
+/** Nguồn đóng ca quá tải (F6-D07): người xử lý hay job hệ thống. */
+export const overbookingResolutionSourceSchema = z.enum(['USER', 'SYSTEM']);
+
+/** Trạng thái lần quét quá tải gần nhất để UI phân biệt rỗng với chưa biết (HB-120 AC14). */
+export const overbookingScanStatusSchema = z.enum(['OK', 'FAILED', 'UNKNOWN']);
+
+/** Nguồn đóng bán: thủ công hay tự động theo BR-CHAN-05 (HB-120 AC14). */
+export const salesClosureSourceSchema = z.enum(['MANUAL', 'AUTOMATIC']);
+
+/** Trạng thái giao bền từng consumer (csdl §3 `event_deliveries.status`); HB-120 AC11. */
+export const outboxDeliveryStatusSchema = z.enum([
+  'PENDING',
+  'PROCESSING',
+  'COMPLETED',
+  'DEAD_LETTER',
+]);
+
+/** Sự kiện webhook simulator OTA (api.md §5.1). */
+export const otaEventTypeSchema = z.enum([
+  'booking.created',
+  'booking.modified',
+  'booking.cancelled',
+]);
+
+/** Trạng thái xử lý inbox OTA nhìn từ màn hình vận hành (HB-120 AC11). */
+export const otaBookingProcessingStatusSchema = z.enum([
+  'PENDING',
+  'PROCESSED',
+  'FAILED',
+  'QUARANTINED',
+]);
+
+/** Trạng thái chi bồi thường: `UNKNOWN` tách khỏi `PENDING` khi timeout chưa rõ kết quả (F6-D06). */
+export const compensationPayoutStateSchema = z.enum(['PENDING', 'UNKNOWN', 'SUCCEEDED', 'FAILED']);
+
 export type BookingStatus = z.infer<typeof bookingStatusSchema>;
 export type CancelReason = z.infer<typeof cancelReasonSchema>;
 export type ChannelCode = z.infer<typeof channelCodeSchema>;
@@ -142,3 +195,14 @@ export type HousekeepingStatus = z.infer<typeof housekeepingStatusSchema>;
 export type RoomStatus = z.infer<typeof roomStatusSchema>;
 export type ChannelSyncStatus = z.infer<typeof channelSyncStatusSchema>;
 export type OverbookingCaseStatus = z.infer<typeof overbookingCaseStatusSchema>;
+export type RoomMoveStatus = z.infer<typeof roomMoveStatusSchema>;
+export type RoomMergeStatus = z.infer<typeof roomMergeStatusSchema>;
+export type RoomMergeSide = z.infer<typeof roomMergeSideSchema>;
+export type RelocationPriorityGroup = z.infer<typeof relocationPriorityGroupSchema>;
+export type OverbookingResolutionSource = z.infer<typeof overbookingResolutionSourceSchema>;
+export type OverbookingScanStatus = z.infer<typeof overbookingScanStatusSchema>;
+export type SalesClosureSource = z.infer<typeof salesClosureSourceSchema>;
+export type OutboxDeliveryStatus = z.infer<typeof outboxDeliveryStatusSchema>;
+export type OtaEventType = z.infer<typeof otaEventTypeSchema>;
+export type OtaBookingProcessingStatus = z.infer<typeof otaBookingProcessingStatusSchema>;
+export type CompensationPayoutState = z.infer<typeof compensationPayoutStateSchema>;

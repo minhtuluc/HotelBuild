@@ -155,6 +155,11 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
 
 const WRITE_TARGETS = AUTH_OPERATIONS.filter(([method]) => method !== 'get');
 
+/** Gom mọi chuỗi `description` (nơi mã lỗi được phát) từ tài liệu đã serialize. */
+function serializedDescriptions(): string {
+  return (serializeDocument().match(/"description":\s*"(?:[^"\\]|\\.)*"/g) ?? []).join(' ');
+}
+
 describe('OpenAPI 3.1 sinh từ zod', () => {
   const document = buildDocument();
 
@@ -169,7 +174,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 93 path của F0…F5 + F7 + F8 (kèm tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151, 3 path HB-204 và confirm-transfer HB-215)', () => {
+  it('có đủ 118 path của F0…F8 (kèm tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151, 3 path HB-204, confirm-transfer HB-215 và hợp đồng F6 HB-120)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -265,12 +270,40 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/notifications/{notificationId}/resend',
         '/api/v1/integrations/psp/vnpay/callback',
         '/api/v1/integrations/psp/momo/callback',
+        '/api/v1/integrations/ota/{channel}/bookings',
+        '/api/v1/channels/{channelId}/mappings',
+        '/api/v1/channels/{channelId}/sales-closure',
+        '/api/v1/channels/{channelId}/sync',
+        '/api/v1/channels/{channelId}/sync-status',
+        '/api/v1/channels/{channelId}/outbox-deliveries',
+        '/api/v1/channels/{channelId}/outbox-deliveries/{deliveryId}/retry',
+        '/api/v1/channels/{channelId}/ota-bookings',
+        '/api/v1/channels/{channelId}/ota-bookings/{bookingId}/duplicate-flag',
+        '/api/v1/overbooking-cases',
+        '/api/v1/overbooking-cases/{caseId}',
+        '/api/v1/overbooking-cases/{caseId}/relocation-plan',
+        '/api/v1/overbooking-cases/{caseId}/resolve',
+        '/api/v1/overbooking-alerts',
+        '/api/v1/room-moves',
+        '/api/v1/room-moves/{roomMoveId}',
+        '/api/v1/room-moves/{roomMoveId}/approve',
+        '/api/v1/room-moves/{roomMoveId}/execute',
+        '/api/v1/room-moves/{roomMoveId}/compensation-payments',
+        '/api/v1/room-merges',
+        '/api/v1/room-merges/{roomMergeId}',
+        '/api/v1/room-merges/{roomMergeId}/consent',
+        '/api/v1/room-merges/{roomMergeId}/approve',
+        '/api/v1/room-merges/{roomMergeId}/execute',
+        '/api/v1/bookings/{bookingId}/relocation-options',
       ].sort(),
     );
   });
 
   it('mọi mã E_* xuất hiện trong tài liệu đều thuộc danh mục §4.2', () => {
-    const tokens = serializeDocument().match(/E_[A-Z]+_[A-Z_]+/g) ?? [];
+    // Mã lỗi chỉ được phát trong `description` của response; enum nhãn bậc (vd. SAME_TYPE_SAME_PROPERTY)
+    // vô tình chứa chuỗi con `E_*` nên không quét toàn văn để tránh dương tính giả.
+    const descriptions = serializedDescriptions();
+    const tokens = descriptions.match(/E_[A-Z]+_[A-Z_]+/g) ?? [];
     expect(tokens.length).toBeGreaterThanOrEqual(10);
     for (const token of new Set(tokens)) expect(isErrorCode(token), `mã lạ: ${token}`).toBe(true);
   });

@@ -8,3 +8,5 @@ export * from './booking.js';
 export * from './payment.js';
 export * from './front-office.js';
 export * from './report.js';
+export * from './channel.js';
+export * from './overbooking.js';
