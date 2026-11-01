@@ -2,9 +2,9 @@
 
 **Đã hiện thực:** workflow `Security` (`.github/workflows/security.yml`) gồm CodeQL, Trivy filesystem/image,
 `pnpm audit` và cổng CVSS ≥ 7,0 với hạn 7 ngày + file waiver. Gitleaks là workflow riêng của HB-176, nay
-chạy thêm hằng đêm. **Toàn HB-183 còn OPEN**: GitHub Actions đang tắt ở cấp repo nên chưa có lần chạy
-hosted nào; CodeQL/Trivy chưa chạy cục bộ; 5 advisory còn treo và pentest staging chưa thực hiện — không
-gọi các kết quả dưới đây là CI hosted xanh.
+chạy thêm hằng đêm. **GitHub Actions đã bật lại (31/10/2026)**; ngày 01/11/2026 đã vá chuỗi dependency và
+làm xanh cổng audit/Trivy. Pentest staging vẫn chưa thực hiện — không gọi các kết quả dưới đây là nghiệm
+thu bảo mật đầy đủ.
 
 ## Job và điều kiện chặn
 
@@ -40,8 +40,12 @@ waiver vô nghĩa và mọi PR sẽ đỏ vĩnh viễn.
 
 Cổng fail closed khi báo cáo audit không có `advisories` — lỗi mạng/registry không được coi là đạt.
 `--release` (tag phát hành) bỏ qua waiver: release không đi kèm lỗ hổng CVSS ≥ 7,0 đã biết. Gia hạn quá 7
-ngày không phải việc của file waiver; phải vá/nâng, thay dependency hoặc sửa NFR-SEC-06 có duyệt. Năm waiver
-hiện tại (mở 22/10) hết hiệu lực sau 29/10/2026 — TD-34 phải xong trước mốc đó.
+ngày không phải việc của file waiver; phải vá/nâng, thay dependency hoặc sửa NFR-SEC-06 có duyệt.
+
+**Trạng thái 01/11/2026:** đã nâng `next` 15.5.28, `zod` 4.6.6 (trực tiếp), `markdown-it` 14.3.3 và thêm
+override `vite` 7.3.7, `dompurify` 3.4.17, `node-forge` 1.4.1, `uuid` 11.1.1. Còn **2 waiver có ngày** cho
+`decode-uri-component@0.2.2` và `zod@3.25.76`, cả hai nằm trong chuỗi Expo (`expo-router`/`@expo/cli`) và
+bản vá là major/ESM-only — theo dõi **TD-70**, phải trả khi nâng Expo SDK (TD-34).
 
 ## Chạy cục bộ
 
@@ -68,9 +72,12 @@ node --check .github/workflows/security-audit-gate.mjs
   bật Actions, bật code scanning/GHAS cho repo private và đặt check bắt buộc; thiếu thì giữ BLOCKED.
 - **CodeQL và Trivy chưa chạy cục bộ**: máy này không có `codeql`/`trivy`, Trivy cần CSDL tải từ mạng;
   phần đã kiểm chỉ là YAML + tham số. Kết quả quét thật phải đến từ runner.
-- **5 advisory đang waive tạm**: `node-forge` 1.4.0, `braces` 3.0.3 (chưa có bản vá phát hành) và `uuid`
-  7.0.3, `markdown-it` 14.3.2, `vite` 7.3.6 (cần nâng phiên bản) — TD-34, root `package.json`/lockfile ngoài
-  allow HB-183; xem [bản vá dependency](va-dependency-20261014.md). Không thêm ignore/baseline audit.
+- **Còn 2 advisory waive có ngày** (`decode-uri-component`, `zod` 3 — TD-70) sau khi đã vá `node-forge`,
+  `uuid`, `markdown-it`, `vite`, `dompurify`, `next`. Không dùng baseline SARIF để né cổng.
+- **`.trivyignore` chỉ chứa `CVE-2026-118664`** (cùng `decode-uri-component`, Trivy không đọc
+  `security-waivers.json` và không có waiver theo ngày). Mỗi mục có lý do + mốc rà lại trong tệp; khi nâng
+  `query-string`/`expo-router` phải xoá mục này. Đây là ngoại lệ được lead duyệt ngày 01/11/2026, không
+  thay cho việc vá dependency.
 - **Pentest staging**: xem [checklist pentest](pentest-checklist.md) — mọi mục runtime đang BLOCKED.
 
 ## Quyết định tự đưa ra
