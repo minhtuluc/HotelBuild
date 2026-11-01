@@ -100,6 +100,9 @@ jobs:
           scanners: vuln,misconfig
           severity: HIGH,CRITICAL
           ignore-unfixed: false
+          # Mặc định của action là false ⇒ nó bỏ TRIVY_SEVERITY và đỏ vì mọi mức.
+          # Bật true để SARIF + exit-code chỉ tính HIGH/CRITICAL đúng như cổng mô tả.
+          limit-severities-for-sarif: true
           exit-code: '1'
           format: sarif
           output: trivy-fs.sarif
@@ -121,4 +124,5 @@ jobs:
           image-ref: pinehill-api:scan
           severity: HIGH,CRITICAL
           ignore-unfixed: false
+          limit-severities-for-sarif: true
           exit-code: '1'

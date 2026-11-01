@@ -89,3 +89,7 @@ node --check .github/workflows/security-audit-gate.mjs
 4. Ảnh quét đại diện `docker/api.Dockerfile`; `docker/worker.Dockerfile` dùng cùng base `node:22-slim` và
    cùng lockfile, nên chênh lệch nằm ở lockfile đã được Trivy fs phủ. Không dùng `ignore-unfixed` hay hạ
    `severity` để giữ cổng đỏ đúng nghĩa.
+5. (Lead, 01/11/2026) Bật `limit-severities-for-sarif: true` cho cả hai bước Trivy. Mặc định của
+   trivy-action v0.36.0 là `false`: action **bỏ `TRIVY_SEVERITY`** để SARIF có đủ mức, nên `exit-code: 1`
+   đỏ vì cả MEDIUM/LOW — cổng không còn là "HIGH/CRITICAL". Bật `true` để SARIF và exit-code cùng lọc
+   đúng `severity: HIGH,CRITICAL`; đây là sửa cấu hình, không nới cổng.
