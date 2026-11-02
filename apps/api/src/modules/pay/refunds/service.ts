@@ -53,17 +53,25 @@ function decisionNote(note: string | undefined, fallback: string): string {
   return text.length > 0 ? text : fallback;
 }
 
-/** Số duyệt hợp lệ: dương, ≤ số yêu cầu và còn NET dương sau phí; trả NET cho phần giữ hạn mức. */
+/**
+ * Số duyệt hợp lệ: dương, ≤ số yêu cầu và còn NET dương sau phí; trả NET cho phần giữ hạn mức.
+ * Hồ sơ `HOTEL_RELOCATION` do walk-out lập đã trừ phí **một lần** vào `net_refund` khi tạo
+ * (ADR-016: phí chụp một lần, không trừ lại khi chi), nên số người duyệt nhập là số thực chi NET:
+ * quyết định giữ `refund_fee = 0` thay vì trừ phí lần hai.
+ */
 function approvedLegs(
   row: RefundRow,
   input: { approvedAmount: number },
+  refundFee: bigint,
 ): { gross: bigint; net: bigint } | null {
   const gross = BigInt(input.approvedAmount);
   if (gross <= 0n || gross > row.requested_amount) return null;
-  const net = gross > row.refund_fee ? gross - row.refund_fee : 0n;
+  const net = gross > refundFee ? gross - refundFee : 0n;
   if (net <= 0n) return null;
   return { gross, net };
 }
+
+/** Phí của quyết định: walk-out (hotel bồi hoàn) không trừ phí lần hai. */
 
 export class RefundService {
   private readonly ledger: BookingLedger;
@@ -179,20 +187,58 @@ export class RefundService {
     }
   }
 
+  /**
+   * Ghi quyết định duyệt trong cùng transaction. `refund_allocations` chỉ cho đổi số khi hồ sơ còn
+   * PENDING, nên phí của quyết định được ghi trước (cột sinh `net_refund` theo đó) rồi mới cân lại
+   * phần đã giữ; quyết định ghi sau cùng. Trả phí đã dùng để audit/phản hồi.
+   */
+  private async commitApproval(
+    tx: Tx,
+    row: RefundRow,
+    checkerId: string,
+    role: string,
+    approved: { gross: bigint; net: bigint },
+    reason: string,
+    now: Date,
+  ): Promise<bigint> {
+    const fee = row.reason === 'HOTEL_RELOCATION' ? 0n : row.refund_fee;
+    if (fee !== row.refund_fee)
+      await tx.$executeRaw`
+        UPDATE refund_requests SET refund_fee = ${fee}, updated_at = ${now}::timestamptz
+         WHERE id = ${row.id}::uuid`;
+    const current = fee === row.refund_fee ? row : await lockRefund(tx, row.id);
+    await reallocate(tx, row.id, approved.net, now);
+    await recordDecision(
+      tx,
+      current,
+      { id: checkerId, role },
+      'APPROVED',
+      approved.gross,
+      reason,
+      now,
+      fee,
+    );
+    return fee;
+  }
+
   /** Duyệt hồ sơ PENDING: một MANAGER/OWNER khác người lập, còn giữ quỹ, đòi `pinToken`. */
   async approve(
     tx: Tx,
     checker: AuthorizedActor,
     refundId: string,
     input: unknown,
-  ): Promise<RefundDecision> {
+  ): Promise<RefundDecision & RefundRequest> {
     try {
       const decided = approveInput(input);
       const plan = await this.open(tx, checker, refundId);
       // So `created_by` với actor, không theo vai (BR-CANCEL-15): trùng người lập ⇒ chặn mọi mức.
       if (plan.row.requested_by !== null && plan.row.requested_by === checker.id)
         throw refundError('selfApproval');
-      const legs = approvedLegs(plan.row, decided);
+      const legs = approvedLegs(
+        plan.row,
+        decided,
+        plan.row.reason === 'HOTEL_RELOCATION' ? 0n : plan.row.refund_fee,
+      );
       if (legs === null)
         throw refundError(
           'amountMismatch',
@@ -214,16 +260,7 @@ export class RefundService {
       });
       const now = this.clock.now(),
         reason = decisionNote(decided.note, 'Duyệt hoàn tiền');
-      await reallocate(tx, plan.row.id, net, now);
-      await recordDecision(
-        tx,
-        plan.row,
-        { id: checker.id, role: plan.role },
-        'APPROVED',
-        gross,
-        reason,
-        now,
-      );
+      const fee = await this.commitApproval(tx, plan.row, checker.id, plan.role, legs, reason, now);
       const action = 'REFUND_APPROVED';
       await this.audit.record(tx, {
         actor: checker,
@@ -238,7 +275,7 @@ export class RefundService {
           bookingId: plan.row.booking_id,
           status: 'APPROVED',
           approvedAmount: gross.toString(),
-          refundFee: plan.row.refund_fee.toString(),
+          refundFee: fee.toString(),
           netRefund: net.toString(),
           eventNetRefund: eventNet.toString(),
           requiresThresholdControl: eventNet > threshold,
@@ -246,7 +283,7 @@ export class RefundService {
         },
         reason,
       });
-      return refundDecisionSchema.parse({
+      const decision = refundDecisionSchema.parse({
         id: plan.row.id,
         status: 'APPROVED',
         requestedAmount: vnd(plan.row.requested_amount),
@@ -258,6 +295,10 @@ export class RefundService {
         auditLogId: await auditLogId(tx, plan.row.id, action),
         payoutDeadline: payoutDeadline(now),
       });
+      // HB-124 đọc hồ sơ vừa duyệt bằng `refundRequestSchema`; trả kèm projection đầy đủ và giữ
+      // `auditLogId`/`payoutDeadline` để hợp đồng HB-099 vẫn đọc được cùng một thân.
+      const updated = await lockRefund(tx, plan.row.id);
+      return { ...(await requestView(tx, updated)), ...decision };
     } catch (error) {
       return refundFailure(error);
     }
