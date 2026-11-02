@@ -108,12 +108,14 @@ describe('createWorkerApp', () => {
     expect([...h.handlers.keys()]).toEqual([...QUEUE_NAMES]);
     expect(h.schedulers).toEqual([]);
   });
-  it('bật scheduler cho đúng nhịp: hold-expiry 30 giây + đối chiếu 900 giây, inbox OTA 30 giây, no-show 60 giây, outbox 5 giây, dọn tệp và chi hoàn 30 giây', async () => {
+  it('bật scheduler cho đúng nhịp: hold-expiry 30 giây + đối chiếu 900 giây, channel-sync 300 giây, inbox OTA 30 giây, no-show 60 giây, outbox 5 giây, dọn tệp và chi hoàn 30 giây', async () => {
     const h = harness();
     await createWorkerApp(config({ ENABLE_REPEATABLE_SCHEDULERS: true }), h.deps).start();
     expect(h.schedulers).toEqual([
       'q.hold-expiry:q.hold-expiry-scheduler:30000:{"name":"hold-expiry","data":{"mode":"SWEEP"}}',
       'q.hold-expiry:q.hold-expiry-reconcile-scheduler:900000:{"name":"hold-reconcile","data":{"mode":"RECONCILE"}}',
+      // HB-131: nhịp đọc từ SystemSetting; fixture này không có CSDL nên rơi về mặc định 300 giây.
+      'q.channel-sync:q.channel-sync-scheduler:300000:{"name":"channel-sync","data":{}}',
       'q.ota-inbox:q.ota-inbox-scheduler:30000:{"name":"ota-inbox","data":{}}',
       'q.no-show-mark:q.no-show-mark-scheduler:60000:{"name":"no-show-mark","data":{}}',
       'q.outbox-relay:q.outbox-relay-scheduler:5000:{"name":"outbox-relay","data":{}}',

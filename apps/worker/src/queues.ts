@@ -20,6 +20,7 @@ export const REPEATABLE_QUEUES = [
   'q.ota-inbox',
   'q.no-show-mark',
   'q.outbox-relay',
+  'q.channel-sync',
   'q.export-cleanup',
   'q.refund-payout',
   'q.alerts-scan',
@@ -42,3 +43,9 @@ export const NO_SHOW_MARK_JOB = 'no-show-mark';
 export const OTA_INBOX_JOB = 'ota-inbox';
 /** HB-182 — quét cảnh báo vận hành (NFR-OBS-04); không có `data.mode`, một nhịp duy nhất. */
 export const ALERTS_SCAN_JOB = 'alerts-scan';
+/**
+ * HB-131 — quét đồng bộ kênh. Nhịp **không** lấy từ `WorkerConfig` mà từ `SystemSetting`
+ * (`job.channelSync.intervalSeconds`, mặc định 300 giây) nên `repeatSchedules` trả mặc định và
+ * `createWorkerApp` đọc cấu hình hiện hành lúc khởi động (BR-SYS-02).
+ */
+export const CHANNEL_SYNC_JOB = 'channel-sync';
