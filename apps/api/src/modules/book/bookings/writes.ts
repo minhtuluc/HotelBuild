@@ -50,6 +50,8 @@ export interface BookingCreation {
   readonly channelId: string;
   readonly guestId: string;
   readonly units: readonly UnitIdentity[];
+  /** BR-OVER-03: booking bán vượt không gán được phòng nhưng vẫn tạo `BookingRoom` cho mỗi phòng. */
+  readonly oversold?: boolean;
   readonly snapshotSource: SnapshotSource;
   /** Giờ CSDL đọc sau khoá (ADR-014) — dùng cho `captured_at`/`updated_at`/`at`. */
   readonly now: Date;
@@ -111,6 +113,25 @@ async function insertSnapshotAndCharges(
   if (charges.length > 0) await tx.booking_charges.createMany({ data: charges });
 }
 
+async function assignRoomUnit(
+  tx: Tx,
+  roomId: string,
+  unit: UnitIdentity | undefined,
+  input: BookingInput,
+): Promise<void> {
+  // Booking bán vượt (BR-OVER-03) là cam kết chưa xếp chỗ: chỉ tạo dòng nhu cầu, không gán đơn vị.
+  if (unit === undefined) return;
+  await tx.room_assignments.create({
+    data: {
+      booking_room_id: roomId,
+      room_id: unit.roomId,
+      bed_no: unit.bedNo,
+      start_date: new Date(`${input.checkIn}T00:00:00.000Z`),
+      end_date: new Date(`${input.checkOut}T00:00:00.000Z`),
+    },
+  });
+}
+
 export async function insertBooking(
   tx: Tx,
   audit: AuditWriter,
@@ -144,6 +165,7 @@ export async function insertBooking(
       balance_due: BigInt(quote.total),
       currency: 'VND',
       hold_expires_at: creation.holdExpiresAt,
+      oversold: creation.oversold === true,
       note: input.note,
       created_by: creation.caller.type === 'USER' ? creation.caller.id : null,
       created_at: now,
@@ -154,7 +176,8 @@ export async function insertBooking(
   const adults = spread(input.adults, input.roomCount);
   const children = spread(input.children, input.roomCount);
   const roomIds: string[] = [];
-  for (const [index, unit] of creation.units.entries()) {
+  for (let index = 0; index < input.roomCount; index += 1) {
+    const unit = creation.units[index];
     const room = await tx.booking_rooms.create({
       data: {
         booking_id: booking.id,
@@ -166,15 +189,7 @@ export async function insertBooking(
       select: { id: true },
     });
     roomIds.push(room.id);
-    await tx.room_assignments.create({
-      data: {
-        booking_room_id: room.id,
-        room_id: unit.roomId,
-        bed_no: unit.bedNo,
-        start_date: new Date(`${input.checkIn}T00:00:00.000Z`),
-        end_date: new Date(`${input.checkOut}T00:00:00.000Z`),
-      },
-    });
+    await assignRoomUnit(tx, room.id, unit, input);
   }
   // AC1: snapshot ORIGINAL cùng transaction với booking — bằng chứng giá/policy bất biến (BR-RATE-16).
   await insertSnapshotAndCharges(tx, booking.id, creation, plan, roomIds, now);
