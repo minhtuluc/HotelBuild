@@ -2,7 +2,13 @@ import { randomUUID } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import type { JobContext, JobHandler } from '../types.js';
-import { notifyManager, recordAttempt, type AttemptOutcome, type NotifyPort } from './attempts.js';
+import {
+  notifyManager,
+  recordAttempt,
+  settleOperation,
+  type AttemptOutcome,
+  type NotifyPort,
+} from './attempts.js';
 import {
   CHANNEL_INVENTORY_EVENT,
   CHANNEL_SYNC_CONSUMER,
@@ -171,13 +177,18 @@ async function pendingSyncOperations(
   return operations;
 }
 
-/** Các kênh OTA đang bật — nhịp quét đẩy ảnh tồn cho **mọi** kênh OTA, kể cả khi chưa có sự kiện. */
-async function activeOtaChannels(db: PrismaClient): Promise<readonly ChannelIdentity[]> {
-  return db.$queryRaw<ChannelIdentity[]>`
+/**
+ * Kênh neo của nhịp quét rỗi: `DEGRADED` trước (cần bằng chứng phục hồi), rồi kênh có `last_sync_at` cũ
+ * nhất; kênh chưa từng đồng bộ xếp sau vì ảnh của nó chỉ đổi khi có sự kiện outbox.
+ */
+async function anchorChannel(db: PrismaClient): Promise<ChannelIdentity | null> {
+  const rows = await db.$queryRaw<ChannelIdentity[]>`
     SELECT id, code, version
       FROM channels
      WHERE status = 'ACTIVE' AND code = ANY(${OTA_CHANNEL_CODES}::text[])
-     ORDER BY created_at, code`;
+     ORDER BY (sync_status = 'DEGRADED') DESC, last_sync_at ASC NULLS LAST, created_at, code
+     LIMIT 1`;
+  return rows[0] ?? null;
 }
 
 interface SyncResult {
@@ -189,14 +200,14 @@ interface SyncResult {
 class SweepRunner {
   pushes = 0;
   deliveries = 0;
-  private readonly pushed = new Set<string>();
+  /** Kết quả đã chốt của từng kênh trong lượt — mỗi kênh chỉ đẩy **một** ảnh và đếm **một** lượt. */
+  private readonly outcomes = new Map<string, SyncResult>();
 
   constructor(
     readonly context: JobContext,
     readonly settings: ChannelSyncSettings,
     readonly today: string,
     readonly sweepKey: string,
-    readonly sweepKeyExplicit: boolean,
     readonly notify: NotifyPort,
   ) {}
 
@@ -249,10 +260,34 @@ class SweepRunner {
     }
   }
 
-  async pushChannel(channelId: string, version: number | null): Promise<boolean> {
-    this.pushed.add(channelId);
+  /**
+   * Khoá idempotent của **một kênh trong một lượt quét**: delivery và operation của cùng kênh dùng chung
+   * khoá nên một lượt chỉ cộng counter đúng một lần, phát lại cùng lượt không cộng thêm.
+   */
+  private attemptKey(channelId: string): string {
+    return `${channelId}:${this.sweepKey}`;
+  }
+
+  async pushChannel(
+    channelId: string,
+    version: number | null,
+    operationId: string | null = null,
+  ): Promise<boolean> {
+    const cached = this.outcomes.get(channelId);
+    if (cached !== undefined) {
+      // Kênh đã được đẩy trong lượt này: chốt operation theo kết quả đó, không đẩy/gia tăng lần hai.
+      if (operationId !== null)
+        await settleOperation(this.context.db, operationId, cached.succeeded);
+      return cached.succeeded;
+    }
     this.pushes += 1;
-    const result = await this.syncChannel(channelId, version, this.sweepKey, null);
+    const result = await this.syncChannel(
+      channelId,
+      version,
+      this.attemptKey(channelId),
+      operationId,
+    );
+    this.outcomes.set(channelId, result);
     await this.notifyIfDegraded(result.outcome);
     return result.succeeded;
   }
@@ -262,15 +297,13 @@ class SweepRunner {
     channelId: string,
     version: number | null,
   ): Promise<void> {
-    this.pushes += 1;
-    const result = await this.syncChannel(channelId, version, operationId, operationId);
-    await this.notifyIfDegraded(result.outcome);
+    await this.pushChannel(channelId, version, operationId);
   }
 
   /** Delivery được gom theo kênh và đẩy **một ảnh mới nhất** (version lớn nhất), không cộng dồn delta. */
   async pushDeliveries(): Promise<void> {
     await registerDeliveries(this.context.db);
-    const claimed = await claimDeliveries(this.context.db, this.sweepKey);
+    const claimed = await claimDeliveries(this.context.db, randomUUID());
     this.deliveries = claimed.length;
     const groups = new Map<string, { version: number | null; items: ClaimedDelivery[] }>();
     for (const item of claimed) {
@@ -292,12 +325,15 @@ class SweepRunner {
       await this.pushOperation(operation.id, operation.channelId, operation.version);
   }
 
-  /** Ảnh tồn của mọi kênh OTA: sự kiện chỉ nói "có thay đổi", còn nhịp 5 phút là lưới an toàn. */
-  async pushAllOtaChannels(): Promise<void> {
-    for (const channel of await activeOtaChannels(this.context.db)) {
-      if (this.pushed.has(channel.id)) continue;
-      await this.pushChannel(channel.id, null);
-    }
+  /**
+   * Lượt quét không có việc (không delivery/operation) vẫn đẩy **một kênh neo** — kênh OTA đang bật cần
+   * đồng bộ nhất — để nhịp 5 phút giữ tín hiệu sức khoẻ adapter mà không phát lại toàn bộ ảnh không đổi.
+   */
+  async pushAnchor(): Promise<void> {
+    if (this.pushes > 0) return;
+    const channel = await anchorChannel(this.context.db);
+    if (channel === null) return;
+    await this.pushChannel(channel.id, null);
   }
 }
 
@@ -306,9 +342,9 @@ class SweepRunner {
  *
  * Hàng đợi chỉ là **nhịp chạy**: payload không mang tồn/giá. Một lượt chạy (1) bổ sung delivery còn thiếu,
  * (2) giành delivery tới hạn và đẩy ảnh tồn mới nhất, (3) xử lý `operations` CHANNEL_SYNC do API để lại,
- * Mọi I/O mạng nằm **ngoài** transaction; trạng thái kênh + sổ lượt + cảnh báo nằm trong một transaction.
- * Lượt không có việc nào là no-op: sức khoẻ kênh chỉ được đánh giá trên lần đồng bộ thật, để một nhịp
- * quét rỗng không tự đẩy kênh vào DEGRADED.
+ * (4) lượt rỗi chỉ đẩy ảnh của **một** kênh neo làm phép thử sức khoẻ adapter. Mọi I/O mạng nằm **ngoài**
+ * transaction; trạng thái kênh + sổ lượt + cảnh báo nằm trong một transaction. Mỗi kênh đẩy tối đa **một**
+ * lần cho mỗi lượt với cùng khoá `attemptKey` nên counter không bị cộng đôi.
  */
 export function createChannelSyncJob(deps: ChannelSyncJobDeps = {}): JobHandler {
   const notify = deps.notify ?? notifyManager;
@@ -320,21 +356,14 @@ export function createChannelSyncJob(deps: ChannelSyncJobDeps = {}): JobHandler 
     // Cửa sổ đẩy ảnh tồn tính theo UTC của tiến trình; ngày nghiệp vụ của API vẫn theo múi giờ vận hành.
     const today = context.clock.now().toISOString().slice(0, 10);
     const sweepKey = job.key ?? randomUUID();
-    const runner = new SweepRunner(
-      context,
-      settings,
-      today,
-      sweepKey,
-      job.key !== undefined,
-      notify,
-    );
+    const runner = new SweepRunner(context, settings, today, sweepKey, notify);
 
     if (job.channelId !== undefined) {
       await runner.pushChannel(job.channelId, job.version ?? null);
     } else {
       await runner.pushDeliveries();
       await runner.pushPendingOperations();
-      await runner.pushAllOtaChannels();
+      await runner.pushAnchor();
     }
     context.log({
       queue: CHANNEL_SYNC_QUEUE,

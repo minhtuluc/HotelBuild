@@ -36,6 +36,7 @@ export class ChannelMappingAccess implements IdempotencyAccess {
     );
     const type = await this.service.loadRoomType(this.service.db, roomTypeId);
     requireProperty(current, type.property_id);
+    await this.service.assertRoomTypeInChannelScope(this.service.db, channelId, type.property_id);
     mappingInput(request.body);
     return { type: 'USER' as const, id: current.id };
   }

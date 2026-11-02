@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import type { PrismaClient } from '@prisma/client';
 import type { Clock } from '@pinehill/domain';
-import { requireProperty } from '../../../common/rbac/scope.js';
+import { requireProperty, ScopeDeniedError } from '../../../common/rbac/scope.js';
 import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
 import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import { CHANNEL_INVENTORY_EVENT } from '../../../worker-runtime/channel-sync.js';
@@ -72,6 +72,34 @@ export class ChannelMappingsService {
     if (rows.length > 0) throw mappingConflict();
   }
 
+  /**
+   * Loại phòng phải thuộc **cùng cơ sở** với kênh (fail-closed).
+   *
+   * Kênh trong `channels` là danh mục toàn cục; cơ sở của kênh đến từ `channel_property_settings`
+   * (cấu hình hoa hồng theo cơ sở). Khi kênh chưa có cấu hình nào, cơ sở do **ánh xạ đầu tiên** thiết lập
+   * nên các lệnh ghi sau không thể trộn hai cơ sở vào cùng một tài khoản OTA. Kiểm tra này chạy **trước**
+   * mọi lệnh ghi nên lệnh bị từ chối không đổi `used`/tổng quota của bất kỳ kênh nào (BR-CHAN-08).
+   */
+  async assertRoomTypeInChannelScope(
+    tx: Prisma.TransactionClient,
+    channelId: string,
+    propertyId: string,
+  ): Promise<void> {
+    const configured = await tx.$queryRaw<{ property_id: string }[]>(Prisma.sql`
+      SELECT property_id FROM channel_property_settings
+       WHERE channel_id = ${channelId}::uuid`);
+    const properties =
+      configured.length > 0
+        ? configured
+        : await tx.$queryRaw<{ property_id: string }[]>(Prisma.sql`
+            SELECT DISTINCT rt.property_id
+              FROM channel_mappings m
+              JOIN room_types rt ON rt.id = m.room_type_id
+             WHERE m.channel_id = ${channelId}::uuid`);
+    if (properties.length > 0 && !properties.some((row) => row.property_id === propertyId))
+      throw new ScopeDeniedError();
+  }
+
   private async readMapping(
     tx: Prisma.TransactionClient,
     channelId: string,
@@ -100,6 +128,7 @@ export class ChannelMappingsService {
     await this.assertProviderCodeFree(tx, channelId, input.roomTypeId, input.providerRoomTypeCode);
     const type = await this.loadRoomType(tx, input.roomTypeId);
     requireProperty(actor, type.property_id);
+    await this.assertRoomTypeInChannelScope(tx, channelId, type.property_id);
 
     const before = await this.readMapping(tx, channelId, input.roomTypeId);
     await tx.$executeRaw(Prisma.sql`

@@ -1,5 +1,5 @@
 import { Queue } from 'bullmq';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import { redisOptions } from '../../bullmq.factory.js';
 import type { JobContext } from '../types.js';
 import { CHANNEL_SYNC_FAILED, CHANNEL_SYNC_QUEUE, DEGRADED_AFTER_FAILURES } from './contract.js';
@@ -91,6 +91,23 @@ async function raiseDegraded(
 }
 
 /**
+ * Chốt `operations` của API theo kết quả adapter. Tách riêng để lượt quét chốt được cả khi lượt đẩy ảnh
+ * đã xảy ra trước đó trong **cùng** lượt (delivery và operation của một kênh chỉ đẩy một ảnh).
+ */
+export async function settleOperation(
+  tx: Prisma.TransactionClient | PrismaClient,
+  operationId: string,
+  succeeded: boolean,
+): Promise<void> {
+  await tx.$executeRaw`
+    UPDATE operations
+       SET status = ${succeeded ? 'SUCCEEDED' : 'FAILED'},
+           error_code = ${succeeded ? null : CHANNEL_SYNC_FAILED},
+           finished_at = clock_timestamp(), updated_at = clock_timestamp()
+     WHERE id = ${operationId}::uuid AND status = 'PENDING'`;
+}
+
+/**
  * Chốt **một lượt đồng bộ** theo khoá idempotent (`attemptKey`), trong **một transaction**:
  *
  * - `channel_sync_attempts` là sổ bền theo `(channel, key)`: phát lại cùng khoá không tăng counter, không
@@ -115,8 +132,13 @@ export async function recordAttempt(
               ${succeeded ? null : CHANNEL_SYNC_FAILED}, clock_timestamp())
       ON CONFLICT (channel_id, attempt_key) DO NOTHING
       RETURNING id`;
-    if (inserted.length === 0) return { fresh: false, notificationId: null };
+    const fresh = inserted.length > 0;
     let notificationId: string | null = null;
+    if (!fresh) {
+      // Phát lại cùng khoá: sổ lượt đã chốt, nhưng operation của API vẫn phải được chốt theo kết quả đã ghi.
+      if (operationId !== null) await settleOperation(tx, operationId, succeeded);
+      return { fresh: false, notificationId };
+    }
     if (succeeded) {
       await tx.$executeRaw`
         UPDATE channels
@@ -138,13 +160,7 @@ export async function recordAttempt(
       if (Number(updated[0]?.failures) === DEGRADED_AFTER_FAILURES)
         notificationId = await raiseDegraded(tx, context, channel, settings);
     }
-    if (operationId !== null)
-      await tx.$executeRaw`
-        UPDATE operations
-           SET status = ${succeeded ? 'SUCCEEDED' : 'FAILED'},
-               error_code = ${succeeded ? null : CHANNEL_SYNC_FAILED},
-               finished_at = clock_timestamp(), updated_at = clock_timestamp()
-         WHERE id = ${operationId}::uuid AND status = 'PENDING'`;
+    if (operationId !== null) await settleOperation(tx, operationId, succeeded);
     return { fresh: true, notificationId };
   });
   context.log({

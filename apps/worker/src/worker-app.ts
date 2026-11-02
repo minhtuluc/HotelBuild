@@ -30,7 +30,7 @@ export interface QueueLike {
   add(name: string, data: unknown): Promise<unknown>;
   upsertJobScheduler(
     id: string,
-    repeat: { every: number },
+    repeat: { every: number; startDate?: number },
     template?: JobTemplate,
   ): Promise<unknown>;
   close(): Promise<void>;
@@ -185,11 +185,18 @@ export function createWorkerApp(config: WorkerConfig, deps: WorkerDeps): WorkerA
               schedule.id === CHANNEL_SYNC_SCHEDULER_ID && configuredInterval !== null
                 ? configuredInterval
                 : schedule.everySeconds;
-            await queue.upsertJobScheduler(
-              schedule.id,
-              { every: everySeconds * 1000 },
-              { name: schedule.jobName, data: schedule.data },
-            );
+            const everyMs = everySeconds * 1000;
+            // BullMQ tạo lượt chạy đầu **ngay** khi scheduler chưa có `startDate`; với kênh, lần quét đầu
+            // đặt sau đúng một chu kỳ để restart không tự đẩy ảnh/đếm lỗi trước khi vận hành kịp kiểm tra.
+            // Đồng bộ tức thì vẫn do outbox/API phát job, không phụ thuộc nhịp này (BR-CHAN-02).
+            const repeat =
+              schedule.id === CHANNEL_SYNC_SCHEDULER_ID
+                ? { every: everyMs, startDate: Date.now() + everyMs }
+                : { every: everyMs };
+            await queue.upsertJobScheduler(schedule.id, repeat, {
+              name: schedule.jobName,
+              data: schedule.data,
+            });
           }
         }
       }
