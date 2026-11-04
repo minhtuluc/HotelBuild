@@ -8,6 +8,7 @@ import { createNotificationSendJob } from '../noti/send.job.js';
 import { smtpSettings } from '../noti/smtp.js';
 import { refundPayoutJob } from './refund-payout/refund-payout.job.js';
 import { noShowMarkJob } from './no-show/no-show.job.js';
+import { otaInboxJob } from './ota-inbox/ota-inbox.job.js';
 import type { JobRegistry } from './types.js';
 
 /**
@@ -23,6 +24,8 @@ export const JOB_HANDLERS: JobRegistry = {
   'q.outbox-relay': outboxRelayJob,
   'q.refund-payout': refundPayoutJob,
   'q.no-show-mark': noShowMarkJob,
+  // HB-129 AC10/AC13: tiêu thụ `q.ota-inbox` bằng use case áp booking qua composition runtime.
+  'q.ota-inbox': otaInboxJob,
   'q.notification-send': (data, context) =>
     createNotificationSendJob(channelSenders(smtpSettings(context.config)))(data, context),
 };

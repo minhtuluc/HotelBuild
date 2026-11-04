@@ -1,4 +1,5 @@
 import { ChannelsModule } from './modules/rate/channels/module.js';
+import { OtaReviewModule } from './modules/chan/ota-review/module.js';
 import { RateCalendarModule } from './modules/rate/calendar/module.js';
 import { SeasonsModule } from './modules/rate/seasons/module.js';
 import { PropertyAdminModule } from './modules/prop/property-admin/module.js';
@@ -184,6 +185,8 @@ export class AppModule {
         OnlinePaymentsModule,
         PspWebhooksModule,
         ChanWebhooksModule,
+        // HB-129 AC12: soát trùng booking OTA (gắn/gỡ cờ, không huỷ/gộp, không đụng tiền).
+        OtaReviewModule,
         RefundModule,
         PayoutModule,
         ReconciliationModule,

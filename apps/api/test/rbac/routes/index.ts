@@ -5,6 +5,7 @@ import { f3Rate } from './f3-rate.js';
 import { f4Booking } from './f4-booking.js';
 import { f5Pay } from './f5-pay.js';
 import { f6OtaInbox } from './f6-ota-inbox.js';
+import { f6OtaBookings } from './f6-ota-bookings.js';
 import { f7FrontOffice } from './f7-front-office.js';
 import { f8Report } from './f8-report.js';
 
@@ -22,6 +23,7 @@ export function independentOracle(): Oracle {
   f4Booking(oracle);
   f5Pay(oracle);
   f6OtaInbox(oracle);
+  f6OtaBookings(oracle);
   f7FrontOffice(oracle);
   f8Report(oracle);
   return oracle;

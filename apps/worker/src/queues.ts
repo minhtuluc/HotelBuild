@@ -2,6 +2,7 @@ export const QUEUE_NAMES = [
   'q.hold-expiry',
   'q.overbooking-scan',
   'q.channel-sync',
+  'q.ota-inbox',
   'q.no-show-mark',
   'q.outbox-relay',
   'q.report-export',
