@@ -12,7 +12,7 @@
  * - SIGTERM dừng êm, thoát mã 0 (HB-006).
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Queue } from 'bullmq';
@@ -53,13 +53,13 @@ function assertNoApiSourceImports(directory: string): void {
   while (pending.length > 0) {
     const current = pending.pop();
     if (current === undefined) break;
-    for (const entry of readdirSync(current)) {
-      const full = join(current, entry);
-      if (statSync(full).isDirectory()) {
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const full = join(current, entry.name);
+      if (entry.isDirectory()) {
         pending.push(full);
         continue;
       }
-      if (!entry.endsWith('.js')) continue;
+      if (!entry.name.endsWith('.js') || !entry.isFile()) continue;
       // Chỉ xét **specifier** của import/require: docblock trong dist nhắc tới `apps/api/src` là
       // chính sách, không phải phụ thuộc. Quét cả văn bản sẽ đỏ vô căn cứ.
       const content = readFileSync(full, 'utf8');
