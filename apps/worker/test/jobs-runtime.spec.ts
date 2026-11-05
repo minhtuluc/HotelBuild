@@ -89,6 +89,7 @@ describe('JOB_HANDLERS', () => {
       'q.hold-expiry',
       'q.no-show-mark',
       'q.notification-send',
+      'q.ota-inbox',
       'q.outbox-relay',
       'q.refund-payout',
       'q.report-export',

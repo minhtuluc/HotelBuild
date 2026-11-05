@@ -68,6 +68,9 @@ const workerEnvSchema = z.object({
     .transform((value) => value === 'true'),
   // HB-147: đánh dấu no-show (BR-CANCEL-10, BR-SYS-02 `job.noShow.markTime`). Nhịp quét một phút để
   // trượt mốc 23:59 không quá một phút; mốc giờ VN và trần booking mỗi trang cấu hình được.
+  // HB-129: nhịp quét hàng đợi inbox OTA đến hạn. Hàng inbox là nguồn sự thật (ghi trước ACK), nên
+  // scheduler lặp bảo đảm không mất việc khi enqueue tức thời thất bại/Redis mất dữ liệu.
+  OTA_INBOX_INTERVAL_SECONDS: z.coerce.number().positive().default(30),
   NO_SHOW_MARK_INTERVAL_SECONDS: z.coerce.number().positive().default(60),
   NO_SHOW_MARK_TIME: z
     .string()
