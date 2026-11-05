@@ -30,7 +30,14 @@ import {
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 
 function buildWorkspace(): void {
-  for (const filter of ['@pinehill/api', '@pinehill/worker']) {
+  // Build cả gói nền trước: dist của worker import `@pinehill/*` qua package subpath, không có
+  // `tsc` nào tự build dependency. Checkout CI sạch không có dist sẵn.
+  for (const filter of [
+    '@pinehill/contracts',
+    '@pinehill/domain',
+    '@pinehill/api',
+    '@pinehill/worker',
+  ]) {
     const built = spawnSync('pnpm', ['--filter', filter, 'build'], {
       cwd: root,
       encoding: 'utf8',
