@@ -30,9 +30,7 @@ export const exportJobs = () => queue.getJobs(['waiting', 'delayed', 'active', '
 export async function loginAs(username: string, role: string): Promise<string> {
   clock.value += 61000;
   await rows('UPDATE users SET role=$1 WHERE username=$2', [role, username]);
-  const response = await http()
-    .post('/api/v1/auth/login')
-    .send({ username, password });
+  const response = await http().post('/api/v1/auth/login').send({ username, password });
   expect(response.status).toBe(200);
   return tokenPairSchema.parse(response.body).accessToken;
 }
