@@ -251,14 +251,24 @@ export class BookingsService {
     }
   }
 
-  /** Cùng use case với scanner, ngay trong transaction tạo booking; lỗi ghi ca ⇒ rollback cả booking. */
-  private async guardOversold(tx: Tx, input: BookingInput, oversold: boolean): Promise<void> {
-    if (!oversold) return;
-    await detectInTransaction(tx, this.clock, {
-      propertyIds: [input.propertyId],
-      roomTypeId: input.roomTypeId,
-      dates: stayDates(input.checkIn, input.checkOut),
-    });
+  /**
+   * Cùng use case với scanner, ngay trong transaction tạo booking; lỗi ghi ca ⇒ rollback cả booking.
+   *
+   * Đồng hồ kiểm lấy **giờ CSDL đã ghi vào `hold_expires_at`/`created_at`** của chính booking này,
+   * không lấy `this.clock`: hold vừa tạo phải còn hạn tại đúng thời điểm nó được ghi (BR-BOOK-07),
+   * tránh lệch giữa giờ CSDL và giờ tiến trình khi quét lại tồn ngay trong TX.
+   */
+  private async guardOversold(tx: Tx, input: BookingInput, hold: HoldDecision): Promise<void> {
+    if (!hold.oversold) return;
+    await detectInTransaction(
+      tx,
+      { now: () => hold.now },
+      {
+        propertyIds: [input.propertyId],
+        roomTypeId: input.roomTypeId,
+        dates: stayDates(input.checkIn, input.checkOut),
+      },
+    );
   }
 
   async create(tx: Tx, caller: BookingCaller, body: unknown): Promise<BookingCreationResult> {
@@ -339,7 +349,7 @@ export class BookingsService {
         },
       });
       // D07: cùng use case với scanner, ngay trong transaction này — ghi ca lỗi thì rollback cả booking.
-      await this.guardOversold(tx, input, hold.oversold);
+      await this.guardOversold(tx, input, hold);
       const row = await tx.bookings.findUniqueOrThrow({
         where: { id: written.id },
         select: bookingSelect,

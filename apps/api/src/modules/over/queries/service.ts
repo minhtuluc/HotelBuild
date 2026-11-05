@@ -178,10 +178,7 @@ export class OverbookingQueries {
     return actor.isOwner() ? undefined : [...actor.propertyScope];
   }
 
-  private caseWhere(
-    actor: AuthorizedActor,
-    query: CaseQuery,
-  ): Prisma.overbooking_casesWhereInput {
+  private caseWhere(actor: AuthorizedActor, query: CaseQuery): Prisma.overbooking_casesWhereInput {
     const filters: Prisma.overbooking_casesWhereInput[] = [this.scopeFor(actor)];
     if (query.propertyId !== undefined) filters.push({ property_id: query.propertyId });
     if (query.status !== undefined) filters.push({ status: query.status });
