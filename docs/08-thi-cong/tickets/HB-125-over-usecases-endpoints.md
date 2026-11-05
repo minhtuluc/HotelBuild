@@ -26,7 +26,7 @@ locked:
 locked_sha:
   - ad85468d59c5776647f4e616e585ea4cb9cbed436d285d8236e55b45675f1062 apps/api/test/over/compensation.locked.spec.ts
   - 2bfabcf0e8b25ccb6cd401f4b73f8a9f55251f6fd060c056e293dbff6707788f apps/api/test/over/helpers/actions.ts
-  - ad926389799db4da0c6893275fab5bcbbd604225886c3f48b75db894bc9e64ec apps/api/test/over/helpers/harness.ts
+  - f871779f698b6a0600396b52e319f058ba50ec25eeb3c83757ffa1cad143cdb9 apps/api/test/over/helpers/harness.ts
   - 3c5156fb3e35b3c6af1029ea203580d2ceef8599bd5dc5fbebfae044c72165b4 apps/api/test/over/helpers/payouts.ts
   - cdb27fb24ca98115bca130fc9896aac83ce7d6c9cb4b2866ddbbc7c120d9e4b6 apps/api/test/over/helpers/seed.ts
   - 25bfc589ab0f8bd1b69c275b8bbf00adec3541377f6179fc07f6e37df40a2e4a apps/api/test/over/helpers/views.ts
