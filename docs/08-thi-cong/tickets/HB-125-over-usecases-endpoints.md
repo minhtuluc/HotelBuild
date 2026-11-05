@@ -26,13 +26,13 @@ locked:
 locked_sha:
   - ad85468d59c5776647f4e616e585ea4cb9cbed436d285d8236e55b45675f1062 apps/api/test/over/compensation.locked.spec.ts
   - 2bfabcf0e8b25ccb6cd401f4b73f8a9f55251f6fd060c056e293dbff6707788f apps/api/test/over/helpers/actions.ts
-  - f404954ad26ec38d614c6d1c5802d0f7bff620d7a87554457f8b21e8aa5efabb apps/api/test/over/helpers/harness.ts
+  - ad926389799db4da0c6893275fab5bcbbd604225886c3f48b75db894bc9e64ec apps/api/test/over/helpers/harness.ts
   - 3c5156fb3e35b3c6af1029ea203580d2ceef8599bd5dc5fbebfae044c72165b4 apps/api/test/over/helpers/payouts.ts
   - cdb27fb24ca98115bca130fc9896aac83ce7d6c9cb4b2866ddbbc7c120d9e4b6 apps/api/test/over/helpers/seed.ts
   - 25bfc589ab0f8bd1b69c275b8bbf00adec3541377f6179fc07f6e37df40a2e4a apps/api/test/over/helpers/views.ts
   - 76c31717754e7ec14af75617005c71a87b21e703ad8922510e4f2eda2b15a340 apps/api/test/over/merge.locked.spec.ts
-  - 0f4dbdcd6382d8fac1bd765c98d322813c6e2009a9c1225961fdb3371cead124 apps/api/test/over/relocation.locked.spec.ts
-  - b0028e36babfc294a8cf6de015e0baf9852290eb914c214d86c702825e7a1bca apps/api/test/over/walkout.locked.spec.ts
+  - a3c4d9c9cde6f9b9311e231267dd721d39e19d0f85a3ded953677de9399ba974 apps/api/test/over/relocation.locked.spec.ts
+  - 5351e96c1093e5daf2e3bdd6295094dab0d4a707163de003a400cc324cb694a9 apps/api/test/over/walkout.locked.spec.ts
 ---
 
 # HB-125 — Use case và endpoint OVER
