@@ -29,7 +29,7 @@ locked:
   - apps/worker/test/channel-sync/harness.ts
 locked_sha:
   - 4c3bb979c22b013f77322cddbfdd90a63c140f978d0b9f201a0b05c4bbc647ca apps/api/test/channel-sync/endpoints.locked.spec.ts
-  - 3e8c0b3d607d2f4e0b15d09ec54e0659775e969bbf0bbcd43bf4646f12261c73 apps/api/test/channel-sync/fixture.ts
+  - 603a026eb1d2384fbed9a99818c512e7986fbec97e90747d026e4f49d776703b apps/api/test/channel-sync/fixture.ts
   - 59900b23f3259702f96baf385ee974198b4d6bd8b30e9f1a7df836b52294bd7a apps/api/test/channel-sync/http.ts
   - ec686751aefad0ae6c01c41e513e316b358358dc146eef719f4230a2a750386b apps/api/test/channel-sync/inventory.locked.spec.ts
   - f2e948bbf155700d54d219b6d07ea44fe779a0f1d6d08af9baeef0efb8480474 apps/api/test/channel-sync/schemas.ts
