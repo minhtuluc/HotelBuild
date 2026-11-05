@@ -53,7 +53,13 @@ function assertNoApiSourceImports(directory: string): void {
         continue;
       }
       if (!entry.endsWith('.js')) continue;
-      expect(readFileSync(full, 'utf8'), full).not.toContain('apps/api/src');
+      // Chỉ xét **specifier** của import/require: docblock trong dist nhắc tới `apps/api/src` là
+      // chính sách, không phải phụ thuộc. Quét cả văn bản sẽ đỏ vô căn cứ.
+      const content = readFileSync(full, 'utf8');
+      const specifiers = [
+        ...content.matchAll(/\b(?:from|require|import)\s*\(?\s*['"]([^'"]+)['"]/g),
+      ].map((match) => match[1]!);
+      for (const specifier of specifiers) expect(specifier, full).not.toContain('apps/api/src');
     }
   }
 }

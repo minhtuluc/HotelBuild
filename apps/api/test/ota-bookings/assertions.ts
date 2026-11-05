@@ -27,8 +27,17 @@ export function count(value: unknown): number {
   throw new Error(`HB129 expected integer-like, got ${String(value)}`);
 }
 
+/**
+ * Ngày nghiệp vụ của cột `date`: node-postgres trả `Date` ở **nửa đêm giờ địa phương**, nên
+ * `toISOString()` trên máy +07 lùi một ngày. Đọc thành phần lịch địa phương thay vì UTC.
+ */
 export function dayOf(value: unknown): string {
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (value instanceof Date) {
+    const year = String(value.getFullYear()).padStart(4, '0');
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
   if (typeof value === 'string') return value.slice(0, 10);
   throw new Error(`HB129 expected date-like, got ${String(value)}`);
 }

@@ -134,7 +134,7 @@ test('lease-and-durable-recovery', async () => {
     expect(JSON.stringify(logs)).not.toContain(REFERENCE.guestName);
     expect(
       await testDb.rows(
-        "SELECT id FROM channel_cancel_tombstones WHERE provider_booking_code='HB129-W-FAIL'",
+        "SELECT 1 FROM channel_cancel_tombstones WHERE provider_booking_code='HB129-W-FAIL'",
       ),
     ).toHaveLength(0);
   } finally {
