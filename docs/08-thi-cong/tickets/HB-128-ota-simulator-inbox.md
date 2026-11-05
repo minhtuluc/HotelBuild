@@ -20,7 +20,7 @@ locked:
 locked_sha:
   - 2a049c4ec14c0958426e87ba6967d80e2a3602a01b44967d26c30929133e2974 apps/api/test/ota-inbox/durability.locked.spec.ts
   - 0527bd7baf3a134cbf36a274d385cdfab41cf4e1882bd8569bc0b568a470fde5 apps/api/test/ota-inbox/fault.ts
-  - 800ad2109b75fdd2c08c1ac20c9dc6ccb1e893789e0bee95231517a9c22788b3 apps/api/test/ota-inbox/fixture.ts
+  - a1d71785bd199deb79fae1b7aeb279f38bc37b1411149173614669998aeda048 apps/api/test/ota-inbox/fixture.ts
   - 0aa61edb9000e1bf31f9e2738e6b852d407e3ca9e6590725388e053949aab451 apps/api/test/ota-inbox/signature.locked.spec.ts
   - 11e10988f82eb31fdd7d6930dfd3d775c753f027cf813ef5b1b9059ca79d5076 apps/api/test/ota-inbox/simulator.locked.spec.ts
 ---

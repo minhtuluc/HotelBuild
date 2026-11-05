@@ -21,15 +21,15 @@ locked:
   - apps/api/test/over/merge.locked.spec.ts
   - apps/api/test/over/walkout.locked.spec.ts
 locked_sha:
-  - e0d50967ff5b6c902e79763859097319f431a273c394cbeadb15f7dcd28757ff apps/api/test/over/detection-helpers/contract.ts
-  - f4026dd8e1c0cbbbbedb79b66d2620f40aef113619ae9076e29e3033741ecbc8 apps/api/test/over/detection-helpers/fixture.ts
+  - 91d331521ca96078a0feba5fe0d1ac67c7981b11c1a59141bdd3165303c2a031 apps/api/test/over/detection-helpers/contract.ts
+  - 4a72c8e66653b58118bd6e27be557bd1fc3cbc7541587212b337e09cab693002 apps/api/test/over/detection-helpers/fixture.ts
   - 6e86f3ab37fa6c06d859d4b6ba7c55dbe09fec77da60e19c8681bb22332358eb apps/api/test/over/detection-helpers/index.ts
-  - f83287522b21027d953a3e1aa6b4dcf3272313d7f3221d6d676f1329dd426aa6 apps/api/test/over/detection-helpers/scenario.ts
+  - 59d41402f67b506c83c7361fce26d1ff2a540db72768daafc3e859aa7b893f3e apps/api/test/over/detection-helpers/scenario.ts
   - d275edf3a935873f79feeff3737088e9606cadc9f97734bff5c307f2cace003c apps/api/test/over/detection-queries.locked.spec.ts
-  - 0fb5e8c644f7ee08d532e78b2f5d5a8aede25cd97c182a017133b24c8a13cbea apps/api/test/over/detection.locked.spec.ts
-  - 444a9530f5f4c11b824cbc3b0e389a7b8dc5b1bf2e018a6406cc344d8193514c apps/api/test/over/merge.locked.spec.ts
-  - d0906e7b296a26993c1615c5afd0cd0d854a2afcb061f2c5c8013b32d98c72c2 apps/api/test/over/relocation.locked.spec.ts
-  - 48597b8fec3506f0ea650f2f3aeae5d4d3bbb5433e213add35af49a07b490824 apps/api/test/over/walkout.locked.spec.ts
+  - b7b4d8d9cb476edd490240fb241f3761382c9e7a0bd7cb5cf063f27bf931007b apps/api/test/over/detection.locked.spec.ts
+  - 76c31717754e7ec14af75617005c71a87b21e703ad8922510e4f2eda2b15a340 apps/api/test/over/merge.locked.spec.ts
+  - 0f4dbdcd6382d8fac1bd765c98d322813c6e2009a9c1225961fdb3371cead124 apps/api/test/over/relocation.locked.spec.ts
+  - b0028e36babfc294a8cf6de015e0baf9852290eb914c214d86c702825e7a1bca apps/api/test/over/walkout.locked.spec.ts
 ---
 
 # HB-126 — Phát hiện quá tải và đọc ca

@@ -33,9 +33,9 @@ locked_sha:
   - 59900b23f3259702f96baf385ee974198b4d6bd8b30e9f1a7df836b52294bd7a apps/api/test/channel-sync/http.ts
   - ec686751aefad0ae6c01c41e513e316b358358dc146eef719f4230a2a750386b apps/api/test/channel-sync/inventory.locked.spec.ts
   - f2e948bbf155700d54d219b6d07ea44fe779a0f1d6d08af9baeef0efb8480474 apps/api/test/channel-sync/schemas.ts
-  - e94e9d0e1cc88bde591d2338b69a2f74e7455ed0c79028fffc4cbd28f42ad586 apps/worker/test/channel-sync/failures.locked.spec.ts
+  - 06739b4568fb8d8e91d4cdb862a9e2dc30a15fff3ff62e2d6f560dc2930ae990 apps/worker/test/channel-sync/failures.locked.spec.ts
   - dd4dbc84ea96ba6c4702018512cdda6e8d4f98a138b36cd3069263347f156a51 apps/worker/test/channel-sync/harness.ts
-  - cb4a31bedccc37b1ed94e8e1edd5c61f2ba6aaf3550c356c0d783aafc0461258 apps/worker/test/channel-sync/scheduler.locked.spec.ts
+  - 7d937d1327cd7414de0e2558fd6bd7cb07739741e651f93b96a62efafe636a7f apps/worker/test/channel-sync/scheduler.locked.spec.ts
 ---
 
 # HB-131 — Endpoint CHAN và đồng bộ tồn/giá
