@@ -1,0 +1,88 @@
+import { makeTranslate } from '@pinehill/ui-web/messages';
+
+/** Câu chữ riêng của SCR-43 (HB-135); danh mục chung `lib/i18n.ts` không thuộc ticket nên không sửa. */
+export const text = makeTranslate({
+  title: 'Bảng điều khiển quá tải (SCR-43)',
+  intro:
+    'Màn hình chỉ hiển thị ca, hạn và trạng thái do máy chủ trả; không tính lại thiếu phòng, hạn hay tự đóng ca.',
+  reload: 'Tải lại dữ liệu',
+  loading: 'Đang tải…',
+  refreshing: 'Đang cập nhật; giữ dữ liệu cũ trên màn hình.',
+  offline: 'Mất kết nối. Dữ liệu đang hiện có thể đã cũ.',
+  serverError: 'Máy chủ gặp lỗi. Dữ liệu đang hiện có thể đã cũ.',
+  expired: 'Phiên đã hết hạn. Đăng nhập lại để tiếp tục.',
+  forbidden: 'Bạn không có quyền xem hoặc thao tác nội dung này.',
+  reference: 'Mã tham chiếu: {reference}',
+  // Quét
+  scanOk: 'Lượt quét gần nhất thành công lúc {time}.',
+  scanFailed:
+    'Lượt quét gần nhất lỗi; dữ liệu có thể chưa đầy đủ. Lần thành công gần nhất: {time}.',
+  scanUnknown: 'Chưa có lượt quét thành công; chưa thể kết luận có hay không có ca.',
+  scanThrough: 'Quét tới ngày {date}.',
+  never: 'chưa có',
+  overdueCount: 'Số ca quá hạn (máy chủ đếm): {count}',
+  notConfirmedEmpty:
+    'Chưa xác định: không có ca trong bộ lọc nhưng lượt quét chưa thành công, nên không kết luận là không có quá tải.',
+  confirmedEmpty: 'Không có ca quá tải trong bộ lọc (lượt quét thành công, máy chủ xác nhận).',
+  // Bộ lọc
+  filterTitle: 'Bộ lọc',
+  property: 'Cơ sở',
+  roomType: 'Loại phòng',
+  status: 'Trạng thái',
+  all: 'Tất cả',
+  dateFrom: 'Từ ngày',
+  dateTo: 'Đến ngày',
+  overdueOnly: 'Chỉ ca quá hạn',
+  apply: 'Áp dụng bộ lọc',
+  filterNote: 'Mặc định xem 30 ngày tới. Xoá ngày để xem cả ca của ngày đã qua.',
+  stOpen: 'Mở (OPEN)',
+  stProposed: 'Đã đề xuất (PROPOSED)',
+  stResolved: 'Đã đóng (RESOLVED)',
+  stEscalated: 'Đã leo thang (ESCALATED)',
+  // Bảng
+  listLabel: 'Danh sách ca quá tải',
+  total: 'Tổng: {total}',
+  colDate: 'Ngày thiếu phòng',
+  colType: 'Loại phòng',
+  colShortage: 'Thiếu (máy chủ)',
+  colStatus: 'Trạng thái',
+  colDeadline: 'Hạn xử lý',
+  colEscalated: 'Leo thang lúc',
+  colResolved: 'Đóng lúc',
+  colDelay: 'Lý do chậm',
+  colAction: 'Thao tác',
+  overdue: 'QUÁ HẠN',
+  inTime: 'Trong hạn',
+  byUser: 'bởi người dùng {id}',
+  bySystem: 'bởi hệ thống',
+  none: '—',
+  open: 'Xử lý (SCR-44)',
+  resolve: 'Đóng ca',
+  loadMore: 'Tải thêm',
+  // Đóng ca
+  resolveTitle: 'Đóng ca quá tải',
+  resolveNote: 'Máy chủ chỉ đóng khi thiếu phòng đã hết; nếu còn thiếu ca vẫn mở.',
+  resolutionNote: 'Ghi chú đóng ca',
+  confirmResolve: 'Gửi lệnh đóng ca',
+  cancel: 'Huỷ',
+  // Lệnh
+  sending: 'Đang gửi lệnh…',
+  done: 'Máy chủ đã xác nhận đóng ca. Danh sách được đọc lại.',
+  unknown:
+    'Chưa biết lệnh đã được áp dụng hay chưa. Không gửi lệnh khác; gửi lại đúng lệnh cũ hoặc tải lại để đối chiếu.',
+  retry: 'Gửi lại cùng lệnh',
+  lookup: 'Tải lại để đối chiếu',
+  newIntent: 'Bỏ lệnh cũ và tạo lệnh mới',
+  ttl: 'Lệnh cũ đã quá 24 giờ: không gửi lại mù. Tải lại để đối chiếu rồi mới tạo lệnh mới.',
+  inProgress: 'Máy chủ đang xử lý lệnh này. Thử lại sau {seconds} giây với cùng lệnh.',
+  keyReused: 'Khoá lệnh đã dùng cho nội dung khác. Tải lại và tạo lệnh mới.',
+  conflict: 'Ca đã đổi. Danh sách được đọc lại; đối chiếu rồi xác nhận lại ý định.',
+  deadlinePassed:
+    'Ca đã qua hạn xử lý (E_OVER_CASE_DEADLINE_PASSED). Ca và nguồn dữ liệu được giữ nguyên: leo thang và xử lý tại chỗ theo quyền, rồi đóng ca khi máy chủ cho phép.',
+  rejected: 'Máy chủ từ chối lệnh; ca vẫn mở.',
+  // Lỗi trường
+  REQUIRED: 'Bắt buộc nhập',
+  TOO_LONG: 'Quá dài',
+  INVALID_DATE: 'Ngày không hợp lệ',
+  BEFORE_FROM: 'Phải không trước ngày bắt đầu',
+});
