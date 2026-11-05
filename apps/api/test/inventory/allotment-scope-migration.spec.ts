@@ -28,8 +28,14 @@ describe('HB035 persisted configuration scope on real PostgreSQL16', () => {
 
   it('backfills version1 while preserving populated child rows and timestamps', async () => {
     expect(await version(f.legacyChannel)).toEqual([{ version: '1' }]);
+    // 0010 adds the closure provenance next to `is_closed`; the pre-upgrade rows are unclosed.
     expect((await f.db.query('SELECT * FROM channel_allotments ORDER BY date')).rows).toEqual(
-      f.legacyRows,
+      f.legacyRows.map((row) => ({
+        ...row,
+        manual_closed: false,
+        auto_closed: false,
+        closed_by: null,
+      })),
     );
   });
 

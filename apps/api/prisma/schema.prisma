@@ -200,20 +200,24 @@ model channel_allotment_scopes {
 }
 
 model channel_allotments {
-  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  channel_id    String     @db.Uuid
-  room_type_id  String     @db.Uuid
-  date          DateTime   @db.Date
-  allotment     Int        @db.SmallInt
-  used          Int        @default(0) @db.SmallInt
-  is_closed     Boolean    @default(false)
-  closed_reason String?
-  closed_at     DateTime?  @db.Timestamptz(6)
-  created_at    DateTime   @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime   @default(now()) @db.Timestamptz(6)
-  version       BigInt     @default(1)
-  channels      channels   @relation(fields: [channel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  room_types    room_types @relation(fields: [room_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                                        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  channel_id                                String     @db.Uuid
+  room_type_id                              String     @db.Uuid
+  date                                      DateTime   @db.Date
+  allotment                                 Int        @db.SmallInt
+  used                                      Int        @default(0) @db.SmallInt
+  is_closed                                 Boolean    @default(false)
+  closed_reason                             String?
+  closed_at                                 DateTime?  @db.Timestamptz(6)
+  created_at                                DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at                                DateTime   @default(now()) @db.Timestamptz(6)
+  version                                   BigInt     @default(1)
+  manual_closed                             Boolean    @default(false)
+  auto_closed                               Boolean    @default(false)
+  closed_by                                 String?    @db.Uuid
+  channels                                  channels   @relation(fields: [channel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  room_types                                room_types @relation(fields: [room_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_channel_allotments_closed_byTousers users?     @relation("channel_allotments_closed_byTousers", fields: [closed_by], references: [id], onUpdate: NoAction)
 
   @@unique([channel_id, room_type_id, date], map: "uq_channel_allotments_scope")
   @@index([date, room_type_id], map: "idx_channel_allotments_date")
@@ -230,11 +234,14 @@ model channel_mappings {
   created_at              DateTime   @default(now()) @db.Timestamptz(6)
   updated_at              DateTime   @default(now()) @db.Timestamptz(6)
   version                 BigInt     @default(1)
+  allotment_pct           Int        @default(80) @db.SmallInt
   channels                channels   @relation(fields: [channel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   room_types              room_types @relation(fields: [room_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([channel_id, external_room_code], map: "uq_channel_mappings_external")
+  @@unique([channel_id, external_room_code], map: "uq_channel_mappings_external_code")
   @@unique([channel_id, room_type_id], map: "uq_channel_mappings_room")
+  @@unique([channel_id, room_type_id], map: "uq_channel_mappings_room_type")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -280,6 +287,7 @@ model channels {
   channel_mappings          channel_mappings[]
   channel_property_settings channel_property_settings[]
   channel_sales_closures    channel_sales_closures[]
+  channel_sync_attempts     channel_sync_attempts[]
   channel_sync_watermarks   channel_sync_watermarks[]
   outbox_events             outbox_events[]
   rate_calendars            rate_calendars[]
@@ -992,6 +1000,7 @@ model users {
   booking_status_history                                           booking_status_history[]
   bookings                                                         bookings[]
   bookings_bookings_duplicate_suspected_byTousers                  bookings[]               @relation("bookings_duplicate_suspected_byTousers")
+  channel_allotments_channel_allotments_closed_byTousers           channel_allotments[]     @relation("channel_allotments_closed_byTousers")
   channel_sales_closures_channel_sales_closures_closed_byTousers   channel_sales_closures[] @relation("channel_sales_closures_closed_byTousers")
   channel_sales_closures_channel_sales_closures_reopened_byTousers channel_sales_closures[] @relation("channel_sales_closures_reopened_byTousers")
   guest_notes                                                      guest_notes[]
@@ -1207,4 +1216,19 @@ model channel_sales_closures {
   users_channel_sales_closures_closed_byTousers   users?     @relation("channel_sales_closures_closed_byTousers", fields: [closed_by], references: [id], onUpdate: NoAction)
   users_channel_sales_closures_reopened_byTousers users?     @relation("channel_sales_closures_reopened_byTousers", fields: [reopened_by], references: [id], onUpdate: NoAction)
   room_types                                      room_types @relation(fields: [room_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model channel_sync_attempts {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  channel_id   String   @db.Uuid
+  attempt_key  String
+  outcome      String
+  error_code   String?
+  attempted_at DateTime @default(now()) @db.Timestamptz(6)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  channels     channels @relation(fields: [channel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([channel_id, attempt_key], map: "uq_channel_sync_attempts_key")
+  @@index([channel_id, attempted_at(sort: Desc)], map: "idx_channel_sync_attempts_history")
 }
