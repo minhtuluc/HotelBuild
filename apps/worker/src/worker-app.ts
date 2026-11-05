@@ -3,11 +3,12 @@ import {
   EXPORT_CLEANUP_JOB,
   HOLD_EXPIRY_JOB,
   HOLD_RECONCILE_JOB,
-  isRepeatableQueue,
   NO_SHOW_MARK_JOB,
+  OTA_INBOX_JOB,
   OUTBOX_RELAY_JOB,
   QUEUE_NAMES,
   REFUND_PAYOUT_JOB,
+  isRepeatableQueue,
 } from './queues.js';
 import type { QueueName } from './queues.js';
 import { HOLD_EXPIRY_RECONCILE, HOLD_EXPIRY_SWEEP } from './jobs/hold-expiry/hold-expiry.job.js';
@@ -81,6 +82,15 @@ export function repeatSchedules(config: WorkerConfig, name: QueueName): readonly
         everySeconds: config.HOLD_RECONCILE_INTERVAL_SECONDS,
         jobName: HOLD_RECONCILE_JOB,
         data: { mode: HOLD_EXPIRY_RECONCILE },
+      },
+    ];
+  if (name === 'q.ota-inbox')
+    return [
+      {
+        id: 'q.ota-inbox-scheduler',
+        everySeconds: config.OTA_INBOX_INTERVAL_SECONDS,
+        jobName: OTA_INBOX_JOB,
+        data: {},
       },
     ];
   if (name === 'q.outbox-relay')

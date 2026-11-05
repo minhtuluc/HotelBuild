@@ -17,6 +17,7 @@ export type QueueName = (typeof QUEUE_NAMES)[number];
 /** Các hàng đợi chạy lặp theo nhịp; chỉ bật khi cấu hình cho phép. */
 export const REPEATABLE_QUEUES = [
   'q.hold-expiry',
+  'q.ota-inbox',
   'q.no-show-mark',
   'q.outbox-relay',
   'q.export-cleanup',
@@ -37,5 +38,7 @@ export const OUTBOX_RELAY_JOB = 'outbox-relay';
 export const EXPORT_CLEANUP_JOB = 'export-cleanup';
 export const REFUND_PAYOUT_JOB = 'refund-payout';
 export const NO_SHOW_MARK_JOB = 'no-show-mark';
+/** HB-129 — quét `q.ota-inbox` đến hạn; payload `{}` nghĩa là quét, không phải một `eventId`. */
+export const OTA_INBOX_JOB = 'ota-inbox';
 /** HB-182 — quét cảnh báo vận hành (NFR-OBS-04); không có `data.mode`, một nhịp duy nhất. */
 export const ALERTS_SCAN_JOB = 'alerts-scan';
