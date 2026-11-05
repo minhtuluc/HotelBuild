@@ -59,15 +59,15 @@ Mục lục: [backlog](backlog.md) · [lộ trình đến deploy](lo-trinh-den-d
 | [HB-107](tickets/HB-107-scr33-34-tao-booking-ops.md) | SCR-33 + SCR-34 tạo booking tại quầy / qua điện thoại | R1 | DeepSeek | HB-106, HB-077 | SCR-33, SCR-34; FR-BOOK-02, FR-BOOK-03; UC-BOOK-02, UC-BOOK-03 | ≤ 5 bước tại quầy |
 | [HB-108](tickets/HB-108-scr35-36-sua-huy-ops.md) | SCR-35 + SCR-36 sửa/đổi ngày/huỷ (operations web) | R1 | DeepSeek | HB-106, HB-097, HB-098 | SCR-35, SCR-36; UC-BOOK-05, UC-BOOK-06, UC-BOOK-08 | Xác nhận hai bước |
 | [HB-109](tickets/HB-109-scr37-thu-tien-ops.md) | SCR-37 thu cọc/thu số dư tại quầy | R1 | DeepSeek | HB-106, HB-096 | SCR-37; UC-PAY-01, UC-PAY-03 | Đòi PIN; in biên lai |
-| [HB-110](tickets/HB-110-scr38-duyet-hoan-ops.md) | SCR-38 yêu cầu & duyệt hoàn tiền | R1 | DeepSeek | HB-106, HB-099, HB-100 | SCR-38; UC-PAY-04; TC-PAY-23 | Không có nút "chi lại"; PAID chỉ sau bằng chứng |
-| [HB-111](tickets/HB-111-scr39-69-doi-soat-ops.md) | SCR-39 đối soát + SCR-69 | R1 | DeepSeek | HB-109 | SCR-39, SCR-69; UC-PAY-05; BR-PAY-06, BR-PAY-10 | Đối soát theo (người thu, ngày VN) |
+| [HB-110](tickets/HB-110-scr38-duyet-hoan-ops.md) | SCR-38 yêu cầu & duyệt hoàn tiền — **Xong (#194)** | R1 | DeepSeek | HB-106, HB-099, HB-100 | SCR-38; UC-PAY-04; TC-PAY-23 | Không có nút "chi lại"; PAID chỉ sau bằng chứng |
+| [HB-111](tickets/HB-111-scr39-69-doi-soat-ops.md) | SCR-39 đối soát + SCR-69 — **Xong (#215)** | R1 | DeepSeek | HB-109 | SCR-39, SCR-69; UC-PAY-05; BR-PAY-06, BR-PAY-10 | Đối soát theo (người thu, ngày VN) |
 | [HB-112](tickets/HB-112-scr77-thanh-toan-android.md) | SCR-77 thanh toán (customer Android) | R1 | DeepSeek | HB-084, HB-094 | SCR-77; UC-PAY-02; TC-PAY-22 | Deep link PSP an toàn |
 | [HB-113](tickets/HB-113-scr79-80-don-cua-toi-android.md) | SCR-79 + SCR-80 đơn của tôi (customer Android) | R1 | DeepSeek | HB-084, HB-098 | SCR-79, SCR-80; UC-BOOK-07 | Offline §8.3 |
 | [HB-114](tickets/HB-114-scr81-82-huy-doi-ngay-android.md) | SCR-81 + SCR-82 huỷ & đổi ngày (customer Android) | R1 | DeepSeek | HB-113, HB-097, HB-098 | SCR-81, SCR-82; UC-BOOK-06, UC-BOOK-08 | Offline không xác nhận tài chính |
 | [HB-115](tickets/HB-115-scr83-ho-so-android.md) | SCR-83 hồ sơ khách (customer Android) — cắt được | R1 | DeepSeek | HB-113 | SCR-83; UC-CRM-01 | — |
 | [HB-116](tickets/HB-116-api-gia-f5.md) | API giả E2E F5 (callback muộn, timeout) | R2 | Codex | HB-079, HB-090 | api.md §5.2; TC-PAY-22, TC-BOOK-28 | E2E cũ vẫn xanh |
-| [HB-117](tickets/HB-117-qa-f5.md) | QA F5: 2 web + 2 Android, callback PSP, maker-checker | R0 | Gemini | HB-101…HB-116 | TC-BOOK-23, TC-BOOK-27, TC-PAY-22, TC-PAY-23, TC-SYS-10 | Không hiển thị dữ liệu thẻ |
-| [HB-118](tickets/HB-118-nghiem-thu-f5.md) | Nghiệm thu F5 (mốc M6) | — | lead | HB-117 | lộ trình §7.7 | Bằng chứng đủ — **ĐẠT 28/10/2026**: 225/225 PASS · 0 FAIL · 0 FINDING trên `main` `9ee00d9`, 5/5 phát hiện F5 đã đóng ([bằng chứng §8](../07-ban-giao/bang-chung-f5.md)) |
+| [HB-117](tickets/HB-117-qa-f5.md) | QA F5: 2 web + 2 Android, callback PSP, maker-checker — **Xong (#194)** | R0 | Gemini | HB-101…HB-116 | TC-BOOK-23, TC-BOOK-27, TC-PAY-22, TC-PAY-23, TC-SYS-10 | Không hiển thị dữ liệu thẻ |
+| [HB-118](tickets/HB-118-nghiem-thu-f5.md) | Nghiệm thu F5 (mốc M6) — **Xong (#207)** | — | lead | HB-117 | lộ trình §7.7 | Bằng chứng đủ — **ĐẠT 28/10/2026**: 225/225 PASS · 0 FAIL · 0 FINDING trên `main` `9ee00d9`, 5/5 phát hiện F5 đã đóng ([bằng chứng §8](../07-ban-giao/bang-chung-f5.md)) |
 | HB-119 | Dự phòng tách ticket | — | lead cấp | — | — | — |
 
 ## Khoảng trống tài liệu
