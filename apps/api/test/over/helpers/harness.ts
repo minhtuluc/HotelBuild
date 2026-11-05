@@ -122,9 +122,15 @@ export async function flushRedis(): Promise<void> {
  * ở mỗi request (RBAC guard), nên cache không che thay đổi vai.
  */
 const tokens = new Map<StaffKey, string>();
+/** Hạn mức login 10/phút/IP đếm mọi lần đăng nhập; xoá riêng khoá IP trước mỗi lần lấy token. */
+async function clearLoginWindow(): Promise<void> {
+  const keys = await redis.keys('auth:ip:*');
+  if (keys.length > 0) await redis.del(...keys);
+}
 export async function staffToken(key: StaffKey): Promise<string> {
   const cached = tokens.get(key);
   if (cached !== undefined) return cached;
+  await clearLoginWindow();
   const response = await http()
     .post('/api/v1/auth/login')
     .send({ username: STAFF[key].username, password });
