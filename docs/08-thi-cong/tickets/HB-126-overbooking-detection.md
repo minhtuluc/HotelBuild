@@ -26,10 +26,10 @@ locked_sha:
   - 6e86f3ab37fa6c06d859d4b6ba7c55dbe09fec77da60e19c8681bb22332358eb apps/api/test/over/detection-helpers/index.ts
   - 59d41402f67b506c83c7361fce26d1ff2a540db72768daafc3e859aa7b893f3e apps/api/test/over/detection-helpers/scenario.ts
   - d275edf3a935873f79feeff3737088e9606cadc9f97734bff5c307f2cace003c apps/api/test/over/detection-queries.locked.spec.ts
-  - b7b4d8d9cb476edd490240fb241f3761382c9e7a0bd7cb5cf063f27bf931007b apps/api/test/over/detection.locked.spec.ts
+  - 0e53ceb564d311288570f0245c13aadaf81625c4528bc556849b4f98c3cc9d4b apps/api/test/over/detection.locked.spec.ts
   - 76c31717754e7ec14af75617005c71a87b21e703ad8922510e4f2eda2b15a340 apps/api/test/over/merge.locked.spec.ts
-  - 0f4dbdcd6382d8fac1bd765c98d322813c6e2009a9c1225961fdb3371cead124 apps/api/test/over/relocation.locked.spec.ts
-  - b0028e36babfc294a8cf6de015e0baf9852290eb914c214d86c702825e7a1bca apps/api/test/over/walkout.locked.spec.ts
+  - a3c4d9c9cde6f9b9311e231267dd721d39e19d0f85a3ded953677de9399ba974 apps/api/test/over/relocation.locked.spec.ts
+  - 5351e96c1093e5daf2e3bdd6295094dab0d4a707163de003a400cc324cb694a9 apps/api/test/over/walkout.locked.spec.ts
 ---
 
 # HB-126 — Phát hiện quá tải và đọc ca
