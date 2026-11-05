@@ -13,6 +13,7 @@ import {
   exportJobs,
   http,
   login,
+  loginAs,
   operationStatus,
   requestExport,
   rows,
@@ -144,11 +145,13 @@ describe('HB-163 · GET /operations/{operationId}', () => {
       (await operationStatus(owner, operationId)).body,
     );
     expect(ownerView).toMatchObject({ operationId, status: 'PENDING' });
-    const manager = await login('MANAGER');
+    // MANAGER **khác** người khởi tạo: `operations.read` đã mở cho MANAGER (HB-131, để tự theo dõi lượt
+    // retry mình phát), nhưng hàng `operations` vẫn chỉ người yêu cầu hoặc OWNER đọc được ⇒ 403.
+    const manager = await loginAs('h029-second', 'MANAGER');
     const denied = await operationStatus(manager, operationId);
     expect(denied.status).toBe(403);
     expect(errorBodySchema.parse(denied.body).code).toBe('E_RBAC_FORBIDDEN');
-    // Đăng nhập lại OWNER: `login` của fixture đổi vai trò người dùng dùng chung nên token cũ đã thành MANAGER.
+    // Đăng nhập lại OWNER trên người dùng dùng chung: `login` đổi vai trò của chính `h029-first`.
     const ownerAgain = await login('OWNER');
     const missing = await operationStatus(ownerAgain, '11111111-1111-4111-8111-111111111111');
     expect(missing.status).toBe(404);
