@@ -17,6 +17,7 @@
  */
 import 'reflect-metadata';
 import { randomBytes, randomUUID } from 'node:crypto';
+import { Redis } from 'ioredis';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { hash } from '@node-rs/argon2';
@@ -221,6 +222,11 @@ export async function setup(): Promise<void> {
 
   const redisUrl = new URL(process.env['REDIS_URL'] ?? 'redis://127.0.0.1:6379');
   redisUrl.pathname = '/12';
+  // DB 12 dùng chung với suite khác; hạn mức login 10/phút/IP đếm **mọi** lần đăng nhập. Không xoá
+  // đầu suite thì bộ test này có thể thừa hưởng counter và nhận 429/500 dù sản phẩm đúng.
+  const redis = new Redis(redisUrl.href);
+  await redis.flushdb();
+  await redis.quit();
   const registered = AppModule.register({
     DATABASE_URL: runtime.href,
     REDIS_URL: redisUrl.href,
