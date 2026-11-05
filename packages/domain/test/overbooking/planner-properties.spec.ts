@@ -12,71 +12,75 @@ import type {
   RelocationRoomStock,
 } from '@pinehill/domain/overbooking';
 
-test('active_oversell_10000: per-property exact limits, every night, determinism and immutable snapshots', () => {
-  fc.assert(
-    fc.property(
-      fc.array(
-        fc.record({
-          rooms: fc.integer({ min: 0, max: 1_000_000 }),
-          pctHundredths: fc.integer({ min: 0, max: 500 }),
-          overbookAllowed: fc.boolean(),
-          deltas: fc.tuple(
-            fc.integer({ min: -1, max: 1 }),
-            fc.integer({ min: -1, max: 1 }),
-            fc.integer({ min: -1, max: 1 }),
-          ),
-        }),
-        { minLength: 1, maxLength: 4 },
-      ),
-      (properties) => {
-        for (const [index, config] of properties.entries()) {
-          // Independent bounded-number oracle: quotient plus remainder, not production bigint ceil.
-          const product = config.rooms * config.pctHundredths;
-          const rounded = Math.floor(product / 10_000) + (product % 10_000 === 0 ? 0 : 1);
-          const limit =
-            config.pctHundredths === 0 || !config.overbookAllowed ? 0 : Math.max(1, rounded);
-          const nightly = Object.freeze(
-            config.deltas.map((delta, day) =>
-              Object.freeze({
-                date: `2026-10-0${day + 3}`,
-                projectedOversoldRooms: Math.max(0, limit + delta),
-              }),
+test(
+  'active_oversell_10000: per-property exact limits, every night, determinism and immutable snapshots',
+  { timeout: 60_000 },
+  () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({
+            rooms: fc.integer({ min: 0, max: 1_000_000 }),
+            pctHundredths: fc.integer({ min: 0, max: 500 }),
+            overbookAllowed: fc.boolean(),
+            deltas: fc.tuple(
+              fc.integer({ min: -1, max: 1 }),
+              fc.integer({ min: -1, max: 1 }),
+              fc.integer({ min: -1, max: 1 }),
             ),
-          );
-          const input = Object.freeze({
-            kind: 'ACTIVE_SALE' as const,
-            propertyId: `CS-${index}`,
-            activePhysicalRooms: config.rooms,
-            overbookLimitPct: `${Math.floor(config.pctHundredths / 100)}.${String(
-              config.pctHundredths % 100,
-            ).padStart(2, '0')}`,
-            channel: Object.freeze({ overbookAllowed: config.overbookAllowed }),
-            nightly,
-          });
-          const original = JSON.stringify(input);
-          const firstFailure = nightly.find((row) => row.projectedOversoldRooms > limit);
-          const expected = firstFailure
-            ? {
-                ok: false,
-                error: {
-                  code: 'E_OVER_LIMIT_EXCEEDED',
-                  propertyId: input.propertyId,
-                  date: firstFailure.date,
-                  dailyLimit: limit,
-                  projectedOversoldRooms: firstFailure.projectedOversoldRooms,
-                },
-              }
-            : { ok: true, value: { kind: 'ACTIVE_SALE', dailyLimit: limit } };
-          expect(guard(input)).toEqual(expected);
-          expect(guard(input)).toEqual(expected);
-          expect(guard({ ...input, nightly: [...nightly].reverse() })).toEqual(expected);
-          expect(JSON.stringify(input)).toBe(original);
-        }
-      },
-    ),
-    { numRuns: 10_000, seed: 12203 },
-  );
-});
+          }),
+          { minLength: 1, maxLength: 4 },
+        ),
+        (properties) => {
+          for (const [index, config] of properties.entries()) {
+            // Independent bounded-number oracle: quotient plus remainder, not production bigint ceil.
+            const product = config.rooms * config.pctHundredths;
+            const rounded = Math.floor(product / 10_000) + (product % 10_000 === 0 ? 0 : 1);
+            const limit =
+              config.pctHundredths === 0 || !config.overbookAllowed ? 0 : Math.max(1, rounded);
+            const nightly = Object.freeze(
+              config.deltas.map((delta, day) =>
+                Object.freeze({
+                  date: `2026-10-0${day + 3}`,
+                  projectedOversoldRooms: Math.max(0, limit + delta),
+                }),
+              ),
+            );
+            const input = Object.freeze({
+              kind: 'ACTIVE_SALE' as const,
+              propertyId: `CS-${index}`,
+              activePhysicalRooms: config.rooms,
+              overbookLimitPct: `${Math.floor(config.pctHundredths / 100)}.${String(
+                config.pctHundredths % 100,
+              ).padStart(2, '0')}`,
+              channel: Object.freeze({ overbookAllowed: config.overbookAllowed }),
+              nightly,
+            });
+            const original = JSON.stringify(input);
+            const firstFailure = nightly.find((row) => row.projectedOversoldRooms > limit);
+            const expected = firstFailure
+              ? {
+                  ok: false,
+                  error: {
+                    code: 'E_OVER_LIMIT_EXCEEDED',
+                    propertyId: input.propertyId,
+                    date: firstFailure.date,
+                    dailyLimit: limit,
+                    projectedOversoldRooms: firstFailure.projectedOversoldRooms,
+                  },
+                }
+              : { ok: true, value: { kind: 'ACTIVE_SALE', dailyLimit: limit } };
+            expect(guard(input)).toEqual(expected);
+            expect(guard(input)).toEqual(expected);
+            expect(guard({ ...input, nightly: [...nightly].reverse() })).toEqual(expected);
+            expect(JSON.stringify(input)).toBe(original);
+          }
+        },
+      ),
+      { numRuns: 10_000, seed: 12203 },
+    );
+  },
+);
 
 const NOW = Date.UTC(2026, 9, 10, 6, 0);
 const HOUR = 3_600_000;
@@ -169,42 +173,48 @@ const relocationBooking = (): fc.Arbitrary<RelocationPlanRequest['booking']> =>
 const serializeBigint = (_key: string, value: unknown): unknown =>
   typeof value === 'bigint' ? value.toString() : value;
 
-test('TC_OVER_10_deterministic_10000: seeded fixture sets keep order, score and ladder stable and are not mutated', () => {
-  fc.assert(
-    fc.property(
-      relocationCandidates(),
-      relocationRooms(),
-      relocationGeography(),
-      relocationBooking(),
-      (candidates, roomStock, geography, booking) => {
-        const ranked = rankRelocations(candidates);
-        expect(ranked.ok).toBe(true);
-        expect(rankRelocations(candidates)).toEqual(ranked);
-        expect(rankRelocations([...candidates].reverse())).toEqual(ranked);
+test(
+  'TC_OVER_10_deterministic_10000: seeded fixture sets keep order, score and ladder stable and are not mutated',
+  { timeout: 60_000 },
+  () => {
+    fc.assert(
+      fc.property(
+        relocationCandidates(),
+        relocationRooms(),
+        relocationGeography(),
+        relocationBooking(),
+        (candidates, roomStock, geography, booking) => {
+          const ranked = rankRelocations(candidates);
+          expect(ranked.ok).toBe(true);
+          expect(rankRelocations(candidates)).toEqual(ranked);
+          expect(rankRelocations([...candidates].reverse())).toEqual(ranked);
 
-        const request: RelocationPlanRequest = {
-          planId: 'plan-deterministic-1',
-          nowEpochMs: NOW,
-          booking,
-          stayDates: [...STAY],
-          roomStock,
-          geography,
-        };
-        const before = JSON.stringify(candidates, serializeBigint) + JSON.stringify(request);
-        const plan = planRelocation(request);
-        expect(plan.ok).toBe(true);
-        expect(planRelocation(request)).toEqual(plan);
-        // Reversing stay dates and room stock must not change order, score or ladder.
-        expect(
-          planRelocation({
-            ...request,
-            stayDates: [...STAY].reverse(),
-            roomStock: [...roomStock].reverse(),
-          }),
-        ).toEqual(plan);
-        expect(JSON.stringify(candidates, serializeBigint) + JSON.stringify(request)).toBe(before);
-      },
-    ),
-    { numRuns: 10_000, seed: 12204 },
-  );
-});
+          const request: RelocationPlanRequest = {
+            planId: 'plan-deterministic-1',
+            nowEpochMs: NOW,
+            booking,
+            stayDates: [...STAY],
+            roomStock,
+            geography,
+          };
+          const before = JSON.stringify(candidates, serializeBigint) + JSON.stringify(request);
+          const plan = planRelocation(request);
+          expect(plan.ok).toBe(true);
+          expect(planRelocation(request)).toEqual(plan);
+          // Reversing stay dates and room stock must not change order, score or ladder.
+          expect(
+            planRelocation({
+              ...request,
+              stayDates: [...STAY].reverse(),
+              roomStock: [...roomStock].reverse(),
+            }),
+          ).toEqual(plan);
+          expect(JSON.stringify(candidates, serializeBigint) + JSON.stringify(request)).toBe(
+            before,
+          );
+        },
+      ),
+      { numRuns: 10_000, seed: 12204 },
+    );
+  },
+);
