@@ -41,6 +41,15 @@ export interface InboxReceipt {
   readonly hashMatches: boolean;
 }
 
+/**
+ * Việc gắn thêm vào **cùng transaction** của `receive` (không có transaction thứ hai):
+ * `conflict` chạy khi khoá `(provider, account, eventId)` đã tồn tại với hash khác — nơi gọi ghi dấu
+ * đối soát của mình (vd `audit_logs`) mà **không** ghi đè payload gốc.
+ */
+export interface InboxHooks {
+  readonly conflict?: (tx: Prisma.TransactionClient, row: InboxRow) => Promise<void>;
+}
+
 /** Kết cục khi không áp dụng được; `reason` là **mã** ngắn, không PII, dùng để đối soát. */
 export interface InboxOutcome {
   readonly reason: string;
@@ -66,7 +75,7 @@ export class WebhookInbox {
   ) {}
 
   /** Ghi bền sự kiện **đã xác minh** và commit ngay: cổng ngoài chỉ được ACK sau khi hàm này trả về. */
-  async receive(entry: InboxEntry): Promise<InboxReceipt> {
+  async receive(entry: InboxEntry, hooks: InboxHooks = {}): Promise<InboxReceipt> {
     return this.db.$transaction(async (tx) => {
       const inserted = await tx.webhook_inbox.createMany({
         data: [
@@ -94,11 +103,10 @@ export class WebhookInbox {
         },
         select: ROW,
       });
-      return {
-        row,
-        created: inserted.count === 1,
-        hashMatches: row.payload_hash === entry.payloadHash,
-      };
+      const created = inserted.count === 1;
+      const hashMatches = row.payload_hash === entry.payloadHash;
+      if (!created && !hashMatches && hooks.conflict !== undefined) await hooks.conflict(tx, row);
+      return { row, created, hashMatches };
     });
   }
 

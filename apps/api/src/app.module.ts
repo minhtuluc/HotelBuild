@@ -74,6 +74,8 @@ import { PspModule } from './modules/pay/psp/module.js';
 // lead — không đổi API hiện có; khai ở đây vì `check:scope` tính cả file ngoài allow của HB-094.
 import { OnlinePaymentsModule } from './modules/pay/online/module.js';
 import { PspWebhooksModule } from './modules/pay/webhooks/module.js';
+// HB-128: tiếp nhận webhook OTA simulator — inbox bền trước ACK, xác minh HMAC trước dedup.
+import { ChanWebhooksModule } from './modules/chan/webhooks/module.js';
 import { ReconciliationModule } from './modules/pay/reconciliation/module.js';
 
 /**
@@ -181,6 +183,7 @@ export class AppModule {
         PspModule,
         OnlinePaymentsModule,
         PspWebhooksModule,
+        ChanWebhooksModule,
         RefundModule,
         PayoutModule,
         ReconciliationModule,
