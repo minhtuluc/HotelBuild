@@ -81,7 +81,7 @@ function readRetryAfterMs(value: string | null): number | undefined {
 }
 
 /**
- * Endpoint cấp/huỷ phiên: 401 ở đây là kết quả nghiệp vụ, không kích hoạt `onUnauthorized` (HB-012).
+ * Endpoint cấp/huỷ phiên (và `pin/verify`): 401 ở đây là kết quả nghiệp vụ, không kích hoạt `onUnauthorized` (HB-012).
  * `/auth/logout` bắt buộc có trong danh sách: hook thường gọi logout khi refresh thất bại, nếu logout
  * lại kích hoạt hook thì hook chờ chính nó → treo (lead tái hiện khi xét PR #32).
  */
@@ -92,6 +92,9 @@ const CREDENTIAL_PATHS: readonly string[] = [
   '/guest-auth/login',
   '/guest-auth/register',
   '/guest-auth/refresh',
+  // HB-217: 401 của PIN sai là kết quả nghiệp vụ, không phải token hết hạn (cùng mã `E_AUTH_INVALID_CREDENTIALS`);
+  // làm mới phiên rồi gửi lại sẽ đếm mỗi lần nhập sai hai lần vào ngưỡng khoá PIN 3 lần.
+  '/auth/pin/verify',
 ];
 
 /** Phân loại lỗi kết nối để UI biết có nên gửi lại hay không. */

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { tokenPairSchema } from '@pinehill/contracts';
 import { ApiClient, type ApiResponse } from '../src/client.js';
 import { ApiError, isApiError } from '../src/errors.js';
@@ -384,5 +384,32 @@ describe('đọc phản hồi', () => {
     });
     expect(response.data).toBeUndefined();
     expect(response.status).toBe(204);
+  });
+});
+
+describe('401 của pin/verify (HB-217)', () => {
+  it('pin_verify_401_is_not_replayed', async () => {
+    const body = {
+      code: 'E_AUTH_INVALID_CREDENTIALS',
+      message: 'x',
+      traceId: 't',
+      timestamp: '2026-11-10T00:00:00.000Z',
+      path: '/auth/pin/verify',
+    };
+    const h = harness([
+      { status: 401, body },
+      { status: 200, body: {} },
+    ]);
+    const onUnauthorized = vi.fn(async () => true);
+    const client = clientWith(h, { getAccessToken: () => 'access-token-aaaaaaaa', onUnauthorized });
+    const request = {
+      method: 'POST',
+      path: '/auth/pin/verify',
+      body: { pin: '123456' },
+      decoder: tokenPairSchema,
+    } as const;
+    expect((await expectApiError(client.request(request))).status).toBe(401);
+    expect(onUnauthorized).not.toHaveBeenCalled();
+    expect(h.calls).toHaveLength(1);
   });
 });
