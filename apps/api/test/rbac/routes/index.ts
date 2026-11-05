@@ -7,6 +7,7 @@ import { f5Pay } from './f5-pay.js';
 import { f6OtaInbox } from './f6-ota-inbox.js';
 import { f7FrontOffice } from './f7-front-office.js';
 import { f8Report } from './f8-report.js';
+import { f6Over } from './f6-over.js';
 
 export type { Expected } from './types.js';
 
@@ -24,5 +25,6 @@ export function independentOracle(): Oracle {
   f6OtaInbox(oracle);
   f7FrontOffice(oracle);
   f8Report(oracle);
+  f6Over(oracle);
   return oracle;
 }

@@ -141,14 +141,19 @@ export async function auditLogId(tx: Tx, refundId: string, action: string): Prom
  * Chỉ diễn ra khi hồ sơ **còn PENDING** nên trigger `refund_allocations` vẫn cho sửa; giảm xuống
  * dưới số dòng đã giữ nghĩa là quyết định không phân bổ nổi — trả `E_PAY_AMOUNT_MISMATCH`.
  */
-export async function reallocate(tx: Tx, requestId: string, net: bigint, now: Date): Promise<void> {
-  const legs = await tx.refund_allocations.findMany({
-    where: { refund_request_id: requestId },
-    orderBy: { id: 'asc' },
-    select: { id: true, amount: true },
-  });
-  const total = legs.reduce((sum, leg) => sum + leg.amount, 0n);
-  if (net <= 0n || total <= net) return;
+interface AllocationLeg {
+  id: string;
+  amount: bigint;
+  original_payment_id: string;
+}
+
+async function shrinkAllocations(
+  tx: Tx,
+  legs: readonly AllocationLeg[],
+  total: bigint,
+  net: bigint,
+  now: Date,
+): Promise<void> {
   let left = net;
   const next = legs.map((leg, index) => {
     const amount = index + 1 < legs.length ? (net * leg.amount) / total : left;
@@ -163,6 +168,56 @@ export async function reallocate(tx: Tx, requestId: string, net: bigint, now: Da
   }
 }
 
+async function growAllocations(
+  tx: Tx,
+  requestId: string,
+  legs: readonly AllocationLeg[],
+  net: bigint,
+  now: Date,
+): Promise<void> {
+  const paymentIds = legs.map((leg) => leg.original_payment_id);
+  const payments = await tx.payments.findMany({
+    where: { id: { in: paymentIds } },
+    select: { id: true, amount: true },
+  });
+  const reserved = await tx.$queryRaw<{ original_payment_id: string; held: bigint }[]>`
+    SELECT a.original_payment_id, coalesce(sum(a.amount),0)::bigint AS held
+      FROM refund_allocations a JOIN refund_requests r ON r.id = a.refund_request_id
+     WHERE a.original_payment_id = ANY(${paymentIds}::uuid[])
+       AND a.refund_request_id <> ${requestId}::uuid
+       AND r.status IN ('PENDING','APPROVED','PAID')
+     GROUP BY a.original_payment_id`;
+  const otherHeld = new Map(reserved.map((row) => [row.original_payment_id, row.held]));
+  let left = net - legs.reduce((sum, leg) => sum + leg.amount, 0n);
+  for (const leg of legs) {
+    if (left <= 0n) break;
+    const cap =
+      (payments.find((payment) => payment.id === leg.original_payment_id)?.amount ?? 0n) -
+      (otherHeld.get(leg.original_payment_id) ?? 0n);
+    const room = cap - leg.amount;
+    if (room <= 0n) continue;
+    const add = room < left ? room : left;
+    await tx.$executeRaw`
+      UPDATE refund_allocations SET amount = amount + ${add}, updated_at = ${now}::timestamptz
+       WHERE id = ${leg.id}::uuid`;
+    left -= add;
+  }
+  if (left > 0n)
+    throw refundError('exceedsPaid', 'Quyết định vượt quỹ còn giữ được của các nguồn thu.');
+}
+
+export async function reallocate(tx: Tx, requestId: string, net: bigint, now: Date): Promise<void> {
+  const legs = await tx.refund_allocations.findMany({
+    where: { refund_request_id: requestId },
+    orderBy: { id: 'asc' },
+    select: { id: true, amount: true, original_payment_id: true },
+  });
+  const total = legs.reduce((sum, leg) => sum + leg.amount, 0n);
+  if (net <= 0n || total === net) return;
+  if (total > net) return shrinkAllocations(tx, legs, total, net, now);
+  return growAllocations(tx, requestId, legs, net, now);
+}
+
 /** Ghi quyết định hai cấp vào `refund_approvals` rồi mới đổi trạng thái (trigger bắt buộc bảng này). */
 export async function recordDecision(
   tx: Tx,
@@ -172,15 +227,17 @@ export async function recordDecision(
   approvedAmount: bigint,
   reason: string,
   now: Date,
+  refundFee: bigint = row.refund_fee,
 ): Promise<void> {
   await tx.$queryRaw`
     INSERT INTO refund_approvals(refund_request_id, request_version, approver_id, approver_role,
       decision, approved_amount, refund_fee, reason, created_at, updated_at)
     VALUES(${row.id}::uuid, ${row.version}, ${actor.id}::uuid, ${actor.role}, ${decision},
-      ${approvedAmount}, ${row.refund_fee}, ${reason}, ${now}::timestamptz, ${now}::timestamptz)`;
+      ${approvedAmount}, ${refundFee}, ${reason}, ${now}::timestamptz, ${now}::timestamptz)`;
   await tx.$queryRaw`
     UPDATE refund_requests SET status = ${decision}, approved_amount = ${approvedAmount},
-      approved_by = ${actor.id}::uuid, decided_at = ${now}::timestamptz, updated_at = ${now}::timestamptz
+      refund_fee = ${refundFee}, approved_by = ${actor.id}::uuid,
+      decided_at = ${now}::timestamptz, updated_at = ${now}::timestamptz
      WHERE id = ${row.id}::uuid`;
 }
 
