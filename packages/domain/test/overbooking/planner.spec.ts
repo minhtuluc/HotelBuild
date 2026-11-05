@@ -1,14 +1,21 @@
+/* eslint-disable max-lines -- HB-122 AC1…AC10 are independently named cases in the only spec file the ticket allows; splitting them would need files outside `allow`. */
 import { expect, test, vi } from 'vitest';
 import {
   checkActiveOversell as guard,
+  checkStandardStep3,
   keepScore,
+  planRelocation,
+  proposeCrossCityException,
   rankRelocations,
 } from '@pinehill/domain/overbooking';
 import type {
   KeepScoreBreakdown,
   KeepScoreFactors,
   RelocationCandidate,
+  RelocationGeography,
+  RelocationPlanRequest,
   RelocationRank,
+  RelocationRoomStock,
 } from '@pinehill/domain/overbooking';
 
 const NOW = Date.UTC(2026, 9, 10, 6, 0);
@@ -239,6 +246,55 @@ test('HB122_clock_ids_and_purity: frozen snapshots work without time, IDs, rando
     expect(guard(input)).toEqual(allowed(2));
     expect(guard(input)).toEqual(allowed(2));
     expect(JSON.stringify(input)).toBe(original);
+
+    const planInput = Object.freeze({
+      planId: 'plan-purity-1',
+      nowEpochMs: NOW,
+      booking: Object.freeze({
+        bookingId: 'booking-purity-1',
+        propertyId: 'CS-01',
+        roomTypeId: 'STD',
+        roomTypeBasePriceVnd: 1_000_000,
+        guestCount: 2,
+        status: 'CONFIRMED' as const,
+        paidAmountVnd: 1_400_000,
+        firstNightRateVnd: 700_000,
+      }),
+      stayDates: Object.freeze(['2026-10-10', '2026-10-11']),
+      roomStock: Object.freeze([
+        Object.freeze({
+          roomId: 'room-purity-1',
+          propertyId: 'CS-01',
+          roomTypeId: 'STD',
+          basePriceVnd: 1_000_000,
+          capacityAdults: 2,
+          occupiedDates: Object.freeze<string[]>([]),
+        }),
+      ]),
+      geography: Object.freeze({
+        properties: Object.freeze([
+          Object.freeze({ propertyId: 'CS-01', city: 'Đà Lạt' }),
+          Object.freeze({ propertyId: 'CS-02', city: 'Vũng Tàu' }),
+        ]),
+        distances: Object.freeze([
+          Object.freeze({
+            fromPropertyId: 'CS-01',
+            toPropertyId: 'CS-02',
+            roadDistanceKm: 300,
+          }),
+        ]),
+      }),
+    });
+    const planSnapshot = JSON.stringify(planInput);
+    const firstPlan = planRelocation(planInput);
+    expect(firstPlan).toEqual(planRelocation(planInput));
+    expect(firstPlan.ok).toBe(true);
+    if (firstPlan.ok) {
+      expect(firstPlan.value.planId).toBe('plan-purity-1');
+      expect(firstPlan.value.generatedAtEpochMs).toBe(NOW);
+      expect(firstPlan.value.firstFeasibleStep).toBe(1);
+    }
+    expect(JSON.stringify(planInput)).toBe(planSnapshot);
   } finally {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -431,4 +487,364 @@ test('HB122_explained_order_matches_examples: K-A…K-H expose components, group
   expect(explain(rankOf(K_CASES.map((row, index) => toCandidate(row, `8f00-${index}`))))).toEqual(
     explain(ranks),
   );
+});
+
+const GEOGRAPHY: RelocationGeography = {
+  properties: [
+    { propertyId: 'CS-01', city: 'Đà Lạt' },
+    { propertyId: 'CS-02', city: 'Vũng Tàu' },
+    { propertyId: 'CS-03', city: 'Phan Thiết' },
+  ],
+  distances: [
+    { fromPropertyId: 'CS-01', toPropertyId: 'CS-03', roadDistanceKm: 160 },
+    { fromPropertyId: 'CS-02', toPropertyId: 'CS-03', roadDistanceKm: 170 },
+    { fromPropertyId: 'CS-01', toPropertyId: 'CS-02', roadDistanceKm: 300 },
+  ],
+};
+
+const twoProperties = (toCity: string, roadDistanceKm: number): RelocationGeography => ({
+  properties: [
+    { propertyId: 'CS-01', city: 'Đà Lạt' },
+    { propertyId: 'CS-09', city: toCity },
+  ],
+  distances: [{ fromPropertyId: 'CS-01', toPropertyId: 'CS-09', roadDistanceKm }],
+});
+
+const BOOKING = {
+  bookingId: 'booking-relocation-1',
+  propertyId: 'CS-01',
+  roomTypeId: 'STD',
+  roomTypeBasePriceVnd: 1_000_000,
+  guestCount: 2,
+  status: 'CONFIRMED' as const,
+  paidAmountVnd: 1_400_000,
+  firstNightRateVnd: 700_000,
+};
+
+const STAY = ['2026-10-10', '2026-10-11'] as const;
+
+const stockRoom = (
+  roomId: string,
+  overrides: Partial<RelocationRoomStock> = {},
+): RelocationRoomStock => ({
+  roomId,
+  propertyId: 'CS-01',
+  roomTypeId: 'STD',
+  basePriceVnd: 1_000_000,
+  capacityAdults: 2,
+  occupiedDates: [],
+  ...overrides,
+});
+
+const planRequest = (overrides: Partial<RelocationPlanRequest> = {}): RelocationPlanRequest => ({
+  planId: 'plan-relocation-1',
+  nowEpochMs: NOW,
+  booking: BOOKING,
+  stayDates: [...STAY],
+  roomStock: [],
+  geography: GEOGRAPHY,
+  ...overrides,
+});
+
+const planOf = (request: RelocationPlanRequest) => {
+  const result = planRelocation(request);
+  if (!result.ok) throw new Error(result.error.message);
+  return result.value;
+};
+
+test('TC_OVER_05_first_feasible_and_continuous_stay: step 1 only for a room free the whole stay', () => {
+  // r-n1 is free on 11/10 and r-n2 on 10/10: together they look free but neither covers the stay.
+  const stitched = planOf(
+    planRequest({
+      roomStock: [
+        stockRoom('r-n1', { occupiedDates: ['2026-10-10'] }),
+        stockRoom('r-n2', { occupiedDates: ['2026-10-11'] }),
+      ],
+    }),
+  );
+  expect(stitched.firstFeasibleStep).toBe(4);
+  expect(stitched.sameTypeSameProperty).toBeNull();
+  expect(stitched.executionOrder).toEqual([4]);
+  expect(stitched.ladder[0]).toEqual({
+    step: 1,
+    moveType: 'SAME_TYPE_SAME_PROPERTY',
+    feasible: false,
+    candidateCount: 0,
+    note: 'Không còn phòng cùng loại cùng cơ sở trống liên tục cả kỳ',
+  });
+  expect(stitched.ladder[1]).toMatchObject({ feasible: false, candidateCount: 0 });
+
+  const wholeStay = planOf(
+    planRequest({
+      roomStock: [stockRoom('r-n1', { occupiedDates: ['2026-10-10'] }), stockRoom('r-whole')],
+    }),
+  );
+  expect(wholeStay.firstFeasibleStep).toBe(1);
+  expect(wholeStay.ladder[0]).toEqual({
+    step: 1,
+    moveType: 'SAME_TYPE_SAME_PROPERTY',
+    feasible: true,
+    candidateCount: 1,
+  });
+  expect(wholeStay.sameTypeSameProperty).toEqual({
+    roomId: 'r-whole',
+    propertyId: 'CS-01',
+    roomTypeId: 'STD',
+    basePriceVnd: 1_000_000,
+    moveType: 'SAME_TYPE_SAME_PROPERTY',
+    requiresManagerApproval: false,
+    requiresForceMajeure: false,
+  });
+
+  // Only a higher class with enough capacity is a step-2 candidate; the cheap upgrade picks first.
+  const upgradeOnly = planOf(
+    planRequest({
+      roomStock: [
+        stockRoom('dlx-small', { roomTypeId: 'DLX', basePriceVnd: 1_600_000, capacityAdults: 1 }),
+        stockRoom('sup', { roomTypeId: 'SUP', basePriceVnd: 1_300_000 }),
+        stockRoom('dlx', { roomTypeId: 'DLX', basePriceVnd: 1_500_000 }),
+      ],
+    }),
+  );
+  expect(upgradeOnly.firstFeasibleStep).toBe(2);
+  expect(upgradeOnly.ladder[1]).toEqual({
+    step: 2,
+    moveType: 'UPGRADE_SAME_PROPERTY',
+    feasible: true,
+    candidateCount: 2,
+  });
+  expect(upgradeOnly.upgradeSameProperty).toEqual({
+    roomId: 'sup',
+    propertyId: 'CS-01',
+    roomTypeId: 'SUP',
+    basePriceVnd: 1_300_000,
+    moveType: 'UPGRADE_SAME_PROPERTY',
+    requiresManagerApproval: false,
+    requiresForceMajeure: false,
+  });
+});
+
+test('TC_OVER_06_current_geography_skips_step3: 160–300 km ladder runs 1→2→4 with all four steps previewed', () => {
+  const plan = planOf(
+    planRequest({
+      roomStock: [
+        stockRoom('r-whole'),
+        stockRoom('r-dlx', { roomTypeId: 'DLX', basePriceVnd: 1_400_000 }),
+        stockRoom('vt-std', { propertyId: 'CS-02' }),
+        stockRoom('pt-std', { propertyId: 'CS-03' }),
+      ],
+    }),
+  );
+  expect(plan.ladder.map((row) => row.step)).toEqual([1, 2, 3, 4]);
+  expect(plan.ladder.map((row) => row.moveType)).toEqual([
+    'SAME_TYPE_SAME_PROPERTY',
+    'UPGRADE_SAME_PROPERTY',
+    'SAME_TYPE_CROSS_PROPERTY',
+    'WALK_OUT',
+  ]);
+  expect(plan.ladder[2]).toMatchObject({ feasible: false, candidateCount: 0 });
+  expect(plan.ladder[2].note).toContain('160–300 km');
+  expect(plan.ladder[2].note).toContain('15 km');
+  expect(plan.ladder[3]).toMatchObject({ feasible: true });
+  // Distant rooms exist, but they are never promoted into step 3.
+  expect(plan.crossProperty).toBeNull();
+  expect(plan.firstFeasibleStep).toBe(1);
+  expect(plan.executionOrder).toEqual([1, 2, 4]);
+  expect(plan.crossCityException).toEqual({
+    kind: 'BR_OVER_07_EXCEPTION',
+    countsAsStandardLadderStep: false,
+    standardLadderStep: null,
+    writtenConsentRequired: true,
+    managerApprovalRequired: true,
+    transportSupportCapVnd: null,
+    options: [
+      { toPropertyId: 'CS-02', city: 'Vũng Tàu', roadDistanceKm: 300, roomIds: ['vt-std'] },
+      { toPropertyId: 'CS-03', city: 'Phan Thiết', roadDistanceKm: 160, roomIds: ['pt-std'] },
+    ],
+  });
+});
+
+test('HB122_geo_boundary_and_explicit_exception: ≤15 km same city is step 3, beyond or cross-city needs BR-OVER-07 consent + MANAGER', () => {
+  expect(checkStandardStep3(twoProperties('Đà Lạt', 15), 'CS-01', 'CS-09')).toEqual({
+    ok: true,
+    value: {
+      fromPropertyId: 'CS-01',
+      toPropertyId: 'CS-09',
+      city: 'Đà Lạt',
+      roadDistanceKm: 15,
+      maxStep3DistanceKm: 15,
+      eligible: true,
+      reason: 'SAME_CITY_WITHIN_RADIUS',
+    },
+  });
+  expect(checkStandardStep3(twoProperties('Đà Lạt', 15.01), 'CS-01', 'CS-09')).toMatchObject({
+    ok: true,
+    value: { eligible: false, reason: 'OUTSIDE_RADIUS' },
+  });
+  // Same radius, different city: still excluded from the standard ladder.
+  expect(checkStandardStep3(twoProperties('Vũng Tàu', 5), 'CS-01', 'CS-09')).toMatchObject({
+    ok: true,
+    value: { eligible: false, reason: 'DIFFERENT_CITY' },
+  });
+  expect(checkStandardStep3(twoProperties('Đà Lạt', 300), 'CS-01', 'CS-09')).toMatchObject({
+    ok: true,
+    value: { eligible: false, reason: 'OUTSIDE_RADIUS' },
+  });
+
+  const nearby = planOf(
+    planRequest({
+      geography: twoProperties('Đà Lạt', 12),
+      roomStock: [stockRoom('near-std', { propertyId: 'CS-09' })],
+    }),
+  );
+  expect(nearby.ladder[2]).toEqual({
+    step: 3,
+    moveType: 'SAME_TYPE_CROSS_PROPERTY',
+    feasible: true,
+    candidateCount: 1,
+  });
+  expect(nearby.firstFeasibleStep).toBe(3);
+  expect(nearby.crossProperty).toEqual({
+    roomId: 'near-std',
+    propertyId: 'CS-09',
+    roomTypeId: 'STD',
+    basePriceVnd: 1_000_000,
+    moveType: 'SAME_TYPE_CROSS_PROPERTY',
+    requiresManagerApproval: true,
+    requiresForceMajeure: false,
+  });
+  expect(nearby.crossCityException).toBeNull();
+
+  const consent = { granted: true, channel: 'WRITTEN' as const, evidenceRef: 'br-over-07-doc' };
+  const manager = { role: 'MANAGER' as const, approvedByActorId: 'user-manager-1' };
+  const exceptionRequest = {
+    bookingId: BOOKING.bookingId,
+    roomId: 'vt-std',
+    fromPropertyId: 'CS-01',
+    toPropertyId: 'CS-02',
+    geography: GEOGRAPHY,
+  };
+  expect(proposeCrossCityException(exceptionRequest)).toMatchObject({
+    ok: false,
+    error: { code: 'E_OVER_CROSS_CITY_NO_CONSENT' },
+  });
+  // A phone note is not written consent.
+  expect(
+    proposeCrossCityException({
+      ...exceptionRequest,
+      // @ts-expect-error BR-OVER-07 requires the WRITTEN channel.
+      consent: { granted: true, channel: 'PHONE', evidenceRef: 'call-log' },
+      approval: manager,
+    }),
+  ).toMatchObject({ ok: false, error: { code: 'E_OVER_CROSS_CITY_NO_CONSENT' } });
+  expect(proposeCrossCityException({ ...exceptionRequest, consent })).toMatchObject({
+    ok: false,
+    error: { code: 'E_OVER_APPROVAL_REQUIRED' },
+  });
+  expect(
+    proposeCrossCityException({
+      ...exceptionRequest,
+      consent,
+      approval: { role: 'FRONT_DESK', approvedByActorId: 'user-front-desk' },
+    }),
+  ).toMatchObject({ ok: false, error: { code: 'E_OVER_APPROVAL_REQUIRED' } });
+  expect(
+    proposeCrossCityException({
+      ...exceptionRequest,
+      consent,
+      approval: manager,
+      transportSupportVnd: 750_000,
+    }),
+  ).toEqual({
+    ok: true,
+    value: {
+      kind: 'BR_OVER_07_EXCEPTION',
+      bookingId: BOOKING.bookingId,
+      roomId: 'vt-std',
+      fromPropertyId: 'CS-01',
+      toPropertyId: 'CS-02',
+      countsAsStandardLadderStep: false,
+      standardLadderStep: null,
+      writtenConsentRequired: true,
+      writtenConsentSatisfied: true,
+      managerApprovalRequired: true,
+      managerApprovalSatisfied: true,
+      transportSupportVnd: 750_000,
+      transportSupportCapVnd: null,
+      transportSupportDecidedByManager: true,
+      priceLocked: true,
+      inventoryHeld: false,
+      assignmentChanged: false,
+      executable: false,
+    },
+  });
+  // A target inside the standard radius must use the ladder, not the exception route.
+  expect(
+    proposeCrossCityException({
+      ...exceptionRequest,
+      toPropertyId: 'CS-09',
+      geography: twoProperties('Đà Lạt', 12),
+      consent,
+      approval: manager,
+    }),
+  ).toMatchObject({ ok: false, error: { code: 'E_OVER_INVALID_INPUT' } });
+});
+
+test('HB122_no_room_returns_walkout_without_effects: exhausted ladder previews WALK_OUT and changes nothing', () => {
+  const exhausted = planOf(planRequest({ roomStock: [] }));
+  expect(exhausted.firstFeasibleStep).toBe(4);
+  expect(exhausted.executionOrder).toEqual([4]);
+  expect(exhausted.ladder[3]).toEqual({
+    step: 4,
+    moveType: 'WALK_OUT',
+    feasible: true,
+    candidateCount: 1,
+  });
+  expect(exhausted.walkOut).toEqual({
+    kind: 'WALK_OUT',
+    bookingId: BOOKING.bookingId,
+    reason: 'NO_ALTERNATIVE_STEP_4',
+    refundPercent: 100,
+    refundVnd: BOOKING.paidAmountVnd,
+    compensationVnd: BOOKING.firstNightRateVnd,
+    transportSupportVnd: 0,
+    requiresManagerApproval: true,
+    requiresForceMajeure: false,
+    policyBlock: null,
+    executable: false,
+    autoRefund: false,
+    autoCompensation: false,
+    autoCancellation: false,
+    cancelBooking: false,
+    inventoryHeld: false,
+    assignmentChanged: false,
+  });
+  expect(exhausted.executable).toBe(false);
+  expect(exhausted.inventoryHeld).toBe(false);
+  expect(exhausted.assignmentChanged).toBe(false);
+  expect(exhausted.priceLocked).toBe(true);
+
+  const checkedIn = planOf(
+    planRequest({ booking: { ...BOOKING, status: 'CHECKED_IN' }, roomStock: [] }),
+  );
+  expect(checkedIn.walkOut).toMatchObject({
+    requiresManagerApproval: true,
+    requiresForceMajeure: true,
+    policyBlock: 'CHECKED_IN_REQUIRES_FORCE_MAJEURE',
+    executable: false,
+  });
+
+  // Arrived guests are never auto-executed: policy still needs force majeure plus MANAGER approval.
+  const checkedInWithRoom = planOf(
+    planRequest({
+      booking: { ...BOOKING, status: 'CHECKED_IN' },
+      roomStock: [stockRoom('r-whole')],
+    }),
+  );
+  expect(checkedInWithRoom.firstFeasibleStep).toBe(1);
+  expect(checkedInWithRoom.sameTypeSameProperty).toMatchObject({
+    requiresManagerApproval: true,
+    requiresForceMajeure: true,
+  });
+  expect(checkedInWithRoom.executable).toBe(false);
 });
