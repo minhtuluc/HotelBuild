@@ -2,6 +2,15 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { allotmentFixture, root } from './allotment-fixture.js';
 import { expectMigrationHistory } from '../migration/baseline-fixture.js';
 
+/** `db.query` trả `any`; thu hẹp bằng type guard để so hàng mà không dùng `as` (QT §2). */
+function recordRows(value: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (item): item is Record<string, unknown> =>
+      typeof item === 'object' && item !== null && !Array.isArray(item),
+  );
+}
+
 describe('HB035 persisted configuration scope on real PostgreSQL16', () => {
   let f: Awaited<ReturnType<typeof allotmentFixture>>;
   beforeAll(async () => {
@@ -30,7 +39,7 @@ describe('HB035 persisted configuration scope on real PostgreSQL16', () => {
     expect(await version(f.legacyChannel)).toEqual([{ version: '1' }]);
     // 0010 adds the closure provenance next to `is_closed`; the pre-upgrade rows are unclosed.
     expect((await f.db.query('SELECT * FROM channel_allotments ORDER BY date')).rows).toEqual(
-      f.legacyRows.map((row) => ({
+      recordRows(f.legacyRows).map((row) => ({
         ...row,
         manual_closed: false,
         auto_closed: false,
