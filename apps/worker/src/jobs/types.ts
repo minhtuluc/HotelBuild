@@ -36,6 +36,12 @@ export interface JobAttempt {
   readonly attempts: number;
 }
 
+/** Định danh job BullMQ mà handler được biết: để log/tra vết, **không** thay payload. */
+export interface JobMeta {
+  readonly id?: string | undefined;
+  readonly name: string;
+}
+
 /**
  * Một handler nhận payload thô từ hàng đợi, tự kiểm schema trước khi dùng, và biết mình đang ở lượt thứ mấy.
  * `attempt` vắng khi handler được gọi thẳng (test) — khi đó coi như lượt cuối.
@@ -44,6 +50,7 @@ export type JobHandler = (
   data: unknown,
   context: JobContext,
   attempt?: JobAttempt,
+  job?: JobMeta,
 ) => Promise<void>;
 
 /** Hàng đợi nào chưa có handler thật thì rơi về handler log mặc định của `worker-app`. */

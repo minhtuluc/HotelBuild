@@ -7,6 +7,7 @@ import type { JobAttempt, JobContext, JobRegistry } from './jobs/types.js';
 import type { JobLike, QueueLike, WorkerDeps, WorkerLike } from './worker-app.js';
 import { createLogger } from './pino.logger.js';
 import { CRITICAL_ATTRIBUTE, CRITICAL_PAYMENT, isPaymentQueue } from './tracing/sampling.js';
+import { scanScheduleSource } from './overbooking/source.js';
 import { withJobTrace } from './tracing/tracing.js';
 import type { Tracing } from './tracing/tracing.js';
 
@@ -144,10 +145,11 @@ export function createBullmqDeps(
               await handler(job);
               return;
             }
-            await real(job.data, dispatch.context, attempt);
+            await real(job.data, dispatch.context, attempt, { id: job.id, name: job.name });
           },
         );
       }),
     log: ({ queue, msg }) => logger.info({ queue }, msg),
+    ...(dispatch === undefined ? {} : { scanSchedule: scanScheduleSource(dispatch.context) }),
   };
 }
