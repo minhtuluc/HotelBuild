@@ -1,0 +1,34 @@
+appId: vn.pinehill.operations
+---
+# HB-139 AC10 — talkback_labels_focus_and_large_text. Bật TalkBack và cỡ chữ lớn nhất trên thiết bị trước khi chạy
+# (Maestro không bật được): kiểm nhãn tiêu đề/nút/lỗi đọc được, vùng chạm ≥48 dp (token UI-native), ô PIN có nhãn
+# trợ năng, nút vẫn thấy khi phóng lớn. Không ghi số điện thoại khách vào log. Chưa chạy được — BLOCKED trong PR.
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "username"
+- inputText: "${F6_TEST_USERNAME}"
+- tapOn:
+    id: "password"
+- inputText: "${F6_TEST_PASSWORD}"
+- tapOn:
+    id: "login-submit"
+- openLink: "pinehill-operations://alerts"
+- assertVisible: "Cảnh báo quá tải"
+- assertVisible:
+    id: "alerts-refresh"
+- tapOn:
+    id: "open-${F6_CASE_ID}-${F6_BOOKING_STEP1_ID}"
+- assertVisible: "Đổi phòng"
+- assertVisible:
+    id: "options"
+- tapOn:
+    id: "execute-move"
+- assertVisible: "PIN (6 chữ số)"
+- tapOn:
+    id: "pin-submit"
+- assertVisible: "PIN gồm đúng 6 chữ số."
+- tapOn:
+    id: "pin-cancel"
+- assertVisible:
+    id: "relocation-back"

@@ -1,6 +1,9 @@
+/** Tên duy nhất của hàng đợi quét quá tải (HB-127) — mọi chỗ khác dùng hằng này, không chép chuỗi. */
+export const OVERBOOKING_SCAN_QUEUE = 'q.overbooking-scan' as const;
+
 export const QUEUE_NAMES = [
   'q.hold-expiry',
-  'q.overbooking-scan',
+  OVERBOOKING_SCAN_QUEUE,
   'q.channel-sync',
   'q.ota-inbox',
   'q.no-show-mark',
@@ -17,6 +20,7 @@ export type QueueName = (typeof QUEUE_NAMES)[number];
 /** Các hàng đợi chạy lặp theo nhịp; chỉ bật khi cấu hình cho phép. */
 export const REPEATABLE_QUEUES = [
   'q.hold-expiry',
+  OVERBOOKING_SCAN_QUEUE,
   'q.ota-inbox',
   'q.no-show-mark',
   'q.outbox-relay',
@@ -49,3 +53,10 @@ export const ALERTS_SCAN_JOB = 'alerts-scan';
  * `createWorkerApp` đọc cấu hình hiện hành lúc khởi động (BR-SYS-02).
  */
 export const CHANNEL_SYNC_JOB = 'channel-sync';
+/**
+ * HB-127 — quét quá tải. Nhịp **không** nằm trong `WorkerConfig`: nó đọc từ SystemSetting
+ * `job.overbooking.scanIntervalMinutes` (mặc định 60 phút) và đổi được không triển khai lại, nên lịch do
+ * `overbooking/schedule.ts` quản dưới một identity cố định thay vì `repeatSchedules`.
+ */
+export const OVERBOOKING_SCAN_JOB = 'overbooking-scan';
+export const OVERBOOKING_SCAN_SCHEDULER_ID = 'q.overbooking-scan-scheduler';

@@ -7,6 +7,7 @@ import {
   NO_SHOW_MARK_JOB,
   OTA_INBOX_JOB,
   OUTBOX_RELAY_JOB,
+  OVERBOOKING_SCAN_QUEUE,
   QUEUE_NAMES,
   REFUND_PAYOUT_JOB,
   isRepeatableQueue,
@@ -20,6 +21,8 @@ import {
 import { channelSyncIntervalSeconds } from './jobs/channel-sync/settings.js';
 import type { WorkerConfig } from './config/env.js';
 import type { WorkerLogger } from './logger.js';
+import { createScanScheduleSync } from './overbooking/schedule.js';
+import type { ScanScheduleSource, ScanScheduleSync } from './overbooking/schedule.js';
 
 export interface JobTemplate {
   readonly name: string;
@@ -55,6 +58,8 @@ export interface WorkerDeps {
   createQueue(name: QueueName): QueueLike;
   createWorker(name: QueueName, handler: (job: JobLike) => Promise<void>): WorkerLike;
   log(entry: { queue: QueueName; msg: string }): void;
+  /** Nguồn nhịp `q.overbooking-scan` (SystemSetting); vắng thì không đăng ký lịch quét. */
+  readonly scanSchedule?: ScanScheduleSource;
 }
 
 export interface WorkerApp {
@@ -165,6 +170,7 @@ export function createWorkerApp(config: WorkerConfig, deps: WorkerDeps): WorkerA
   const queues: QueueLike[] = [];
   const workers: WorkerLike[] = [];
   let stopped = false;
+  let scanSync: ScanScheduleSync | undefined;
   return {
     async start(): Promise<void> {
       for (const name of QUEUE_NAMES) {
@@ -198,12 +204,19 @@ export function createWorkerApp(config: WorkerConfig, deps: WorkerDeps): WorkerA
               data: schedule.data,
             });
           }
+          // HB-127: nhịp quét quá tải đến từ SystemSetting, không từ cấu hình tiến trình.
+          if (name === OVERBOOKING_SCAN_QUEUE && deps.scanSchedule !== undefined) {
+            scanSync = createScanScheduleSync(queue, deps.scanSchedule);
+            await scanSync.start();
+          }
         }
       }
     },
     async stop(): Promise<void> {
       if (stopped) return;
       stopped = true;
+      // Ngừng đọc lại nhịp trước: không đăng ký thêm lịch quét trong lúc đóng.
+      scanSync?.stop();
       const timeout = Promise.withResolvers<void>();
       setTimeout(timeout.resolve, config.SHUTDOWN_TIMEOUT_SECONDS * 1000).unref();
       await Promise.race([Promise.all(workers.map((worker) => worker.close())), timeout.promise]);

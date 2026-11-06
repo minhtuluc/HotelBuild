@@ -10,6 +10,8 @@ import { smtpSettings } from '../noti/smtp.js';
 import { refundPayoutJob } from './refund-payout/refund-payout.job.js';
 import { noShowMarkJob } from './no-show/no-show.job.js';
 import { otaInboxJob } from './ota-inbox/ota-inbox.job.js';
+import { OVERBOOKING_SCAN_QUEUE } from '../queues.js';
+import { overbookingScanJob } from '../overbooking/scan.job.js';
 import type { JobRegistry } from './types.js';
 
 /**
@@ -28,6 +30,8 @@ export const JOB_HANDLERS: JobRegistry = {
   'q.no-show-mark': noShowMarkJob,
   // HB-129 AC10/AC13: tiêu thụ `q.ota-inbox` bằng use case áp booking qua composition runtime.
   'q.ota-inbox': otaInboxJob,
+  // HB-127: quét quá tải bằng đúng use case phát hiện của HB-126 qua composition runtime.
+  [OVERBOOKING_SCAN_QUEUE]: overbookingScanJob,
   'q.notification-send': (data, context) =>
     createNotificationSendJob(channelSenders(smtpSettings(context.config)))(data, context),
 };

@@ -146,7 +146,11 @@ export const refundDecisionSchema = z.object({
   payoutDeadline: isoUtcTimestampSchema,
 });
 
-export const refundListQuerySchema = listQuerySchema.extend({
+/**
+ * `GET /refund-requests` không hỗ trợ `sort`/`q` (TD-63): thứ tự cố định theo con trỏ id, và chưa có
+ * tìm kiếm tự do. Bỏ hai khoá khỏi schema dùng chung để khoá lạ bị từ chối (400) thay vì bỏ qua êm.
+ */
+export const refundListQuerySchema = listQuerySchema.omit({ sort: true, q: true }).extend({
   bookingId: z.string().min(1).optional(),
   propertyId: z.string().min(1).optional(),
   status: refundStatusSchema.optional(),

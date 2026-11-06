@@ -60,6 +60,10 @@
     "./worker-runtime/ota-inbox.js": {
       "pinehill-dist": "./dist/worker-runtime/ota-inbox.js",
       "default": "./src/worker-runtime/ota-inbox.ts"
+    },
+    "./worker-runtime/overbooking-scan.js": {
+      "pinehill-dist": "./dist/worker-runtime/overbooking-scan.js",
+      "default": "./src/worker-runtime/overbooking-scan.ts"
     }
   }
 }

@@ -1,0 +1,30 @@
+appId: vn.pinehill.operations
+---
+# HB-139 AC8 — execute_conflict_keeps_source. Điều kiện: backend cấp fixture trong đó phòng đích F6_TARGET_ROOM_ID bị
+# chiếm (hoặc đồng thuận/duyệt bị rút, hoặc phiên bản đổi) ngay trước bước thực hiện. Kỳ vọng: giữ phòng nguồn
+# F6_SOURCE_ROOM_ID, ca chưa RESOLVED, phương án được đọc lại, không tự thực hiện bậc khác. Không commit giá trị biến.
+# Chưa chạy được: thiếu runner/thiết bị — BLOCKED trong PR.
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "username"
+- inputText: "${F6_TEST_USERNAME}"
+- tapOn:
+    id: "password"
+- inputText: "${F6_TEST_PASSWORD}"
+- tapOn:
+    id: "login-submit"
+- openLink: "pinehill-operations://alerts"
+- tapOn:
+    id: "open-${F6_CASE_ID}-${F6_BOOKING_STEP1_ID}"
+- tapOn:
+    id: "execute-move"
+- inputText: "${F6_TEST_PIN}"
+- hideKeyboard
+- tapOn:
+    id: "pin-submit"
+- assertVisible: "Phòng nguồn và ca vẫn mở"
+- assertVisible: "${F6_SOURCE_ROOM_ID}"
+- assertNotVisible: "Đã thực hiện (EXECUTED)."
+- assertVisible:
+    id: "options"

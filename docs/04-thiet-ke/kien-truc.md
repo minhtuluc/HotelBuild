@@ -336,8 +336,35 @@ flowchart TB
 
 ### 7.1. Biến môi trường và bí mật
 
+Bảng khớp **đúng** hai schema `apps/api/src/config/env.ts` và `apps/worker/src/config/env.ts`; ca kiểm `apps/api/test/config-docs.spec.ts` đỏ khi một khoá schema không có dòng ở đây (`PREFIX_*` trong dấu huyền phủ cả họ biến cùng tiền tố). Biến thêm vào schema phải thêm dòng ở bảng này trong cùng PR.
+
 | Biến | Dùng ở | Bắt buộc | Nguồn |
 |------|--------|----------|-------|
+| `DATABASE_URL` | api, worker | Có | Secret |
+| `REDIS_URL` | api, worker | Có | Secret |
+| `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | api | Có | Secret (ADR-010). `JWT_REFRESH_SECRET` hiện bắt buộc nhưng chưa có đường mã đọc; cả hai chỉ kiểm không rỗng (TD-46) |
+| `BUSINESS_TIMEZONE` | api | Có (`Asia/Ho_Chi_Minh`) | Biến thường, BR-GEN-05 |
+| `IDEMPOTENCY_TTL_HOURS` | api | Không (mặc định 24) | Biến thường, khớp BR-GEN-08 |
+| `HOST`, `PORT`, `NODE_ENV`, `CORS_ALLOWED_ORIGINS` | api | Không | Biến thường; `NODE_ENV=production` bật các kiểm fail-fast (không chạy PSP mô phỏng) |
+| `EXPORT_DIR` | api, worker | Không (mặc định `<tmpdir>/pinehill-exports`) | Biến thường; hai tiến trình **phải** cùng giá trị (HB-163) |
+| `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_PAYMENT_URL` | api | Có khi bật kênh VNPay | Secret (URL là biến thường) |
+| `MOMO_PARTNER_CODE`, `MOMO_ACCESS_KEY`, `MOMO_SECRET_KEY`, `MOMO_PAYMENT_URL` | api | Có khi bật kênh MoMo | Secret (URL là biến thường) |
+| `PAYMENT_PSP_CALLBACK_BASE_URL`, `PAYMENT_RETURN_URL_ORIGINS` | api | Production bắt buộc | Biến thường (HB-095) |
+| `PSP_ALLOW_MOCK` | api | Không — **chỉ kiểm thử** | Biến thường; thiếu cờ ⇒ bộ mô phỏng PSP từ chối mọi sự kiện |
+| `SMTP_URL`, `SMTP_FROM` | api | Không (thiếu ⇒ gửi thư lỗi `MAIL_NOT_CONFIGURED`); production phải đặt `SMTP_FROM` | Secret (HB-028, đặt lại mật khẩu khách) |
+| `GUEST_WEB_BASE_URL` | api | Không | Biến thường; gốc customer web dựng link đặt lại mật khẩu |
+| `NOTI_SMTP_URL`, `NOTI_SMTP_FROM` | worker | Có khi gửi email thật (thiếu ⇒ kênh EMAIL lỗi `EMAIL_NOT_CONFIGURED`) | Secret (HB-168) |
+| `WORKER_CONCURRENCY`, `SHUTDOWN_TIMEOUT_SECONDS`, `ENABLE_REPEATABLE_SCHEDULERS` | worker | Không | Biến thường; scheduler tắt mặc định |
+| `HOLD_EXPIRY_*`, `HOLD_RECONCILE_*`, `OUTBOX_RELAY_*`, `EXPORT_CLEANUP_*`, `REFUND_PAYOUT_*`, `OTA_INBOX_*`, `NO_SHOW_*`, `ALERTS_SCAN_*` | worker | Không (có mặc định) | Biến thường: nhịp, cỡ lô, lease, thử lại của từng hàng đợi. Nhịp `q.overbooking-scan` **không** ở đây mà ở SystemSetting `job.overbooking.scanIntervalMinutes` (HB-127) |
+| `REFUND_PAYOUT_SIMULATOR` | worker | Không | Biến thường; chọn bộ mô phỏng chi hoàn (HB-100) |
+| `LOG_LEVEL`, `OTEL_EXPORTER_OTLP_ENDPOINT` | api, worker | Không | Biến thường, NFR-OBS-01/03 |
+| `OTEL_SAMPLE_RATIO` | api | Không | Biến thường, NFR-OBS-03 |
+| `NEXT_PUBLIC_API_BASE_URL` | web | Có | Vercel env |
+| `EXPO_PUBLIC_API_BASE_URL`, `EXPO_PUBLIC_APP_VARIANT` | mobile | Có | EAS env |
+
+Chưa có reader trong mã (chỗ giữ cho tích hợp thật, đừng đặt giá trị mong chúng có tác dụng): `OTA_BOOKING_*`, `OTA_AGODA_*`, `OTA_AIRBNB_*`, `NOTI_EMAIL_API_KEY`, `NOTI_SMS_*`, `NOTI_ZALO_OA_*`.
+
+------|--------|----------|-------|
 | `DATABASE_URL` | api, worker | Có | Secret |
 | `REDIS_URL` | api, worker | Có | Secret |
 | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | api | Có | Secret (ADR-010) |
@@ -524,7 +551,7 @@ Các định danh dưới đây **không thuộc từ điển thực thể** ở
 | 1 | Sự kiện miền | `RefundRequested`, `RefundApproved`, `NoShowMarked`, `AvailabilityChanged`, `RateChanged`, `ChannelSyncFailed` (bổ sung cho 5 biến cố ở §4) | §4, §8.4 |
 | 2 | Cổng ra | `Clock`, `IdGenerator`, `OutboxPort`, `NotificationPort`, `UnitOfWork` và repository theo module (`BookingRepository`, `InventoryRepository`, `ChannelAdapter`, `PaymentGatewayAdapter`, …) | §3.1, §3.2 |
 | 3 | Mã lỗi | Hai mã do tài liệu này chốt: `E_CHAN_SYNC_FAILED` (đồng bộ kênh thất bại 3 lần liên tiếp, BR-CHAN-07), `E_PAY_CALLBACK_DUPLICATE` (callback lặp khoá idempotency, BR-PAY-03). Danh mục đầy đủ 54 mã `E_*` thuộc [api.md](api.md) §4.2 — xương sống và tài liệu này chỉ nêu ví dụ | §8.4, §8.5, §9.1, §9.4 |
-| 4 | Hàng đợi, header, endpoint | Hàng đợi `q.hold-expiry`, `q.overbooking-scan`, `q.channel-sync`, `q.no-show-mark`, `q.outbox-relay`; header `X-Correlation-Id`; endpoint `/api/v1/health/live`, `/api/v1/health/ready`, `/metrics` | §7, §8.4, §8.5, §9.2 |
+| 4 | Hàng đợi, header, endpoint | Hàng đợi `q.hold-expiry`, `q.overbooking-scan` (quét mỗi `job.overbooking.scanIntervalMinutes` phút, mặc định 60, đổi được không triển khai lại — BR-OVER-05, BR-SYS-02; worker gọi use case phát hiện qua `@pinehill/api/worker-runtime/overbooking-scan.js`, HB-127), `q.channel-sync`, `q.no-show-mark`, `q.outbox-relay`; header `X-Correlation-Id`; endpoint `/api/v1/health/live`, `/api/v1/health/ready`, `/metrics` | §7, §8.4, §8.5, §9.2 |
 | 5 | Số liệu | Tên metric nghiệp vụ ở §9.3 (`booking_confirmed_total`, `overbooking_open_cases`, `channel_sync_failures_total`, …) | §9.3 |
 | 6 | Quy ước mã nguồn | Facade mỗi module là `modules/<mod>/index.ts`; hậu tố tệp `.use-case.ts`, `.service.ts`, `.repository.ts`, `.adapter.ts`, `.controller.ts`, `.spec.ts`; tên gói `@pinehill/domain`, `@pinehill/contracts`, `@pinehill/config` | §3.1, §4, §5, §6 |
 
