@@ -62,6 +62,7 @@ import { GuestsModule } from './modules/crm/guests/module.js';
 import { OperationsModule } from './modules/sys/operations/module.js';
 import { ReportExportModule } from './modules/rep/export/module.js';
 import { NotiModule } from './modules/noti/module.js';
+import { OverModule } from './modules/over/over.module.js';
 import { CancelModule } from './modules/book/cancel/module.js';
 import { HoldsModule } from './modules/book/holds/module.js';
 import { BookingsModule } from './modules/book/bookings/module.js';
@@ -78,9 +79,6 @@ import { PspWebhooksModule } from './modules/pay/webhooks/module.js';
 // HB-128: tiếp nhận webhook OTA simulator — inbox bền trước ACK, xác minh HMAC trước dedup.
 import { ChanWebhooksModule } from './modules/chan/webhooks/module.js';
 import { ReconciliationModule } from './modules/pay/reconciliation/module.js';
-// HB-125: use case/endpoint OVER — planner, điều chuyển, ghép phòng, chi bồi thường.
-import { OverModule } from './modules/over/over.module.js';
-
 /**
  * Request của một dòng log pino-http (`{ res, responseTime }`): `res.req` là request gốc, nơi `customProps`
  * đã gắn trace. Không đọc bindings vì pino không đưa bindings vào `mixin`.
@@ -178,6 +176,7 @@ export class AppModule {
         GuestsModule,
         OperationsModule,
         NotiModule,
+        OverModule,
         CancelModule,
         HoldsModule,
         BookingsModule,
@@ -192,7 +191,6 @@ export class AppModule {
         RefundModule,
         PayoutModule,
         ReconciliationModule,
-        OverModule,
       ],
       providers: [
         { provide: CONFIG, useValue: config },

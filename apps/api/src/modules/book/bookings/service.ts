@@ -21,11 +21,14 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { PrismaClient } from '@prisma/client';
 import type { Clock } from '@pinehill/domain';
+import type { UnitIdentity } from '@pinehill/domain/inventory';
 import type { BookingSummary, BookingsQuery, ListPage } from '@pinehill/contracts';
 import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import type { ApiConfig } from '../../../config/env.js';
+import { AppError } from '../../../common/app-error.js';
 import { PermissionRegistry } from '../../../common/rbac/permission-registry.js';
 import { assertGuestNotBlacklisted } from '../../crm/guests/blacklist.js';
+import { allowOversell, detectInTransaction } from '../../over/detection/index.js';
 import { civilDay, dateOnly } from '../../rate/calendar/support.js';
 import { RateQuoteService } from '../../rate/quotes/service.js';
 import { planHold } from '../holds/availability.js';
@@ -63,10 +66,27 @@ export const PENDING_PAYMENT_MINUTES = 15;
 /** BR-BOOK-02: `checkIn` không xa hơn 365 ngày kể từ hôm nay. */
 const MAX_LOOKAHEAD_DAYS = 365;
 
+/** `[checkIn, checkOut)` theo ngày lịch — phạm vi guard quá tải của D07. */
+function stayDates(checkIn: string, checkOut: string): string[] {
+  const nights = civilDay(checkOut) - civilDay(checkIn);
+  return Array.from({ length: Math.max(0, nights) }, (_, index) =>
+    new Date(Date.parse(`${checkIn}T00:00:00.000Z`) + index * 86_400_000)
+      .toISOString()
+      .slice(0, 10),
+  );
+}
+
 /** `use case` trả `created = false` khi BR-BOOK-16 trả lại booking đã có (200 thay vì 201). */
 export interface BookingCreationResult {
   readonly created: boolean;
   readonly booking: BookingSummary;
+}
+
+/** Kết quả bước giữ chỗ: có đơn vị bán, hoặc bán vượt không gán phòng (BR-OVER-03). */
+interface HoldDecision {
+  readonly units: readonly UnitIdentity[];
+  readonly oversold: boolean;
+  readonly now: Date;
 }
 
 /** Snapshot đã chốt của quote trong DB (AC1) — retry với khoá idempotency **mới** vẫn là lệnh mới. */
@@ -207,6 +227,50 @@ export class BookingsService {
     }));
   }
 
+  /**
+   * F6-D07: `planHold` chạy sau khoá tồn; nếu hết phòng vật lý thì bảng quyết định bán vượt quyết định
+   * cho ghi `oversold` hay ném `E_OVER_LIMIT_EXCEEDED`. Không đổi luật F4 khi còn đủ tồn.
+   */
+  private async prepareHold(tx: Tx, input: BookingInput): Promise<HoldDecision> {
+    try {
+      const plan = await planHold(tx, input);
+      return { units: plan.units, oversold: false, now: plan.facts.now };
+    } catch (error) {
+      if (!(error instanceof AppError && error.code === 'E_INV_NO_AVAILABILITY')) throw error;
+      const oversold = await allowOversell(tx, this.clock, {
+        propertyId: input.propertyId,
+        roomTypeId: input.roomTypeId,
+        checkIn: input.checkIn,
+        checkOut: input.checkOut,
+        roomCount: input.roomCount,
+        channelCode: input.channelCode,
+      });
+      if (!oversold) throw error;
+      const now = (await tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`)[0]!.now;
+      return { units: [], oversold, now };
+    }
+  }
+
+  /**
+   * Cùng use case với scanner, ngay trong transaction tạo booking; lỗi ghi ca ⇒ rollback cả booking.
+   *
+   * Đồng hồ kiểm lấy **giờ CSDL đã ghi vào `hold_expires_at`/`created_at`** của chính booking này,
+   * không lấy `this.clock`: hold vừa tạo phải còn hạn tại đúng thời điểm nó được ghi (BR-BOOK-07),
+   * tránh lệch giữa giờ CSDL và giờ tiến trình khi quét lại tồn ngay trong TX.
+   */
+  private async guardOversold(tx: Tx, input: BookingInput, hold: HoldDecision): Promise<void> {
+    if (!hold.oversold) return;
+    await detectInTransaction(
+      tx,
+      { now: () => hold.now },
+      {
+        propertyIds: [input.propertyId],
+        roomTypeId: input.roomTypeId,
+        dates: stayDates(input.checkIn, input.checkOut),
+      },
+    );
+  }
+
   async create(tx: Tx, caller: BookingCaller, body: unknown): Promise<BookingCreationResult> {
     const input = bookingInput(body);
     requireCreate(this.permissions, caller, input.propertyId);
@@ -232,7 +296,7 @@ export class BookingsService {
         phone: input.guest.phone,
       });
       if (duplicate !== null) return this.reportDuplicate(tx, caller, duplicate);
-      const plan = await planHold(tx, input);
+      const hold = await this.prepareHold(tx, input);
       const ratePlan = await tx.rate_plans.findUnique({
         where: { code: input.ratePlanCode },
         select: {
@@ -247,9 +311,8 @@ export class BookingsService {
       });
       if (ratePlan === null) throw missing();
       const policy = await loadPolicySnapshot(tx, ratePlan.cancellation_policy_id);
-      const now = plan.facts.now;
       const holdExpiresAt = new Date(
-        now.getTime() +
+        hold.now.getTime() +
           (channel.hold_minutes > 0 ? channel.hold_minutes : PENDING_PAYMENT_MINUTES) * 60_000,
       );
       const written = await insertBooking(tx, this.audit, {
@@ -263,8 +326,9 @@ export class BookingsService {
         ratePlanId: ratePlan.id,
         channelId: channel.id,
         guestId,
-        units: plan.units,
-        now,
+        units: hold.units,
+        oversold: hold.oversold,
+        now: hold.now,
         snapshotSource: {
           quote: stored.quote,
           quoteId: input.quoteId,
@@ -284,6 +348,8 @@ export class BookingsService {
           settings: await this.channelSettings(tx, channel.id, input.propertyId, input.checkOut),
         },
       });
+      // D07: cùng use case với scanner, ngay trong transaction này — ghi ca lỗi thì rollback cả booking.
+      await this.guardOversold(tx, input, hold);
       const row = await tx.bookings.findUniqueOrThrow({
         where: { id: written.id },
         select: bookingSelect,
