@@ -91,6 +91,7 @@ describe('JOB_HANDLERS', () => {
       'q.notification-send',
       'q.ota-inbox',
       'q.outbox-relay',
+      'q.overbooking-scan',
       'q.refund-payout',
       'q.report-export',
     ]);
