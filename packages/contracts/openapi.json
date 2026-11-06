@@ -14008,15 +14008,6 @@
               "minLength": 1
             },
             "required": false,
-            "name": "sort",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "required": false,
             "name": "from",
             "in": "query"
           },
@@ -14027,15 +14018,6 @@
             },
             "required": false,
             "name": "to",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            },
-            "required": false,
-            "name": "q",
             "in": "query"
           },
           {
