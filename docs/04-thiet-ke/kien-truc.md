@@ -336,8 +336,35 @@ flowchart TB
 
 ### 7.1. Biến môi trường và bí mật
 
+Bảng khớp **đúng** hai schema `apps/api/src/config/env.ts` và `apps/worker/src/config/env.ts`; ca kiểm `apps/api/test/config-docs.spec.ts` đỏ khi một khoá schema không có dòng ở đây (`PREFIX_*` trong dấu huyền phủ cả họ biến cùng tiền tố). Biến thêm vào schema phải thêm dòng ở bảng này trong cùng PR.
+
 | Biến | Dùng ở | Bắt buộc | Nguồn |
 |------|--------|----------|-------|
+| `DATABASE_URL` | api, worker | Có | Secret |
+| `REDIS_URL` | api, worker | Có | Secret |
+| `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | api | Có | Secret (ADR-010). `JWT_REFRESH_SECRET` hiện bắt buộc nhưng chưa có đường mã đọc; cả hai chỉ kiểm không rỗng (TD-46) |
+| `BUSINESS_TIMEZONE` | api | Có (`Asia/Ho_Chi_Minh`) | Biến thường, BR-GEN-05 |
+| `IDEMPOTENCY_TTL_HOURS` | api | Không (mặc định 24) | Biến thường, khớp BR-GEN-08 |
+| `HOST`, `PORT`, `NODE_ENV`, `CORS_ALLOWED_ORIGINS` | api | Không | Biến thường; `NODE_ENV=production` bật các kiểm fail-fast (không chạy PSP mô phỏng) |
+| `EXPORT_DIR` | api, worker | Không (mặc định `<tmpdir>/pinehill-exports`) | Biến thường; hai tiến trình **phải** cùng giá trị (HB-163) |
+| `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_PAYMENT_URL` | api | Có khi bật kênh VNPay | Secret (URL là biến thường) |
+| `MOMO_PARTNER_CODE`, `MOMO_ACCESS_KEY`, `MOMO_SECRET_KEY`, `MOMO_PAYMENT_URL` | api | Có khi bật kênh MoMo | Secret (URL là biến thường) |
+| `PAYMENT_PSP_CALLBACK_BASE_URL`, `PAYMENT_RETURN_URL_ORIGINS` | api | Production bắt buộc | Biến thường (HB-095) |
+| `PSP_ALLOW_MOCK` | api | Không — **chỉ kiểm thử** | Biến thường; thiếu cờ ⇒ bộ mô phỏng PSP từ chối mọi sự kiện |
+| `SMTP_URL`, `SMTP_FROM` | api | Không (thiếu ⇒ gửi thư lỗi `MAIL_NOT_CONFIGURED`); production phải đặt `SMTP_FROM` | Secret (HB-028, đặt lại mật khẩu khách) |
+| `GUEST_WEB_BASE_URL` | api | Không | Biến thường; gốc customer web dựng link đặt lại mật khẩu |
+| `NOTI_SMTP_URL`, `NOTI_SMTP_FROM` | worker | Có khi gửi email thật (thiếu ⇒ kênh EMAIL lỗi `EMAIL_NOT_CONFIGURED`) | Secret (HB-168) |
+| `WORKER_CONCURRENCY`, `SHUTDOWN_TIMEOUT_SECONDS`, `ENABLE_REPEATABLE_SCHEDULERS` | worker | Không | Biến thường; scheduler tắt mặc định |
+| `HOLD_EXPIRY_*`, `HOLD_RECONCILE_*`, `OUTBOX_RELAY_*`, `EXPORT_CLEANUP_*`, `REFUND_PAYOUT_*`, `OTA_INBOX_*`, `NO_SHOW_*`, `ALERTS_SCAN_*` | worker | Không (có mặc định) | Biến thường: nhịp, cỡ lô, lease, thử lại của từng hàng đợi. Nhịp `q.overbooking-scan` **không** ở đây mà ở SystemSetting `job.overbooking.scanIntervalMinutes` (HB-127) |
+| `REFUND_PAYOUT_SIMULATOR` | worker | Không | Biến thường; chọn bộ mô phỏng chi hoàn (HB-100) |
+| `LOG_LEVEL`, `OTEL_EXPORTER_OTLP_ENDPOINT` | api, worker | Không | Biến thường, NFR-OBS-01/03 |
+| `OTEL_SAMPLE_RATIO` | api | Không | Biến thường, NFR-OBS-03 |
+| `NEXT_PUBLIC_API_BASE_URL` | web | Có | Vercel env |
+| `EXPO_PUBLIC_API_BASE_URL`, `EXPO_PUBLIC_APP_VARIANT` | mobile | Có | EAS env |
+
+Chưa có reader trong mã (chỗ giữ cho tích hợp thật, đừng đặt giá trị mong chúng có tác dụng): `OTA_BOOKING_*`, `OTA_AGODA_*`, `OTA_AIRBNB_*`, `NOTI_EMAIL_API_KEY`, `NOTI_SMS_*`, `NOTI_ZALO_OA_*`.
+
+------|--------|----------|-------|
 | `DATABASE_URL` | api, worker | Có | Secret |
 | `REDIS_URL` | api, worker | Có | Secret |
 | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | api | Có | Secret (ADR-010) |

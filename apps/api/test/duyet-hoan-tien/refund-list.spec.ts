@@ -144,6 +144,12 @@ test('cursor tất định theo (created_at,id) và chỉ hợp lệ trong đún
   expect((await list(maker, '?cursor=not-a-uuid')).status).toBe(400);
   expect((await list(maker, '?limit=101')).status).toBe(400);
   expect((await list(maker, '?status=UNKNOWN')).status).toBe(400);
+  // TD-63: `sort`/`q` không được hỗ trợ ⇒ từ chối rõ ràng, không bỏ qua êm trả thứ tự mặc định.
+  for (const query of ['?sort=-createdAt', '?q=nguyen', '?sort=status&q=a']) {
+    const unsupported = await list(maker, query);
+    expect(unsupported.status, query).toBe(400);
+    expect(errorCode(unsupported.body), query).toBe('E_GEN_VALIDATION_FAILED');
+  }
 });
 
 test('quyền §6.3: năm vai trò đọc được; HOUSEKEEPING và SYSADMIN bị 403', async () => {
