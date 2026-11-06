@@ -1,0 +1,50 @@
+appId: vn.pinehill.operations
+---
+# HB-139 — TC_OVER_15_move_step_one_two_30s và TC_OVER_18_verified_server_result.
+# Cần API thật + fixture tổng hợp từ seed backend, tài khoản FRONT_DESK có PIN và một booking bậc 1 (F6_BOOKING_STEP1_ID)
+# trong ca F6_CASE_ID. Môi trường Maestro (do runner cấp, KHÔNG commit): F6_PROPERTY_ID, F6_BOOKING_STEP1_ID,
+# F6_BOOKING_STEP2_ID, F6_CASE_ID, F6_SOURCE_ROOM_ID, F6_TARGET_ROOM_ID, F6_TEST_USERNAME, F6_TEST_PASSWORD, F6_TEST_PIN.
+# Số chạm từ danh sách cảnh báo tới EXECUTED: mở cảnh báo (1), chọn phương án (2), đồng ý của khách (3), lập điều
+# chuyển (4), Thực hiện (5), xác nhận PIN (6) = 6, đúng trần ≤6 nhưng vượt mục tiêu ≤5 của thiết kế §5.3; ô PIN tự lấy
+# focus nên không tính thêm chạm. Bước PIN phải được che/tạm dừng ghi video khi runner ghi input.
+# Đo thời gian: ghi mốc trước tapOn đầu và sau assertVisible "move-final" (≤30 giây gồm cả thời gian mạng).
+# Chưa chạy được: repo chưa có runner Maestro/thiết bị — BLOCKED trong PR; kịch bản này chỉ là cam kết đo.
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "username"
+- inputText: "${F6_TEST_USERNAME}"
+- tapOn:
+    id: "password"
+- inputText: "${F6_TEST_PASSWORD}"
+- tapOn:
+    id: "login-submit"
+- openLink: "pinehill-operations://alerts"
+- assertVisible:
+    id: "alerts-scan"
+- tapOn:
+    id: "open-${F6_CASE_ID}-${F6_BOOKING_STEP1_ID}"
+- tapOn:
+    id: "pick-0"
+- tapOn:
+    id: "reason-input"
+- inputText: "Quá tải, đổi phòng cùng loại"
+- hideKeyboard
+- tapOn:
+    id: "consent-check"
+- tapOn:
+    id: "create-move"
+- assertVisible: "Chưa hoàn tất"
+- tapOn:
+    id: "execute-move"
+- inputText: "${F6_TEST_PIN}"
+- hideKeyboard
+- tapOn:
+    id: "pin-submit"
+- assertVisible:
+    id: "move-final"
+- assertVisible: "Đã thực hiện (EXECUTED)."
+- assertVisible: "${F6_TARGET_ROOM_ID}"
+# TC_OVER_18_verified_server_result: giá/phòng đích do máy chủ trả; đối chiếu RoomMove trước/sau và bằng chứng
+# notification ≤15 phút nằm ở bằng chứng backend HB-194, không đo trong 30 giây.
+- assertVisible: "Giữ giá đã chốt"
