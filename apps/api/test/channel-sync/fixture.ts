@@ -86,10 +86,20 @@ export async function insert(sql: string, values: unknown[] = []): Promise<strin
 
 export const http = () => request(app.getHttpServer());
 
-export async function login(username: string): Promise<string> {
-  const response = await http().post('/api/v1/auth/login').send({ username, password: PASSWORD });
-  if (response.status !== 200) throw new Error(`đăng nhập ${username} lỗi ${response.status}`);
-  return tokenPairSchema.parse(response.body).accessToken;
+/**
+ * Login tuần tự trong một suite: audit writer ghi chuỗi hash trong transaction, sáu login song song
+ * (`Promise.all` ở `beforeAll`) có thể tranh khoá/connection và trả 500 trên runner chậm. Xếp hàng
+ * từng login, không đổi hành vi sản phẩm.
+ */
+let loginChain: Promise<unknown> = Promise.resolve();
+export function login(username: string): Promise<string> {
+  const next = loginChain.then(async () => {
+    const response = await http().post('/api/v1/auth/login').send({ username, password: PASSWORD });
+    if (response.status !== 200) throw new Error(`đăng nhập ${username} lỗi ${response.status}`);
+    return tokenPairSchema.parse(response.body).accessToken;
+  });
+  loginChain = next.catch(() => undefined);
+  return next;
 }
 
 export function auth(token: string): Record<string, string> {
