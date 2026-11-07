@@ -95,6 +95,7 @@ const CREDENTIAL_PATHS: readonly string[] = [
   // HB-217: 401 của PIN sai là kết quả nghiệp vụ, không phải token hết hạn (cùng mã `E_AUTH_INVALID_CREDENTIALS`);
   // làm mới phiên rồi gửi lại sẽ đếm mỗi lần nhập sai hai lần vào ngưỡng khoá PIN 3 lần.
   '/auth/pin/verify',
+  ...['/auth/password', '/auth/pin'], // TD-20: sai `currentPassword` được đếm vào ngưỡng khoá 5 lần
 ];
 
 /** Phân loại lỗi kết nối để UI biết có nên gửi lại hay không. */
@@ -146,10 +147,8 @@ function uuidV4FromRandomValues(cryptoApi: RandomSource): string {
 function requireSecureIdFactory(): () => string {
   const cryptoApi = globalThis.crypto;
   if (typeof cryptoApi?.randomUUID === 'function') return () => cryptoApi.randomUUID();
-  if (typeof cryptoApi?.getRandomValues === 'function') {
-    const source: RandomSource = cryptoApi;
-    return () => uuidV4FromRandomValues(source);
-  }
+  if (typeof cryptoApi?.getRandomValues === 'function')
+    return () => uuidV4FromRandomValues(cryptoApi);
   throw new Error(
     'Không có nguồn ngẫu nhiên an toàn để sinh UUIDv4; truyền `createId` (ví dụ expo-crypto randomUUID) khi tạo ApiClient.',
   );
