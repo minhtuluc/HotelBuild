@@ -60,9 +60,10 @@ export function bodyField(value: unknown, field: string): unknown {
  */
 export function mappingInput(value: unknown): MappingInput {
   // Vắng `allotmentPct` ⇒ 80% theo BR-CHAN-01; `0` vẫn bị từ chối vì muốn ngừng bán phải dùng sales-closure.
-  const body: Record<string, unknown> = {};
-  if (typeof value === 'object' && value !== null)
-    for (const [key, item] of Object.entries(value)) body[key] = item;
+  // `Object.fromEntries` tạo thuộc tính **riêng** cho mọi khoá (kể cả `__proto__`), nên khoá do người dùng
+  // gửi không đổi được prototype của `body` và schema strict thấy đủ khoá để từ chối (CodeQL js/remote-property-injection).
+  const body: Record<string, unknown> =
+    typeof value === 'object' && value !== null ? Object.fromEntries(Object.entries(value)) : {};
   body['allotmentPct'] ??= DEFAULT_ALLOTMENT_PCT;
   const parsed = channelMappingPutRequestSchema.safeParse(body);
   if (!parsed.success) throw invalid();
