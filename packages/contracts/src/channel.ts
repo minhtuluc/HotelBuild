@@ -18,6 +18,7 @@ import {
   outboxDeliveryStatusSchema,
   otaBookingProcessingStatusSchema,
   otaEventTypeSchema,
+  paymentMethodSchema,
   salesClosureSourceSchema,
 } from './enums.js';
 
@@ -198,8 +199,9 @@ export const outboxDeliveriesQuerySchema = listQuerySchema.extend({
 export const otaBookingSchema = z.object({
   id: z.string().min(1),
   channelId: z.string().min(1),
-  eventType: otaEventTypeSchema,
-  providerEventId: z.string().min(1),
+  /** `null` khi booking của kênh chưa có sự kiện inbox khớp (dòng không do webhook áp). */
+  eventType: otaEventTypeSchema.nullable(),
+  providerEventId: z.string().min(1).nullable(),
   providerBookingCode: z.string().min(1),
   status: otaBookingProcessingStatusSchema,
   bookingId: z.string().min(1).nullable(),
@@ -215,6 +217,17 @@ export const otaBookingSchema = z.object({
   processedAt: isoUtcTimestampSchema.nullable(),
   errorCode: z.string().nullable(),
   version: z.number().int().min(0),
+  /**
+   * Phần dưới (F6 gap HB-134) chỉ **thêm**, đều tuỳ chọn: máy chủ đọc từ sổ cái/booking, giao diện chỉ hiển thị.
+   * `OTA_COLLECT` khi đã ghi khoản thu hộ của OTA vào sổ cái; `null` khi chưa có.
+   */
+  paymentMethod: paymentMethodSchema.nullable().optional(),
+  /** Tổng `payments` SUCCEEDED `OTA_COLLECT` của booking (VND nguyên); `null` khi chưa có khoản thu. */
+  collectedAmount: z.number().int().min(0).nullable().optional(),
+  /** Mã chính sách huỷ của kênh đã áp khi OTA huỷ (`bookings.channel_policy_code`); `null` khi chưa huỷ. */
+  channelPolicyCode: z.string().nullable().optional(),
+  /** Case quá tải sớm nhất phủ đêm lưu trú của booking vượt tồn; `null` khi không có. */
+  overbookingCaseId: z.string().min(1).nullable().optional(),
 });
 
 export const otaBookingsQuerySchema = listQuerySchema.extend({

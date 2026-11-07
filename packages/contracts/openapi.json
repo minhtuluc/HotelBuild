@@ -17363,15 +17363,22 @@
                             "minLength": 1
                           },
                           "eventType": {
-                            "type": "string",
+                            "type": [
+                              "string",
+                              "null"
+                            ],
                             "enum": [
                               "booking.created",
                               "booking.modified",
-                              "booking.cancelled"
+                              "booking.cancelled",
+                              null
                             ]
                           },
                           "providerEventId": {
-                            "type": "string",
+                            "type": [
+                              "string",
+                              "null"
+                            ],
                             "minLength": 1
                           },
                           "providerBookingCode": {
@@ -17449,6 +17456,40 @@
                           "version": {
                             "type": "integer",
                             "minimum": 0
+                          },
+                          "paymentMethod": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "enum": [
+                              "VNPAY",
+                              "MOMO",
+                              "CASH",
+                              "BANK_TRANSFER",
+                              "OTA_COLLECT",
+                              null
+                            ]
+                          },
+                          "collectedAmount": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "channelPolicyCode": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "overbookingCaseId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
                           }
                         },
                         "required": [
@@ -18168,15 +18209,22 @@
                       "minLength": 1
                     },
                     "eventType": {
-                      "type": "string",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
                       "enum": [
                         "booking.created",
                         "booking.modified",
-                        "booking.cancelled"
+                        "booking.cancelled",
+                        null
                       ]
                     },
                     "providerEventId": {
-                      "type": "string",
+                      "type": [
+                        "string",
+                        "null"
+                      ],
                       "minLength": 1
                     },
                     "providerBookingCode": {
@@ -18254,6 +18302,40 @@
                     "version": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "paymentMethod": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "VNPAY",
+                        "MOMO",
+                        "CASH",
+                        "BANK_TRANSFER",
+                        "OTA_COLLECT",
+                        null
+                      ]
+                    },
+                    "collectedAmount": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "channelPolicyCode": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "overbookingCaseId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1
                     }
                   },
                   "required": [
