@@ -36,16 +36,16 @@ Quyết định: [QĐ-03](../05-ke-hoach/nhat-ky/QD-03-dinh-danh-phien-f1.md) (n
 | [HB-013](tickets/HB-013-auth-loi.md) | Auth lõi nhân viên: login/refresh/logout/đổi mật khẩu, khoá, rate limit, idle | R2 | Codex (test khoá) → DeepSeek | HB-007, HB-009, HB-010, HB-011, HB-027 |
 | [HB-014](tickets/HB-014-rbac.md) | RBAC: ma trận quyền, phạm vi cơ sở, deny mặc định | R2 | Codex | HB-013 |
 | [HB-015](tickets/HB-015-pin.md) | PIN + `pinToken` dùng một lần | R2 | Codex (test khoá) → DeepSeek | HB-014 |
-| [HB-016](tickets/HB-016-quan-ly-nguoi-dung.md) | `GET/POST /users`, `PUT access`, thu hồi phiên | R2 | Codex (test khoá) → DeepSeek | HB-014 |
-| [HB-017](tickets/HB-017-guest-auth.md) | Guest auth | R2 | Codex (test khoá) → DeepSeek | HB-014 |
-| [HB-028](tickets/HB-028-quen-mat-khau-email.md) | Khách quên mật khẩu qua email | R2 | Codex (test khoá) → DeepSeek | HB-017 |
+| [HB-016](tickets/HB-016-quan-ly-nguoi-dung.md) | `GET/POST /users`, `PUT access`, thu hồi phiên — **A+B đã merge (#191), chờ Opus duyệt** | R2 | Codex (test khoá) → DeepSeek | HB-014 |
+| [HB-017](tickets/HB-017-guest-auth.md) | Guest auth — **A+B đã merge (#193), chờ Opus duyệt** | R2 | Codex (test khoá) → DeepSeek | HB-014 |
+| [HB-028](tickets/HB-028-quen-mat-khau-email.md) | Khách quên mật khẩu qua email — **Xong (#192)** | R2 | Codex (test khoá) → DeepSeek | HB-017 |
 | [HB-019](tickets/HB-019-bff-phien-web.md) | BFF cookie cho 2 web app + API giả dùng chung cho E2E | R2 | Codex | HB-011 |
 | [HB-020](tickets/HB-020-scr14-dang-nhap-ops-web.md) | SCR-14 đăng nhập + chọn cơ sở (operations web) | R1 | DeepSeek | HB-019 |
 | [HB-021](tickets/HB-021-scr15-nguoi-dung.md) | SCR-15 người dùng/vai trò/phạm vi | R1 | DeepSeek | HB-020 |
 | [HB-022](tickets/HB-022-scr56-android-ops.md) | SCR-56 đăng nhập + PIN (operations Android) | R1 | DeepSeek | HB-011 |
 | [HB-023](tickets/HB-023-scr08-khach-web.md) | SCR-08 khách web + quên mật khẩu | R1 | DeepSeek | HB-019 |
 | [HB-024](tickets/HB-024-scr71-khach-android.md) | SCR-71 khách Android — **xong (#23)** | R1 | DeepSeek | HB-011 |
-| [HB-025](tickets/HB-025-qa-f1.md) | QA F1 trên API thật, Chromium + WebKit, Maestro | R0 | Gemini | tất cả ở trên |
+| [HB-025](tickets/HB-025-qa-f1.md) | QA F1 trên API thật, Chromium + WebKit, Maestro — **Xong (#210)** | R0 | Gemini | tất cả ở trên |
 | HB-026 | Nghiệm thu F1 | — | Opus | HB-025 |
 
 Mã HB-012 trước định dành cho test khoá gộp; nay dùng cho bổ sung hợp đồng (mỗi ticket R2 tự có giai đoạn A viết test khoá). Codex là nút thắt (B0 + F1 có 12 việc); nếu Codex chậm, Opus nhận giai đoạn A của HB-013/HB-015/HB-016/HB-017.
@@ -57,3 +57,21 @@ Mã HB-012 trước định dành cho test khoá gộp; nay dùng cho bổ sung 
 | Chạy `e2e-nightly` WebKit lấy log (NFR-USE-04) | Gemini → lead | **Xong 02/10**: Gemini phát hiện config thiếu project WebKit; PR #14 sửa, run 36902488210 xanh 72/72 |
 | Smoke Android trên emulator/thiết bị | Người dùng | Emulator máy hiện tại crash (xem review-f0-response) |
 | Log CI từ xa trên commit F0 | — | Đã có: CI xanh trên `e7f90f0` ở repo HotelBuild |
+
+## Ticket đã merge nhưng chưa có trong bảng trên
+
+Lấy từ commit trên `main` (git). Thêm ngày 2026-11-05.
+
+| Ticket | Việc (theo commit) | Hạng | Làm | Phụ thuộc | Trạng thái |
+|---|---|---|---|---|---|
+| HB-205 | giá booking nhiều phòng — báo giá/hold/booking/walk-in/đổi ngày tính đủ roomCount (F7-QA-03) | — | — | — | Xong (#182) |
+| HB-206 | check-in nhiều phòng ghép đúng đơn vị bán và sẵn sàng theo lượt giải phóng | — | — | — | Xong (#181) |
+| HB-207 | POST /housekeeping/tasks — ghi nhận kiểm phòng cho phòng chưa có bằng chứng sẵn sàng | — | — | — | Xong (#184) |
+| HB-209 | xem trước tiền no-show và trả phòng — preview không ghi, cùng engine với lệnh ghi | — | — | — | Xong (#185) |
+| HB-210 | Android — tên khách SCR-57, số xem trước SCR-61/64, lối khách vãng lai từ SCR-57 | — | — | — | Xong (#186) |
+| HB-211 | phân bổ khoản thu theo trọng số phòng — huỷ một phần hết 422 | — | — | — | Xong (#202) |
+| HB-212 | hoàn đúng số đã thu khi hold hết hạn | — | — | — | Xong (#203) |
+| HB-213 | GET /refund-requests — danh sách hồ sơ hoàn cho SCR-38 | — | — | — | Xong (#199) |
+| HB-214 | trigger CSDL chặn tổng hoàn vượt tổng đã thu của booking | — | — | — | Xong (#201) |
+| HB-215 | xác nhận chuyển khoản hoàn tiền tay — hồ sơ PAID có bằng chứng | — | — | — | Xong (#205) |
+| HB-216 | han muc IP cho confirm dat lai mat khau — 429 da cong bo (TD-60) | — | — | — | Xong (#217) |
