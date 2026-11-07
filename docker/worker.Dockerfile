@@ -10,6 +10,8 @@ ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable && corepack prepare pnpm@10.34.5 --activate
 WORKDIR /repo
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
+# `pnpm.patchedDependencies` (query-string@7.1.3) cần file vá ngay lúc `pnpm install --frozen-lockfile`.
+COPY patches ./patches
 COPY packages ./packages
 # worker phụ thuộc `@pinehill/api` (workspace, composition runtime HB-127/129): cần mã API để sinh Prisma client và build dist
 COPY apps/api ./apps/api
