@@ -390,10 +390,17 @@ test('AC4: 200 yêu cầu song song qua API (pool 50) ⇒ đúng 1 thành công,
   // tín hiệu "tạm thời không sẵn sàng" mà client phải thử lại, nên harness gửi lại **bằng khoá mới**
   // (đúng chính sách thử lại của client; lệnh 500 không để lại hold) cho tới khi có phán quyết nghiệp
   // vụ. Nhờ vậy **mọi** lệnh đều phải trả lời, còn lỗi hệ thống thật (tái diễn ở mọi lần thử) vẫn đỏ.
+  // Thời hạn thay cho số lần: trên runner chậm cả 8 lần thử liền nhau từng rơi vào cùng một đợt bão hoà pool
+  // (CI #260: 201×1, 409×113, 500×86 sau 8 lần không nghỉ — TD-79). Lùi có nhiễu như client thật; lỗi hệ thống
+  // thật vẫn đỏ khi hết hạn.
+  const deadline = Date.now() + 30_000;
   const attempt = async () => {
     for (let tries = 1; ; tries++) {
       const response = await holdRequest(body);
-      if (response.status !== 500 || tries >= 8) return response;
+      if (response.status !== 500 || Date.now() >= deadline) return response;
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.min(400, tries * 40) * (0.5 + Math.random())),
+      );
     }
   };
   const responses = await Promise.all(Array.from({ length: 200 }, attempt));
