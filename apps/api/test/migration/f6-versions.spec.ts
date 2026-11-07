@@ -115,10 +115,12 @@ describe('HB121 AC6/7 schema versions (not endpoint or complete F6 acceptance)',
         ])
       ).rows[0]!;
       // 0009 adds a nullable resolution_source to resolved-case provenance; existing rows keep NULL.
+      // 0010 adds the BR-CHAN-01 allotment percentage; existing mappings keep the 80% default.
       expect(row).toEqual({
         ...original[table],
         version: '1',
         ...(table === 'overbooking_cases' ? { resolution_source: null } : {}),
+        ...(table === 'channel_mappings' ? { allotment_pct: 80 } : {}),
       });
       const column = (
         await client().query(

@@ -1,5 +1,6 @@
 import {
   ALERTS_SCAN_JOB,
+  CHANNEL_SYNC_JOB,
   EXPORT_CLEANUP_JOB,
   HOLD_EXPIRY_JOB,
   HOLD_RECONCILE_JOB,
@@ -13,6 +14,11 @@ import {
 } from './queues.js';
 import type { QueueName } from './queues.js';
 import { HOLD_EXPIRY_RECONCILE, HOLD_EXPIRY_SWEEP } from './jobs/hold-expiry/hold-expiry.job.js';
+import {
+  CHANNEL_SYNC_SCHEDULER_ID,
+  DEFAULT_INTERVAL_SECONDS,
+} from './jobs/channel-sync/contract.js';
+import { channelSyncIntervalSeconds } from './jobs/channel-sync/settings.js';
 import type { WorkerConfig } from './config/env.js';
 import type { WorkerLogger } from './logger.js';
 import { createScanScheduleSync } from './overbooking/schedule.js';
@@ -27,7 +33,7 @@ export interface QueueLike {
   add(name: string, data: unknown): Promise<unknown>;
   upsertJobScheduler(
     id: string,
-    repeat: { every: number },
+    repeat: { every: number; startDate?: number },
     template?: JobTemplate,
   ): Promise<unknown>;
   close(): Promise<void>;
@@ -134,6 +140,15 @@ export function repeatSchedules(config: WorkerConfig, name: QueueName): readonly
         data: {},
       },
     ];
+  if (name === 'q.channel-sync')
+    return [
+      {
+        id: CHANNEL_SYNC_SCHEDULER_ID,
+        everySeconds: DEFAULT_INTERVAL_SECONDS,
+        jobName: CHANNEL_SYNC_JOB,
+        data: {},
+      },
+    ];
   if (name === 'q.no-show-mark')
     return [
       {
@@ -144,6 +159,39 @@ export function repeatSchedules(config: WorkerConfig, name: QueueName): readonly
       },
     ];
   return [];
+}
+
+/**
+ * Đăng ký các lịch lặp của **một** hàng đợi từ `repeatSchedules`. Tách khỏi `start()` để hàm đó không
+ * vượt trần độ phức tạp khi mỗi hàng đợi thêm quy tắc nhịp riêng (HB-131, HB-127).
+ */
+async function registerRepeatSchedules(
+  config: WorkerConfig,
+  queue: QueueLike,
+  name: QueueName,
+): Promise<void> {
+  // HB-131: nhịp `q.channel-sync` đọc từ `SystemSetting` lúc khởi động; đổi cấu hình rồi restart
+  // là đổi nhịp, không cần triển khai lại (BR-SYS-02). Id scheduler không đổi nên không nhân đôi.
+  const configuredInterval =
+    name === 'q.channel-sync' ? await channelSyncIntervalSeconds(config.DATABASE_URL) : null;
+  for (const schedule of repeatSchedules(config, name)) {
+    const everySeconds =
+      schedule.id === CHANNEL_SYNC_SCHEDULER_ID && configuredInterval !== null
+        ? configuredInterval
+        : schedule.everySeconds;
+    const everyMs = everySeconds * 1000;
+    // BullMQ tạo lượt chạy đầu **ngay** khi scheduler chưa có `startDate`; với kênh, lần quét đầu
+    // đặt sau đúng một chu kỳ để restart không tự đẩy ảnh/đếm lỗi trước khi vận hành kịp kiểm tra.
+    // Đồng bộ tức thì vẫn do outbox/API phát job, không phụ thuộc nhịp này (BR-CHAN-02).
+    const repeat =
+      schedule.id === CHANNEL_SYNC_SCHEDULER_ID
+        ? { every: everyMs, startDate: Date.now() + everyMs }
+        : { every: everyMs };
+    await queue.upsertJobScheduler(schedule.id, repeat, {
+      name: schedule.jobName,
+      data: schedule.data,
+    });
+  }
 }
 
 /**
@@ -165,13 +213,7 @@ export function createWorkerApp(config: WorkerConfig, deps: WorkerDeps): WorkerA
           deps.createWorker(name, async () => deps.log({ queue: name, msg: 'nhận job' })),
         );
         if (config.ENABLE_REPEATABLE_SCHEDULERS && isRepeatableQueue(name)) {
-          for (const schedule of repeatSchedules(config, name)) {
-            await queue.upsertJobScheduler(
-              schedule.id,
-              { every: schedule.everySeconds * 1000 },
-              { name: schedule.jobName, data: schedule.data },
-            );
-          }
+          await registerRepeatSchedules(config, queue, name);
           // HB-127: nhịp quét quá tải đến từ SystemSetting, không từ cấu hình tiến trình.
           if (name === OVERBOOKING_SCAN_QUEUE && deps.scanSchedule !== undefined) {
             scanSync = createScanScheduleSync(queue, deps.scanSchedule);

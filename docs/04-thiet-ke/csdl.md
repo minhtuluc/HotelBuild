@@ -1589,6 +1589,56 @@ ALTER TABLE bookings ADD CONSTRAINT ck_bookings_duplicate_flag CHECK (
   duplicate_suspected_by IS NULL OR duplicate_suspected_at IS NOT NULL
 );
 
+-- Migration 0010 (HB-131): `channel_allotments` giữ provenance đóng bán tại chỗ (thủ công/tự động +
+-- người đóng) vì `is_closed` là cờ hiệu lực duy nhất mà loader tồn đọc; `channel_mappings` giữ phần
+-- trăm hạn mức theo BR-CHAN-01/BR-INV-05; `channel_sync_attempts` là sổ bền từng lượt đồng bộ theo
+-- khoá idempotent; `operations.kind` mở thêm hai loại tác vụ CHAN. Khai bằng `ALTER` đúng thứ tự
+-- triển khai như block 0009 ở trên.
+ALTER TABLE channel_allotments
+  ADD COLUMN manual_closed boolean NOT NULL DEFAULT false,
+  ADD COLUMN auto_closed boolean NOT NULL DEFAULT false,
+  ADD COLUMN closed_by uuid REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE channel_allotments ADD CONSTRAINT ck_channel_allotments_manual_closed CHECK (
+  manual_closed = false OR closed_at IS NOT NULL
+);
+
+ALTER TABLE channel_mappings
+  ADD COLUMN allotment_pct smallint NOT NULL DEFAULT 80
+  CHECK (allotment_pct >= 1 AND allotment_pct <= 100);
+-- BR-CHAN-08: một loại phòng chỉ có một mã phòng OTA trong một kênh, và ngược lại.
+CREATE UNIQUE INDEX uq_channel_mappings_room_type
+  ON channel_mappings (channel_id, room_type_id);
+CREATE UNIQUE INDEX uq_channel_mappings_external_code
+  ON channel_mappings (channel_id, external_room_code);
+
+-- Lượt đồng bộ bền theo (kênh, khoá lượt): phát lại cùng khoá là no-op, không đếm lỗi lần hai.
+CREATE TABLE channel_sync_attempts (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  channel_id   uuid NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+  attempt_key  text NOT NULL CHECK (length(btrim(attempt_key)) > 0),
+  outcome      text NOT NULL CHECK (outcome IN ('SUCCESS','FAILURE')),
+  error_code   text,
+  attempted_at timestamptz NOT NULL DEFAULT now(),
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_channel_sync_attempts_key UNIQUE (channel_id, attempt_key)
+);
+CREATE INDEX idx_channel_sync_attempts_history
+  ON channel_sync_attempts (channel_id, attempted_at DESC);
+
+ALTER TABLE operations DROP CONSTRAINT operations_kind_check;
+ALTER TABLE operations ADD CONSTRAINT operations_kind_check CHECK (
+  kind IN ('REPORT_EXPORT','CHANNEL_SYNC','CHANNEL_DELIVERY_RETRY')
+);
+-- Tác vụ CHAN không sinh tệp nên không có `result_ref`/`result_path`; bất biến của tác vụ xuất báo
+-- cáo vẫn giữ nguyên thay vì nới lỏng cho mọi loại.
+ALTER TABLE operations DROP CONSTRAINT ck_operations_succeeded;
+ALTER TABLE operations ADD CONSTRAINT ck_operations_succeeded CHECK (
+  status <> 'SUCCEEDED'
+  OR (finished_at IS NOT NULL
+      AND (kind <> 'REPORT_EXPORT'
+           OR (result_ref IS NOT NULL AND result_path IS NOT NULL)))
+);
+
 CREATE FUNCTION fn_immutable_record() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   -- Cascade chỉ khi parent đã qua guard xoá DRAFT/HELD và lưu bằng chứng vào AuditLog.

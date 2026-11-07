@@ -27,6 +27,15 @@ export let exportDir = '';
 /** Hàng đợi thật trỏ cùng Redis DB `/7` để đếm job `q.report-export` mà API vừa phát. */
 export const exportJobs = () => queue.getJobs(['waiting', 'delayed', 'active', 'paused']);
 
+export async function loginAs(username: string, role: string): Promise<string> {
+  clock.value += 61000;
+  await rows('UPDATE users SET role=$1 WHERE username=$2', [role, username]);
+  const response = await http().post('/api/v1/auth/login').send({ username, password });
+  expect(response.status).toBe(200);
+  return tokenPairSchema.parse(response.body).accessToken;
+}
+
+/** Đăng nhập bằng người dùng dùng chung `h029-first` sau khi đổi vai trò của chính nó. */
 export async function login(role = 'ACCOUNTANT'): Promise<string> {
   clock.value += 61000;
   await rows('UPDATE users SET role=$1 WHERE id=$2', [role, userId]);

@@ -7,6 +7,8 @@ import { permissionProvider } from '../../../common/rbac/permissions.js';
  * (ví dụ sao lưu ở HB-179).
  */
 export const operationsPermissions = permissionProvider('sys-operations', {
-  'operations.read': ['OWNER', 'ACCOUNTANT'],
+  // HB-131: MANAGER theo dõi tác vụ do chính mình khởi tạo (sync kênh/retry delivery); service vẫn chặn
+  // người không phải người tạo và kiểm scope hiện tại, OWNER đọc được mọi tác vụ.
+  'operations.read': ['OWNER', 'ACCOUNTANT', 'MANAGER'],
   'operations.download': ['OWNER', 'ACCOUNTANT'],
 });

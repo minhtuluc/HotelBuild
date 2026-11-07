@@ -1,5 +1,10 @@
 import { ChannelsModule } from './modules/rate/channels/module.js';
 import { OtaReviewModule } from './modules/chan/ota-review/module.js';
+import { ChannelSyncModule } from './modules/chan/sync/module.js';
+import { ChannelMappingsModule } from './modules/chan/mappings/module.js';
+import { ChannelSalesClosureModule } from './modules/chan/sales-closure/module.js';
+import { ChannelOtaBookingsModule } from './modules/chan/ota-bookings/module.js';
+import { ChannelMonitoringModule } from './modules/chan/monitoring/module.js';
 import { RateCalendarModule } from './modules/rate/calendar/module.js';
 import { SeasonsModule } from './modules/rate/seasons/module.js';
 import { PropertyAdminModule } from './modules/prop/property-admin/module.js';
@@ -155,6 +160,12 @@ export class AppModule {
         AvailabilityModule,
         RatePlansModule,
         ChannelsModule,
+        // HB-131: bề mặt CHAN (sync/mappings/sales-closure/ota-bookings/monitoring) theo api.md §2.7.
+        ChannelSyncModule,
+        ChannelMappingsModule,
+        ChannelSalesClosureModule,
+        ChannelOtaBookingsModule,
+        ChannelMonitoringModule,
         RateCalendarModule,
         SeasonsModule,
         CancellationPoliciesModule,

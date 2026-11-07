@@ -9,7 +9,12 @@ export function f5Pay(keyed: Oracle): void {
     status: 400,
     method: RequestMethod.POST,
   };
-  keyed[`${RequestMethod.GET}:operations/:operationId`] = readMissing(['ACCOUNTANT', 'OWNER']);
+  // HB-131: MANAGER theo dõi tác vụ CHAN do chính mình khởi tạo (service vẫn kiểm người tạo/scope).
+  keyed[`${RequestMethod.GET}:operations/:operationId`] = readMissing([
+    'ACCOUNTANT',
+    'MANAGER',
+    'OWNER',
+  ]);
   keyed[`${RequestMethod.GET}:operations/:operationId/download`] = readMissing([
     'ACCOUNTANT',
     'OWNER',
