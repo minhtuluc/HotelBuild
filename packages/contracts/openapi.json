@@ -1641,7 +1641,7 @@
             }
           },
           "401": {
-            "description": "E_AUTH_INVALID_CREDENTIALS",
+            "description": "E_AUTH_INVALID_CREDENTIALS, E_AUTH_ACCOUNT_LOCKED",
             "content": {
               "application/json": {
                 "schema": {

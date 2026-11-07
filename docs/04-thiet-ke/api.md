@@ -99,7 +99,7 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 | POST | `/api/v1/guest-auth/logout` | Khách đăng xuất: access token của phiên khách xác định phiên; thu hồi **cả family** (`revoke_reason = LOGOUT`) nên refresh token và mọi access token còn hạn của phiên vô hiệu ngay. `204`; token nhân viên/sai chữ ký/phiên đã thu hồi ⇒ `401` trước mọi thay đổi (TD-58). `POST /auth/logout` là tuyến **nhân viên**, token khách nhận 403 | GUEST session | — | UC-AUTH-03 | BR-RBAC-05 |
 | GET | `/api/v1/users` | Danh sách người dùng nội bộ cho SCR-15 | MANAGER | `cursor`, `limit`, `role`, `propertyId`, `q` | UC-AUTH-02 | BR-RBAC-01,02 |
 | POST | `/api/v1/users` | Tạo người dùng với mật khẩu tạm (buộc đổi ở lần đăng nhập đầu) | OWNER/SYSADMIN | `username`, `fullName`, `phone?`, `role`, `propertyScope[]`, `temporaryPassword` | UC-AUTH-02 | BR-RBAC-01,02 |
-| POST | `/api/v1/auth/password` | Đổi mật khẩu của chính mình | Đã đăng nhập | `currentPassword`, `newPassword` (8–128) | UC-AUTH-01 | BR-RBAC-05 |
+| POST | `/api/v1/auth/password` | Đổi mật khẩu của chính mình; `currentPassword` sai được đếm vào cùng bộ đếm khoá với đăng nhập (5 lần ⇒ khoá 15 phút, `401 E_AUTH_ACCOUNT_LOCKED` + `retryAfterSeconds`; TD-20) | Đã đăng nhập | `currentPassword`, `newPassword` (8–128) | UC-AUTH-01 | BR-RBAC-05, BR-RBAC-06 |
 | PUT | `/api/v1/auth/pin` | Đặt PIN 6 số cho chính mình | Đã đăng nhập | `pin` (6 số), `currentPassword` | UC-AUTH-01 | BR-RBAC-05 |
 | DELETE | `/api/v1/users/{userId}/pin` | Xoá PIN để người dùng đặt lại | MANAGER/SYSADMIN | — | UC-AUTH-02 | BR-RBAC-05 |
 | POST | `/api/v1/guest-auth/password-reset/request` | Yêu cầu đặt lại mật khẩu; **luôn 202** dù SĐT có tồn tại hay không | — | `phone` | UC-AUTH-03 | BR-CRM-01 |
@@ -784,7 +784,7 @@ Lỗi 5xx **PHẢI** có `traceId` và được ghi log JSON cùng mã đó, **k
 | `E_SYS_IDEMPOTENCY_KEY_REUSED` | 409 | Khoá chống trùng đã dùng cho một yêu cầu khác. | Cùng `Idempotency-Key`, khác payload | Sinh khoá mới (BR-GEN-08) |
 | `E_AUTH_INVALID_CREDENTIALS` | 401 | Tên đăng nhập hoặc mật khẩu không đúng. | Sai thông tin đăng nhập | Nhập lại; 5 lần sai bị khoá 15 phút (BR-RBAC-06) |
 | `E_AUTH_PIN_REQUIRED` | 401 | Cần xác thực PIN cho thao tác tài chính. | Thiếu hoặc hết hạn `pinToken` | Gọi `/auth/pin/verify` rồi thử lại (BR-RBAC-05) |
-| `E_AUTH_ACCOUNT_LOCKED` | 401 | Tài khoản đang tạm khoá. | 5 lần đăng nhập sai liên tiếp trong 15 phút — cả nhân viên lẫn khách (QĐ-03 quyết định 3) | Chờ `retryAfterSeconds` rồi đăng nhập lại, hoặc nhờ quản lý mở khoá (BR-RBAC-06) |
+| `E_AUTH_ACCOUNT_LOCKED` | 401 | Tài khoản đang tạm khoá. | 5 lần đăng nhập sai liên tiếp trong 15 phút — cả nhân viên lẫn khách (QĐ-03 quyết định 3); với nhân viên, `currentPassword` sai ở `POST /auth/password` và `PUT /auth/pin` cũng cộng vào cùng bộ đếm | Chờ `retryAfterSeconds` rồi đăng nhập lại, hoặc nhờ quản lý mở khoá (BR-RBAC-06) |
 | `E_AUTH_PIN_LOCKED` | 403 | PIN đang tạm khoá. | 3 lần nhập sai PIN liên tiếp (QĐ-03 quyết định 4) | Chờ 15 phút hoặc nhờ MANAGER/SYSADMIN xoá PIN để đặt lại |
 | `E_AUTH_PASSWORD_CHANGE_REQUIRED` | 403 | Phải đổi mật khẩu trước khi dùng hệ thống. | Tài khoản tạo bằng mật khẩu tạm chưa đổi (QĐ-03 quyết định 8) | Gọi `POST /auth/password` rồi tiếp tục |
 | `E_AUTH_USERNAME_TAKEN` | 409 | Tên đăng nhập đã được dùng. | Trùng `User.username` khi tạo tài khoản | Chọn tên đăng nhập khác |

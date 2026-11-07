@@ -262,7 +262,7 @@ registry.registerPath({
   responses: {
     204: { description: 'Đã đổi mật khẩu' },
     400: errorResponse('E_GEN_VALIDATION_FAILED'),
-    401: errorResponse('E_AUTH_INVALID_CREDENTIALS'),
+    401: errorResponse('E_AUTH_INVALID_CREDENTIALS', 'E_AUTH_ACCOUNT_LOCKED'),
   },
 });
 
