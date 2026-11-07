@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '@pinehill/api-client';
-import type { SalesClosureRow } from '@pinehill/contracts';
+import type { ChannelSummary, SalesClosureRow } from '@pinehill/contracts';
 import { mappingKey } from '../../src/features/hb132-scr40-cau-hinh-kenh/controller';
 import {
   classify,
@@ -186,9 +186,33 @@ describe('HB-132 SCR-40', () => {
     expect(ports.closeSales.mock.calls[0]?.[0].body.closed).toBe(false);
   });
 
-  it.todo(
-    'server_rate_warning — BLOCKED: HB-120 chưa có trường cảnh báo giá thuần OTA < WEB trong response/preview của kênh',
-  );
+  it('server_rate_warning', async () => {
+    const withChannel = (extra: Partial<ChannelSummary>): ConfigData => {
+      const base = dataWith();
+      return { ...base, channels: base.channels.map((row) => ({ ...row, ...extra })) };
+    };
+    const show = async (data: ConfigData): Promise<string> => {
+      const { controller } = setup(OWNER, data);
+      await controller.load();
+      return renderToStaticMarkup(createElement(Projection, { state: controller.getState() }));
+    };
+    const warned: NonNullable<ChannelSummary['rateWarnings']> = [
+      'E_RATE_CHANNEL_PARITY',
+      'E_RATE_DIRECT_BELOW_BASE',
+    ];
+    const markup = await show(withChannel({ rateWarnings: warned }));
+    expect(markup).toContain('data-testid="hb132-rate-warning"');
+    expect(markup).toContain('BR-RATE-09');
+    expect(markup).toContain('dưới 1,00');
+    // Nói rõ phạm vi để không bị đọc nhầm thành kết quả theo từng ngày.
+    expect(markup).toContain('chưa gồm ghi đè theo cơ sở và bước kẹp sàn/trần');
+    // Không có cảnh báo (rỗng hoặc vắng) thì không dựng khối cảnh báo.
+    expect(await show(withChannel({ rateWarnings: [] }))).not.toContain('hb132-rate-warning');
+    // Giao diện không tự so hệ số/hoa hồng: số liệu "xấu" mà máy chủ không báo thì không có cảnh báo.
+    const unflagged = await show(withChannel({ multiplier: 0.5, commissionPct: 30 }));
+    expect(unflagged).not.toContain('hb132-rate-warning');
+    expect(unflagged).not.toContain('BR-RATE-09');
+  });
 
   it('current_scope_permission_fail_closed', async () => {
     const { controller, ports } = setup();

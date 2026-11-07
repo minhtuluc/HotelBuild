@@ -1,5 +1,6 @@
 'use client';
 import type { ReactElement } from 'react';
+import type { ChannelSummary } from '@pinehill/contracts';
 import { ClosureForm, MappingForm } from './forms';
 import { text } from './messages';
 import { canClose, canMap, type FieldIssue } from './model';
@@ -72,6 +73,27 @@ function Selectors({
   );
 }
 
+const RATE_WARNING_TEXT = {
+  E_RATE_CHANNEL_PARITY: 'rateParity',
+  E_RATE_DIRECT_BELOW_BASE: 'rateDirectBelowBase',
+} as const;
+
+/** Cảnh báo giá đọc thẳng từ `rateWarnings` do máy chủ trả; giao diện không so sánh hệ số/hoa hồng. */
+function RateWarnings({ channel }: { channel: ChannelSummary }): ReactElement | null {
+  const warnings = channel.rateWarnings ?? [];
+  if (warnings.length === 0) return null;
+  return (
+    <div data-testid="hb132-rate-warning">
+      {warnings.map((code) => (
+        <p key={code} role="status">
+          {text(RATE_WARNING_TEXT[code])}
+        </p>
+      ))}
+      <p>{text('rateScope')}</p>
+    </div>
+  );
+}
+
 /** Số liệu đúng như máy chủ trả; không cộng allotment các kênh, không tính lại trần hay tồn. */
 export function Projection({ state }: { state: ControllerState }): ReactElement | null {
   const data = state.data;
@@ -95,6 +117,7 @@ export function Projection({ state }: { state: ControllerState }): ReactElement 
       <p>
         {text('overbookAllowed', { value: channel.overbookAllowed ? text('yes') : text('no') })}
       </p>
+      <RateWarnings channel={channel} />
       {data.rows.length === 0 ? (
         <p>{text('noRows')}</p>
       ) : (
