@@ -18,6 +18,7 @@ allow:
   - packages/ui-web/src/format.ts
   - packages/ui-web/src/messages.ts
   - packages/ui-web/test/format-i18n-source.spec.ts
+  - packages/ui-native/src/stateMessages.ts
 ---
 
 # HB-218 — Sửa 14 node chuỗi tiếng Việt ngoài danh mục
@@ -36,7 +37,7 @@ allow:
 
 1. `operations-web`: `cancelLabel` của hai `ConfirmDialog` HB-132, đơn vị chờ của `formatWait` ("giây"/"phút") và thông điệp "Cơ sở ngoài phạm vi" của SCR-48 lấy từ danh mục; `formatWait` tách thành `waitParts` (số + đơn vị) và câu chữ ở `view-text.ts` — test: `test/auth/login-model.spec.ts`, `test/auth/view-text.spec.ts`, `test/hb218-i18n-source.spec.ts`.
 2. `operations-android`: nhãn "đêm" của kỳ ở lấy từ danh mục `lookup/messages.ts` (`stayPeriodText`); `formatStay` thuần nhận nhãn từ nơi gọi để test Node không kéo `react-native` — test: `test/lookup-view.spec.ts`, `test/lookup-i18n-source.spec.ts`.
-3. `packages/ui-web`: `formatStayPeriod` và `formatRemaining` dựng câu từ `viCatalog` (`format.stayPeriod`, `format.remaining.*`), đầu ra không đổi — test: `test/format.spec.ts` (giữ nguyên), `test/format-i18n-source.spec.ts`.
+3. `packages/ui-web`: `formatStayPeriod` và `formatRemaining` dựng câu từ `viCatalog` (`format.stayPeriod`, `format.remaining.*`), đầu ra không đổi; `ui-native/stateMessages.ts` nhận cùng 3 khoá để giữ bất biến web = Android — test: `test/format.spec.ts` (giữ nguyên), `test/format-i18n-source.spec.ts`, `ui-native/test/ui-native.spec.ts`.
 4. Quét AST của HB-186: 31 → 25 ứng viên trong app (hết 6 node UI), `ui-web/src/format.ts` chỉ còn hai lỗi lập trình và nhãn `(giờ VN)`.
 
 ## Ngoài phạm vi
@@ -47,4 +48,4 @@ allow:
 
 ## Cổng phải xanh
 
-`pnpm check:scope` · `pnpm lint` · `pnpm typecheck` · `pnpm format:check` · test của `ui-web`, `operations-web`, `operations-android`, `customer-web` (người dùng `formatStayPeriod`)
+`pnpm check:scope` · `pnpm lint` · `pnpm typecheck` · `pnpm format:check` · test của **mọi gói/app đụng tới** (`ui-web`, `ui-native`, `operations-web`, `operations-android`, `customer-web`) (người dùng `formatStayPeriod`)
