@@ -17,7 +17,7 @@
       "prisma"
     ],
     "overrides": {
-      "@nestjs/platform-fastify@11.2.7>fastify": "5.12.5",
+      "fastify": "5.12.5",
       "postcss@<8.5.28": "8.5.28",
       "@prisma/config@6.19.3>deepmerge-ts": "8.0.2",
       "source-map-js@<1.2.2": "1.2.2",
