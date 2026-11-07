@@ -130,7 +130,7 @@ test('rotation invalidates old access and logout invalidates the new access', as
   const body = { ...search, propertyId: 'journey-standard', quoteId: 'unknown' };
   expect((await call('/holds', body, session.accessToken)).status).toBe(401);
   expect((await call('/holds', body, rotated.accessToken)).status).toBe(410);
-  expect((await call('/auth/logout', undefined, rotated.accessToken, 'POST')).status).toBe(204);
+  expect((await call('/guest-auth/logout', undefined, rotated.accessToken, 'POST')).status).toBe(204);
   expect((await call('/holds', body, rotated.accessToken)).status).toBe(401);
 });
 test('per-server state cannot leak a bearer or quote into another server', async () => {
