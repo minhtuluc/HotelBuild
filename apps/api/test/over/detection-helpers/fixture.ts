@@ -65,6 +65,7 @@ export {
   otherTypeId,
   otherRoomId,
 } from '../../room-blocks/inventory-seed.js';
+import { openGuestSession } from '../../support/guest-session.js';
 
 export const DAY = 86_400_000;
 /** Ngày nghiệp vụ ghim cho cả bộ test; giờ VN không có DST nên cộng/trừ ngày bằng UTC là đúng. */
@@ -100,8 +101,9 @@ async function insert(sql: string, values: unknown[] = []): Promise<string> {
 
 /** Token phiên khách cho một `guests.id` đã có (HB-017 chưa mở nên phát hành đúng loại token ấy). */
 export async function guestTokenFor(id: string): Promise<string> {
+  const sessionId = await openGuestSession(rows, id);
   const { token } = await signAccessToken(
-    { userId: id, role: GUEST_ROLE, propertyScope: [], sessionId: randomUUID() },
+    { userId: id, role: GUEST_ROLE, propertyScope: [], sessionId },
     secrets.access,
     clock.now(),
   );

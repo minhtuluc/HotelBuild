@@ -95,7 +95,7 @@ describe('Session khách', () => {
     expect(bodies[1]).toContain('"clientSurface":"GUEST_ANDROID"');
   });
 
-  it('logout gọi /auth/logout trước rồi luôn xoá storage (HB-012)', async () => {
+  it('logout gọi /guest-auth/logout (tuyến khách, TD-58) trước rồi luôn xoá storage (HB-012)', async () => {
     const storage = memoryStorage();
     const calls: string[] = [];
     const s = new Session({
@@ -117,7 +117,7 @@ describe('Session khách', () => {
     });
     await s.login('0901234567', 'matkhau123');
     await s.logout();
-    expect(calls).toEqual(['/api/v1/guest-auth/login', '/api/v1/auth/logout']);
+    expect(calls).toEqual(['/api/v1/guest-auth/login', '/api/v1/guest-auth/logout']);
     expect(await storage.get(SESSION_KEY)).toBeNull();
   });
 

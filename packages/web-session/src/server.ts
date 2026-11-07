@@ -112,7 +112,11 @@ async function execute(
         code: 'E_AUTH_INVALID_CREDENTIALS',
         message: 'No access token',
       });
-    await client.requestVoid({ method: 'POST', path: '/auth/logout' });
+    // TD-58: khách đi tuyến riêng; `/auth/logout` là tuyến nhân viên (token khách nhận 403, phiên máy chủ còn sống).
+    await client.requestVoid({
+      method: 'POST',
+      path: options.kind === 'staff' ? '/auth/logout' : '/guest-auth/logout',
+    });
     return new Response(null, { status: 204, headers: { 'cache-control': 'no-store' } });
   }
   const prefix = options.kind === 'staff' ? '/auth' : '/guest-auth';

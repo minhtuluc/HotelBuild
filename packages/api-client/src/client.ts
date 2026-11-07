@@ -89,9 +89,8 @@ const CREDENTIAL_PATHS: readonly string[] = [
   '/auth/login',
   '/auth/refresh',
   '/auth/logout',
-  '/guest-auth/login',
-  '/guest-auth/register',
-  '/guest-auth/refresh',
+  // TD-58: logout khách cùng lý do với `/auth/logout`.
+  ...['login', 'register', 'refresh', 'logout'].map((action) => `/guest-auth/${action}`),
   // HB-217: 401 của PIN sai là kết quả nghiệp vụ, không phải token hết hạn (cùng mã `E_AUTH_INVALID_CREDENTIALS`);
   // làm mới phiên rồi gửi lại sẽ đếm mỗi lần nhập sai hai lần vào ngưỡng khoá PIN 3 lần.
   '/auth/pin/verify',

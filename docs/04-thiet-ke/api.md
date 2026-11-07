@@ -96,6 +96,7 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 | POST | `/api/v1/auth/logout` | Thu hồi phiên và refresh family, hết quyền trên mọi client của phiên | Đã đăng nhập | — | UC-AUTH-01, UC-AUTH-03 | BR-RBAC-05 |
 | GET | `/api/v1/auth/me` | Hồ sơ phiên hiện tại: vai trò, phạm vi cơ sở, `hasPin`, `mustChangePassword` | Đã đăng nhập | — | UC-AUTH-01 | BR-RBAC-02,05 |
 | POST | `/api/v1/guest-auth/refresh` | Xoay refresh của khách; phát hiện reuse thì thu hồi cả family | GUEST session | `refreshToken` | UC-AUTH-03 | BR-RBAC-05 |
+| POST | `/api/v1/guest-auth/logout` | Khách đăng xuất: access token của phiên khách xác định phiên; thu hồi **cả family** (`revoke_reason = LOGOUT`) nên refresh token và mọi access token còn hạn của phiên vô hiệu ngay. `204`; token nhân viên/sai chữ ký/phiên đã thu hồi ⇒ `401` trước mọi thay đổi (TD-58). `POST /auth/logout` là tuyến **nhân viên**, token khách nhận 403 | GUEST session | — | UC-AUTH-03 | BR-RBAC-05 |
 | GET | `/api/v1/users` | Danh sách người dùng nội bộ cho SCR-15 | MANAGER | `cursor`, `limit`, `role`, `propertyId`, `q` | UC-AUTH-02 | BR-RBAC-01,02 |
 | POST | `/api/v1/users` | Tạo người dùng với mật khẩu tạm (buộc đổi ở lần đăng nhập đầu) | OWNER/SYSADMIN | `username`, `fullName`, `phone?`, `role`, `propertyScope[]`, `temporaryPassword` | UC-AUTH-02 | BR-RBAC-01,02 |
 | POST | `/api/v1/auth/password` | Đổi mật khẩu của chính mình | Đã đăng nhập | `currentPassword`, `newPassword` (8–128) | UC-AUTH-01 | BR-RBAC-05 |
@@ -103,6 +104,8 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 | DELETE | `/api/v1/users/{userId}/pin` | Xoá PIN để người dùng đặt lại | MANAGER/SYSADMIN | — | UC-AUTH-02 | BR-RBAC-05 |
 | POST | `/api/v1/guest-auth/password-reset/request` | Yêu cầu đặt lại mật khẩu; **luôn 202** dù SĐT có tồn tại hay không | — | `phone` | UC-AUTH-03 | BR-CRM-01 |
 | POST | `/api/v1/guest-auth/password-reset/confirm` | Đặt lại mật khẩu bằng token một lần; thu hồi mọi phiên của khách | — | `token`, `newPassword` (8–128) | UC-AUTH-03 | BR-CRM-01 |
+
+**Quy tắc phiên trên tuyến `@Public` tự phân giải chủ thể (TD-59).** `POST /quotes`, `POST/GET /bookings`, `POST/DELETE /holds` và `POST /guest-auth/logout` cho cả khách lẫn nhân viên nên không đi qua `AuthGuard`. Ngoài chữ ký/hạn của access token, chúng PHẢI kiểm trạng thái phiên bằng `findUsableSession` (`common/guards/session-state.ts`, cùng hàm với `AuthGuard`): phiên không tồn tại, đã thu hồi (đăng xuất/replay), sai chủ, hết hạn, hoặc phiên `OPS_WEB` nhàn rỗi quá 15 phút ⇒ `401 E_AUTH_INVALID_CREDENTIALS`. Chữ ký đúng không thay được dòng phiên (fail-closed). Test sinh token ký tay phải mở phiên thật (`test/support/guest-session.ts`).
 
 ### 2.2. PROP — Cơ sở & buồng phòng (4 UC)
 

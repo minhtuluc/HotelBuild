@@ -7,6 +7,8 @@ import { IdempotencyContext } from '../../../common/idempotency/context.js';
 import { CONFIG } from '../../../config/env.js';
 import type { ApiConfig } from '../../../config/env.js';
 import { CLOCK } from '../../../infrastructure/ports.js';
+import { PRISMA } from '../../../infrastructure/prisma/prisma.module.js';
+import type { DatabaseClient } from '../../../infrastructure/prisma/prisma.module.js';
 import { QuoteAccess } from './access.js';
 import { quotePrincipal } from './principal.js';
 import { RateQuoteService } from './service.js';
@@ -24,6 +26,7 @@ export class QuotesController {
     @Inject(IdempotencyContext) private readonly context: IdempotencyContext,
     @Inject(CONFIG) private readonly config: ApiConfig,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(PRISMA) private readonly db: DatabaseClient,
   ) {}
 
   @Public()
@@ -33,7 +36,7 @@ export class QuotesController {
   async create(@Body() body: unknown, @Req() request: FastifyRequest) {
     return this.service.create(
       this.context.transaction(),
-      await quotePrincipal(request, this.config, this.clock),
+      await quotePrincipal(this.db, request, this.config, this.clock),
       body,
     );
   }

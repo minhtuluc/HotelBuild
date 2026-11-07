@@ -7,7 +7,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Prisma } from '@prisma/client';
 import type { FastifyRequest } from 'fastify';
 import type { Clock, IdGenerator } from '@pinehill/domain';
 import { AppError } from '../app-error.js';
@@ -20,11 +19,10 @@ import { verifyAccessToken } from '../../infrastructure/crypto/access-tokens.js'
 import { PRISMA } from '../../infrastructure/prisma/prisma.module.js';
 import type { DatabaseClient } from '../../infrastructure/prisma/prisma.module.js';
 import { PASSWORD_CHANGE_ALLOWED_KEY, PUBLIC_ROUTE_KEY } from './decorators.js';
+import { findUsableSession } from './session-state.js';
+import type { SessionWithUser } from './session-state.js';
 
-/** Phiên operations web hết hạn sau 15 phút nhàn rỗi (TC-AUTH-02). */
-export const IDLE_TIMEOUT_MS = 15 * 60_000;
-/** Nhịp cập nhật `last_seen_at` tối thiểu (QĐ-03 quyết định 9). */
-export const LAST_SEEN_THROTTLE_MS = 60_000;
+export { IDLE_TIMEOUT_MS, LAST_SEEN_THROTTLE_MS } from './session-state.js';
 
 export function invalidCredentials(): AppError {
   return new AppError(401, 'E_AUTH_INVALID_CREDENTIALS', 'Tên đăng nhập hoặc mật khẩu không đúng.');
@@ -47,9 +45,6 @@ function bearerToken(header: string | undefined): string | null {
   if (header === undefined) return null;
   return /^Bearer +(\S+)$/i.exec(header)?.[1] ?? null;
 }
-
-/** Phiên kèm người dùng (guard xác thực cần cả hai để kiểm trạng thái). */
-type SessionWithUser = Prisma.auth_sessionsGetPayload<{ include: { users: true } }>;
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -111,33 +106,10 @@ export class AuthGuard implements CanActivate {
     );
   }
 
-  /** Phiên còn dùng được: chưa thu hồi, đúng chủ, chưa hết hạn, chưa nhàn rỗi quá ngưỡng (web). */
+  /** Phiên còn dùng được (logic dùng chung với các tuyến `@Public`: `findUsableSession`). */
   private async usableSession(sessionId: string, userId: string): Promise<SessionWithUser> {
-    const session = await this.prisma.auth_sessions.findUnique({
-      where: { id: sessionId },
-      include: { users: true },
-    });
-    const now = this.clock.now();
-    if (
-      session === null ||
-      session.revoked_at !== null ||
-      (session.principal_type === 'GUEST' ? session.guest_id : session.user_id) !== userId ||
-      session.expires_at.getTime() <= now.getTime()
-    ) {
-      throw invalidCredentials();
-    }
-    if (
-      session.surface === 'OPS_WEB' &&
-      now.getTime() - session.last_seen_at.getTime() >= IDLE_TIMEOUT_MS
-    ) {
-      throw invalidCredentials();
-    }
-    if (now.getTime() - session.last_seen_at.getTime() >= LAST_SEEN_THROTTLE_MS) {
-      await this.prisma.auth_sessions.update({
-        where: { id: session.id },
-        data: { last_seen_at: now },
-      });
-    }
+    const session = await findUsableSession(this.prisma, this.clock, sessionId, userId);
+    if (session === null) throw invalidCredentials();
     // Phiên khách (HB-017) đã kiểm đủ (chưa thu hồi, đúng chủ, còn hạn) nhưng mọi tuyến có guard là tuyến nhân viên.
     if (session.principal_type === 'GUEST') throw guestSessionForbidden();
     return session;

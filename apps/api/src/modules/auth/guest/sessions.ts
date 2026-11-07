@@ -6,10 +6,12 @@
 import type { Prisma } from '@prisma/client';
 import type { Clock, IdGenerator } from '@pinehill/domain';
 import { invalidCredentials } from '../../../common/guards/auth.guard.js';
+import { findUsableSession } from '../../../common/guards/session-state.js';
 import type { ApiConfig } from '../../../config/env.js';
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   signAccessToken,
+  verifyAccessToken,
 } from '../../../infrastructure/crypto/access-tokens.js';
 import {
   REFRESH_TOKEN_TTL_SECONDS,
@@ -84,6 +86,35 @@ export class GuestSessions {
       ),
       mustChangePassword: false,
     };
+  }
+
+  /**
+   * Đăng xuất khách (TD-58): access token xác định phiên; thu hồi **cả family** như logout nhân viên nên refresh
+   * token và mọi access token còn hạn của phiên đều vô hiệu ngay. Token nhân viên, token sai chữ ký hay phiên đã
+   * thu hồi/hết hạn đều `401` **trước** mọi thay đổi để một bên không thu hồi được phiên của bên kia.
+   */
+  async logout(accessToken: string | null): Promise<void> {
+    if (accessToken === null) throw invalidCredentials();
+    const verified = await verifyAccessToken(
+      accessToken,
+      this.config.JWT_ACCESS_SECRET,
+      this.clock.now(),
+    );
+    if (verified === null) throw invalidCredentials();
+    const session = await findUsableSession(
+      this.prisma,
+      this.clock,
+      verified.sessionId,
+      verified.userId,
+    );
+    if (session === null || session.principal_type !== 'GUEST') throw invalidCredentials();
+    await this.prisma.$transaction(async (tx) => {
+      await lockFamily(tx, session.family_id);
+      await tx.auth_sessions.updateMany({
+        where: { family_id: session.family_id, revoked_at: null },
+        data: { revoked_at: this.clock.now(), revoke_reason: 'LOGOUT' },
+      });
+    });
   }
 
   /**

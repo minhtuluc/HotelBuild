@@ -69,6 +69,10 @@ export class GuestAuthService {
     this.sessions = new GuestSessions(config, clock, ids, prisma);
   }
 
+  logout(accessToken: string | null): Promise<void> {
+    return this.sessions.logout(accessToken);
+  }
+
   private systemActor(context: RequestContext): ActorContext {
     return { id: null, role: 'SYSTEM', ip: context.ip, correlationId: context.correlationId };
   }

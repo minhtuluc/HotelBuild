@@ -53,7 +53,7 @@ try {
   assert.deepEqual(paths, [
     '/api/v1/guest-auth/login',
     '/api/v1/guest-auth/refresh',
-    '/api/v1/auth/logout',
+    '/api/v1/guest-auth/logout',
   ]);
   const csrf = await refresh(req('refresh', undefined, { origin: 'https://evil.test' }));
   assert.equal(csrf.status, 403);

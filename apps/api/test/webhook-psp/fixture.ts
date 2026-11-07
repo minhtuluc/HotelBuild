@@ -46,6 +46,7 @@ export {
   stay,
   userId,
 } from '../room-blocks/inventory-seed.js';
+import { openGuestSession } from '../support/guest-session.js';
 const GUEST_ROLE = z.custom<AccessTokenClaims['role']>((value) => value === 'GUEST').parse('GUEST');
 
 /** `POST /quotes` thật của HB-074: giá và cọc do engine trả — test không tự tính lại (BR-RATE-17). */
@@ -277,9 +278,10 @@ beforeAll(async () => {
       ])
     )[0]?.id,
   );
+  const sessionId = await openGuestSession(rows, guestId);
   token = (
     await signAccessToken(
-      { userId: guestId, role: GUEST_ROLE, propertyScope: [], sessionId: randomUUID() },
+      { userId: guestId, role: GUEST_ROLE, propertyScope: [], sessionId },
       secrets.access,
       clock.now(),
     )

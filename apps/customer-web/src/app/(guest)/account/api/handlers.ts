@@ -127,7 +127,7 @@ export function createAccountHandlers(options: AccountHandlerOptions) {
   /** Phiên vừa tạo không dùng tới: thu hồi, và lỗi thu hồi không làm hỏng đăng ký đã thành công. */
   async function discard(accessToken: string): Promise<void> {
     try {
-      await client(() => accessToken).requestVoid({ method: 'POST', path: '/auth/logout' });
+      await client(() => accessToken).requestVoid({ method: 'POST', path: '/guest-auth/logout' });
     } catch {
       // Best-effort: tài khoản đã tạo; token chưa từng rời máy chủ ứng dụng nên hết hạn theo TTL.
     }

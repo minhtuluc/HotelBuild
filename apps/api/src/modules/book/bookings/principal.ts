@@ -21,6 +21,7 @@ import { isAuthorizedActor } from '../../../common/actor/authorized-actor.js';
 import type { PermissionLookup } from '../../../common/actor/authorized-actor.js';
 import type { Principal } from '../../../common/idempotency/request.js';
 import type { ApiConfig } from '../../../config/env.js';
+import { findUsableSession } from '../../../common/guards/session-state.js';
 import { verifyAccessToken } from '../../../infrastructure/crypto/access-tokens.js';
 import { forbidden, missing, outOfScope, unauthorized } from './validation.js';
 
@@ -79,6 +80,9 @@ export async function bookingCaller(
   if (token === null) throw unauthorized();
   const verified = await verifyAccessToken(token, config.JWT_ACCESS_SECRET, clock.now());
   if (verified === null) throw unauthorized();
+  // TD-59: chữ ký đúng chưa đủ — phiên đã đăng xuất/replay/hết hạn phải bị từ chối (cả khách lẫn nhân viên).
+  if ((await findUsableSession(db, clock, verified.sessionId, verified.userId)) === null)
+    throw unauthorized();
   const ip = request.ip ?? null;
   const correlationId = request.id;
   if (STAFF_ROLES[verified.role] !== true)

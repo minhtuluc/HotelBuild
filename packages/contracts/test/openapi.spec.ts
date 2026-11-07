@@ -43,6 +43,7 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['post', '/api/v1/guest-auth/login', 'public'],
   ['post', '/api/v1/guest-auth/register', 'public'],
   ['post', '/api/v1/guest-auth/refresh', 'public'],
+  ['post', '/api/v1/guest-auth/logout', 'bearer'],
   ['get', '/api/v1/system/health', 'public'],
   ['post', '/api/v1/auth/pin/verify', 'bearer'],
   ['post', '/api/v1/auth/logout', 'bearer'],
@@ -174,7 +175,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 118 path của F0…F8 (kèm tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151, 3 path HB-204, confirm-transfer HB-215 và hợp đồng F6 HB-120)', () => {
+  it('có đủ 119 path của F0…F8 (kèm logout khách TD-58, tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151, 3 path HB-204, confirm-transfer HB-215 và hợp đồng F6 HB-120)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -185,6 +186,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/auth/pin/verify',
         '/api/v1/auth/refresh',
         '/api/v1/guest-auth/login',
+        '/api/v1/guest-auth/logout',
         '/api/v1/guest-auth/password-reset/confirm',
         '/api/v1/guest-auth/password-reset/request',
         '/api/v1/guest-auth/refresh',

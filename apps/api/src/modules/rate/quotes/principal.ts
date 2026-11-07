@@ -18,7 +18,9 @@ import type { Clock } from '@pinehill/domain';
 import { AppError } from '../../../common/app-error.js';
 import type { Principal } from '../../../common/idempotency/request.js';
 import type { ApiConfig } from '../../../config/env.js';
+import { findUsableSession } from '../../../common/guards/session-state.js';
 import { verifyAccessToken } from '../../../infrastructure/crypto/access-tokens.js';
+import type { DatabaseClient } from '../../../infrastructure/prisma/prisma.module.js';
 
 /** Vai trò phiên nhân viên (BR-RBAC-01). Vai trò khác (vd. `GUEST` của phiên khách) là khách. */
 const STAFF_ROLES: Readonly<Record<string, true>> = {
@@ -40,6 +42,7 @@ function bearerToken(header: string | undefined): string | null {
 }
 
 export async function quotePrincipal(
+  db: Pick<DatabaseClient, 'auth_sessions'>,
   request: FastifyRequest,
   config: ApiConfig,
   clock: Clock,
@@ -49,6 +52,9 @@ export async function quotePrincipal(
     return Object.freeze({ type: 'ANONYMOUS' as const, id: request.ip ?? 'unknown' });
   const verified = await verifyAccessToken(token, config.JWT_ACCESS_SECRET, clock.now());
   if (verified === null) throw new AppError(401, 'E_AUTH_INVALID_CREDENTIALS', 'Chưa xác thực.');
+  // TD-59: chữ ký đúng chưa đủ — phiên đã đăng xuất/replay/hết hạn phải bị từ chối.
+  if ((await findUsableSession(db, clock, verified.sessionId, verified.userId)) === null)
+    throw new AppError(401, 'E_AUTH_INVALID_CREDENTIALS', 'Chưa xác thực.');
   return Object.freeze({
     type: STAFF_ROLES[verified.role] === true ? ('USER' as const) : ('GUEST' as const),
     id: verified.userId,

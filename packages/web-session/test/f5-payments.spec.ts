@@ -212,7 +212,7 @@ test('canonical replay returns original snapshot while changed body/key and revo
   expect((await f.raw('/payments/online', body, owner.accessToken, 'POST', 'invalid')).status).toBe(
     400,
   );
-  await f.raw('/auth/logout', undefined, owner.accessToken, 'POST');
+  await f.raw('/guest-auth/logout', undefined, owner.accessToken, 'POST');
   expect((await f.raw('/payments/online', body, owner.accessToken, 'POST', key)).status).toBe(401);
 });
 test('missing, invented, rotated and foreign guest access cannot read or control another payment', async () => {
