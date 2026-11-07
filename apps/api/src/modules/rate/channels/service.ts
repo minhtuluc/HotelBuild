@@ -5,6 +5,8 @@ import {
   type ChannelSummary,
   type ListPage,
 } from '@pinehill/contracts';
+import { channelConfigWarnings } from '@pinehill/domain/pricing';
+import type { ChannelRateConfig } from '@pinehill/domain/pricing';
 import { z } from 'zod';
 import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
 import { AppError } from '../../../common/app-error.js';
@@ -14,7 +16,15 @@ function input(value: unknown) {
   if (!parsed.success) throw new AppError(400, 'E_GEN_VALIDATION_FAILED', 'Yêu cầu không hợp lệ.');
   return parsed.data;
 }
-function summary(row: channels): ChannelSummary {
+/** Hệ số/hoa hồng mặc định dạng chuỗi thập phân thuần (không số mũ) để engine so sánh chính xác. */
+function rateConfig(row: channels): ChannelRateConfig {
+  return {
+    code: row.code,
+    multiplier: row.multiplier.toFixed(),
+    commissionPercent: row.commission_pct.toFixed(),
+  };
+}
+function summary(row: channels, web: ChannelRateConfig | null): ChannelSummary {
   const version = Number(row.version);
   if (!Number.isSafeInteger(version)) throw new Error('CHANNEL_VERSION_OUT_OF_RANGE');
   // Global defaults only; no sync metadata, credentials or property-specific overrides.
@@ -27,6 +37,7 @@ function summary(row: channels): ChannelSummary {
     holdMinutes: row.hold_minutes,
     overbookAllowed: row.overbook_allowed,
     version,
+    rateWarnings: channelConfigWarnings(rateConfig(row), web),
   });
 }
 export class ChannelsService {
@@ -43,10 +54,13 @@ export class ChannelsService {
           orderBy: { id: 'asc' },
           take: query.limit + 1,
         });
+        // `WEB` có thể nằm ngoài trang hiện tại nên đọc riêng trong cùng snapshot (RepeatableRead).
+        const webRow = await tx.channels.findFirst({ where: { code: 'WEB' } });
+        const web = webRow === null ? null : rateConfig(webRow);
         const selected = rows.slice(0, query.limit),
           hasMore = rows.length > query.limit;
         return {
-          data: selected.map(summary),
+          data: selected.map((row) => summary(row, web)),
           meta: {
             total,
             limit: query.limit,

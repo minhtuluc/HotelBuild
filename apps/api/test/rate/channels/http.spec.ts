@@ -50,6 +50,8 @@ test('MANAGER reads global chain defaults without a property scope or resolving 
     holdMinutes: 45,
     overbookAllowed: true,
     version: 2,
+    // F6 gap HB-132: 0,315 × (1 − 15,25%) < hệ số WEB của fixture ⇒ máy chủ cảnh báo cân bằng giá (BR-RATE-09).
+    rateWarnings: ['E_RATE_CHANNEL_PARITY'],
   });
   expect(JSON.stringify(response.body)).not.toContain('synthetic-private-channel');
   expect(
@@ -66,6 +68,7 @@ test('MANAGER reads global chain defaults without a property scope or resolving 
       'holdMinutes',
       'overbookAllowed',
       'version',
+      'rateWarnings',
     ].sort(),
   );
 });
