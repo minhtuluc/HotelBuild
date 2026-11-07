@@ -7,8 +7,8 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import type { BookingSummary, CheckInResponse, RoomSummary } from '@pinehill/contracts';
 import { color, space, touchTargetDp } from '@pinehill/ui-native';
-import { statusText } from '../lookup/messages';
-import { formatStay, formatVnd } from '../lookup/view';
+import { statusText, stayPeriodText } from '../lookup/messages';
+import { formatVnd } from '../lookup/view';
 import { ActionButton, CheckRow } from './controls';
 import { formatVnDateTime } from './format';
 import { arrivalsText as text } from './messages';
@@ -110,7 +110,7 @@ function Facts({
         {text('checkInTitle', { code: booking.code })}
       </Text>
       <Text>{statusText(booking.status)}</Text>
-      <Text>{formatStay(booking.checkIn, booking.checkOut, booking.nights)}</Text>
+      <Text>{stayPeriodText(booking.checkIn, booking.checkOut, booking.nights)}</Text>
       <Text>
         {text('totalLine', {
           total: formatVnd(booking.totalAmount),

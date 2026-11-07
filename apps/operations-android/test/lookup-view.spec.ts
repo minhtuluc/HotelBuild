@@ -130,5 +130,5 @@ test('money and stay formatting keep VND integers and calendar dates', () => {
   expect(formatVnd(1_234_567)).toBe('1.234.567 ₫');
   expect(() => formatVnd(-1)).toThrow(RangeError);
   expect(() => formatVnd(1.5)).toThrow(RangeError);
-  expect(formatStay('2026-11-01', '2026-11-03', 2)).toBe('01/11/2026 → 03/11/2026 · 2 đêm');
+  expect(formatStay('2026-11-01', '2026-11-03', '2 đêm')).toBe('01/11/2026 → 03/11/2026 · 2 đêm');
 });

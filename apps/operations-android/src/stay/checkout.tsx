@@ -10,7 +10,8 @@ import type { BookingSummary, CheckOutPreview, CheckOutResponse } from '@pinehil
 import { color, space, touchTargetDp } from '@pinehill/ui-native';
 import { ActionButton, CheckRow } from '../arrivals/controls';
 import { formatVnDateTime } from '../arrivals/format';
-import { formatStay, formatVnd } from '../lookup/view';
+import { formatVnd } from '../lookup/view';
+import { stayPeriodText } from '../lookup/messages';
 import { usePreview } from '../preview/hooks';
 import { previewText } from '../preview/messages';
 import { checkOutPreviewPort } from '../preview/ports';
@@ -236,7 +237,7 @@ export function CheckOutDetail(props: CheckOutDetailProps): ReactElement {
         </Text>
         <Text>
           {text('stayLine', {
-            stay: formatStay(booking.checkIn, booking.checkOut, booking.nights),
+            stay: stayPeriodText(booking.checkIn, booking.checkOut, booking.nights),
           })}
         </Text>
         <Text testID="check-out-balance" style={{ fontWeight: '700' }}>

@@ -2,8 +2,8 @@ import type { ReactElement } from 'react';
 import { Pressable, Text } from 'react-native';
 import type { BookingSummary } from '@pinehill/contracts';
 import { color, space, touchTargetDp } from '@pinehill/ui-native';
-import { statusText } from '../lookup/messages';
-import { formatStay, formatVnd } from '../lookup/view';
+import { statusText, stayPeriodText } from '../lookup/messages';
+import { formatVnd } from '../lookup/view';
 import { arrivalsText as text } from './messages';
 
 /** Thẻ khách đến: toàn bộ số tiền/trạng thái là số máy chủ trả, không suy ra thêm (ADR-018). */
@@ -49,7 +49,7 @@ export function ArrivalCard({
       <Text style={{ color: color.text, fontWeight: '700' }}>
         {booking.code} · {statusText(booking.status)}
       </Text>
-      <Text>{formatStay(booking.checkIn, booking.checkOut, booking.nights)}</Text>
+      <Text>{stayPeriodText(booking.checkIn, booking.checkOut, booking.nights)}</Text>
       <Text>
         {text('guestsLine', {
           rooms: booking.roomCount,

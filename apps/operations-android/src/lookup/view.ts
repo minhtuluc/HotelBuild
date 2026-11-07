@@ -135,6 +135,7 @@ export function formatVnd(amount: number): string {
   return `${new Intl.NumberFormat('vi-VN').format(amount)} ₫`;
 }
 
-export function formatStay(checkIn: string, checkOut: string, nights: number): string {
-  return `${formatBusinessDate(checkIn)} → ${formatBusinessDate(checkOut)} · ${nights} đêm`;
+/** `nightsLabel` do nơi gọi dựng từ danh mục (`lookup/messages.ts`) để module thuần này không kéo `react-native` vào test Node. */
+export function formatStay(checkIn: string, checkOut: string, nightsLabel: string): string {
+  return `${formatBusinessDate(checkIn)} → ${formatBusinessDate(checkOut)} · ${nightsLabel}`;
 }
