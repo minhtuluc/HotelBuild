@@ -119,11 +119,16 @@ export function createHandler(context: FakeApiContext = {}): FakeHandler {
       return control(request);
     if (path === '/api/v1/system/health') return { status: 200, body: { status: 'ok' } };
     if (request.method !== 'POST' || !object(request.body)) {
-      if (path === '/api/v1/auth/logout' && request.method === 'POST') {
+      const guestLogout = path === '/api/v1/guest-auth/logout';
+      if ((path === '/api/v1/auth/logout' || guestLogout) && request.method === 'POST') {
         const state = [...actors.values()].find(
           (value) => `Bearer ${value.access}` === request.authorization,
         );
         if (!state) return error(401, path);
+        // Giống API thật (TD-58): `/auth/logout` là tuyến nhân viên (token khách nhận 403, phiên không bị thu hồi);
+        // `/guest-auth/logout` chỉ nhận phiên khách (token nhân viên nhận 401).
+        if (!guestLogout && state.guest) return error(403, path);
+        if (guestLogout && !state.guest) return error(401, path);
         state.logoutCount++;
         state.revoked = true;
         return state.status === 200 ? { status: 204 } : error(state.status, path);

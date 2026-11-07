@@ -107,7 +107,7 @@ export class Session {
   /** Thu hồi phiên trên máy chủ trước, rồi luôn xoá secure storage (kể cả lỗi/mất mạng — HB-012). */
   async logout(): Promise<void> {
     try {
-      if (this.accessToken !== null) await this.auth.logout();
+      if (this.accessToken !== null) await this.auth.guestLogout();
     } catch {
       // Bỏ qua: phiên cục bộ vẫn phải bị xoá dù máy chủ không trả lời.
     }

@@ -180,18 +180,26 @@ test.each([401, 429, 503])(
     if (code === 429) expect(r.headers.get('retry-after')).toBe('42');
   },
 );
-test.each([204, 401, 503])(
-  'logout uses authenticated shared endpoint and clears cookie on %i',
-  async (code) => {
+// TD-58: khách đi tuyến logout riêng. `/auth/logout` là tuyến nhân viên nên token khách nhận 403 và phiên
+// máy chủ còn sống (trình duyệt vẫn bị xoá cookie, nên trông như đã đăng xuất).
+const LOGOUT_CASES = [
+  ['staff', '/api/v1/auth/logout'],
+  ['guest', '/api/v1/guest-auth/logout'],
+] as const;
+test.each(
+  LOGOUT_CASES.flatMap(([kind, path]) =>
+    [204, 401, 503].map((code) => [kind, path, code] as const),
+  ),
+)(
+  'logout %s uses its own authenticated endpoint %s and clears cookie on %i',
+  async (kind, path, code) => {
     status = code;
-    const r = await createSessionHandler({ kind: 'guest', baseUrl })(
+    const r = await createSessionHandler({ kind, baseUrl })(
       request('logout', undefined, { authorization: `Bearer ${pair.accessToken}` }),
       'logout',
     );
-    expect(calls[0]).toMatchObject({
-      path: '/api/v1/auth/logout',
-      authorization: `Bearer ${pair.accessToken}`,
-    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ path, authorization: `Bearer ${pair.accessToken}` });
     expect(r.headers.get('set-cookie')).toContain('Max-Age=0');
     expect(r.status).toBe(code);
   },

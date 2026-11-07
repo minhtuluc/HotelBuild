@@ -98,7 +98,8 @@ describe('register', () => {
     expect(calls[0]?.idempotencyKey).toBeTruthy();
     expect(calls[1]).toMatchObject({
       method: 'POST',
-      path: '/auth/logout',
+      // TD-58: phiên khách vừa tạo bị thu hồi qua tuyến khách; `/auth/logout` là tuyến nhân viên (403, phiên còn sống).
+      path: '/guest-auth/logout',
       authorization: `Bearer ${tokenPair.accessToken}`,
     });
   });

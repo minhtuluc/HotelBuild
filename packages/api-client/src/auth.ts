@@ -31,6 +31,8 @@ export interface AuthApi {
   login(input: LoginRequest): Promise<ApiResponse<TokenPair>>;
   refresh(refreshToken: string): Promise<ApiResponse<TokenPair>>;
   logout(): Promise<ApiResponse<undefined>>;
+  /** Khách đăng xuất (TD-58): `/auth/logout` là tuyến nhân viên nên token khách nhận 403 và phiên không bị thu hồi. */
+  guestLogout(): Promise<ApiResponse<undefined>>;
   pinVerify(pin: string, bookingId?: string): Promise<ApiResponse<PinToken>>;
   guestRegister(input: GuestRegisterRequest): Promise<ApiResponse<TokenPair>>;
   guestLogin(
@@ -69,6 +71,7 @@ export function createAuthApi(client: ApiClient): AuthApi {
         decoder: tokenPairSchema,
       }),
     logout: () => client.requestVoid({ method: 'POST', path: '/auth/logout' }),
+    guestLogout: () => client.requestVoid({ method: 'POST', path: '/guest-auth/logout' }),
     pinVerify: (pin, bookingId) =>
       client.request({
         method: 'POST',
