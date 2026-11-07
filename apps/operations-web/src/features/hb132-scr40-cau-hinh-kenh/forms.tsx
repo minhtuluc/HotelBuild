@@ -105,7 +105,7 @@ export function MappingForm(props: {
         open={asking}
         title={text('mappingTitle')}
         confirmLabel={text('saveMapping')}
-        cancelLabel="Huỷ"
+        cancelLabel={text('cancel')}
         onCancel={() => setAsking(false)}
         onConfirm={() => {
           setAsking(false);
@@ -204,7 +204,7 @@ export function ClosureForm(props: {
         open={asking}
         title={text('closureTitle')}
         confirmLabel={text('submitClosure')}
-        cancelLabel="Huỷ"
+        cancelLabel={text('cancel')}
         onCancel={() => setAsking(false)}
         onConfirm={() => {
           setAsking(false);

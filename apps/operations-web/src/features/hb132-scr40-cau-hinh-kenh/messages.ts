@@ -42,6 +42,7 @@ export const text = makeTranslate({
   active: 'Đang bật',
   inactive: 'Tắt',
   saveMapping: 'Lưu ánh xạ',
+  cancel: 'Huỷ',
   confirmedMapping: 'Máy chủ đã xác nhận: {code}, {pct}%, phiên bản {version}',
   // Đóng bán
   closureTitle: 'Đóng/mở bán theo ngày',

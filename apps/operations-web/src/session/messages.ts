@@ -19,6 +19,8 @@ const messages = {
   usernameLength: 'Tên đăng nhập gồm 3–64 ký tự.',
   passwordLength: 'Mật khẩu gồm 8–128 ký tự.',
   loginInvalid: 'Tên đăng nhập hoặc mật khẩu không đúng.',
+  waitSeconds: '{value} giây',
+  waitMinutes: '{value} phút',
   loginLocked: 'Tài khoản tạm khoá do nhập sai nhiều lần. Thử lại sau {wait}.',
   loginLockedNoWait:
     'Tài khoản tạm khoá do nhập sai nhiều lần. Thử lại sau ít phút hoặc liên hệ quản trị.',

@@ -1,6 +1,6 @@
 /** Chuyển kết quả phân loại (hàm thuần ở `login-model.ts`) thành câu chữ hiển thị; không có luật nào ở đây. */
 import {
-  formatWait,
+  waitParts,
   type FieldIssue,
   type LoginFailure,
   type PasswordChangeFailure,
@@ -16,6 +16,11 @@ export function issueMessage(field: FieldName, issue: FieldIssue): string {
   return text(field === 'next' ? 'newLength' : 'passwordLength');
 }
 
+function waitText(seconds: number): string {
+  const { unit, value } = waitParts(seconds);
+  return text(unit === 'seconds' ? 'waitSeconds' : 'waitMinutes', { value });
+}
+
 export function loginFailureMessage(failure: LoginFailure): string {
   switch (failure.kind) {
     case 'invalid':
@@ -23,11 +28,11 @@ export function loginFailureMessage(failure: LoginFailure): string {
     case 'locked':
       return failure.waitSeconds === undefined
         ? text('loginLockedNoWait')
-        : text('loginLocked', { wait: formatWait(failure.waitSeconds) });
+        : text('loginLocked', { wait: waitText(failure.waitSeconds) });
     case 'rateLimited':
       return failure.waitSeconds === undefined
         ? text('loginRateLimitedNoWait')
-        : text('loginRateLimited', { wait: formatWait(failure.waitSeconds) });
+        : text('loginRateLimited', { wait: waitText(failure.waitSeconds) });
     case 'network':
       return text('loginNetwork');
     case 'unknown':

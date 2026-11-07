@@ -38,6 +38,7 @@ import {
   type WalkInResult,
 } from '@pinehill/contracts';
 import { splitDesk, type DeskLists } from './front-desk-model';
+import { deskText } from './messages';
 
 const PAGE_LIMIT = 100;
 const MAX_PAGES = 10;
@@ -115,7 +116,7 @@ export function createDeskApi(client: ApiClient): DeskApi {
           kind: 'http',
           status: 403,
           code: 'E_AUTH_OUT_OF_SCOPE',
-          message: 'Cơ sở ngoài phạm vi',
+          message: deskText('outOfScope'),
         });
       const [types, rooms, arrivals, checkedIn] = await Promise.all([
         collectPages((cursor) =>

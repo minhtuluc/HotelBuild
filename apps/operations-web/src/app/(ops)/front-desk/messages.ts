@@ -66,6 +66,7 @@ const messages = {
   penalty: 'Số tiền máy chủ tính: {amount}',
   refundRequest: 'Yêu cầu hoàn tạo ra: {value}',
   rejected: 'Máy chủ từ chối thao tác',
+  outOfScope: 'Cơ sở ngoài phạm vi',
   rejectedCode: 'Mã lỗi: {code}',
   rejectedReason: 'Lý do máy chủ trả: {reason}',
   forbidden: 'Bạn không có quyền xem hoặc thao tác nội dung này.',
