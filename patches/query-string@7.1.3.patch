@@ -1,0 +1,14 @@
+diff --git a/index.js b/index.js
+index d45e67d91d38c91d05e68e8b338e4bc2de591dcc..eccf2c2fec6a349bf520bd0d1f73de523345715f 100644
+--- a/index.js
++++ b/index.js
+@@ -1,6 +1,8 @@
+ 'use strict';
+ const strictUriEncode = require('strict-uri-encode');
+-const decodeComponent = require('decode-uri-component');
++// decode-uri-component >= 0.4 là ESM-only: `require()` trả namespace `{ default }` thay vì hàm (TD-70, GHSA-qr28-fpjm-wq7f).
++const decodeComponentModule = require('decode-uri-component');
++const decodeComponent = decodeComponentModule.default || decodeComponentModule;
+ const splitOnFirst = require('split-on-first');
+ const filterObject = require('filter-obj');
+ 

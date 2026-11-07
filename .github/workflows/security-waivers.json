@@ -1,7 +1,4 @@
 {
   "$comment": "HB-183/NFR-SEC-06 — waiver cho finding đã chấp nhận. Bắt buộc: github_advisory_id, package (module_name trong pnpm audit), owner, reason, firstSeen, reviewedAt (YYYY-MM-DD). Cổng security-audit-gate.mjs chặn khi thiếu waiver, khi firstSeen/reviewedAt quá 7 ngày hoặc reviewedAt trước firstSeen; waiver không gia hạn quá 7 ngày và không áp dụng cho tag phát hành. Quy trình: docs/07-ban-giao/van-hanh/bao-mat-ci.md",
-  "waivers": [
-    { "github_advisory_id": "GHSA-mrhx-c7xc-m3w5", "package": "zod", "owner": "lead", "reason": "zod 3.25.76 chỉ kéo theo @expo/cli (công cụ build Expo, không chạy production); chưa có bản vá 3.x, nâng 4.x phá API Expo CLI — TD-34", "firstSeen": "2026-11-01", "reviewedAt": "2026-11-01" },
-    { "github_advisory_id": "GHSA-qr28-fpjm-wq7f", "package": "decode-uri-component", "owner": "lead", "reason": "decode-uri-component 0.2.2 qua query-string 7 → expo-router (bundle Android); bản vá 0.5.1 là ESM-only, phá query-string 7 CJS — chờ nâng expo-router/query-string, TD-34", "firstSeen": "2026-11-01", "reviewedAt": "2026-11-01" }
-  ]
+  "waivers": []
 }
