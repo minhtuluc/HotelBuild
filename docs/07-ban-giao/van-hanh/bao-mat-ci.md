@@ -46,8 +46,10 @@ ngày không phải việc của file waiver; phải vá/nâng, thay dependency 
 Hai waiver Expo cuối (`zod@3.25.76`, `decode-uri-component@0.2.2`, TD-70) đã được gỡ bằng sửa thật chứ không gia hạn:
 override `@expo/cli` 57.0.33 (không còn kéo zod 3) và override `decode-uri-component` 0.5.1 kèm `pnpm patch`
 `query-string@7.1.3` (`patches/query-string@7.1.3.patch`) để nhận export ESM. Ảnh `api`/`worker` chạy trên
-`node:22-alpine`, bỏ npm/corepack/yarn khỏi lớp chạy; Trivy ảnh = 0 HIGH/CRITICAL (OS và Node). Khi nâng
-Expo SDK nên bỏ patch nếu `expo-router` thôi dùng `query-string@7`.
+`node:22-alpine`, bỏ npm/corepack/yarn khỏi lớp chạy; Trivy ảnh = 0 HIGH/CRITICAL (OS và Node). Patch chỉ có ở chuỗi Expo nên
+`pnpm deploy --prod` của api/worker không dùng tới; `pnpm.allowUnusedPatches: true` (package.json) tránh
+`ERR_PNPM_UNUSED_PATCH`, và Dockerfile phải `COPY patches`. Khi nâng Expo SDK nên bỏ patch nếu `expo-router`
+thôi dùng `query-string@7`.
 
 ## Chạy cục bộ
 
