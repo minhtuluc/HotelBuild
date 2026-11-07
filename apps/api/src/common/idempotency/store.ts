@@ -29,7 +29,12 @@ const reused = () =>
   new AppError(409, 'E_SYS_IDEMPOTENCY_KEY_REUSED', 'Khoá đã dùng cho yêu cầu khác.');
 const DAY = 24 * 60 * 60 * 1000;
 const LEASE = 30000;
-const transactionOptions = { maxWait: 1000, timeout: 10000 };
+/**
+ * `maxWait` 1 giây làm 200 lệnh ghi song song (AC4 holds) nhận P2028 "Unable to start a transaction
+ * in the given time" trên runner chậm: hàng đợi connection của pool 50 chưa kịp nhả. Chờ tối đa 5 giây
+ * rồi mới báo bận; `timeout` của chính transaction giữ 10 giây (TD-17).
+ */
+const transactionOptions = { maxWait: 5000, timeout: 10000 };
 function isLockTimeout(error: unknown): boolean {
   return (
     error instanceof Prisma.PrismaClientKnownRequestError &&

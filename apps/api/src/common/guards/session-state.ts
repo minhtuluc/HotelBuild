@@ -42,7 +42,13 @@ export async function findUsableSession(
     now.getTime() - session.last_seen_at.getTime() >= IDLE_TIMEOUT_MS
   )
     return null;
-  if (now.getTime() - session.last_seen_at.getTime() >= LAST_SEEN_THROTTLE_MS)
+  // Chỉ phiên `OPS_WEB` có ngưỡng nhàn rỗi mới cần `last_seen_at`. Cập nhật cho cả phiên khách khiến
+  // nhiều request cùng một token (vd. 200 hold AC4) tranh khoá đúng một dòng `auth_sessions`, đẩy
+  // `maxWait` của idempotency quá 1 giây và trả 500 thay vì 409.
+  if (
+    session.surface === 'OPS_WEB' &&
+    now.getTime() - session.last_seen_at.getTime() >= LAST_SEEN_THROTTLE_MS
+  )
     await prisma.auth_sessions.update({ where: { id: session.id }, data: { last_seen_at: now } });
   return session;
 }
