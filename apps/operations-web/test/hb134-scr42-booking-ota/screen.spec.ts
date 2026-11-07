@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '@pinehill/api-client';
+import { formatMoney } from '@pinehill/ui-web';
 import type { ControllerState } from '../../src/features/hb134-scr42-booking-ota/controller';
 import { classify, evidenceOf } from '../../src/features/hb134-scr42-booking-ota/model';
 import { CommandStatus, ReadBanner } from '../../src/features/hb134-scr42-booking-ota/status';
@@ -70,9 +71,25 @@ describe('HB-134 SCR-42', () => {
     expect(controller.getState().command).toMatchObject({ failure: { kind: 'validation' } });
   });
 
-  it.todo(
-    'ota_intake_list_projection:paymentMethod — BLOCKED: otaBookingSchema (HB-120) chưa có PaymentMethod/OTA_COLLECT, số tiền đối chiếu, lọc theo cơ sở',
-  );
+  it('ota_intake_list_projection:paymentMethod', async () => {
+    const { controller, ports } = setup();
+    ports.list.mockResolvedValueOnce(
+      page([
+        booking('b1', { paymentMethod: 'OTA_COLLECT', collectedAmount: 500_000 }),
+        booking('b2', { paymentMethod: null, collectedAmount: null }),
+        // Máy chủ cũ chưa có hai trường: vẫn hiển thị được, không vỡ bảng.
+        booking('b3'),
+      ]),
+    );
+    await controller.load();
+    const markup = table(controller.getState());
+    expect(markup).toContain('OTA thu hộ');
+    expect(markup).toContain(`Đã ghi sổ: ${formatMoney(500_000)}`);
+    // Chỉ đúng một dòng có khoản thu; số tiền là số máy chủ trả, không phép tính nào ở giao diện.
+    expect(markup.match(/Đã ghi sổ/g)).toHaveLength(1);
+    expect(markup).not.toContain('undefined');
+    expect(Object.keys(ports)).not.toContain('payment');
+  });
 
   it('confirmed_ota_oversell_case_link', async () => {
     const { controller, ports } = setup();
@@ -88,9 +105,22 @@ describe('HB-134 SCR-42', () => {
     expect(markup.match(/Vượt tồn/g)).toHaveLength(1);
   });
 
-  it.todo(
-    'confirmed_ota_oversell_case_link:caseLink — BLOCKED: otaBookingSchema chưa có liên kết case quá tải; chỉ hiện cờ oversold',
-  );
+  it('confirmed_ota_oversell_case_link:caseLink', async () => {
+    const { controller, ports } = setup();
+    ports.list.mockResolvedValueOnce(
+      page([
+        booking('b1', { oversold: true, overbookingCaseId: 'case-9' }),
+        booking('b2', { oversold: true, overbookingCaseId: null }),
+        booking('b3'),
+      ]),
+    );
+    await controller.load();
+    const markup = table(controller.getState());
+    // Liên kết đi tới đúng case do máy chủ chỉ ra (cùng đích với SCR-43); không tự mở case, không gọi lệnh nào.
+    expect(markup).toContain('href="/overbooking/relocation?caseId=case-9"');
+    expect(markup.match(/Mở case để điều chuyển/g)).toHaveLength(1);
+    expect(ports.flag).not.toHaveBeenCalled();
+  });
 
   it('ota_cancellation_policy_projection', async () => {
     const { controller, ports } = setup();
@@ -106,9 +136,23 @@ describe('HB-134 SCR-42', () => {
     expect(Object.keys(ports)).not.toContain('refund');
   });
 
-  it.todo(
-    'ota_cancellation_policy_projection:channelPolicyCode — BLOCKED: otaBookingSchema chưa có channelPolicyCode/kết quả đối chiếu huỷ',
-  );
+  it('ota_cancellation_policy_projection:channelPolicyCode', async () => {
+    const { controller, ports } = setup();
+    ports.list.mockResolvedValueOnce(
+      page([
+        booking('b1', { eventType: 'booking.cancelled', channelPolicyCode: 'OTA_CHANNEL' }),
+        // Booking chưa có sự kiện inbox khớp: không bịa loại sự kiện.
+        booking('b2', { eventType: null, providerEventId: null }),
+      ]),
+    );
+    await controller.load();
+    const markup = table(controller.getState());
+    expect(markup).toContain('OTA_CHANNEL');
+    expect(markup).toContain('Chính sách huỷ (kênh)');
+    expect(markup).not.toContain('null');
+    expect(markup).not.toMatch(/hoàn tiền|refund/i);
+    expect(Object.keys(ports)).not.toContain('refund');
+  });
 
   it('suspected_duplicate_contract_gate', async () => {
     const { controller, ports } = setup();

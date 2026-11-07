@@ -1,6 +1,6 @@
 'use client';
 import { useState, type ReactElement } from 'react';
-import { formatDateTimeVn } from '@pinehill/ui-web';
+import { formatDateTimeVn, formatMoney } from '@pinehill/ui-web';
 import type { OtaBooking } from '@pinehill/contracts';
 import type { Rows } from './controller';
 import { text } from './messages';
@@ -22,6 +22,26 @@ const EVENT_TEXT = {
 
 const when = (value: string | null): string =>
   value === null ? text('none') : formatDateTimeVn(value);
+
+const eventLabel = (row: OtaBooking): string =>
+  row.eventType === null ? text('none') : text(EVENT_TEXT[row.eventType]);
+
+/** Liên kết tới case quá tải do máy chủ chỉ ra (cùng đích với SCR-43); không có case thì để trống. */
+function CaseCell({ id }: { id: string | null | undefined }): ReactElement {
+  if (id === null || id === undefined) return <>{text('none')}</>;
+  return (
+    <a href={`/overbooking/relocation?caseId=${encodeURIComponent(id)}`}>{text('openCase')}</a>
+  );
+}
+
+/** Khoản OTA thu hộ đọc từ sổ cái do máy chủ trả; không có thì để trống, không suy từ số tiền booking. */
+function collection(row: OtaBooking): string {
+  if (row.paymentMethod !== 'OTA_COLLECT') return text('none');
+  const amount = row.collectedAmount;
+  return amount === null || amount === undefined
+    ? text('otaCollect')
+    : `${text('otaCollect')} — ${text('collected', { amount: formatMoney(amount) })}`;
+}
 
 /** Cảnh báo đối soát đọc thẳng từ cờ máy chủ trả; không suy thêm từ trạng thái hay số liệu. */
 function flags(row: OtaBooking): string[] {
@@ -47,7 +67,7 @@ function Row({
   return (
     <tr data-testid={`hb134-row-${row.id}`}>
       <th scope="row">{row.providerBookingCode}</th>
-      <td>{text(EVENT_TEXT[row.eventType])}</td>
+      <td>{eventLabel(row)}</td>
       <td>{text(STATUS_TEXT[row.status])}</td>
       <td>
         {row.bookingId === null ? (
@@ -59,6 +79,11 @@ function Row({
       <td>{row.guestNameMasked ?? text('none')}</td>
       <td>{when(row.receivedAt)}</td>
       <td>{when(row.processedAt)}</td>
+      <td>{collection(row)}</td>
+      <td>{row.channelPolicyCode ?? text('none')}</td>
+      <td>
+        <CaseCell id={row.overbookingCaseId} />
+      </td>
       <td>
         {warnings.length === 0 ? text('none') : warnings.map((item) => <p key={item}>{item}</p>)}
         {row.errorCode === null ? null : <p>{row.errorCode}</p>}
@@ -103,6 +128,9 @@ function Table(props: {
             <th scope="col">{text('colGuest')}</th>
             <th scope="col">{text('colReceived')}</th>
             <th scope="col">{text('colProcessed')}</th>
+            <th scope="col">{text('colCollect')}</th>
+            <th scope="col">{text('colPolicy')}</th>
+            <th scope="col">{text('colCase')}</th>
             <th scope="col">{text('colFlags')}</th>
             {props.canFlag ? <th scope="col">{text('colAction')}</th> : null}
           </tr>
