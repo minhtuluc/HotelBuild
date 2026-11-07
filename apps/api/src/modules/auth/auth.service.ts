@@ -58,7 +58,12 @@ interface RequestContext {
 }
 
 type AuditAction =
-  'AUTH_LOGIN_SUCCESS' | 'AUTH_LOGIN_FAILURE' | 'AUTH_LOGIN_LOCKED' | 'AUTH_PASSWORD_CHANGED';
+  | 'AUTH_LOGIN_SUCCESS'
+  | 'AUTH_LOGIN_FAILURE'
+  | 'AUTH_LOGIN_LOCKED'
+  | 'AUTH_PASSWORD_CHANGED'
+  | 'AUTH_PASSWORD_CHANGE_FAILURE'
+  | 'AUTH_PASSWORD_CHANGE_LOCKED';
 
 @Injectable()
 export class AuthService {
@@ -253,36 +258,74 @@ export class AuthService {
     return this.sessions.logout(sessionId);
   }
 
+  /**
+   * Đổi mật khẩu của chính mình. `currentPassword` sai được đếm vào cùng bộ đếm với đăng nhập
+   * (`failed_login_count`/`locked_until`, BR-RBAC-06, TD-20) để người giữ access token không dò được mật khẩu;
+   * kiểm khoá + đếm + audit nằm trong một transaction khoá hàng `users` nên đoán song song không vượt ngưỡng.
+   */
   async changePassword(
     userId: string,
     currentPassword: string,
     newPassword: string,
     context: RequestContext,
   ): Promise<void> {
-    const user = await this.prisma.users.findUnique({ where: { id: userId } });
-    if (user === null) throw invalidCredentials();
-    if (!(await verifyPassword(user.password_hash, currentPassword))) throw invalidCredentials();
-    const now = this.clock.now();
-    const passwordHash = await hashPassword(newPassword);
-    await this.prisma.$transaction(async (tx) => {
-      await tx.users.update({
-        where: { id: userId },
-        data: {
-          password_hash: passwordHash,
-          must_change_password: false,
-          password_changed_at: now,
-        },
-      });
-      await this.audit.record(
-        tx,
-        this.auditEntry(
-          { id: user.id, role: user.role, ip: context.ip, correlationId: context.correlationId },
-          'AUTH_PASSWORD_CHANGED',
-          user.id,
-          undefined,
-        ),
-      );
-    });
+    const outcome = await this.prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT id FROM users WHERE id=${userId}::uuid FOR UPDATE`;
+        const user = await tx.users.findUnique({ where: { id: userId } });
+        if (user === null) return { error: invalidCredentials() };
+        const actor = {
+          id: user.id,
+          role: user.role,
+          ip: context.ip,
+          correlationId: context.correlationId,
+        };
+        const now = this.clock.now();
+        if (user.locked_until !== null && user.locked_until.getTime() > now.getTime()) {
+          await this.audit.record(
+            tx,
+            this.auditEntry(actor, 'AUTH_PASSWORD_CHANGE_LOCKED', user.id, undefined),
+          );
+          return {
+            error: this.lockedError(
+              Math.ceil((user.locked_until.getTime() - now.getTime()) / 1000),
+            ),
+          };
+        }
+        if (!(await verifyPassword(user.password_hash, currentPassword))) {
+          const failures = user.locked_until !== null ? 1 : user.failed_login_count + 1;
+          await tx.users.update({
+            where: { id: user.id },
+            data: {
+              failed_login_count: failures,
+              locked_until: failures >= LOCK_THRESHOLD ? new Date(now.getTime() + LOCK_MS) : null,
+            },
+          });
+          await this.audit.record(
+            tx,
+            this.auditEntry(actor, 'AUTH_PASSWORD_CHANGE_FAILURE', user.id, undefined),
+          );
+          return { error: invalidCredentials() };
+        }
+        await tx.users.update({
+          where: { id: userId },
+          data: {
+            password_hash: await hashPassword(newPassword),
+            must_change_password: false,
+            password_changed_at: now,
+            failed_login_count: 0,
+            locked_until: null,
+          },
+        });
+        await this.audit.record(
+          tx,
+          this.auditEntry(actor, 'AUTH_PASSWORD_CHANGED', user.id, undefined),
+        );
+        return { error: null };
+      },
+      { timeout: 15000 },
+    );
+    if (outcome.error !== null) throw outcome.error;
   }
 
   async me(userId: string): Promise<UserMe> {
