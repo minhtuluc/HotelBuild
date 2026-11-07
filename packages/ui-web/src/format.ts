@@ -3,7 +3,10 @@
  * Lưu UTC, hiển thị giờ Việt Nam; tiền là số nguyên VND; không dùng số thực cho tiền.
  */
 
+import { makeTranslate, viCatalog } from './messages';
+
 const LOCALE = 'vi-VN';
+const text = makeTranslate(viCatalog);
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
 
 const moneyFormatter = new Intl.NumberFormat(LOCALE, {
@@ -46,7 +49,7 @@ export function formatDateTimeVn(isoUtc: string): string {
 
 /** `3 đêm · 2 người lớn · 0 trẻ em` */
 export function formatStayPeriod(nights: number, adults: number, children: number): string {
-  return `${nights} đêm · ${adults} người lớn · ${children} trẻ em`;
+  return text('format.stayPeriod', { nights, adults, children });
 }
 
 /** `còn 6 giờ 12 phút` · dưới 1 giờ: `còn 47 phút`. Hết hạn trả `null` để màn hình chọn câu chữ. */
@@ -55,7 +58,9 @@ export function formatRemaining(msRemaining: number): string | null {
   const totalMinutes = Math.floor(msRemaining / 60_000);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  return hours >= 1 ? `còn ${hours} giờ ${minutes} phút` : `còn ${minutes} phút`;
+  return hours >= 1
+    ? text('format.remaining.hours', { hours, minutes })
+    : text('format.remaining.minutes', { minutes });
 }
 
 /** `0,85` — hai chữ số thập phân, dấu phẩy (BR-RATE-17). */
