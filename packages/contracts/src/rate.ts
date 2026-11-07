@@ -97,6 +97,15 @@ export const channelQuerySchema = z.strictObject({
   cursor: z.string().min(1).optional(),
 });
 
+/**
+ * Cảnh báo cấu hình kênh do máy chủ tính từ hệ số/hoa hồng mặc định (BR-RATE-07/09): OTA có doanh thu thuần
+ * thấp hơn `WEB`, hoặc kênh trực tiếp có hệ số < 1,00. Không phải kết quả báo giá theo ngày (không có bước kẹp).
+ */
+export const channelRateWarningSchema = z.enum([
+  'E_RATE_CHANNEL_PARITY',
+  'E_RATE_DIRECT_BELOW_BASE',
+]);
+
 /** Kênh ở mức mặc định toàn chuỗi; `version` để màn hình gửi `If-Match` khi sửa (BR-RATE-07,18). */
 export const channelSummarySchema = z.object({
   id: z.string().min(1),
@@ -107,6 +116,8 @@ export const channelSummarySchema = z.object({
   holdMinutes: z.number().int().min(0).max(1440),
   overbookAllowed: z.boolean(),
   version: z.number().int().min(0),
+  /** Cảnh báo cấu hình của máy chủ (tuỳ chọn, thêm ở F6 gap HB-132); vắng/rỗng = không có cảnh báo. */
+  rateWarnings: z.array(channelRateWarningSchema).optional(),
 });
 
 /** Một dòng ghi đè theo cặp (kênh, cơ sở); máy chủ ghi dòng **mới** theo `effectiveFrom`. */

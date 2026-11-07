@@ -6253,6 +6253,16 @@
                           "version": {
                             "type": "integer",
                             "minimum": 0
+                          },
+                          "rateWarnings": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "E_RATE_CHANNEL_PARITY",
+                                "E_RATE_DIRECT_BELOW_BASE"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -6391,6 +6401,16 @@
                     "version": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "rateWarnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "E_RATE_CHANNEL_PARITY",
+                          "E_RATE_DIRECT_BELOW_BASE"
+                        ]
+                      }
                     },
                     "propertyOverrides": {
                       "type": "array",

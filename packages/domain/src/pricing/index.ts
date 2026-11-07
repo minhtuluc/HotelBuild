@@ -231,3 +231,6 @@ export function quotePrice(i: PricingInput): PricingResult {
     throw error;
   }
 }
+
+export { channelConfigWarnings } from './channel-config.js';
+export type { ChannelRateConfig, ChannelRateWarning } from './channel-config.js';

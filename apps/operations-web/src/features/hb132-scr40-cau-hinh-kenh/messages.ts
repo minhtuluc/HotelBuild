@@ -16,6 +16,12 @@ export const text = makeTranslate({
   sellingUnits: 'Đơn vị bán đang hoạt động: {units}',
   sellingUnitsUnknown: 'Máy chủ chưa trả số đơn vị bán.',
   overbookAllowed: 'Kênh cho phép bán vượt: {value}',
+  rateParity:
+    'Cảnh báo giá (BR-RATE-09): doanh thu thuần của kênh thấp hơn kênh WEB theo cấu hình hiện tại. Không chặn lưu.',
+  rateDirectBelowBase:
+    'Cảnh báo giá: kênh trực tiếp có hệ số dưới 1,00, tức bán dưới giá niêm yết cơ bản.',
+  rateScope:
+    'Máy chủ tính theo hệ số và hoa hồng mặc định của kênh; chưa gồm ghi đè theo cơ sở và bước kẹp sàn/trần của từng ngày.',
   yes: 'Có',
   no: 'Không',
   tableLabel: 'Hạn mức theo ngày',
