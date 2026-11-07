@@ -42,10 +42,12 @@ Cổng fail closed khi báo cáo audit không có `advisories` — lỗi mạng/
 `--release` (tag phát hành) bỏ qua waiver: release không đi kèm lỗ hổng CVSS ≥ 7,0 đã biết. Gia hạn quá 7
 ngày không phải việc của file waiver; phải vá/nâng, thay dependency hoặc sửa NFR-SEC-06 có duyệt.
 
-**Trạng thái 01/11/2026:** đã nâng `next` 15.5.28, `zod` 4.6.6 (trực tiếp), `markdown-it` 14.3.3 và thêm
-override `vite` 7.3.7, `dompurify` 3.4.17, `node-forge` 1.4.1, `uuid` 11.1.1. Còn **2 waiver có ngày** cho
-`decode-uri-component@0.2.2` và `zod@3.25.76`, cả hai nằm trong chuỗi Expo (`expo-router`/`@expo/cli`) và
-bản vá là major/ESM-only — theo dõi **TD-70**, phải trả khi nâng Expo SDK (TD-34).
+**Trạng thái 07/11/2026:** hiện **không có waiver nào** (`security-waivers.json` rỗng, `.trivyignore` chỉ còn chú thích).
+Hai waiver Expo cuối (`zod@3.25.76`, `decode-uri-component@0.2.2`, TD-70) đã được gỡ bằng sửa thật chứ không gia hạn:
+override `@expo/cli` 57.0.33 (không còn kéo zod 3) và override `decode-uri-component` 0.5.1 kèm `pnpm patch`
+`query-string@7.1.3` (`patches/query-string@7.1.3.patch`) để nhận export ESM. Ảnh `api`/`worker` chạy trên
+`node:22-alpine`, bỏ npm/corepack/yarn khỏi lớp chạy; Trivy ảnh = 0 HIGH/CRITICAL (OS và Node). Khi nâng
+Expo SDK nên bỏ patch nếu `expo-router` thôi dùng `query-string@7`.
 
 ## Chạy cục bộ
 
@@ -100,8 +102,10 @@ Hạn mức theo IP (TD-60) chỉ đúng khi API biết IP khách. Chốt:
    `docs/07-ban-giao/van-hanh/**`; `.github/**` đã có trong `unlock`.
 2. Không nhân bản gitleaks: `secret-scan.yml` của HB-176 là nơi duy nhất quét bí mật; chỉ thêm lịch đêm.
 3. CodeQL chỉ bật `javascript-typescript`: repo không có tệp `.kt`/`.java`, app Expo là JS/TS nên được phủ.
-4. Ảnh quét đại diện `docker/api.Dockerfile`; `docker/worker.Dockerfile` dùng cùng base `node:22-slim` và
-   cùng lockfile, nên chênh lệch nằm ở lockfile đã được Trivy fs phủ. Không dùng `ignore-unfixed` hay hạ
+4. Ảnh quét đại diện `docker/api.Dockerfile`; `docker/worker.Dockerfile` dùng cùng base `node:22-alpine` và
+   cùng lockfile, nên chênh lệch nằm ở lockfile đã được Trivy fs phủ. Đổi nền Debian → Alpine (07/11/2026) vì
+   Debian 12 có 35 mục OS HIGH/CRITICAL chưa có bản vá (`affected`/`fix_deferred`/`will_not_fix`) và Debian 13 có 48;
+   Alpine 0. Không dùng `ignore-unfixed` hay hạ
    `severity` để giữ cổng đỏ đúng nghĩa.
 5. (Lead, 01/11/2026) Bật `limit-severities-for-sarif: true` cho cả hai bước Trivy. Mặc định của
    trivy-action v0.36.0 là `false`: action **bỏ `TRIVY_SEVERITY`** để SARIF có đủ mức, nên `exit-code: 1`
