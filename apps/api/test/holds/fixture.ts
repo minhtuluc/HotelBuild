@@ -39,6 +39,7 @@ import {
   stay,
   userId,
 } from '../room-blocks/inventory-seed.js';
+import { openGuestSession } from '../support/guest-session.js';
 
 let app: NestFastifyApplication;
 let redis: Redis;
@@ -85,8 +86,9 @@ async function issueGuest(phone: string, fullName: string): Promise<{ id: string
  * fixture tự ký bằng cùng khoá/đồng hồ để kiểm tuyến trước khi HB-017 có mặt.
  */
 export async function guestTokenFor(id: string): Promise<string> {
+  const sessionId = await openGuestSession(rows, id);
   const { token } = await signAccessToken(
-    { userId: id, role: GUEST_ROLE, propertyScope: [], sessionId: randomUUID() },
+    { userId: id, role: GUEST_ROLE, propertyScope: [], sessionId },
     secrets.access,
     clock.now(),
   );

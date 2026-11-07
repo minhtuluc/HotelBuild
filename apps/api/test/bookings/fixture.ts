@@ -40,6 +40,7 @@ import {
   stay,
   userId,
 } from '../room-blocks/inventory-seed.js';
+import { openGuestSession } from '../support/guest-session.js';
 
 let app: NestFastifyApplication;
 let redis: Redis;
@@ -82,8 +83,9 @@ const GUEST_ROLE = z.custom<AccessTokenClaims['role']>((value) => value === 'GUE
 
 /** Token phiên khách cho một `guests.id` đã có — HB-017 sẽ phát hành đúng loại này. */
 export async function guestTokenFor(id: string): Promise<string> {
+  const sessionId = await openGuestSession(rows, id);
   const { token } = await signAccessToken(
-    { userId: id, role: GUEST_ROLE, propertyScope: [], sessionId: randomUUID() },
+    { userId: id, role: GUEST_ROLE, propertyScope: [], sessionId },
     secrets.access,
     clock.now(),
   );

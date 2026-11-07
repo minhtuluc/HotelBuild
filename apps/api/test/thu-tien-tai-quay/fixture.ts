@@ -38,6 +38,7 @@ import {
   userId,
 } from '../idempotency/database.js';
 import { otherTypeId, stay, typeId } from '../room-blocks/inventory-seed.js';
+import { openGuestSession } from '../support/guest-session.js';
 
 export const PIN = '123456';
 /** Hạn giữ chỗ thật của kênh WEB (seed `reference-data.ts`); seed dùng chung để mặc định 0. */
@@ -56,8 +57,9 @@ export const http = () => request(app.getHttpServer());
 
 /** Token phiên khách cho một `guests.id` đã có — HB-017 sẽ phát hành đúng loại này. */
 export async function guestTokenFor(id: string): Promise<string> {
+  const sessionId = await openGuestSession(rows, id);
   const { token } = await signAccessToken(
-    { userId: id, role: GUEST_ROLE, propertyScope: [], sessionId: randomUUID() },
+    { userId: id, role: GUEST_ROLE, propertyScope: [], sessionId },
     secrets.access,
     clock.now(),
   );
