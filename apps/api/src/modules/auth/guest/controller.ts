@@ -1,6 +1,7 @@
 /**
  * Controller auth khách (HB-017; api.md §2.1): `register`/`login`/`refresh` công khai — danh tính là SĐT +
- * mật khẩu hoặc refresh token, không có bearer. Token khách không gọi được tuyến nhân viên (guard trả 403).
+ * mật khẩu hoặc refresh token, không có bearer. `logout` (TD-58) nhận access token của phiên khách để thu hồi
+ * phiên. Token khách không gọi được tuyến nhân viên (guard trả 403).
  */
 import { Body, Controller, HttpCode, Inject, Post, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
@@ -8,7 +9,13 @@ import { refreshRequestSchema } from '@pinehill/contracts';
 import type { TokenPair } from '@pinehill/contracts';
 import { Public } from '../../../common/guards/decorators.js';
 import { GuestAuthService } from './service.js';
-import { loginCommand, registerCommand, requestContext, validationFailed } from './validation.js';
+import {
+  bearerToken,
+  loginCommand,
+  registerCommand,
+  requestContext,
+  validationFailed,
+} from './validation.js';
 
 @Controller('guest-auth')
 export class GuestAuthController {
@@ -26,6 +33,14 @@ export class GuestAuthController {
   @HttpCode(200)
   login(@Body() body: unknown, @Req() request: FastifyRequest): Promise<TokenPair> {
     return this.guests.login(loginCommand(body), requestContext(request));
+  }
+
+  /** TD-58: công khai ở tầng guard (khách không phải người dùng); danh tính là access token của phiên khách. */
+  @Public()
+  @Post('logout')
+  @HttpCode(204)
+  async logout(@Req() request: FastifyRequest): Promise<void> {
+    await this.guests.logout(bearerToken(request.headers.authorization));
   }
 
   @Public()

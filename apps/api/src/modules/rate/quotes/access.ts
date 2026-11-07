@@ -12,6 +12,8 @@ import type { Principal } from '../../../common/idempotency/request.js';
 import { CONFIG } from '../../../config/env.js';
 import type { ApiConfig } from '../../../config/env.js';
 import { CLOCK } from '../../../infrastructure/ports.js';
+import { PRISMA } from '../../../infrastructure/prisma/prisma.module.js';
+import type { DatabaseClient } from '../../../infrastructure/prisma/prisma.module.js';
 import { quotePrincipal } from './principal.js';
 import { quoteInput } from './validation.js';
 
@@ -20,11 +22,12 @@ export class QuoteAccess implements IdempotencyAccess {
   constructor(
     @Inject(CONFIG) private readonly config: ApiConfig,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(PRISMA) private readonly db: DatabaseClient,
   ) {}
 
   async authorize(context: ExecutionContext): Promise<Principal> {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
     quoteInput(request.body);
-    return quotePrincipal(request, this.config, this.clock);
+    return quotePrincipal(this.db, request, this.config, this.clock);
   }
 }

@@ -75,3 +75,8 @@ export function requestContext(request: FastifyRequest): RequestContext {
     correlationId: typeof header === 'string' && header !== '' ? header : (request.id ?? ''),
   };
 }
+
+/** Access token từ `Authorization: Bearer …`; `null` khi vắng hoặc sai dạng. */
+export function bearerToken(header: string | undefined): string | null {
+  return header === undefined ? null : (/^Bearer +(\S+)$/i.exec(header)?.[1] ?? null);
+}

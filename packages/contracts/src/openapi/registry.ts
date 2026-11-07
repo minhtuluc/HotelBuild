@@ -152,6 +152,21 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'post',
+  path: '/api/v1/guest-auth/logout',
+  operationId: 'guestLogout',
+  summary:
+    'Khách đăng xuất: thu hồi phiên và họ refresh token của access token đang dùng (UC-AUTH-03, TD-58)',
+  tags: ['auth'],
+  security: [{ bearerAuth: [] }],
+  parameters: idempotencyHeaders,
+  responses: {
+    204: { description: 'Đã thu hồi phiên khách' },
+    401: errorResponse('E_AUTH_INVALID_CREDENTIALS'),
+  },
+});
+
+registry.registerPath({
+  method: 'post',
   path: '/api/v1/guest-auth/refresh',
   operationId: 'guestRefresh',
   summary: 'Luân chuyển refresh token khách; dùng lại token cũ thu hồi cả họ (UC-AUTH-03)',
