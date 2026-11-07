@@ -22,7 +22,7 @@ locked:
   - apps/api/test/over/walkout.locked.spec.ts
 locked_sha:
   - 91d331521ca96078a0feba5fe0d1ac67c7981b11c1a59141bdd3165303c2a031 apps/api/test/over/detection-helpers/contract.ts
-  - 4a72c8e66653b58118bd6e27be557bd1fc3cbc7541587212b337e09cab693002 apps/api/test/over/detection-helpers/fixture.ts
+  - 851ff5a13c3d9f8847e148497c4356d2dcad3d786239129e33c769da0bd8d9e0 apps/api/test/over/detection-helpers/fixture.ts
   - 6e86f3ab37fa6c06d859d4b6ba7c55dbe09fec77da60e19c8681bb22332358eb apps/api/test/over/detection-helpers/index.ts
   - 59d41402f67b506c83c7361fce26d1ff2a540db72768daafc3e859aa7b893f3e apps/api/test/over/detection-helpers/scenario.ts
   - d275edf3a935873f79feeff3737088e9606cadc9f97734bff5c307f2cace003c apps/api/test/over/detection-queries.locked.spec.ts
