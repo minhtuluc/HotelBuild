@@ -36,8 +36,10 @@ import { RelocationOptionsService } from './planning/options.js';
 import { OverbookingPlanningService } from './planning/service.js';
 import { OverbookingAlertsController, OverbookingCasesController } from './queries/controller.js';
 import { OverbookingQueries } from './queries/service.js';
+import { NotiModule } from '../noti/module.js';
 
 @Module({
+  imports: [NotiModule],
   controllers: [
     OverbookingPlanningController,
     RelocationOptionsController,
