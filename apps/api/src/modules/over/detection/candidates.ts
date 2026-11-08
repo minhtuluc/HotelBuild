@@ -65,6 +65,8 @@ export interface BalancedCandidate {
 }
 
 export interface LadderRung {
+  /** Bậc 1…4 theo thứ tự BR-OVER-06 (hợp đồng `relocationLadderStepSchema`, HB-220). */
+  readonly step: 1 | 2 | 3 | 4;
   readonly moveType:
     'SAME_TYPE_SAME_PROPERTY' | 'UPGRADE_SAME_PROPERTY' | 'SAME_TYPE_CROSS_PROPERTY' | 'WALK_OUT';
   readonly feasible: boolean;
@@ -222,6 +224,10 @@ export async function candidatesForCase(
   };
 }
 
+/** Hợp đồng buộc mọi bậc không khả dụng nêu lý do (`relocationLadderSchema`). */
+export const SAME_TYPE_NOTE = 'Không còn phòng cùng loại trống cho đêm thiếu.';
+export const UPGRADE_NOTE = 'Không còn phòng hạng cao hơn trống cho đêm thiếu.';
+
 /** Thang 4 bậc theo BR-OVER-06; bậc 3 luôn `false` kèm lý do khoảng cách. */
 export function ladderFor(
   property: PropertyFacts,
@@ -235,22 +241,28 @@ export function ladderFor(
     .reduce((total, item) => total + positive(item.pools.get(date)), 0);
   return [
     {
+      step: 1,
       moveType: 'SAME_TYPE_SAME_PROPERTY',
       feasible: sameType > 0,
       candidateCount: sameType,
+      ...(sameType > 0 ? {} : { note: SAME_TYPE_NOTE }),
     },
     {
+      step: 2,
       moveType: 'UPGRADE_SAME_PROPERTY',
       feasible: upgrades > 0,
       candidateCount: upgrades,
+      ...(upgrades > 0 ? {} : { note: UPGRADE_NOTE }),
     },
     {
+      step: 3,
       moveType: 'SAME_TYPE_CROSS_PROPERTY',
       feasible: false,
       candidateCount: 0,
       note: CROSS_PROPERTY_NOTE,
     },
     {
+      step: 4,
       moveType: 'WALK_OUT',
       feasible: true,
       candidateCount: Math.max(0, shortage),

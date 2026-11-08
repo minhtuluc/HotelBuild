@@ -14,7 +14,7 @@ import type { Clock } from '@pinehill/domain';
 import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
 import { AppError } from '../../../common/app-error.js';
 import { requireProperty } from '../../../common/rbac/scope.js';
-import { candidatesForCase } from '../detection/candidates.js';
+import { SAME_TYPE_NOTE, UPGRADE_NOTE, candidatesForCase } from '../detection/candidates.js';
 import type { BalancedCandidate, LadderRung } from '../detection/candidates.js';
 import { deadlineOf } from '../detection/engine.js';
 import { loadPropertyFacts } from '../detection/facts.js';
@@ -101,15 +101,28 @@ function notFound(): AppError {
 
 function fallbackLadder(): readonly LadderRung[] {
   return [
-    { moveType: 'SAME_TYPE_SAME_PROPERTY', feasible: false, candidateCount: 0 },
-    { moveType: 'UPGRADE_SAME_PROPERTY', feasible: false, candidateCount: 0 },
     {
+      step: 1,
+      moveType: 'SAME_TYPE_SAME_PROPERTY',
+      feasible: false,
+      candidateCount: 0,
+      note: SAME_TYPE_NOTE,
+    },
+    {
+      step: 2,
+      moveType: 'UPGRADE_SAME_PROPERTY',
+      feasible: false,
+      candidateCount: 0,
+      note: UPGRADE_NOTE,
+    },
+    {
+      step: 3,
       moveType: 'SAME_TYPE_CROSS_PROPERTY',
       feasible: false,
       candidateCount: 0,
       note: 'bậc 3 không khả dụng: ba cơ sở cách nhau 160–300 km (> 15 km)',
     },
-    { moveType: 'WALK_OUT', feasible: true, candidateCount: 0 },
+    { step: 4, moveType: 'WALK_OUT', feasible: true, candidateCount: 0 },
   ];
 }
 

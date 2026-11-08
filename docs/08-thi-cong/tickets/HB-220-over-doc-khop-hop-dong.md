@@ -6,6 +6,7 @@ owner: claude
 max_lines: 600
 allow:
   - apps/api/src/modules/over/queries/**
+  - apps/api/src/modules/over/detection/candidates.ts
   - apps/api/src/modules/over/support.ts
   - apps/api/src/modules/over/planning/service.ts
   - apps/api/test/over/read-contract.spec.ts
@@ -33,7 +34,8 @@ allow:
 
 1. `meta.scan`: server (`queries/scan-meta.ts`, khoá bằng test HB-126 `detection-queries.locked.spec.ts::HB126_scan_freshness_and_unknown_empty`, `toEqual` chính xác) trả `{status, lastSuccessAt, dataAsOf}`; hợp đồng HB-120 ghi `{scanStatus, lastSuccessfulScanAt, nextScanAt, scannedThrough}`.
 2. Tóm tắt ca thiếu `escalatedAt`, `version` (hợp đồng bắt buộc).
-3. Chi tiết ca thiếu `history`; `candidates` của bộ chọn HB-126 có `keepScore` là **số** + `keepScoreBreakdown` (khoá ở `detection-helpers/contract.ts`), trong khi hợp đồng dùng `relocationCandidateSchema` của planner (`keepScore` là bảng phân rã) và thiếu rank, tên đã che, kỳ ở, tiền.
+3. `ladderPreview` thiếu `step` và lý do cho bậc 1/2 không khả dụng (hợp đồng `relocationLadderSchema` bắt buộc) — phát hiện khi viết test hợp đồng của ticket này.
+4. Chi tiết ca thiếu `history`; `candidates` của bộ chọn HB-126 có `keepScore` là **số** + `keepScoreBreakdown` (khoá ở `detection-helpers/contract.ts`), trong khi hợp đồng dùng `relocationCandidateSchema` của planner (`keepScore` là bảng phân rã) và thiếu rank, tên đã che, kỳ ở, tiền.
 
 ## Quyết định
 
