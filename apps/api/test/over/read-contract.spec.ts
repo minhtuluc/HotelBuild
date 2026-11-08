@@ -40,7 +40,8 @@ describe('HB-220 · hợp đồng đường đọc OVER', () => {
 
     const never = overbookingCaseListSchema.parse(await get(manager, CASES_ROUTE, { propertyId }));
     expect(never.meta.scan).toEqual({ status: 'NEVER', lastSuccessAt: null, dataAsOf: null });
-    expect(never.data[0]).toMatchObject({ escalatedAt: null, version: expect.any(Number) });
+    expect(never.data[0]?.escalatedAt).toBeNull();
+    expect(never.data[0]?.version).toBeGreaterThanOrEqual(1);
 
     await runScan([propertyId]);
     const scanned = overbookingCaseListSchema.parse(
