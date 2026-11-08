@@ -603,25 +603,32 @@ async function merges() {
       steps.unspecified?.endsWith('E_OVER_MERGE_GENDER'),
     JSON.stringify(steps),
   );
-  // TC-OVER-14: doanh thu phần phòng (tổng booking) không đổi; chiết khấu ghi ở merge, không trừ vào booking.
+  // TC-OVER-14 (BR-OVER-15): doanh thu ghi nhận = tổng gộp PriceSnapshot ORIGINAL (định nghĩa của test khoá
+  // HB-124 `merge.locked.spec.ts`), phải giữ nguyên; chiết khấu ghi ở merge; nghĩa vụ phải thu giảm (floor 1.000).
+  const gross = async (id) =>
+    (await sql("SELECT gross_amount::text AS g FROM price_snapshots WHERE booking_id = $1 AND kind = 'ORIGINAL'", [id]))[0]?.g;
   const totals = await sql(
-    'SELECT external_ref, total_amount::text AS t, paid_amount::text AS paid, balance_due::text AS due FROM bookings WHERE id = ANY($1) ORDER BY external_ref',
+    'SELECT id, total_amount::text AS t, paid_amount::text AS paid, balance_due::text AS due FROM bookings WHERE id = ANY($1) ORDER BY external_ref',
     [[F.booking.id, M.booking.id]],
   );
+  const grossAfter = [await gross(F.booking.id), await gross(M.booking.id)];
   const before = [F.booking, M.booking].map((b) => String(b.total_amount));
-  const after = totals.map((r) => r.t);
   const expectedDiscount = Math.floor((Number(F.booking.total_amount) + Number(M.booking.total_amount)) * 0.2);
   check(
     'TC_OVER_14_revenue_unchanged',
-    steps.execute?.startsWith('200') && JSON.stringify([...before].sort()) === JSON.stringify([...after].sort()) && steps.discount?.pct === 20 && steps.discount?.amount === expectedDiscount,
-    `totalsBefore=${JSON.stringify(before)} after=${JSON.stringify(totals)} discount=${JSON.stringify(steps.discount)} expected20pct=${expectedDiscount}`,
+    steps.execute?.startsWith('200') &&
+      JSON.stringify(grossAfter) === JSON.stringify(before) &&
+      steps.discount?.pct === 20 &&
+      steps.discount?.amount === expectedDiscount,
+    `snapshotGross=${JSON.stringify(grossAfter)} totalsBefore=${JSON.stringify(before)} after=${JSON.stringify(totals.map(({ t, paid, due }) => ({ t, paid, due })))} discount=${JSON.stringify(steps.discount)} expected20pct=${expectedDiscount}`,
   );
-  const reduced = before.reduce((n, t) => n + Number(t), 0) - after.reduce((n, t) => n + Number(t), 0);
-  if (steps.execute?.startsWith('200') && reduced !== 0)
+  const overpaid = totals.filter((r) => Number(r.paid) > Number(r.t));
+  const refunds = await sql('SELECT count(*)::int AS n FROM refund_requests WHERE booking_id = ANY($1)', [[F.booking.id, M.booking.id]]);
+  if (steps.execute?.startsWith('200') && overpaid.length > 0 && refunds[0].n === 0)
     finding(
       'QA-F6-13',
-      `BR-OVER-15: ghép MERGE_SHARE trừ thẳng chiết khấu vào \`bookings.total_amount\` (tổng giảm ${reduced} VND) thay vì giữ doanh thu và chỉ ghi \`RoomMerge.discountAmount\`; mức trừ (${reduced}) còn lệch \`discountAmount\` máy chủ trả (${steps.discount?.amount}).`,
-      `before=${JSON.stringify(before)} after=${JSON.stringify(totals)}`,
+      `Sau ghép MERGE_SHARE nghĩa vụ phải thu giảm (\`total_amount\` ${before.join('/')} → ${totals.map((r) => r.t).join('/')}) nhưng khách đã trả đủ giá cũ: \`paid_amount\` > \`total_amount\`, \`balance_due\` = 0 và không có \`refund_requests\` — phần chiết khấu khách được hưởng không có đường hoàn/đối soát. Mức giảm thực (${before.reduce((n, t) => n + Number(t), 0) - totals.reduce((n, r) => n + Number(r.t), 0)}) cũng lệch \`discountAmount\` ${steps.discount?.amount} do làm tròn nghĩa vụ xuống 1.000.`,
+      JSON.stringify(totals.map(({ t, paid, due }) => ({ t, paid, due }))),
     );
 }
 
