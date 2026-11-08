@@ -5,8 +5,13 @@
  * thật. Fixture/HTTP dùng lại của HB-126 (không sửa file khoá).
  */
 import { describe, expect, test } from 'vitest';
-import { overbookingCaseDetailSchema, overbookingCaseListSchema } from '@pinehill/contracts';
 import {
+  overbookingAlertsViewSchema,
+  overbookingCaseDetailSchema,
+  overbookingCaseListSchema,
+} from '@pinehill/contracts';
+import {
+  ALERTS_ROUTE,
   CASES_ROUTE,
   D,
   clock,
@@ -87,5 +92,28 @@ describe('HB-220 · hợp đồng đường đọc OVER', () => {
     const plain = overbookingCaseDetailSchema.parse(await get(manager, `${CASES_ROUTE}/${caseId}`));
     expect(plain.candidates).toEqual([]);
     expect(plain.history).toHaveLength(2);
+  });
+
+  test('staff_alerts_parse_with_published_contract', async () => {
+    const cohort = await cohortOf(D);
+    const caseId = await seedCase({
+      propertyId,
+      date: D,
+      roomTypeId: typeId,
+      shortageCount: 1,
+      detectedAt: new Date(clock.value),
+    });
+    const desk = await tokenFor('FRONT_DESK');
+    // HB-221: projection lễ tân theo hợp đồng — một dòng mỗi booking cần xử lý, kèm độ tươi lượt quét.
+    const before = overbookingAlertsViewSchema.parse(await get(desk, ALERTS_ROUTE, { propertyId }));
+    // Fixture không xoá `overbooking_scan_runs` giữa các ca: trạng thái đầu phụ thuộc ca trước.
+    expect(['NEVER', 'SUCCEEDED']).toContain(before.meta.scan.status);
+    expect(before.data).toEqual([
+      expect.objectContaining({ caseId, bookingId: cohort.weak, status: 'OPEN' }),
+    ]);
+    await runScan([propertyId]);
+    const after = overbookingAlertsViewSchema.parse(await get(desk, ALERTS_ROUTE, { propertyId }));
+    expect(after.meta.scan.status).toBe('SUCCEEDED');
+    expect(after.meta.scan.lastSuccessAt).not.toBeNull();
   });
 });

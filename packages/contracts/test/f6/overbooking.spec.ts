@@ -228,23 +228,17 @@ describe('F6 OVER', () => {
 
     const alert = overbookingAlertSchema.parse({
       caseId: 'c1',
+      bookingId: 'b1',
       propertyId: 'p1',
+      roomTypeId: 'rt1',
       date: '2026-12-25',
-      shortageCount: 2,
       status: 'OPEN',
       overdue: true,
-      resolveDeadline: '2026-12-24T07:00:00Z',
-      bookings: [
-        {
-          bookingId: 'b1',
-          bookingRoomId: 'br1',
-          guestNameMasked: 'N*** V** A',
-          checkIn: '2026-12-24',
-          checkOut: '2026-12-26',
-        },
-      ],
-      links: [{ rel: 'ROOM_MOVE', href: '/api/v1/room-moves' }],
+      label: 'Thiếu 2 phòng ngày 2026-12-25',
+      deepLink: '/bookings/b1?overbookingCaseId=c1',
     });
+    // Projection lễ tân là strict (HB-126/HB-221): không nhận khoá thừa như rank/keepScore/tên khách.
+    expect(overbookingAlertSchema.safeParse({ ...alert, keepScore: 1 }).success).toBe(false);
     expect(alert).not.toHaveProperty('keepScore');
     expect(
       overbookingAlertsViewSchema.parse({

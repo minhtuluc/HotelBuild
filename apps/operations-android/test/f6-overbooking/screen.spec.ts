@@ -164,6 +164,9 @@ test('alerts_successful_scan_and_escalation', async () => {
   expect(wire.paths.some((path) => path.endsWith('/overbooking-cases'))).toBe(false);
   expect(wire.paths.some((path) => path.endsWith('/overbooking-alerts'))).toBe(true);
   expect(desk.byId('open-k1-bk-1')).toBeDefined();
+  // HB-221: máy chủ trả một dòng mỗi booking; hai booking cùng ca gom về một thẻ, hai nút mở.
+  expect(desk.byId('open-k1-bk-2')).toBeDefined();
+  expect(desk.byId('alert-k1')).toBeDefined();
   // Rỗng chỉ khi quét thành công có mốc; UNKNOWN/FAILED thì "chưa xác định".
   for (const [scan, expected] of [
     [fx.okScan, 'Không có ca quá tải'],
