@@ -49,6 +49,7 @@ export function PinDialog({
   onSubmit,
   title,
   description,
+  autoOpen,
 }: {
   step: PinStep;
   pin: string;
@@ -61,9 +62,19 @@ export function PinDialog({
   onSubmit: () => void;
   title?: string;
   description?: string;
+  /**
+   * Mặc định mở ngay. `false` khi PIN là bước hai sau khi xem số máy chủ trả (UI-03, SCR-39/69):
+   * hộp thoại modal mở ngay khi vào màn sẽ làm cả trang `inert`, chặn bước một (HB-219).
+   */
+  autoOpen?: boolean;
 }): ReactElement {
   const dialog = useRef<HTMLDialogElement>(null);
-  const [open, setOpen] = useState(true);
+  const initiallyOpen = autoOpen !== false;
+  const [open, setOpen] = useState(initiallyOpen);
+  // PIN đã dùng xong (verified → idle sau lệnh ghi): quay về trạng thái đầu, không bật lại modal đè kết quả.
+  useEffect(() => {
+    if (step === 'verified') setOpen(initiallyOpen);
+  }, [step, initiallyOpen]);
   useEffect(() => {
     const element = dialog.current;
     if (element === null || !open || step === 'verified') return;

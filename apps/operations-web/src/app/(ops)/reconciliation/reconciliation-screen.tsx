@@ -326,6 +326,7 @@ export function ReconciliationScreen({ baseUrl }: { baseUrl: string }): ReactEle
         <section style={{ display: 'grid', gap: 8, maxWidth: 480 }}>
           <h2 style={{ margin: 0 }}>{opsReconcileText('closeSection')}</h2>
           <PinDialog
+            autoOpen={false}
             step={step}
             pin={pin}
             issue={pinIssue(pin)}

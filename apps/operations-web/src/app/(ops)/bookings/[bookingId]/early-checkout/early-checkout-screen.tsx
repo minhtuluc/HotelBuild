@@ -271,6 +271,7 @@ export function EarlyCheckoutScreen({ baseUrl }: { baseUrl: string }): ReactElem
           </button>
           <PreviewCard preview={preview} />
           <PinDialog
+            autoOpen={false}
             step={step}
             pin={pin}
             issue={pinIssue(pin)}
