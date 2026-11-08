@@ -194,7 +194,7 @@ function flushOwnRedis() {
   if (r.status !== 0) console.log(`# cảnh báo: không dọn được Redis DB ${db}: ${r.stderr || r.stdout}`);
 }
 
-export async function bootstrap() {
+export async function bootstrap({ beforeWorker } = {}) {
   flushOwnRedis();
   const admin = new pg.Client({ connectionString: migrationBase });
   await admin.connect();
@@ -248,9 +248,14 @@ export async function bootstrap() {
   children.push(apiChild);
   await waitForHealth(apiChild);
 
+  // HB-194: cấu hình đọc lúc worker khởi động (vd. `job.channelSync.intervalSeconds`) phải ghi trước khi spawn.
+  if (beforeWorker) await beforeWorker();
+
   // Worker THẬT chi hoàn: quét `q.refund-payout` mỗi 2 giây, cổng PSP mô phỏng bền (`REFUND_PAYOUT_SIMULATOR`) cho VNPAY/MOMO;
   // BANK_TRANSFER luôn dừng UNKNOWN chờ kế toán xác nhận (mặc định sản phẩm).
-  workerChild = spawn('node', ['--import', 'tsx', 'src/main.ts'], {
+  // `QA_WORKER_CLOCK=1` (HB-194): worker đọc cùng đồng hồ ảo với API — job so mốc do API ghi (vd. `available_at`).
+  const workerShim = process.env.QA_WORKER_CLOCK === '1' ? ['--import', join(repoRoot, 'tests/e2e/f7/clock-shim.mjs')] : [];
+  workerChild = spawn('node', [...workerShim, '--import', 'tsx', 'src/main.ts'], {
     cwd: join(repoRoot, 'apps/worker'),
     env: {
       ...process.env,
@@ -262,7 +267,7 @@ export async function bootstrap() {
       REFUND_PAYOUT_RETRY_SECONDS: '5',
       REFUND_PAYOUT_SIMULATOR: process.env.QA_PAYOUT_SIMULATOR ?? 'true',
       HOLD_EXPIRY_INTERVAL_SECONDS: process.env.QA_HOLD_EXPIRY_SECONDS ?? '2',
-      OUTBOX_RELAY_INTERVAL_SECONDS: '600',
+      OUTBOX_RELAY_INTERVAL_SECONDS: process.env.QA_OUTBOX_RELAY_SECONDS ?? '600',
       QA_CLOCK_FILE: clockFile,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
