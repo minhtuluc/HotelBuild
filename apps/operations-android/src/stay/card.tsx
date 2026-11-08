@@ -3,7 +3,8 @@ import { Pressable, Text } from 'react-native';
 import type { BookingSummary } from '@pinehill/contracts';
 import { color, space, touchTargetDp } from '@pinehill/ui-native';
 import { formatBusinessDate } from '../housekeeping/date';
-import { formatStay, formatVnd } from '../lookup/view';
+import { formatVnd } from '../lookup/view';
+import { stayPeriodText } from '../lookup/messages';
 import { stayText as text } from './messages';
 
 /** Thẻ khách đi: số tiền/ngày là số máy chủ trả; "quá hạn" chỉ là so sánh ngày hiển thị, không phải luật. */
@@ -36,7 +37,7 @@ export function DepartureCard({
       }}
     >
       <Text style={{ color: color.text, fontWeight: '700' }}>{booking.code}</Text>
-      <Text>{formatStay(booking.checkIn, booking.checkOut, booking.nights)}</Text>
+      <Text>{stayPeriodText(booking.checkIn, booking.checkOut, booking.nights)}</Text>
       <Text style={overdue ? { color: color.warning } : undefined}>
         {text(overdue ? 'overdueLine' : 'dueLine', { date: due })}
       </Text>

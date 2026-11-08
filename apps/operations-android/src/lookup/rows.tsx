@@ -1,8 +1,8 @@
 import type { ReactElement } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { color, space, touchTargetDp, typography } from '@pinehill/ui-native';
-import { lookupText as text, statusText, tierText } from './messages';
-import { formatStay, formatVnd, type GuestView, type BookingView } from './view';
+import { lookupText as text, statusText, stayPeriodText, tierText } from './messages';
+import { formatVnd, type GuestView, type BookingView } from './view';
 
 function BlacklistFlag({ flagged }: { flagged: boolean }): ReactElement | null {
   if (!flagged) return null;
@@ -24,7 +24,7 @@ export function BookingCard({ booking }: { booking: BookingView }): ReactElement
       <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
         {booking.code} · {statusText(booking.status)}
       </Text>
-      <Text>{formatStay(booking.checkIn, booking.checkOut, booking.nights)}</Text>
+      <Text>{stayPeriodText(booking.checkIn, booking.checkOut, booking.nights)}</Text>
       <Text>{text('rooms', { count: booking.roomCount })}</Text>
       <Text>
         {text('amount', {

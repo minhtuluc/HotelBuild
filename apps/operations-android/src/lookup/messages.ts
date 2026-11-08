@@ -1,6 +1,7 @@
 /** Câu chữ SCR-62 (tra cứu booking & khách) — mọi nhãn hiển thị/trợ năng đi qua danh mục này. */
 import { makeTranslate } from '@pinehill/ui-native';
 import type { BookingStatus, LoyaltyTier } from '@pinehill/contracts';
+import { formatStay } from './view';
 
 export const catalog = {
   title: 'Tra cứu booking & khách',
@@ -47,6 +48,7 @@ export const catalog = {
   tier_SILVER: 'Bạc',
   tier_GOLD: 'Vàng',
   tier_PLATINUM: 'Bạch kim',
+  stayNights: '{nights} đêm',
 } as const;
 
 export const lookupText = makeTranslate(catalog);
@@ -77,4 +79,9 @@ export function statusText(status: BookingStatus): string {
 
 export function tierText(tier: LoyaltyTier): string {
   return lookupText(TIER_KEY[tier]);
+}
+
+/** Kỳ lưu trú một dòng (`01/11/2026 → 03/11/2026 · 2 đêm`); nhãn số đêm lấy từ danh mục. */
+export function stayPeriodText(checkIn: string, checkOut: string, nights: number): string {
+  return formatStay(checkIn, checkOut, lookupText('stayNights', { nights }));
 }

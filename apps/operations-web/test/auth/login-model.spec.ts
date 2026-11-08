@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { ApiError } from '@pinehill/api-client';
 import {
-  formatWait,
+  waitParts,
   loginFailure,
   passwordChangeFailure,
   validateLogin,
@@ -65,12 +65,12 @@ test('a wait taken from the error body wins over a missing header and bad values
   });
 });
 
-test('formatWait speaks seconds under a minute and rounds minutes up', () => {
-  expect(formatWait(1)).toBe('1 giây');
-  expect(formatWait(42)).toBe('42 giây');
-  expect(formatWait(60)).toBe('1 phút');
-  expect(formatWait(61)).toBe('2 phút');
-  expect(formatWait(900)).toBe('15 phút');
+test('waitParts speaks seconds under a minute and rounds minutes up', () => {
+  expect(waitParts(1)).toEqual({ unit: 'seconds', value: 1 });
+  expect(waitParts(42)).toEqual({ unit: 'seconds', value: 42 });
+  expect(waitParts(60)).toEqual({ unit: 'minutes', value: 1 });
+  expect(waitParts(61)).toEqual({ unit: 'minutes', value: 2 });
+  expect(waitParts(900)).toEqual({ unit: 'minutes', value: 15 });
 });
 
 test('validatePasswordChange checks required, new length 8-128 and confirmation match', () => {

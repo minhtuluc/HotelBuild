@@ -71,9 +71,11 @@ export function loginFailure(error: unknown, retryAfter?: number): LoginFailure 
   return { kind: 'unknown', code: error.code ?? String(error.status ?? 'UNKNOWN') };
 }
 
-/** Thời gian chờ đọc được: dưới 1 phút nói giây, từ 1 phút làm tròn lên phút. */
-export function formatWait(seconds: number): string {
-  return seconds < 60 ? `${seconds} giây` : `${Math.ceil(seconds / 60)} phút`;
+/** Thời gian chờ ở dạng số + đơn vị: dưới 1 phút nói giây, từ 1 phút làm tròn lên phút. Câu chữ ở `view-text.ts`. */
+export function waitParts(seconds: number): { unit: 'seconds' | 'minutes'; value: number } {
+  return seconds < 60
+    ? { unit: 'seconds', value: seconds }
+    : { unit: 'minutes', value: Math.ceil(seconds / 60) };
 }
 
 export interface PasswordChangeDraft {

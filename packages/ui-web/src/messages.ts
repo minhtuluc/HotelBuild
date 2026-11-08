@@ -65,6 +65,9 @@ export const viCatalog = {
   'api.probe.title': 'Kết nối API',
   'api.probe.ok': 'Máy chủ trả lời bình thường',
   'api.probe.failed': 'Không gọi được API: {code}',
+  'format.stayPeriod': '{nights} đêm · {adults} người lớn · {children} trẻ em',
+  'format.remaining.hours': 'còn {hours} giờ {minutes} phút',
+  'format.remaining.minutes': 'còn {minutes} phút',
 } as const;
 
 export type MessageKey = keyof typeof viCatalog;
