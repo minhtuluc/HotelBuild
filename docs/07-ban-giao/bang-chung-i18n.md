@@ -1,40 +1,39 @@
-# HB-186 — kết quả rà i18n, lượt 2 ngày 08/11/2026
+# HB-186 — kết quả rà i18n, lượt 3 ngày 09/11/2026
 
-**Kết luận: CHƯA ĐẠT, nhưng đã giảm mạnh.** Audit mã tại `f88874bd787199944f65c00d27d71fabdde4ee04` (main sau #258), không phải nghiệm thu toàn bộ màn hình/go-live. Lượt 1 (14/10/2026, `7b1037c`) có **90 node literal giao diện ngoài catalog tại 26 tệp**; lượt này còn **6 node UI trong app + 8 node UI trong 2 formatter dùng chung** (xem §2). Toàn bộ 90 node của lượt 1 không còn xuất hiện trong kết quả quét. Một câu template có thể gồm nhiều node; không hiểu các con số là số câu độc lập. Lượt này chỉ rà và ghi bằng chứng, **không sửa mã sản phẩm** (ticket chỉ cho sửa tệp này).
+**Kết luận: audit nguồn ĐẠT — 0 node chuỗi giao diện ngoài catalog; NFR-LOC chưa nghiệm thu đủ vì QA hình ảnh Android vẫn BLOCKED.** Audit mã tại `059cdd8e2ff24d0faac786d6cdfcaf681dffb618` (main sau #260, #262, #264, #265), không phải nghiệm thu toàn bộ màn hình/go-live. Lượt 1 (14/10/2026, `7b1037c`) có **90 node UI ngoài catalog tại 26 tệp**; lượt 2 (08/11/2026, `f88874b`) còn **6 node UI trong app + 8 node trong formatter dùng chung + 4 node gián tiếp chưa kết luận**. Lượt này: 14 node A–B đã được HB-218 (#262) đưa vào catalog và không còn trong kết quả quét; 4 node gián tiếp (C) đã truy tới nơi dùng và **không có đường hiển thị** (xem §2), nên chuyển sang nhóm không phải UI. Một câu template có thể gồm nhiều node; không hiểu các con số là số câu độc lập.
 
 Căn cứ: [HB-186](../08-thi-cong/tickets/HB-186-ra-soat-i18n.md), [NFR-LOC-01…03](../01-yeu-cau/yeu-cau-phi-chuc-nang.md#9-nfr-loc--nội-địa-hoá--quy-ước-việt-nam), [thiết kế màn hình §7.4/§8](../04-thiet-ke/thiet-ke-man-hinh.md). Số dòng luôn là dòng ở SHA đã rà.
 
 ## 1. Phạm vi và phương pháp
 
-Cùng phương pháp lượt 1: danh sách tệp Git `apps/{customer-web,operations-web,customer-android,operations-android}/{src,app}/**`, chỉ JS/TS/JSX/TSX, bỏ test, TypeScript AST cho literal, mảnh template và JSX text có ký tự tiếng Việt, rồi phân loại tay theo ngữ cảnh (đọc mã quanh từng dòng và nơi `ApiError.message` được dùng). Lượt này **thêm** `packages/ui-web/src` và `packages/ui-native/src` (lượt 1 chưa phủ) bằng cùng kịch bản đổi biểu thức đường dẫn.
+Cùng phương pháp lượt 1–2 và cùng kịch bản §4 (không đổi biểu thức, không bỏ thư mục): danh sách tệp Git `apps/{customer-web,operations-web,customer-android,operations-android}/{src,app}/**`, chỉ JS/TS/JSX/TSX, bỏ test, TypeScript AST cho literal, mảnh template và JSX text có ký tự tiếng Việt; chạy lần hai cho `packages/ui-web/src` và `packages/ui-native/src` bằng cách đổi biểu thức đường dẫn như §4 hướng dẫn. Sau đó phân loại tay theo ngữ cảnh (đọc mã quanh từng dòng và nơi `ApiError.message` được dùng).
 
 | App | Tệp nguồn | Ứng viên | UI thật | Nguy cơ gián tiếp | Không phải UI |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| customer-web | 82 | 6 | 0 | 3 | 3 |
-| operations-web | 396 | 14 | 5 | 1 | 8 |
+| customer-web | 82 | 6 | 0 | 0 | 6 |
+| operations-web | 396 | 9 | 0 | 0 | 9 |
 | customer-android | 47 | 4 | 0 | 0 | 4 |
-| operations-android | 106 | 7 | 1 | 0 | 6 |
-| **Tổng apps** | **631** | **31** | **6** | **4** | **21** |
-| `packages/ui-web`, `ui-native` | 16 | 73 | 8 | 0 | 65 (`stateMessages.ts` là catalog 58 node + 7 nhãn/lỗi/ký hiệu) |
+| operations-android | 106 | 6 | 0 | 0 | 6 |
+| **Tổng apps** | **631** | **25** | **0** | **0** | **25** |
+| `packages/ui-web`, `ui-native` | 16 | 68 | 0 | 0 | 68 (`stateMessages.ts` là catalog 61 node + 7 nhãn/lỗi/ký hiệu) |
 
-Lượt 1: 331 tệp, 25 catalog, 105 ứng viên, 90 UI. Lượt này: 631 tệp, 44 catalog (nhận diện theo tên như lượt 1), 31 ứng viên. `packages/ui-native/src/stateMessages.ts` là catalog thật nhưng tên không khớp mẫu của kịch bản nên hiện trong kết quả quét gói; không tính là vi phạm.
+Lượt 2 → lượt 3: ứng viên app 31 → 25 (bớt đúng 6 node A), gói 73 → 68 (bớt 8 node B; catalog `stateMessages.ts` tăng 58 → 61 do HB-218 thêm 3 khoá `format.*`). Số tệp và catalog không đổi (631 tệp, 44 catalog). `packages/ui-native/src/stateMessages.ts` là catalog thật nhưng tên không khớp mẫu của kịch bản nên hiện trong kết quả quét gói; không tính là vi phạm.
 
-## 2. Vi phạm còn lại (đã đối chiếu mã)
+## 2. Phân loại kết quả quét (đã đối chiếu mã)
 
-**A. Chuỗi UI ngoài catalog — 6 node trong app:**
+**A. Chuỗi UI ngoài catalog trong app — 0 node.** Các vị trí lượt 2 (`hb132-scr40-cau-hinh-kenh/forms.tsx` `Huỷ`, `login-model.ts` `formatWait`, `front-desk-api.ts` "Cơ sở ngoài phạm vi", `operations-android/src/lookup/view.ts` "đêm") không còn trong kết quả; HB-218 có guard nguồn `apps/operations-web/test/hb218-i18n-source.spec.ts`, `apps/operations-android/test/lookup-i18n-source.spec.ts`.
 
-| Tệp:dòng | Nội dung / hướng sửa |
+**B. Formatter dùng chung — 0 node.** `formatStayPeriod`/`formatRemaining` của `packages/ui-web/src/format.ts` lấy chữ từ catalog (guard `packages/ui-web/test/format-i18n-source.spec.ts`; ui-native kiểm chéo `stateMessages` = catalog).
+
+**C. Nguy cơ gián tiếp lượt 2 — đã kết luận, không phải UI (4 node):**
+
+| Tệp:dòng | Vì sao không hiển thị |
 | --- | --- |
-| `apps/operations-web/src/features/hb132-scr40-cau-hinh-kenh/forms.tsx:108,207` | `cancelLabel="Huỷ"` của hai `ConfirmDialog`; lấy từ catalog như `confirmLabel` ngay bên cạnh. |
-| `apps/operations-web/src/session/login-model.ts:76` | `formatWait` ghép "giây"/"phút" cứng, được `view-text.ts:26,30` đưa vào câu khoá/giới hạn tần suất; đưa đơn vị vào catalog (số nhiều/đơn vị theo `text()`). |
-| `apps/operations-web/src/app/(ops)/front-desk/front-desk-api.ts:118` | `ApiError` giả "Cơ sở ngoài phạm vi" có `status 403`; được `front-desk-model.ts:95` gán vào `reason` và `desk-tables.tsx:53` hiển thị. Dùng mã lỗi + catalog thay vì message. |
-| `apps/operations-android/src/lookup/view.ts:139` | `formatStay` ghép "đêm" cứng; dùng catalog hoặc formatter chung đã có cho ngày/kỳ ở. |
+| `apps/customer-web/src/app/(guest)/account/account-api.ts:36,50` | `message` của `ApiError` do client tài khoản dựng; không tệp nào trong `app/(guest)/account/**` đọc `.message` — UI chọn câu theo `kind`/`code` từ catalog. |
+| `apps/customer-web/src/app/(guest)/account/api/handlers.ts:78` | Trường `message` bắt buộc của bao lỗi §4.1 mà BFF trả; client ở `account-api.ts:43–51` chỉ lấy `code`/`retryAfterSeconds` và thay `message` bằng chuỗi riêng (dòng 50, đã xét ở trên). |
+| `apps/operations-web/src/lib/ops-session.ts:58` | Thân 401 khi thiếu bearer. Hai nơi hiện nguyên `ApiError.message` đều không nhận 401: `admin/users/users-model.ts:229` trả `expired` trước `rejected()`, `refunds/refund-command.ts` `transferFailure` chỉ nhận 400/409/422. |
 
-**B. Shared formatter (UI, 8 node):** `packages/ui-web/src/format.ts:49` (`formatStayPeriod`: "đêm · người lớn · trẻ em", dùng ở nhiều màn customer-web) và `:58` (`formatRemaining`: "còn … giờ … phút"). Đây là câu chữ hiển thị nằm ngoài catalog; chuyển sang catalog nhận tham số hoặc để caller truyền nhãn.
-
-**C. Nguy cơ gián tiếp, chưa kết luận — 4 node:** `customer-web/(guest)/account/account-api.ts:36,50` và `account/api/handlers.ts:78` (customer-web không có chỗ render `ApiError.message` cho màn tài khoản), `operations-web/src/lib/ops-session.ts:58` (thân lỗi 401 do BFF dựng; `ApiError.message` được hiển thị ở `admin/users/users-model.ts:216` và `refunds/refund-command.ts:108`, chưa chứng minh có đường nào đưa thông điệp 401 này tới đó). Khuyến nghị: đưa vào catalog hoặc bỏ message, chỉ dùng `code`.
-
-**D. Không phải UI (21 node app + 7 trong gói), giữ phân loại lượt 1:** 4 `src/config/index.ts` (8 node), 2 `api/ready/route.ts`, 2 `OfflineError` trong `netinfo.ts`, `customer-android/src/search.ts:135`, `operations-web/src/lib/seasons.ts:98`, `operations-web/src/app/(ops)/admin-commands/controller.ts:118`, `operations-web/src/session/staff-auth.ts:14` và `staff-session.tsx:32` (lỗi lập trình; `StaffLoginError` chỉ dùng `.failure`), `operations-web/src/lib/ops-session.ts:89`, `operations-android/src/{housekeeping/date.ts:10,lookup/view.ts:134,stay/model.ts:59}` (`RangeError` kiểm tiền/ngày), và trong gói: `ui-web/src/format.ts:31,41`, `ui-native/src/format.ts:27` (RangeError), nhãn `(giờ VN)` ở `ui-web/src/format.ts:44` / `ui-native/src/format.ts:30` (nhãn bắt buộc của NFR-LOC-03 nằm trong chính formatter dùng chung), và ký hiệu chữ "Đ" ở `tokens.ts:44,52` (glyph trạng thái "đang ở", không phải câu).
+**D. Không phải UI (25 node app + 7 trong gói), giữ phân loại lượt 1–2:** 4 `src/config/index.ts` (8 node), 2 `api/ready/route.ts`, 2 `OfflineError` trong `netinfo.ts`, `customer-android/src/search.ts:135`, `operations-web/src/lib/seasons.ts:98`, `operations-web/src/app/(ops)/admin-commands/controller.ts:118`, `operations-web/src/session/staff-auth.ts:14` và `staff-session.tsx:32` (lỗi lập trình; `StaffLoginError` chỉ dùng `.failure`), `operations-web/src/lib/ops-session.ts:89`, `operations-android/src/{housekeeping/date.ts:10,lookup/view.ts:134,stay/model.ts:59}` (`RangeError` kiểm tiền/ngày), 4 node nhóm C ở trên; trong gói: `ui-web/src/format.ts:34,44`, `ui-native/src/format.ts:27` (RangeError), nhãn `(giờ VN)` ở `ui-web/src/format.ts:47` / `ui-native/src/format.ts:30` (nhãn bắt buộc của NFR-LOC-03 nằm trong chính formatter dùng chung), và ký hiệu chữ "Đ" ở `tokens.ts:44` (ui-native) / `tokens.ts:52` (ui-web) (glyph trạng thái "đang ở", không phải câu).
 
 ## 3. Tiền, số và ngày giờ
 
@@ -87,10 +86,9 @@ Kịch bản không phát hiện mọi chuỗi không dấu/tiếng Anh, text si
 
 ## 5. Cổng và phần còn mở
 
-- **Audit nguồn: đã chạy** lại trên `f88874b`; **NFR-LOC: CHƯA ĐẠT** do §2 A–B (14 node) và C (chưa kết luận).
-- **Formatter runtime Node: đã chạy**, cùng kết quả dưới 3 múi giờ; không nhận đã chạy formatter/UI trên Hermes hoặc thiết bị Android.
-- **QA hình ảnh 6 màn, đủ 4 app: BLOCKED/chưa thực hiện**; Android không có thiết bị/emulator ở lượt này. Không suy từ source hoặc bundle sang bằng chứng hiển thị native.
-- **Việc sửa (cần ticket riêng ngoài `allow` của HB-186):** thay các node ở §2 A–B bằng catalog. Ưu tiên `formatStayPeriod`/`formatRemaining` (ảnh hưởng nhiều màn), sau đó `Huỷ` và `formatWait`.
+- **Audit nguồn: ĐẠT** trên `059cdd8` — 0 node UI ngoài catalog (A = B = C = 0).
+- **Formatter runtime Node: đã chạy** lượt này: `pnpm --filter @pinehill/ui-web exec vitest run` 49/49 và `@pinehill/ui-native` 13/13, mỗi gói chạy dưới `TZ=UTC`, `America/New_York`, `Asia/Tokyo` (cùng kết quả). Số liệu §3 lấy từ lượt 2 trên `f88874b`; các hàm `formatMoney`/`formatDateTimeVn`/`formatBusinessDate` không đổi giữa hai SHA. Không nhận đã chạy formatter/UI trên Hermes hoặc thiết bị Android.
+- **QA hình ảnh 6 màn, đủ 4 app: BLOCKED** — host không có thiết bị/emulator Android (không `adb`), WebKit không chạy trên host Fedora (TD-53). Không suy từ source hoặc bundle sang bằng chứng hiển thị native.
 - Cổng `npm run check:docs` chạy trên commit giao; bằng chứng cuối cùng là CI GitHub của PR.
 
-HB-186 giữ OPEN cho tới khi §2 sạch và kiểm hình ảnh/múi giờ xong. Không thay đổi ticket, BR, hợp đồng hoặc test khoá để đóng cổng.
+HB-186 giữ OPEN chỉ vì QA hình ảnh/thiết bị; phần audit nguồn đã sạch. Không thay đổi ticket, BR, hợp đồng hoặc test khoá để đóng cổng.
