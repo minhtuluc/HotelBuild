@@ -62,8 +62,10 @@ export interface Screen {
   readonly path: string;
   readonly ready: string;
   readonly fixture?: FixtureName;
-  readonly status: 'scannable' | 'blocked';
+  /** `covered`: màn đã được quét axe (serious/critical, WCAG 2.1 A/AA) bởi spec E2E riêng của ticket màn đó. */
+  readonly status: 'scannable' | 'blocked' | 'covered';
   readonly reason?: string;
+  readonly coveredBy?: { readonly spec: string; readonly test: string };
 }
 
 /** Lý do dùng chung cho 26 màn Android (13 khách + 13 vận hành). */
@@ -436,8 +438,8 @@ export const SCREENS: readonly Screen[] = [
     surface: 'operations-web',
     path: '',
     ready: '',
-    status: 'blocked',
-    reason: notBuilt('không có `apps/operations-web/src/app/**/reconciliation*`; F6 chưa giao màn'),
+    status: 'covered',
+    coveredBy: { spec: 'tests/e2e/scr39-69-doi-soat-ops.spec.ts', test: 'hợp đồng §8.1 và axe sạch' },
   },
   {
     id: 'SCR-40',
@@ -445,8 +447,8 @@ export const SCREENS: readonly Screen[] = [
     surface: 'operations-web',
     path: '',
     ready: '',
-    status: 'blocked',
-    reason: notBuilt('chưa có tuyến cấu hình kênh riêng; `/channels` chỉ là SCR-28 (hệ số & hoa hồng)'),
+    status: 'covered',
+    coveredBy: { spec: 'tests/e2e/f6/hb132-scr40-cau-hinh-kenh.spec.ts', test: 'browser_keyboard_a11y_responsive' },
   },
   {
     id: 'SCR-41',
@@ -454,8 +456,8 @@ export const SCREENS: readonly Screen[] = [
     surface: 'operations-web',
     path: '',
     ready: '',
-    status: 'blocked',
-    reason: notBuilt('không có tuyến giám sát outbox/đồng bộ kênh'),
+    status: 'covered',
+    coveredBy: { spec: 'tests/e2e/f6/hb133-scr41-giam-sat-dong-bo.spec.ts', test: 'browser_keyboard_a11y_responsive' },
   },
   {
     id: 'SCR-42',
@@ -463,8 +465,8 @@ export const SCREENS: readonly Screen[] = [
     surface: 'operations-web',
     path: '',
     ready: '',
-    status: 'blocked',
-    reason: notBuilt('không có tuyến hàng đợi booking OTA'),
+    status: 'covered',
+    coveredBy: { spec: 'tests/e2e/f6/hb134-scr42-booking-ota.spec.ts', test: 'browser_keyboard_a11y_responsive' },
   },
   {
     id: 'SCR-43',
@@ -472,8 +474,8 @@ export const SCREENS: readonly Screen[] = [
     surface: 'operations-web',
     path: '',
     ready: '',
-    status: 'blocked',
-    reason: notBuilt('không có tuyến bảng điều khiển quá tải (chỉ có báo cáo SCR-55)'),
+    status: 'covered',
+    coveredBy: { spec: 'tests/e2e/f6/hb135-scr43-bang-qua-tai.spec.ts', test: 'browser_keyboard_a11y_responsive' },
   },
   {
     id: 'SCR-44',
@@ -481,8 +483,8 @@ export const SCREENS: readonly Screen[] = [
     surface: 'operations-web',
     path: '',
     ready: '',
-    status: 'blocked',
-    reason: notBuilt('không có tuyến điều chuyển phòng'),
+    status: 'covered',
+    coveredBy: { spec: 'tests/e2e/f6/hb136-scr44-dieu-chuyen.spec.ts', test: 'browser_keyboard_a11y_responsive' },
   },
   {
     id: 'SCR-45',
@@ -490,8 +492,8 @@ export const SCREENS: readonly Screen[] = [
     surface: 'operations-web',
     path: '',
     ready: '',
-    status: 'blocked',
-    reason: notBuilt('không có tuyến ghép phòng'),
+    status: 'covered',
+    coveredBy: { spec: 'tests/e2e/f6/hb137-scr45-46-ghep-walkout.spec.ts', test: 'browser_keyboard_a11y_responsive' },
   },
   {
     id: 'SCR-46',
@@ -499,8 +501,8 @@ export const SCREENS: readonly Screen[] = [
     surface: 'operations-web',
     path: '',
     ready: '',
-    status: 'blocked',
-    reason: notBuilt('không có tuyến walk-out/bồi thường'),
+    status: 'covered',
+    coveredBy: { spec: 'tests/e2e/f6/hb137-scr45-46-ghep-walkout.spec.ts', test: 'browser_keyboard_a11y_responsive' },
   },
   {
     id: 'SCR-47',
@@ -508,8 +510,8 @@ export const SCREENS: readonly Screen[] = [
     surface: 'operations-web',
     path: '',
     ready: '',
-    status: 'blocked',
-    reason: notBuilt('không có tuyến duyệt ngoại lệ chính sách'),
+    status: 'covered',
+    coveredBy: { spec: 'tests/e2e/f6/hb138-scr47-ngoai-le-policy.spec.ts', test: 'browser_keyboard_a11y_responsive' },
   },
   {
     id: 'SCR-48',
@@ -589,8 +591,8 @@ export const SCREENS: readonly Screen[] = [
     surface: 'operations-web',
     path: '',
     ready: '',
-    status: 'blocked',
-    reason: notBuilt('không có tuyến trả phòng sớm; `/front-desk` (SCR-48) chưa mở luồng này'),
+    status: 'covered',
+    coveredBy: { spec: 'tests/e2e/scr39-69-doi-soat-ops.spec.ts', test: 'hợp đồng §8.1 và axe sạch' },
   },
 
   // ── §3.3 Customer Android (13) ────────────────────────────────────────────────────────────────
@@ -836,6 +838,7 @@ export const SCREENS: readonly Screen[] = [
 export const TOTAL_SCREENS = 83;
 
 export const BLOCKED_SCREENS = SCREENS.filter((screen) => screen.status === 'blocked');
+export const COVERED_SCREENS = SCREENS.filter((screen) => screen.status === 'covered');
 export const SCANNABLE_SCREENS = SCREENS.filter((screen) => screen.status === 'scannable');
 
 /** Bề mặt Android không có project Playwright tương ứng nên luôn `blocked`. */

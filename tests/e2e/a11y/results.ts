@@ -5,10 +5,10 @@
  * một tệp riêng dưới `last-run/`, còn `last-run.json` được dựng lại dưới khoá thư mục (mkdir là thao
  * tác nguyên tử trên POSIX) để không worker nào đọc phải bản ghi dở.
  */
-import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BLOCKED_SCREENS, SCREENS, TOTAL_SCREENS } from './screens';
+import { BLOCKED_SCREENS, COVERED_SCREENS, SCREENS, TOTAL_SCREENS } from './screens';
 
 export const A11Y_DIR = path.dirname(fileURLToPath(import.meta.url));
 const RUN_DIR = path.join(A11Y_DIR, 'last-run');
@@ -40,6 +40,7 @@ interface Aggregate {
   readonly totalScreens: number;
   readonly scanned: number;
   readonly blocked: number;
+  readonly covered: number;
   readonly pass: number;
   readonly fail: number;
   readonly error: number;
@@ -103,6 +104,7 @@ function summarize(results: readonly ScreenResult[]): Aggregate {
     totalScreens: TOTAL_SCREENS,
     scanned: screens.length,
     blocked: BLOCKED_SCREENS.length,
+    covered: COVERED_SCREENS.length,
     pass: screens.filter((screen) => screen.status === 'PASS').length,
     fail: screens.filter((screen) => screen.status === 'FAIL').length,
     error: screens.filter((screen) => screen.status === 'ERROR').length,
@@ -116,11 +118,11 @@ function summarize(results: readonly ScreenResult[]): Aggregate {
 }
 
 function summaryLine(aggregate: Aggregate): string {
-  const known = aggregate.scanned + aggregate.blocked;
+  const known = aggregate.scanned + aggregate.covered + aggregate.blocked;
   const missing = aggregate.totalScreens - known;
   return [
     `[A11Y] TỔNG KẾT: ${aggregate.totalScreens} màn =`,
-    `${aggregate.scanned} đã quét + ${aggregate.blocked} BLOCKED`,
+    `${aggregate.scanned} đã quét + ${aggregate.covered} quét bằng spec riêng + ${aggregate.blocked} BLOCKED`,
     `= ${known}${missing === 0 ? '' : ` (+${missing} chưa ghi!)`}`,
     `· PASS ${aggregate.pass} · FAIL ${aggregate.fail} · ERROR ${aggregate.error}`,
   ].join(' ');
@@ -129,10 +131,15 @@ function summaryLine(aggregate: Aggregate): string {
 /** Ghi kết quả một màn rồi dựng lại `last-run.json` + in dòng tổng kết. */
 export async function recordScreenResult(result: ScreenResult): Promise<void> {
   await mkdir(RUN_DIR, { recursive: true });
-  await writeFile(path.join(RUN_DIR, `${result.id}.json`), JSON.stringify(result, null, 2));
+  // Ghi nguyên tử (tệp tạm → rename): worker khác đang `readRunDir` không bao giờ thấy tệp ghi dở.
+  const target = path.join(RUN_DIR, `${result.id}.json`);
+  const temporary = `${target}.${process.pid}.tmp`;
+  await writeFile(temporary, JSON.stringify(result, null, 2));
+  await rename(temporary, target);
   const aggregate = await withLock(async () => {
     const merged = summarize(await readRunDir());
-    await writeFile(AGGREGATE, JSON.stringify(merged, null, 2));
+    await writeFile(`${AGGREGATE}.${process.pid}.tmp`, JSON.stringify(merged, null, 2));
+    await rename(`${AGGREGATE}.${process.pid}.tmp`, AGGREGATE);
     return merged;
   });
   const blocking = result.violations.filter(
@@ -151,12 +158,18 @@ export async function recordScreenResult(result: ScreenResult): Promise<void> {
 /** Bảng danh mục 83 màn in ra console — bằng chứng không màn nào biến mất. */
 export function printCatalog(): void {
   for (const screen of SCREENS) {
-    const detail = screen.status === 'scannable' ? `path=${screen.path}` : `BLOCKED: ${screen.reason ?? ''}`;
+    const detail =
+      screen.status === 'scannable'
+        ? `path=${screen.path}`
+        : screen.status === 'covered'
+          ? `COVERED: ${screen.coveredBy?.spec ?? ''} › ${screen.coveredBy?.test ?? ''}`
+          : `BLOCKED: ${screen.reason ?? ''}`;
     console.log(`[A11Y] ${screen.id.padEnd(7)} ${screen.surface.padEnd(15)} ${screen.status.padEnd(9)} ${screen.name} — ${detail}`);
   }
   console.log(
     `[A11Y] DANH MỤC: ${SCREENS.length}/${TOTAL_SCREENS} màn · ` +
       `${SCREENS.filter((screen) => screen.status === 'scannable').length} quét được · ` +
+      `${COVERED_SCREENS.length} quét bằng spec riêng · ` +
       `${BLOCKED_SCREENS.length} BLOCKED`,
   );
 }
