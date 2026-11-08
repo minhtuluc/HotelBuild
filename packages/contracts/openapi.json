@@ -24254,7 +24254,15 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "bookingId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
                           "propertyId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "roomTypeId": {
                             "type": "string",
                             "minLength": 1
                           },
@@ -24262,100 +24270,37 @@
                             "type": "string",
                             "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
                           },
-                          "shortageCount": {
-                            "type": "integer",
-                            "minimum": 0
-                          },
                           "status": {
                             "type": "string",
                             "enum": [
                               "OPEN",
                               "PROPOSED",
-                              "RESOLVED",
                               "ESCALATED"
                             ]
                           },
                           "overdue": {
                             "type": "boolean"
                           },
-                          "resolveDeadline": {
+                          "label": {
                             "type": "string",
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                            "minLength": 1
                           },
-                          "bookings": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "bookingId": {
-                                  "type": "string",
-                                  "minLength": 1
-                                },
-                                "bookingRoomId": {
-                                  "type": [
-                                    "string",
-                                    "null"
-                                  ],
-                                  "minLength": 1
-                                },
-                                "guestNameMasked": {
-                                  "type": "string",
-                                  "minLength": 1
-                                },
-                                "checkIn": {
-                                  "type": "string",
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                                },
-                                "checkOut": {
-                                  "type": "string",
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                                }
-                              },
-                              "required": [
-                                "bookingId",
-                                "bookingRoomId",
-                                "guestNameMasked",
-                                "checkIn",
-                                "checkOut"
-                              ]
-                            }
-                          },
-                          "links": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "rel": {
-                                  "type": "string",
-                                  "enum": [
-                                    "SELF",
-                                    "ROOM_MOVE",
-                                    "RELOCATION_OPTIONS"
-                                  ]
-                                },
-                                "href": {
-                                  "type": "string",
-                                  "minLength": 1
-                                }
-                              },
-                              "required": [
-                                "rel",
-                                "href"
-                              ]
-                            }
+                          "deepLink": {
+                            "type": "string"
                           }
                         },
                         "required": [
                           "caseId",
+                          "bookingId",
                           "propertyId",
+                          "roomTypeId",
                           "date",
-                          "shortageCount",
                           "status",
                           "overdue",
-                          "resolveDeadline",
-                          "bookings",
-                          "links"
-                        ]
+                          "label",
+                          "deepLink"
+                        ],
+                        "additionalProperties": false
                       }
                     },
                     "meta": {

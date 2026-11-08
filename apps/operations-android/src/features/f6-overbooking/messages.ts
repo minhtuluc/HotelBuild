@@ -33,6 +33,7 @@ export const catalog = {
   delayReason: 'Lý do chậm: {reason}',
   statusLabel: 'Trạng thái: {status}',
   open: 'Xử lý',
+  bookingOrdinal: 'booking {n}',
   // SCR-63 đổi phòng
   moveTitle: 'Đổi phòng',
   moveHint: 'Phương án và giá do máy chủ trả; màn hình không tính lại.',

@@ -323,6 +323,8 @@ export class OverbookingQueries {
         limit: query.limit,
         nextCursor: null,
         hasMore: alerts.length > query.limit,
+        // HB-221: lễ tân cũng cần phân biệt "không có ca" với "chưa quét/quét lỗi" (hợp đồng AC1).
+        scan: await scanMeta(this.db, this.scanScope(actor, query.propertyId)),
       },
     };
   }
