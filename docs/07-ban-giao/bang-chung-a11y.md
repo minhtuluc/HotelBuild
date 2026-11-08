@@ -1,7 +1,7 @@
 # Bằng chứng rà accessibility 83 màn hình (HB-185)
 
 > Ticket: `docs/08-thi-cong/tickets/HB-185-ra-soat-truy-cap.md` · nhánh `ticket/HB-185-a11y`
-> (base `origin/main` = `9ee00d9`) · NFR-USE-03/04/05, TC-SYS-10.
+> — **lượt 2 ngày 08/11/2026** (base `origin/main` = `e187210`; lượt 1 base `9ee00d9`) · NFR-USE-03/04/05, TC-SYS-10.
 > Nguồn chuẩn danh mục: [`04-thiet-ke/thiet-ke-man-hinh.md` §3](../04-thiet-ke/thiet-ke-man-hinh.md)
 > — đọc dòng 181–283 (web khách 13 · operations web 44 · customer Android 13 · operations Android 13).
 
@@ -10,25 +10,31 @@
 | Chỉ số | Giá trị |
 |---|---|
 | Tổng màn theo thiết kế | **83** |
-| Quét axe (Chromium, WCAG 2.1 A/AA) | **46** |
-| PASS (0 vi phạm serious/critical) | **46** |
-| FAIL (vi phạm serious/critical **mới** so với baseline) | **0** |
-| BLOCKED (có lý do đọc được, không bỏ qua âm thầm) | **37** |
-| Vi phạm axe ở **mọi** mức (kể cả minor/moderate) | **0** |
-| Cân đối | 46 + 37 = **83** |
+| Quét axe bằng harness này (Chromium, WCAG 2.1 A/AA) | **46** — PASS 46 · FAIL 0 |
+| Quét axe bằng **spec E2E riêng của màn** (trạng thái `covered`) | **10** — SCR-39…47, SCR-69 (xem dưới) |
+| BLOCKED (có lý do đọc được, không bỏ qua âm thầm) | **27** |
+| Vi phạm axe ở **mọi** mức (kể cả minor/moderate) trong harness | **0** |
+| Cân đối | 46 + 10 + 27 = **83** |
 
-37 màn BLOCKED gồm:
+So với lượt 1 (46 quét + 37 BLOCKED): 10 màn operations web nay đã có tuyến nhờ F6 (SCR-39…47, SCR-69) nên chuyển từ BLOCKED sang `covered`.
+Kết quả quét 46 màn của harness **không đổi** (vẫn 0 vi phạm).
+
+27 màn BLOCKED gồm:
 
 - **26 màn Android** (13 customer + 13 operations): không có `adb`/`emulator`/APK, nên cả axe Android lẫn
   TalkBack đều chưa kiểm được — xem §5.
-- **11 màn operations web chưa có tuyến trong mã nguồn**: SCR-18, 39, 40, 41, 42, 43, 44, 45, 46, 47, 69.
-  Lý do từng màn nằm trong bảng §3; không có bề mặt nào để quét nên không thể "PASS".
+- **1 màn operations web chưa có tuyến**: SCR-18 (Sao lưu & phục hồi). Lý do trong bảng §3.
 
-Dòng tổng kết do spec in ra (đếm đủ 83, không màn nào biến mất):
+**Trạng thái `covered` không phải "PASS do harness này quét".** Mỗi màn trỏ tới một ca E2E có sẵn trong repo
+(`browser_keyboard_a11y_responsive` của `tests/e2e/f6/*` cho SCR-40…47; ca `hợp đồng §8.1 và axe sạch` của
+`tests/e2e/scr39-69-doi-soat-ops.spec.ts` cho SCR-39 và SCR-69) chạy `AxeBuilder` với tag WCAG 2.1 A/AA và đòi
+0 vi phạm serious/critical. Harness chỉ kiểm liên kết còn đúng (tệp spec tồn tại, còn tên ca, có `AxeBuilder`,
+có lọc serious/critical); kết quả axe thật là của ca đó. Lượt này đã chạy các spec đó: `tests/e2e/f6` 15 passed;
+`scr39-69-doi-soat-ops.spec.ts` 10/10 ca axe theo trạng thái PASS (2 ca chức năng AC1 đỏ — xem §4).
 
 ```text
-[A11Y] DANH MỤC: 83/83 màn · 46 quét được · 37 BLOCKED
-[A11Y] TỔNG KẾT: 83 màn = 46 đã quét + 37 BLOCKED = 83 · PASS 46 · FAIL 0 · ERROR 0
+[A11Y] DANH MỤC: 83/83 màn · 46 quét được · 10 quét bằng spec riêng · 27 BLOCKED
+[A11Y] TỔNG KẾT: 83 màn = 46 đã quét + 10 quét bằng spec riêng + 27 BLOCKED = 83 · PASS 46 · FAIL 0 · ERROR 0
 ```
 
 ## 2. Cách chạy lại
@@ -52,8 +58,8 @@ pnpm exec playwright test -c tests/e2e/playwright.config.ts tests/e2e/a11y/scan.
   --project=customer-web --project=operations-web
 ```
 
-Kết quả lượt chạy gần nhất: `50 passed, 120 skipped` (120 skip = 46 màn bị project còn lại bỏ qua +
-37 màn BLOCKED × 2 project; mọi skip đều kèm lý do trong log).
+Kết quả lượt chạy gần nhất (08/11/2026, ba lượt liên tiếp giống nhau): `60 passed, 110 skipped` (skip = 46 màn bị project
+còn lại bỏ qua + 27 màn BLOCKED × 2 project + 10 màn `covered` bị project khách bỏ qua; mọi skip đều kèm lý do trong log).
 
 - Log từng màn: dòng `[A11Y] <SCR> <surface> PASS|FAIL|ERROR · serious/critical N · mới N · …ms · <path>`,
   kèm từng rule vi phạm (rule id, impact, số node).
@@ -107,15 +113,15 @@ serious/critical; FAIL sẽ ghi `<rule> (<impact>, <n> node)`; BLOCKED ghi lý d
 | SCR-36 | Huỷ booking & tính hoàn theo bậc | operations-web | `/bookings/b1/cancel` | PASS (axe 0 serious/critical) |
 | SCR-37 | Thu cọc / thu số dư tại quầy | operations-web | `/bookings/b1/collect` | PASS (axe 0 serious/critical) |
 | SCR-38 | Yêu cầu & duyệt hoàn tiền hai cấp | operations-web | `/bookings/{bookingId}/refunds` | PASS (axe 0 serious/critical) |
-| SCR-39 | Đối soát doanh thu, hoa hồng & công nợ | operations-web | — | BLOCKED — Chưa có tuyến/màn trong mã nguồn (không có `apps/operations-web/src/app/**/reconciliation*`; F6 chưa giao màn); không có bề mặt để quét. |
-| SCR-40 | Cấu hình kênh bán | operations-web | — | BLOCKED — Chưa có tuyến/màn trong mã nguồn (chưa có tuyến cấu hình kênh riêng; `/channels` chỉ là SCR-28 (hệ số & hoa hồng)); không có bề mặt để quét. |
-| SCR-41 | Giám sát đồng bộ kênh & outbox | operations-web | — | BLOCKED — Chưa có tuyến/màn trong mã nguồn (không có tuyến giám sát outbox/đồng bộ kênh); không có bề mặt để quét. |
-| SCR-42 | Hàng đợi booking OTA nhận vào | operations-web | — | BLOCKED — Chưa có tuyến/màn trong mã nguồn (không có tuyến hàng đợi booking OTA); không có bề mặt để quét. |
-| SCR-43 | Bảng điều khiển quá tải | operations-web | — | BLOCKED — Chưa có tuyến/màn trong mã nguồn (không có tuyến bảng điều khiển quá tải (chỉ có báo cáo SCR-55)); không có bề mặt để quét. |
-| SCR-44 | Đề xuất & thực hiện điều chuyển phòng | operations-web | — | BLOCKED — Chưa có tuyến/màn trong mã nguồn (không có tuyến điều chuyển phòng); không có bề mặt để quét. |
-| SCR-45 | Ghép phòng hai booking | operations-web | — | BLOCKED — Chưa có tuyến/màn trong mã nguồn (không có tuyến ghép phòng); không có bề mặt để quét. |
-| SCR-46 | Walk-out & bồi thường | operations-web | — | BLOCKED — Chưa có tuyến/màn trong mã nguồn (không có tuyến walk-out/bồi thường); không có bề mặt để quét. |
-| SCR-47 | Duyệt ngoại lệ chính sách | operations-web | — | BLOCKED — Chưa có tuyến/màn trong mã nguồn (không có tuyến duyệt ngoại lệ chính sách); không có bề mặt để quét. |
+| SCR-39 | Đối soát doanh thu, hoa hồng & công nợ | operations-web | `/reconciliation` | COVERED — axe do ca `tests/e2e/scr39-69-doi-soat-ops.spec.ts › hợp đồng §8.1 và axe sạch` quét (0 serious/critical) |
+| SCR-40 | Cấu hình kênh bán | operations-web | `/channels/configuration` | COVERED — axe do ca `tests/e2e/f6/hb132-scr40-cau-hinh-kenh.spec.ts › browser_keyboard_a11y_responsive` quét (0 serious/critical) |
+| SCR-41 | Giám sát đồng bộ kênh & outbox | operations-web | `/channels/sync` | COVERED — axe do ca `tests/e2e/f6/hb133-scr41-giam-sat-dong-bo.spec.ts › browser_keyboard_a11y_responsive` quét (0 serious/critical) |
+| SCR-42 | Hàng đợi booking OTA nhận vào | operations-web | `/channels/ota-bookings` | COVERED — axe do ca `tests/e2e/f6/hb134-scr42-booking-ota.spec.ts › browser_keyboard_a11y_responsive` quét (0 serious/critical) |
+| SCR-43 | Bảng điều khiển quá tải | operations-web | `/overbooking/cases` | COVERED — axe do ca `tests/e2e/f6/hb135-scr43-bang-qua-tai.spec.ts › browser_keyboard_a11y_responsive` quét (0 serious/critical) |
+| SCR-44 | Đề xuất & thực hiện điều chuyển phòng | operations-web | `/overbooking/relocation` | COVERED — axe do ca `tests/e2e/f6/hb136-scr44-dieu-chuyen.spec.ts › browser_keyboard_a11y_responsive` quét (0 serious/critical) |
+| SCR-45 | Ghép phòng hai booking | operations-web | `/overbooking/merge-walkout` | COVERED — axe do ca `tests/e2e/f6/hb137-scr45-46-ghep-walkout.spec.ts › browser_keyboard_a11y_responsive` quét (0 serious/critical) |
+| SCR-46 | Walk-out & bồi thường | operations-web | `/overbooking/merge-walkout` | COVERED — axe do ca `tests/e2e/f6/hb137-scr45-46-ghep-walkout.spec.ts › browser_keyboard_a11y_responsive` quét (0 serious/critical) |
+| SCR-47 | Duyệt ngoại lệ chính sách | operations-web | `/overbooking/policy-exceptions` | COVERED — axe do ca `tests/e2e/f6/hb138-scr47-ngoai-le-policy.spec.ts › browser_keyboard_a11y_responsive` quét (0 serious/critical) |
 | SCR-48 | Bàn tiền sảnh: đến – đi – ở trong ngày | operations-web | `/front-desk?date=2026-12-24` | PASS (axe 0 serious/critical) |
 | SCR-49 | Hồ sơ khách & danh sách đen | operations-web | `/crm/guests` | PASS (axe 0 serious/critical) |
 | SCR-50 | Hạng khách & điểm thưởng | operations-web | `/crm/loyalty?guestId=g1` | PASS (axe 0 serious/critical) |
@@ -124,7 +130,7 @@ serious/critical; FAIL sẽ ghi `<rule> (<impact>, <n> node)`; BLOCKED ghi lý d
 | SCR-53 | Báo cáo doanh thu theo kênh | operations-web | `/reports/revenue-by-channel` | PASS (axe 0 serious/critical) |
 | SCR-54 | Báo cáo huỷ phòng & hoàn cọc | operations-web | `/reports/cancellations` | PASS (axe 0 serious/critical) |
 | SCR-55 | Báo cáo quá tải & điều chuyển | operations-web | `/reports/overbooking` | PASS (axe 0 serious/critical) |
-| SCR-69 | Xử lý trả phòng sớm | operations-web | — | BLOCKED — Chưa có tuyến/màn trong mã nguồn (không có tuyến trả phòng sớm; `/front-desk` (SCR-48) chưa mở luồng này); không có bề mặt để quét. |
+| SCR-69 | Xử lý trả phòng sớm | operations-web | `/bookings/{bookingId}/early-checkout` | COVERED — axe do ca `tests/e2e/scr39-69-doi-soat-ops.spec.ts › hợp đồng §8.1 và axe sạch` quét (0 serious/critical) |
 | SCR-71 | Đăng ký / đăng nhập khách (Android) | android | — | BLOCKED — Máy thi công không có adb/emulator/APK Android (ANDROID_HOME trống); TalkBack và axe Android cần thiết bị thật hoặc emulator — chưa có. |
 | SCR-72 | Trang chủ & tìm phòng (Android) | android | — | BLOCKED — Máy thi công không có adb/emulator/APK Android (ANDROID_HOME trống); TalkBack và axe Android cần thiết bị thật hoặc emulator — chưa có. |
 | SCR-73 | Kết quả tìm phòng (Android) | android | — | BLOCKED — Máy thi công không có adb/emulator/APK Android (ANDROID_HOME trống); TalkBack và axe Android cần thiết bị thật hoặc emulator — chưa có. |
@@ -160,13 +166,15 @@ Ghi chú tuyến:
   quét hai lần vì danh mục tách thành hai màn.
 - **SCR-08** là một màn nhiều tuyến (`/account/login`, `register`, `forgot-password`,
   `reset-password`); quét tuyến đăng nhập làm đại diện.
-- 11 màn operations web BLOCKED chưa có tuyến — xem cột lý do; khi thi công chỉ cần thêm dòng với
+- SCR-18 là màn operations web duy nhất còn chưa có tuyến — xem cột lý do; khi thi công chỉ cần thêm dòng với
   `status: 'scannable'`, `path`, `ready`, `fixture` vào `tests/e2e/a11y/screens.ts`.
+- SCR-45 và SCR-46 cùng nằm trong `/overbooking/merge-walkout` (HB-137). Tuyến `covered` lấy từ cây `apps/operations-web/src/app/(ops)` và từ `page.goto` trong spec tương ứng.
 
 ## 4. Danh sách lỗi và đề xuất sửa theo màn
 
-**Không có lỗi.** Lượt quét ghi 0 vi phạm ở mọi mức trên cả 46 màn; `tests/e2e/a11y/baseline.json` để
-rỗng (`violations: []`), nghĩa là mọi vi phạm serious/critical trong tương lai đều làm đỏ cổng.
+**Không có lỗi a11y.** Harness ghi 0 vi phạm ở mọi mức trên 46 màn; các ca axe của spec riêng cho 10 màn `covered`
+đều 0 serious/critical. `tests/e2e/a11y/baseline.json` để rỗng (`violations: []`), nghĩa là mọi vi phạm
+serious/critical trong tương lai đều làm đỏ cổng.
 
 Cách ghi khi phát hiện lỗi mới (giữ nguyên tiêu chí, không tắt rule):
 
@@ -175,27 +183,22 @@ Cách ghi khi phát hiện lỗi mới (giữ nguyên tiêu chí, không tắt r
    nợ kỹ thuật; thêm mục vào bảng dưới đây với đề xuất sửa cụ thể theo màn.
 3. Sửa xong thì xoá dòng baseline tương ứng để lỗi tái phát vẫn làm đỏ cổng.
 
-Khuôn mục đề xuất (dùng khi có lỗi):
-
 | Màn | Rule (impact) | Số node | Đề xuất sửa |
 |---|---|---|---|
 | _chưa có_ | — | 0 | — |
 
-Với 11 màn chưa thi công, đề xuất **bổ sung khi làm màn** (không phải lỗi a11y hiện tại):
+**Phát hiện ngoài phạm vi a11y (cần lead giao):**
+
+| Vị trí | Hiện tượng | Ghi chú |
+|---|---|---|
+| `tests/e2e/scr39-69-doi-soat-ops.spec.ts:197` (SCR-39 AC1) và `:223` (SCR-69 AC1) | Đỏ cục bộ trên Chromium ở `e187210`: hộp thoại PIN (`pin-dialog`) đang mở che nút `early-checkout-preview-button` nên `click` quá hạn 60 giây. 10 ca axe theo trạng thái của cùng tệp xanh | Chưa tìm nguyên nhân gốc (ngoài `allow` của HB-185). `e2e-nightly` thường ở trạng thái `cancelled` nên lỗi kiểu này khó bị thấy; nên cho chạy lại trong runner đủ lớn |
+
+Đề xuất bổ sung khi làm màn còn thiếu:
 
 | Màn | Thiếu gì | Đề xuất |
 |---|---|---|
 | SCR-18 Sao lưu & phục hồi | tuyến màn | Khi dựng màn, thêm dòng `scannable` + fixture đọc trạng thái PITR vào bảng quét |
-| SCR-39 Đối soát doanh thu | tuyến màn | Thêm fixture đối soát theo ngày rồi quét; chú ý bảng số liệu cần `scope`/header đúng |
-| SCR-40 Cấu hình kênh bán | tuyến riêng | Nếu gộp vào `/channels` (SCR-28) thì cập nhật danh mục thiết kế thay vì thêm dòng quét trùng |
-| SCR-41 Giám sát đồng bộ kênh | tuyến màn | Fixture outbox có trạng thái FAILED để quét cả bảng và cảnh báo |
-| SCR-42 Hàng đợi OTA | tuyến màn | Fixture booking OTA oversold; kiểm bảng + cờ nghi trùng |
-| SCR-43 Bảng điều khiển quá tải | tuyến màn | Fixture ca quá tải trễ hạn; kiểm thẻ trạng thái và liên kết hành động |
-| SCR-44 Điều chuyển phòng | tuyến màn | Fixture đề xuất PROPOSED/EXECUTED; kiểm bảng so sánh |
-| SCR-45 Ghép phòng | tuyến màn | Fixture hai đồng thuận + cảnh báo khác giới |
-| SCR-46 Walk-out & bồi thường | tuyến màn | Fixture biên bản ký; kiểm form ký và tổng bồi thường |
-| SCR-47 Duyệt ngoại lệ | tuyến màn | Fixture yêu cầu force-majeure; kiểm lý do bắt buộc ≥ 20 ký tự |
-| SCR-69 Trả phòng sớm | tuyến màn | Nếu mở trong `/front-desk` thì thêm trạng thái + `ready` cho khối trả phòng sớm |
+| 10 màn `covered` | harness chưa có fixture riêng | Nếu muốn một bảng kết quả duy nhất, chuyển ca axe của spec riêng thành fixture trong `fixtures.ts` rồi đổi sang `scannable` |
 
 ## 5. TalkBack (Android) — BLOCKED
 
@@ -223,7 +226,7 @@ và kiểm TalkBack theo checklist NFR-USE-03.
 
 | Cấu hình | Kết quả | Bằng chứng |
 |---|---|---|
-| Chromium (desktop, project `customer-web` + `operations-web`) | **PASS** — 46/46 màn, 0 vi phạm | log lượt chạy §2 |
+| Chromium (desktop, project `customer-web` + `operations-web`) | **PASS** — 46/46 màn trong harness, 0 vi phạm; 10 màn `covered` PASS ở spec riêng | log lượt chạy §2, §8 |
 | WebKit (project `*-webkit`, `E2E_BROWSERS=webkit`) | **BLOCKED** — thiếu thư viện hệ thống của host | lỗi rút gọn dưới |
 | 360 px (NFR-USE-04) | Không thuộc cổng HB-185; đã có ca riêng theo màn (`scr02-03`, `scr13`, `scr24`, `day-board`…) | các spec đó |
 | Zoom 200 % | **Chưa có ca tự động** — đề xuất ticket riêng | — |
@@ -249,6 +252,10 @@ Alternatively, use apt:
   web (sẽ là bằng chứng sai).
 - Màn web chưa có tuyến ghi `blocked` + lý do cụ thể thay vì bịa fixture; khi có tuyến chỉ cần đổi
   `status`/`path`/`ready`/`fixture`.
+- **Lượt 2:** thêm trạng thái `covered` cho màn đã có ca axe riêng (SCR-39…47, 69) thay vì sao chép 10 fixture vào harness;
+  harness kiểm liên kết (tệp, tên ca, `AxeBuilder`, lọc serious/critical) để không PASS giả, và đếm riêng khỏi 46 màn quét. Cũng
+  sửa lỗi harness: ghi tệp kết quả từng màn giờ nguyên tử (tệp tạm → rename) — trước đó một worker đọc tệp đang ghi dở làm
+  SCR-55 đỏ một lần với `Unexpected end of JSON input`.
 - Fixture dùng lại API giả sẵn có của từng màn (`fake-api/f5|f7|f8`, `users`, `refund-fixture`) và bám
   đúng `data-testid` mà spec của màn đang dùng; hai màn dùng chung tuyến (SCR-04/05, SCR-33/34) được
   quét hai lần với selector riêng (SCR-04/05) hoặc cùng bề mặt (SCR-33/34).
@@ -260,19 +267,21 @@ Alternatively, use apt:
 ## 8. Cổng đã chạy
 
 ```text
-$ cd tests/e2e && pnpm exec playwright test a11y/scan.spec.ts --project=customer-web --project=operations-web
-  120 skipped
-  50 passed (17.8s)
-[A11Y] DANH MỤC: 83/83 màn · 46 quét được · 37 BLOCKED
-[A11Y] TỔNG KẾT: 83 màn = 46 đã quét + 37 BLOCKED = 83 · PASS 46 · FAIL 0 · ERROR 0
+$ cd tests/e2e && E2E_BROWSERS=chromium pnpm exec playwright test a11y/scan.spec.ts --project=customer-web --project=operations-web
+  (ba lượt liên tiếp)
+  110 skipped
+  60 passed (18.4–18.8s)
+[A11Y] DANH MỤC: 83/83 màn · 46 quét được · 10 quét bằng spec riêng · 27 BLOCKED
+[A11Y] TỔNG KẾT: 83 màn = 46 đã quét + 10 quét bằng spec riêng + 27 BLOCKED = 83 · PASS 46 · FAIL 0 · ERROR 0
+
+$ pnpm exec playwright test f6 --project=operations-web
+  15 passed (11.5s)        # gồm 7 ca browser_keyboard_a11y_responsive (SCR-40…47)
+
+$ pnpm exec playwright test scr39-69-doi-soat-ops.spec.ts --project=operations-web
+  10 passed, 2 failed      # 10 ca axe theo trạng thái PASS; 2 ca AC1 chức năng đỏ (xem §4)
 ```
 
-```text
-$ pnpm check:scope
-Scope: HB-185 cảnh báo (không chặn)
-Diff 2420 dòng > max_lines 400 — ghi lý do vào PR (không chặn)
-Scope: HB-185 (R0) 8 file, 2420/400 dòng — đạt (có cảnh báo)
-```
+Phá thử liên kết `covered` (đổi tên ca của SCR-40 thành tên không tồn tại) ⇒ ca của SCR-40 đỏ với
+"spec … không còn ca …"; khôi phục ⇒ xanh. Chỉ Chromium; WebKit và TalkBack xem §5–§6.
 
-Lý do vượt 400 dòng: bảng 83 màn + fixture theo từng bề mặt là nội dung bắt buộc của ticket; không có
-tệp nào ngoài allow (`tests/e2e/a11y/**`, `docs/07-ban-giao/bang-chung-a11y.md`).
+Bằng chứng cuối cùng là CI GitHub của PR. `pnpm check:scope` và `npm run check:docs` chạy trên commit giao.

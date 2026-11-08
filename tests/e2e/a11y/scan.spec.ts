@@ -1,10 +1,14 @@
 import AxeBuilder from '@axe-core/playwright';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { baselineKeys, loadBaseline } from './baseline';
 import { installFixture, resolvePath } from './fixtures';
 import { printCatalog, recordScreenResult, type ObservedViolation } from './results';
 import {
   BLOCKED_SCREENS,
+  COVERED_SCREENS,
   SCANNABLE_SCREENS,
   SCREENS,
   TOTAL_SCREENS,
@@ -29,8 +33,12 @@ test.describe('HB-185 danh mục 83 màn', () => {
     printCatalog();
     expect(SCREENS, 'danh mục thiết kế có 83 màn').toHaveLength(TOTAL_SCREENS);
     expect(new Set(SCREENS.map((screen) => screen.id)).size, 'mã SCR không trùng').toBe(TOTAL_SCREENS);
-    expect(SCANNABLE_SCREENS.length + BLOCKED_SCREENS.length).toBe(TOTAL_SCREENS);
+    expect(SCANNABLE_SCREENS.length + COVERED_SCREENS.length + BLOCKED_SCREENS.length).toBe(TOTAL_SCREENS);
     for (const screen of SCREENS) {
+      if (screen.status === 'covered') {
+        expect(screen.coveredBy, `${screen.id} covered phải khai spec`).toBeDefined();
+        continue;
+      }
       if (screen.status === 'blocked') {
         expect(screen.reason, `${screen.id} BLOCKED phải nêu lý do`).toBeTruthy();
         expect(screen.reason?.trim().length ?? 0, `${screen.id} lý do quá ngắn`).toBeGreaterThan(10);
@@ -47,6 +55,18 @@ test.describe('HB-185 quét axe (WCAG 2.1 A/AA)', () => {
   for (const screen of SCREENS) {
     test(`${screen.id} — ${screen.name}`, async ({ page, request }, testInfo) => {
       const project = testInfo.project.name;
+      if (screen.status === 'covered') {
+        test.skip(!project.startsWith('operations-web'), `${screen.id} do spec riêng quét, kiểm liên kết ở project operations-web`);
+        // Không PASS giả: liên kết tới spec phải còn đúng, ca axe của spec đó mới là bằng chứng (CI chạy nó).
+        const coveredBy = screen.coveredBy;
+        expect(coveredBy, `${screen.id} thiếu coveredBy`).toBeDefined();
+        const specPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..', coveredBy?.spec ?? '');
+        const source = readFileSync(specPath, 'utf8');
+        expect(source, `${screen.id}: spec ${coveredBy?.spec} không còn ca ${coveredBy?.test}`).toContain(coveredBy?.test ?? '');
+        expect(source, `${screen.id}: ca ${coveredBy?.test} phải dùng AxeBuilder`).toContain('AxeBuilder');
+        expect(source, `${screen.id}: ca phải lọc serious/critical`).toMatch(/serious.*critical|critical.*serious/);
+        return;
+      }
 
       if (screen.status === 'blocked') {
         // Chỉ báo lý do một lần (project customer-web); project còn lại không lặp lại cùng dòng
