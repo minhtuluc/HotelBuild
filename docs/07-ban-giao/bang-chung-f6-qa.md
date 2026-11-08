@@ -1,6 +1,6 @@
 # HB-194 — bằng chứng QA F6 (CHAN/OVER) trên API thật
 
-**Kết luận: CHƯA ĐẠT M7.** Lượt chạy trên commit `2955d70a19c4357f34056d5c05642e7012892259` (nhánh `ticket/HB-194-qa-f6-chay-that`, base `main` `059cdd8`): nghiệp vụ lõi CHAN/OVER chạy đúng trên API + worker thật (chữ ký, phát lại, OTA vào thẳng `CONFIRMED`, quota, đóng/mở bán, DEGRADED, ca quá tải gộp/leo thang/không tự đóng, thang 1→2→4, nâng hạng giữ giá, walk-out có duyệt, mã lỗi ghép phòng), nhưng có **4 lỗi P1 chặn dùng thật** (SCR-43 không tải được trên API thật; walk-out từ giao diện không thực thi được; ghép phòng trừ doanh thu; nâng hạng không báo khách) và các lệch P2 ở §4. Android/Maestro/WebKit BLOCKED theo khả năng của host.
+**Kết luận: CHƯA ĐẠT M7.** Lượt chạy trên nhánh `ticket/HB-194-qa-f6-chay-that` (base `main` `059cdd8`): CHAN và web ở commit `2955d70a19c4357f34056d5c05642e7012892259`, OVER chạy lại ở `587299c` (chỉ sửa cách đo TC-OVER-14 theo định nghĩa doanh thu của test khoá HB-124). Nghiệp vụ lõi CHAN/OVER chạy đúng trên API + worker thật (chữ ký, phát lại, OTA vào thẳng `CONFIRMED`, quota, đóng/mở bán, DEGRADED, ca quá tải gộp/leo thang/không tự đóng, thang 1→2→4, nâng hạng giữ giá, walk-out có duyệt, ghép phòng giữ doanh thu), nhưng có **3 lỗi P1 chặn dùng thật** — SCR-43 không tải được trên API thật (sửa ở #269), walk-out từ giao diện không thực thi được (sửa ở #270), nâng hạng không báo khách — và các lệch P2 ở §4. Android/Maestro/WebKit BLOCKED theo khả năng của host.
 
 Căn cứ: [HB-194](../08-thi-cong/tickets/HB-194-qa-f6.md), [kế hoạch kiểm thử](../05-ke-hoach/ke-hoach-kiem-thu.md) TC-CHAN-01…11, TC-OVER-01…18, [BR](../02-nghiep-vu/quy-tac-nghiep-vu.md) CHAN/OVER.
 
@@ -22,7 +22,7 @@ source lead-env.sh            # DATABASE_MIGRATION_URL, DATABASE_URL
 pnpm db:dev-roles
 export REDIS_URL=redis://127.0.0.1:6379/10
 node tests/e2e/f6-qa/qa-f6-chan.mjs   # 08/11 22:07:04Z → 22:10:43Z (09/11 05:07–05:10 VN), exit 1
-node tests/e2e/f6-qa/qa-f6-over.mjs   # 22:10:43Z → 22:16:20Z (05:10–05:16 VN), exit 1
+node tests/e2e/f6-qa/qa-f6-over.mjs   # 587299c: 22:34:07Z → 22:39:08Z (05:34–05:39 VN), exit 1
 node tests/e2e/f6-qa/qa-f6-web.mjs    # 22:16:20Z → 22:17:02Z (05:16–05:17 VN), exit 1
 ```
 
@@ -31,7 +31,7 @@ Kết quả máy đọc được ghi ở `tests/e2e/f6-qa/results/{chan,over,web
 | Script | PASS | FAIL | BLOCKED | NOT_RUN | FINDING |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | `qa-f6-chan.mjs` | 19 | 1 | 1 | 1 | 4 |
-| `qa-f6-over.mjs` | 15 | 5 | 4 | 1 | 7 |
+| `qa-f6-over.mjs` | 16 | 4 | 4 | 1 | 7 |
 | `qa-f6-web.mjs` | 21 | 1 | 1 | 0 | 1 |
 
 ## 2. CHAN — TC-CHAN-01…11
@@ -69,7 +69,7 @@ Bổ sung AC3 (một phần): ma trận quyền 10 tổ hợp trên tuyến F6 k
 | 11 consent hai bên | **BLOCKED** | Theo ticket: chưa sửa DDL |
 | 12 phòng thông nhau | **BLOCKED** | F6-D01 chờ chốt mô hình |
 | 13 mã lỗi ghép | **PASS** | DOR, khách FEMALE/MALE tạo tại quầy: thiếu 1 consent ⇒ `E_OVER_NO_CONSENT`; đủ consent chưa duyệt ⇒ `E_OVER_MERGE_GENDER`; MANAGER duyệt (PIN) ⇒ `ACTIVE`; UNSPECIFIED + FEMALE đủ consent ⇒ `E_OVER_MERGE_GENDER` |
-| 14 doanh thu giữ nguyên | **FAIL** | Hai booking 313.000/313.000 ⇒ sau ghép `total_amount` 250.000/250.000 (paid vẫn 313.000, `balance_due` 0, không hồ sơ hoàn); `discountAmount` 125.200 — QA-F6-13 |
+| 14 doanh thu giữ nguyên | **PASS** · FINDING | Doanh thu = tổng gộp `price_snapshots` ORIGINAL (định nghĩa của test khoá HB-124): 313.000/313.000 giữ nguyên; `discountPct` 20, `discountAmount` 125.200 ghi ở merge. Nghĩa vụ phải thu `total_amount` giảm 313.000 → 250.000 mỗi bên (floor 1.000) trong khi `paid_amount` vẫn 313.000, `balance_due` 0, không hồ sơ hoàn — QA-F6-13 |
 | 15 Android ≤ 30 giây | **BLOCKED** | Không thiết bị/emulator/Maestro (TD-78) |
 | 16 thiếu 2: nâng hạng + walk-out | **PASS** | Hai khách rank 1, 2 của máy chủ: 1 nâng hạng + 1 walk-out ⇒ ca `RESOLVED` 01/12, trước hạn 17/12 |
 | 17 qua ngày vẫn ESCALATED | **PASS** | Đẩy đồng hồ 04/12 10:00, chờ > 1 nhịp quét: vẫn `ESCALATED`, `detected_at`/`escalated_at` giữ nguyên, `resolved_at` null |
@@ -79,10 +79,10 @@ Bổ sung AC3 (một phần): ma trận quyền 10 tổ hợp trên tuyến F6 k
 
 | ID | Mức | Nội dung | Xử lý |
 | --- | --- | --- | --- |
-| QA-F6-07 | P1 | `GET /overbooking-cases` `meta.scan` = `{status, lastSuccessAt, dataAsOf}` (khoá HB-126) ≠ hợp đồng `{scanStatus, lastSuccessfulScanAt, …}`; thiếu `escalatedAt`/`version`. BFF decode hỏng ⇒ **SCR-43 nhận 502 trên Chromium** (`qa-f6-web`) | HB-220 |
-| QA-F6-08 | P1 | Chi tiết ca thiếu `history`; ứng viên khác `relocationCandidateSchema` (`keepScore` số, thiếu rank/tên che/kỳ ở/tiền) | HB-220 |
-| QA-F6-06 | P1 | Walk-out: hợp đồng + SCR-44 gửi `walkOut: {…}` lồng, server chỉ đọc trường phẳng (test khoá HB-124) ⇒ chứng từ bị bỏ, execute luôn 409 | ticket sửa backend |
-| QA-F6-13 | P1 (tiền) | Ghép `MERGE_SHARE` trừ chiết khấu vào `bookings.total_amount` (−126.000) trái BR-OVER-15; lệch `discountAmount` 125.200; khách thành trả thừa | ticket sửa backend |
+| QA-F6-07 | P1 | `GET /overbooking-cases` `meta.scan` = `{status, lastSuccessAt, dataAsOf}` (khoá HB-126) ≠ hợp đồng `{scanStatus, lastSuccessfulScanAt, …}`; thiếu `escalatedAt`/`version`. BFF decode hỏng ⇒ **SCR-43 nhận 502 trên Chromium** (`qa-f6-web`) | HB-220 (#269): chạy lại `qa-f6-web` trên nhánh đó ⇒ SCR-40…47 7/7 PASS |
+| QA-F6-08 | P1 | Chi tiết ca thiếu `history`; ứng viên khác `relocationCandidateSchema` (`keepScore` số, thiếu rank/tên che/kỳ ở/tiền) | HB-220 (#269) |
+| QA-F6-06 | P1 | Walk-out: hợp đồng + SCR-44 gửi `walkOut: {…}` lồng, server chỉ đọc trường phẳng (test khoá HB-124) ⇒ chứng từ bị bỏ, execute luôn 409 | HB-222 (#270) |
+| QA-F6-13 | P2 (tiền) | Sau ghép `MERGE_SHARE` nghĩa vụ phải thu giảm nhưng khách đã trả đủ giá cũ: trả thừa 63.000/booking không có hồ sơ hoàn/đối soát (`balance_due` 0); mức giảm thực 126.000 lệch `discountAmount` 125.200 do làm tròn floor 1.000. Doanh thu snapshot đúng BR-OVER-15 | cần chốt đường hoàn chiết khấu (OTA_COLLECT vs thu trực tiếp) |
 | QA-F6-10 | P1 | BR-OVER-10: RoomMove không sinh thông báo khách (chỉ outbox `InventoryChanged`) | ticket sửa backend |
 | QA-F6-12 | P2 | `allotmentPct` của mapping không ảnh hưởng tồn công bố (engine + ảnh worker cứng 80%) | ticket sửa backend |
 | QA-F6-05 | P2 | `room_moves` không lưu `overbookingCaseId`/`consent` (nhận rồi trả `null`) | cần DDL, ghi nợ |
