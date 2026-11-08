@@ -19091,41 +19091,34 @@
                         "scan": {
                           "type": "object",
                           "properties": {
-                            "scanStatus": {
+                            "status": {
                               "type": "string",
                               "enum": [
-                                "OK",
+                                "NEVER",
+                                "RUNNING",
                                 "FAILED",
-                                "UNKNOWN"
+                                "SUCCEEDED"
                               ]
                             },
-                            "lastSuccessfulScanAt": {
+                            "lastSuccessAt": {
                               "type": [
                                 "string",
                                 "null"
                               ],
                               "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
                             },
-                            "nextScanAt": {
+                            "dataAsOf": {
                               "type": [
                                 "string",
                                 "null"
                               ],
                               "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
-                            },
-                            "scannedThrough": {
-                              "type": [
-                                "string",
-                                "null"
-                              ],
-                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
                             }
                           },
                           "required": [
-                            "scanStatus",
-                            "lastSuccessfulScanAt",
-                            "nextScanAt",
-                            "scannedThrough"
+                            "status",
+                            "lastSuccessAt",
+                            "dataAsOf"
                           ]
                         }
                       },
@@ -19423,45 +19416,38 @@
                             "minimum": 0
                           },
                           "keepScore": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "keepScoreBreakdown": {
                             "type": "object",
                             "properties": {
-                              "total": {
+                              "loyalty": {
                                 "type": "integer",
-                                "minimum": 0,
-                                "maximum": 173
-                              },
-                              "loyaltyTier": {
-                                "type": "integer",
-                                "minimum": 0,
-                                "maximum": 100
+                                "minimum": 0
                               },
                               "payment": {
                                 "type": "integer",
-                                "minimum": 0,
-                                "maximum": 20
+                                "minimum": 0
                               },
                               "nights": {
                                 "type": "integer",
-                                "minimum": 0,
-                                "maximum": 28
+                                "minimum": 0
                               },
-                              "returningGuest": {
+                              "repeat": {
                                 "type": "integer",
-                                "minimum": 0,
-                                "maximum": 15
+                                "minimum": 0
                               },
                               "arrived": {
                                 "type": "integer",
-                                "minimum": 0,
-                                "maximum": 10
+                                "minimum": 0
                               }
                             },
                             "required": [
-                              "total",
-                              "loyaltyTier",
+                              "loyalty",
                               "payment",
                               "nights",
-                              "returningGuest",
+                              "repeat",
                               "arrived"
                             ]
                           },
@@ -19503,6 +19489,7 @@
                           "adults",
                           "children",
                           "keepScore",
+                          "keepScoreBreakdown",
                           "priorityGroup",
                           "createdAt",
                           "paidAmount",
@@ -24391,41 +24378,34 @@
                         "scan": {
                           "type": "object",
                           "properties": {
-                            "scanStatus": {
+                            "status": {
                               "type": "string",
                               "enum": [
-                                "OK",
+                                "NEVER",
+                                "RUNNING",
                                 "FAILED",
-                                "UNKNOWN"
+                                "SUCCEEDED"
                               ]
                             },
-                            "lastSuccessfulScanAt": {
+                            "lastSuccessAt": {
                               "type": [
                                 "string",
                                 "null"
                               ],
                               "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
                             },
-                            "nextScanAt": {
+                            "dataAsOf": {
                               "type": [
                                 "string",
                                 "null"
                               ],
                               "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
-                            },
-                            "scannedThrough": {
-                              "type": [
-                                "string",
-                                "null"
-                              ],
-                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
                             }
                           },
                           "required": [
-                            "scanStatus",
-                            "lastSuccessfulScanAt",
-                            "nextScanAt",
-                            "scannedThrough"
+                            "status",
+                            "lastSuccessAt",
+                            "dataAsOf"
                           ]
                         }
                       },

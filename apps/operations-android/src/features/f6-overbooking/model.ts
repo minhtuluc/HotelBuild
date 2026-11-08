@@ -92,10 +92,8 @@ export function rowOfAlert(item: OverbookingAlert): AlertRow {
 }
 
 /** "Không có ca" chỉ đáng tin khi lượt quét gần nhất thành công và có mốc (AC1). */
-export const emptyConfirmed = (scan: {
-  scanStatus: string;
-  lastSuccessfulScanAt: string | null;
-}): boolean => scan.scanStatus === 'OK' && scan.lastSuccessfulScanAt !== null;
+export const emptyConfirmed = (scan: { status: string; lastSuccessAt: string | null }): boolean =>
+  scan.status === 'SUCCEEDED' && scan.lastSuccessAt !== null;
 
 type Option = BookingRelocationOptions['options'][number];
 

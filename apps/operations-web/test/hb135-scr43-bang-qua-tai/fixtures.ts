@@ -78,10 +78,9 @@ export const caseRow = (
 });
 
 export const okScan: OverbookingScanMetadata = {
-  scanStatus: 'OK',
-  lastSuccessfulScanAt: '2026-11-10T01:00:00.000Z',
-  nextScanAt: '2026-11-10T01:05:00.000Z',
-  scannedThrough: '2026-12-10',
+  status: 'SUCCEEDED',
+  lastSuccessAt: '2026-11-10T01:00:00.000Z',
+  dataAsOf: '2026-11-10T01:00:00.000Z',
 };
 
 export const page = (

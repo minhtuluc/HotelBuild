@@ -121,10 +121,32 @@ export const CANDIDATE = {
 };
 
 export const SCAN = {
-  scanStatus: 'OK',
-  lastSuccessfulScanAt: '2026-12-01T01:00:00Z',
-  nextScanAt: '2026-12-01T02:00:00Z',
-  scannedThrough: '2026-12-31',
+  status: 'SUCCEEDED',
+  lastSuccessAt: '2026-12-01T01:00:00Z',
+  dataAsOf: '2026-12-01T01:00:00Z',
+};
+
+/** Ứng viên của chi tiết ca (HB-126/HB-220): `keepScore` số + `keepScoreBreakdown`. */
+export const CASE_CANDIDATE = {
+  rank: 1,
+  bookingId: 'b1',
+  bookingRoomId: 'br1',
+  bookingSeq: '1042',
+  guestNameMasked: 'N***',
+  channelCode: 'WEB',
+  status: 'CONFIRMED',
+  checkIn: '2026-12-24',
+  checkOut: '2026-12-26',
+  nights: 2,
+  adults: 2,
+  children: 0,
+  keepScore: 24,
+  keepScoreBreakdown: { loyalty: 0, payment: 20, nights: 4, repeat: 0, arrived: 0 },
+  priorityGroup: 'STRONG',
+  createdAt: '2026-11-20T03:00:00Z',
+  paidAmount: 600_000,
+  depositAmount: 600_000,
+  totalAmount: 2_000_000,
 };
 
 export const CASE_SUMMARY = {

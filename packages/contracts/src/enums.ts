@@ -146,7 +146,7 @@ export const relocationPriorityGroupSchema = z.enum(['WEAK', 'STRONG']);
 export const overbookingResolutionSourceSchema = z.enum(['USER', 'SYSTEM']);
 
 /** Trạng thái lần quét quá tải gần nhất để UI phân biệt rỗng với chưa biết (HB-120 AC14). */
-export const overbookingScanStatusSchema = z.enum(['OK', 'FAILED', 'UNKNOWN']);
+export const overbookingScanStatusSchema = z.enum(['NEVER', 'RUNNING', 'FAILED', 'SUCCEEDED']);
 
 /** Nguồn đóng bán: thủ công hay tự động theo BR-CHAN-05 (HB-120 AC14). */
 export const salesClosureSourceSchema = z.enum(['MANUAL', 'AUTOMATIC']);

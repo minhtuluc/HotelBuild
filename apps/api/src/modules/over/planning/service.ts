@@ -27,6 +27,7 @@ import {
   businessDate,
   businessConflict,
   invalid,
+  maskedName,
   money,
   nightsBetween,
   notFound,
@@ -93,12 +94,6 @@ const LOYALTY_TIERS: Readonly<Record<string, LoyaltyTier>> = {
   MEMBER: 'MEMBER',
   GUEST: 'GUEST',
 };
-
-function maskedName(fullName: string): string {
-  const trimmed = fullName.trim();
-  if (trimmed.length <= 1) return '***';
-  return `${trimmed.slice(0, 1)}***`;
-}
 
 @Injectable()
 export class OverbookingPlanningService {

@@ -249,10 +249,9 @@ export const COMPENSATION = {
 };
 
 export const SCAN = {
-  scanStatus: 'OK',
-  lastSuccessfulScanAt: TS,
-  nextScanAt: TS,
-  scannedThrough: '2026-12-31',
+  status: 'SUCCEEDED',
+  lastSuccessAt: TS,
+  dataAsOf: TS,
 };
 
 export const ALERTS = {

@@ -18,7 +18,6 @@ export const text = makeTranslate({
   scanFailed:
     'Lượt quét gần nhất lỗi; dữ liệu có thể chưa đầy đủ. Lần thành công gần nhất: {time}.',
   scanUnknown: 'Chưa có lượt quét thành công; chưa thể kết luận có hay không có ca.',
-  scanThrough: 'Quét tới ngày {date}.',
   never: 'chưa có',
   overdueCount: 'Số ca quá hạn (máy chủ đếm): {count}',
   notConfirmedEmpty:

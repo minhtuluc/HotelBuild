@@ -19,10 +19,9 @@ export type Role = UserMe['role'];
 export const CTX: MoveContext = { caseId: 'k1', bookingId: 'bk-1', bookingRoomId: 'br-1' };
 
 export const okScan: OverbookingScanMetadata = {
-  scanStatus: 'OK',
-  lastSuccessfulScanAt: '2026-11-10T01:00:00.000Z',
-  nextScanAt: '2026-11-10T01:05:00.000Z',
-  scannedThrough: '2026-12-10',
+  status: 'SUCCEEDED',
+  lastSuccessAt: '2026-11-10T01:00:00.000Z',
+  dataAsOf: '2026-11-10T01:00:00.000Z',
 };
 
 const ladder: OverbookingCaseDetail['ladderPreview'] = [
@@ -116,14 +115,8 @@ export const candidate = (
   nights: 2,
   adults: 2,
   children: 0,
-  keepScore: {
-    total,
-    loyaltyTier: total - 14,
-    payment: 10,
-    nights: 4,
-    returningGuest: 0,
-    arrived: 0,
-  },
+  keepScore: total,
+  keepScoreBreakdown: { loyalty: total - 14, payment: 10, nights: 4, repeat: 0, arrived: 0 },
   priorityGroup: rank === 1 ? 'WEAK' : 'STRONG',
   createdAt: '2026-11-01T00:00:00.000Z',
   paidAmount: 100000,

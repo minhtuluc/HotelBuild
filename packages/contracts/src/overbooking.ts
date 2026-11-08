@@ -112,6 +112,39 @@ export const relocationCandidateSchema = z.object({
   totalAmount: z.number().int().safe().min(0),
 });
 
+/**
+ * Ứng viên trong **chi tiết ca** (`GET /overbooking-cases/{id}?includeCandidates=true`, HB-126): điểm là
+ * số `keepScore` kèm `keepScoreBreakdown` của bộ chọn ca (khác `relocationCandidateSchema` của
+ * `relocation-plan`, nơi `keepScore` là bảng phân rã của planner HB-122). Thứ tự và `rank` do server đặt.
+ */
+export const overbookingCaseCandidateSchema = z.object({
+  rank: z.number().int().min(1),
+  bookingId: z.string().min(1),
+  bookingRoomId: z.string().min(1),
+  bookingSeq: bookingSeqSchema,
+  guestNameMasked: z.string().min(1),
+  channelCode: channelCodeSchema,
+  status: bookingStatusSchema,
+  checkIn: businessDateSchema,
+  checkOut: businessDateSchema,
+  nights: z.number().int().min(1),
+  adults: z.number().int().min(1),
+  children: z.number().int().min(0),
+  keepScore: z.number().int().min(0),
+  keepScoreBreakdown: z.object({
+    loyalty: z.number().int().min(0),
+    payment: z.number().int().min(0),
+    nights: z.number().int().min(0),
+    repeat: z.number().int().min(0),
+    arrived: z.number().int().min(0),
+  }),
+  priorityGroup: relocationPriorityGroupSchema,
+  createdAt: isoUtcTimestampSchema,
+  paidAmount: z.number().int().safe().min(0),
+  depositAmount: z.number().int().safe().min(0),
+  totalAmount: z.number().int().safe().min(0),
+});
+
 /** Một dòng lịch sử xử lý ca quá tải (AC5). */
 export const overbookingCaseEventSchema = z.object({
   at: isoUtcTimestampSchema,
@@ -144,14 +177,14 @@ export const overbookingCaseSummarySchema = z.object({
 });
 
 /**
- * Metadata độ tươi của lần quét để UI phân biệt "rỗng thật" với "chưa quét/scan lỗi" (AC14).
- * `lastSuccessfulScanAt = null` + `scanStatus = UNKNOWN` nghĩa là chưa từng quét thành công.
+ * Metadata độ tươi của lần quét để UI phân biệt "rỗng thật" với "chưa quét/scan lỗi" (AC14), đúng
+ * hình dạng server trả từ `overbooking_scan_runs` (HB-126, HB-220): `NEVER` = chưa từng quét;
+ * `lastSuccessAt`/`dataAsOf` chỉ đổi sau lượt thành công và **giữ** mốc cũ khi lượt sau lỗi.
  */
 export const overbookingScanMetadataSchema = z.object({
-  scanStatus: overbookingScanStatusSchema,
-  lastSuccessfulScanAt: isoUtcTimestampSchema.nullable(),
-  nextScanAt: isoUtcTimestampSchema.nullable(),
-  scannedThrough: businessDateSchema.nullable(),
+  status: overbookingScanStatusSchema,
+  lastSuccessAt: isoUtcTimestampSchema.nullable(),
+  dataAsOf: isoUtcTimestampSchema.nullable(),
 });
 
 export const overbookingCaseListSchema = z.object({
@@ -168,7 +201,7 @@ export const overbookingCaseListSchema = z.object({
 
 /** Chi tiết ca + ứng viên đã xếp hạng + lịch sử xử lý (api.md §3.9, AC5). */
 export const overbookingCaseDetailSchema = overbookingCaseSummarySchema.extend({
-  candidates: z.array(relocationCandidateSchema),
+  candidates: z.array(overbookingCaseCandidateSchema),
   history: z.array(overbookingCaseEventSchema),
 });
 
