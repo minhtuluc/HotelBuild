@@ -64,7 +64,7 @@ Bổ sung AC3 (một phần): ma trận quyền 10 tổ hợp trên tuyến F6 k
 | 06 khác cơ sở | **PASS** | Dữ liệu thật: mọi bậc `*_CROSS_PROPERTY` `feasible = false` kèm lý do |
 | 07 walk-out | **PASS** nghiệp vụ · **FAIL** hợp đồng · BLOCKED phụ | Bồi thường máy chủ đề xuất = giá đêm đầu 975.000; lễ tân execute trước duyệt ⇒ 409 `E_OVER_APPROVAL_REQUIRED`; MANAGER duyệt (PIN) ⇒ lễ tân execute (PIN) ⇒ `EXECUTED`, có biên bản/chữ ký, `approved_by`; kế toán chi 201, payment `COMPENSATION` CASH 975.000. **FAIL**: body đúng hợp đồng (`walkOut` lồng) bị bỏ chứng từ — QA-F6-06 (luồng trên phải dùng trường phẳng). BLOCKED: hoàn 100% số đã trả (TD-77) |
 | 08 nâng hạng giữ giá | **FAIL** | `EXECUTED`, `priceLocked`, tổng 975.000 không đổi, phòng đích đúng, audit PROPOSED/EXECUTED; **không có thông báo khách sau 120 giây** — QA-F6-10. Đi thẳng PROPOSED → EXECUTED — QA-F6-04 |
-| 09 khách đang ở | **NOT_RUN** | Chưa dựng booking CHECKED_IN qua check-in thật trong lượt này |
+| 09 khách đang ở | **NOT_RUN** (lượt QA) · PASS ở test khoá | Lượt QA chưa dựng booking CHECKED_IN qua check-in thật. Ca này đã có test tích hợp khoá chạy trên app + CSDL thật: `apps/api/test/over/relocation.locked.spec.ts::TC_OVER_09_force_majeure_approval_and_free_move`. Chạy lại 09/11/2026 trên 9d677bc: PASS. Nội dung: lý do thường ⇒ 409 `E_OVER_MOVE_NOT_ALLOWED`; bất khả kháng thiếu MANAGER duyệt ⇒ `E_OVER_APPROVAL_REQUIRED`; có duyệt ⇒ 201 |
 | 10 bảng điểm | **PASS** | `relocation-plan` trả 10 ứng viên đủ rank/điểm/nhóm/createdAt/seq theo thứ tự; domain `TC_OVER_10_deterministic_10000` và cả thư mục `test/overbooking` 57/57 xanh |
 | 11 consent hai bên | **BLOCKED** | Theo ticket: chưa sửa DDL |
 | 12 phòng thông nhau | **BLOCKED** | F6-D01 chờ chốt mô hình |
@@ -83,12 +83,12 @@ Bổ sung AC3 (một phần): ma trận quyền 10 tổ hợp trên tuyến F6 k
 | QA-F6-08 | P1 | Chi tiết ca thiếu `history`; ứng viên khác `relocationCandidateSchema` (`keepScore` số, thiếu rank/tên che/kỳ ở/tiền) | HB-220 (#269) |
 | QA-F6-06 | P1 | Walk-out: hợp đồng + SCR-44 gửi `walkOut: {…}` lồng, server chỉ đọc trường phẳng (test khoá HB-124) ⇒ chứng từ bị bỏ, execute luôn 409 | HB-222 (#270) |
 | QA-F6-13 | P2 (tiền) | Sau ghép `MERGE_SHARE` nghĩa vụ phải thu giảm nhưng khách đã trả đủ giá cũ: trả thừa 63.000/booking không có hồ sơ hoàn/đối soát (`balance_due` 0); mức giảm thực 126.000 lệch `discountAmount` 125.200 do làm tròn floor 1.000. Doanh thu snapshot đúng BR-OVER-15 | cần chốt đường hoàn chiết khấu (OTA_COLLECT vs thu trực tiếp) |
-| QA-F6-10 | P1 | BR-OVER-10: RoomMove không sinh thông báo khách (chỉ outbox `InventoryChanged`) | ticket sửa backend |
-| QA-F6-12 | P2 | `allotmentPct` của mapping không ảnh hưởng tồn công bố (engine + ảnh worker cứng 80%) | ticket sửa backend |
-| QA-F6-05 | P2 | `room_moves` không lưu `overbookingCaseId`/`consent` (nhận rồi trả `null`) | cần DDL, ghi nợ |
-| QA-F6-03 | P2 | HB-131 AC4 hứa test thuộc tính 10.000, test khoá không có | ticket test |
-| QA-F6-01 | P3 | Simulator HB-128 cứng cơ sở `H029-A`/ngày/số tiền ngẫu nhiên ⇒ không tạo booking trên dữ liệu thật | công cụ test |
-| QA-F6-02 | P3 | `sales-closure` nhận `from = to` (khoảng rỗng) và trả 200 không làm gì | sửa nhỏ |
+| QA-F6-10 | P1 | BR-OVER-10: RoomMove không sinh thông báo khách (chỉ outbox `InventoryChanged`) | HB-223 (#271) |
+| QA-F6-12 | P2 | `allotmentPct` của mapping không ảnh hưởng tồn công bố (engine + ảnh worker cứng 80%) | HB-224 (#273) |
+| QA-F6-05 | P2 | `room_moves` không lưu `overbookingCaseId`/`consent` (nhận rồi trả `null`) | TD-80 (#274), cần DDL, làm sau #270 |
+| QA-F6-03 | P2 | HB-131 AC4 hứa test thuộc tính 10.000, test khoá không có | HB-226 (#274): thuộc tính 10.000 cấu hình, seed cố định, trên engine tồn |
+| QA-F6-01 | P3 | Simulator HB-128 cứng cơ sở `H029-A`/ngày/số tiền ngẫu nhiên ⇒ không tạo booking trên dữ liệu thật | HB-227 (#275) |
+| QA-F6-02 | P3 | `sales-closure` nhận `from = to` (khoảng rỗng) và trả 200 không làm gì | **Không sửa, đúng hợp đồng**: `salesClosureRequestSchema` chốt "`to` không trước `from`", nên khoảng rỗng là lệnh no-op idempotent |
 | QA-F6-04 | ghi chú | Nâng hạng không chi phí không qua APPROVED; khớp F6-D04, kế hoạch kiểm thử TC-OVER-08 chưa cập nhật | tài liệu |
 | QA-F6-11 | — | Tổng hợp: 1/7 màn F6 lỗi trên API thật (SCR-43) | theo QA-F6-07 |
 
