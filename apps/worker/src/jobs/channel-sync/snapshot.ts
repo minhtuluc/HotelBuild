@@ -28,9 +28,13 @@ export interface ChannelIdentity {
   readonly version: bigint;
 }
 
-/** BR-CHAN-01: mặc định từng OTA = `floor(80% đơn vị ACTIVE)`, tối thiểu 1 khi còn bán được. */
-function defaultOtaQuota(units: number): number {
-  return units > 0 ? Math.max(1, Math.floor((units * 80) / 100)) : 0;
+/**
+ * BR-CHAN-01: mặc định từng OTA = `floor(allotment_pct% × đơn vị ACTIVE)` (ánh xạ kênh, HB-224; 80 khi
+ * thiếu), tối thiểu 1 khi còn bán được; `0%` ⇒ không bán. Gương của `otaQuota` trong `@pinehill/domain`.
+ */
+function defaultOtaQuota(units: number, pct: number): number {
+  if (units <= 0 || pct <= 0) return 0;
+  return Math.max(1, Math.floor((units * pct) / 100));
 }
 
 interface InventoryRow {
@@ -41,6 +45,7 @@ interface InventoryRow {
   readonly used: number;
   readonly allotment: number | null;
   readonly is_closed: boolean | null;
+  readonly allotment_pct: number;
 }
 
 /**
@@ -65,7 +70,7 @@ export async function buildSnapshot(
       SELECT generate_series(${today}::date, ${to}::date - 1, interval '1 day')::date AS day
     ),
     mapped AS (
-      SELECT m.room_type_id FROM channel_mappings m
+      SELECT m.room_type_id, m.allotment_pct FROM channel_mappings m
        WHERE m.channel_id = ${channel.id}::uuid AND m.status = 'ACTIVE'
     ),
     sellable AS (
@@ -99,7 +104,7 @@ export async function buildSnapshot(
            COALESCE((SELECT dm.rooms FROM demand dm
                       WHERE dm.room_type_id = m.room_type_id AND dm.day = d.day
                         AND dm.channel_id = ${channel.id}::uuid), 0)::int AS used,
-           a.allotment, a.is_closed
+           a.allotment, a.is_closed, m.allotment_pct
       FROM mapped m
       CROSS JOIN dates d
       LEFT JOIN sellable s ON s.room_type_id = m.room_type_id
@@ -112,7 +117,8 @@ export async function buildSnapshot(
     const quota =
       row.is_closed === true
         ? 0
-        : (row.allotment ?? (channel.code === 'AGENCY' ? 0 : defaultOtaQuota(units)));
+        : (row.allotment ??
+          (channel.code === 'AGENCY' ? 0 : defaultOtaQuota(units, Number(row.allotment_pct))));
     return {
       roomTypeId: row.room_type_id,
       date: row.day,

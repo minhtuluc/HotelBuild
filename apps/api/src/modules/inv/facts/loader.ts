@@ -122,6 +122,15 @@ export async function loadInventoryFacts(
     where: { room_type_id: query.roomTypeId, date: { gte: start, lt: end } },
     include: { channels: true },
   });
+  // BR-CHAN-01 (HB-224): hạn mức mặc định của kênh = `allotment_pct` của ánh xạ ACTIVE; vắng ⇒ 80% ở engine.
+  const mapping = await tx.channel_mappings.findFirst({
+    where: {
+      room_type_id: query.roomTypeId,
+      status: 'ACTIVE',
+      channels: { code: query.channelCode },
+    },
+    select: { allotment_pct: true },
+  });
   return {
     ...query,
     now,
@@ -162,5 +171,6 @@ export async function loadInventoryFacts(
       date: dateOnly(a.date),
       allotment: a.is_closed ? 0 : a.allotment,
     })),
+    ...(mapping === null ? {} : { allotmentPct: mapping.allotment_pct }),
   };
 }
