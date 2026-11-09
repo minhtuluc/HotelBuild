@@ -10,6 +10,7 @@ allow:
   - docs/07-ban-giao/van-hanh/**
   - docs/08-thi-cong/tickets/HB-184-tai-k6.md
   - tests/e2e/f5/qa-f5-lib.mjs
+  - docs/07-ban-giao/no-ky-thuat.md
 unlock:
   - .github/workflows/**
 ---
