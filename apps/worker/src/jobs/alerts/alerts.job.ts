@@ -10,7 +10,7 @@
  * khi commit. Cảnh báo gửi hỏng vẫn để lại vết kiểm toán và hàng `PENDING` cho nhân viên thấy.
  */
 import { Queue } from 'bullmq';
-import { redisOptions } from '../../bullmq.factory.js';
+import { closeQueueSafely, redisOptions } from '../../bullmq.factory.js';
 import { safeErrorCode } from '../hold-expiry/expire.js';
 import type { QueueName } from '../../queues.js';
 import type { AlertSettings, AlertTarget } from './catalog.js';
@@ -52,7 +52,7 @@ function bullmqQueue(redisUrl: string): AlertQueuePort {
       );
     },
     async close() {
-      await queue.close();
+      await closeQueueSafely(queue);
     },
   };
 }
