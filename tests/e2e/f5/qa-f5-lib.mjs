@@ -5,7 +5,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { createServer } from 'node:net';
-import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { appendFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
@@ -269,6 +269,9 @@ export async function bootstrap() {
     detached: true,
   });
   workerChild.stderr.on('data', (data) => process.env.QA_DEBUG && process.stderr.write(`[worker] ${data}`));
+  // Lượt dài (k6 HB-184): giữ stderr của worker để chẩn đoán khi worker thoát giữa lượt.
+  if (process.env.QA_WORKER_LOG) workerChild.stderr.on('data', (data) => appendFileSync(process.env.QA_WORKER_LOG, data));
+  workerChild.stdout.resume();
   workerChild.on('exit', (code, sig) => console.log('[worker] exit', code, sig));
   children.push(workerChild);
 

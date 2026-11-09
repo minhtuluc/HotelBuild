@@ -14,14 +14,16 @@
  * Biến môi trường: `QA_DATABASE_PARAMS` (mặc định pool 50), `DATABASE_MIGRATION_URL`, `REDIS_URL` (DB riêng, ví dụ `/10`); `LOAD_ONLY=kb-a,kb-b`;
  * `DURATION` (mặc định 10m; đột biến 5m); `VUS`; `LOAD_GUESTS` (200); `K6_IMAGE`.
  */
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { createHash, randomBytes } from 'node:crypto';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 // Pool Prisma của API lượt tải: mặc định 50 như khuyến nghị production (xem tai-k6.md); pool mặc định
 // của Prisma (2 × nhân vật lý + 1 = 17 trên máy dev) bão hoà ở 600 VU. Đặt `QA_DATABASE_PARAMS=` để đo pool mặc định.
 process.env.QA_DATABASE_PARAMS ??= 'connection_limit=50&pool_timeout=20';
+process.env.QA_WORKER_LOG ??= join(fileURLToPath(new URL('.', import.meta.url)), 'results', 'worker-stderr.log');
 const { API_BASE, PASSWORD, api, bootstrap, login, repoRoot, sql, teardown, wait } = await import('../e2e/f5/qa-f5-lib.mjs');
 
 const loadDir = join(repoRoot, 'tests/load');
@@ -156,17 +158,23 @@ async function writeFixture(base) {
   writeFileSync(join(resultsDir, 'fixture.json'), JSON.stringify(fixture));
 }
 
-function k6(script, name, env = {}) {
+async function k6(script, name, env = {}) {
   const args = ['run', '--rm', '--network', 'host', '-v', `${loadDir}:/load:Z`, '-e', `BASE_URL=${API_BASE}`];
   for (const [key, value] of Object.entries({ LOAD_FIXTURE: '/load/results/fixture.json', ...env }))
     args.push('-e', `${key}=${value}`);
   // Tóm tắt văn bản của k6 (stdout) được lưu nguyên vào `<lượt>-<kịch bản>.log`.
   args.push(K6_IMAGE, 'run', '--quiet', `/load/${script}`);
   console.log(`# k6 ${name}`);
-  const run = spawnSync(engine, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 << 20 });
-  writeFileSync(join(resultsDir, `${stamp}-${name}.log`), `${run.stdout}\n${run.stderr}`);
-  console.log(`  ${run.status === 0 ? 'ĐẠT ngưỡng' : `KHÔNG ĐẠT ngưỡng (k6 exit ${run.status})`}`);
-  return { name, exit: run.status };
+  // Bất đồng bộ: `spawnSync` chặn event loop của runner suốt kịch bản, nên pipe stdout/stderr của API và
+  // worker không được đọc và sự kiện thoát của chúng bị trễ tới hết kịch bản.
+  const child = spawn(engine, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  let output = '';
+  child.stdout.on('data', (d) => (output += d));
+  child.stderr.on('data', (d) => (output += d));
+  const status = await new Promise((resolve) => child.on('close', resolve));
+  writeFileSync(join(resultsDir, `${stamp}-${name}.log`), output);
+  console.log(`  ${status === 0 ? 'ĐẠT ngưỡng' : `KHÔNG ĐẠT ngưỡng (k6 exit ${status})`}`);
+  return { name, exit: status };
 }
 
 async function invariants(lastType) {
@@ -191,20 +199,20 @@ try {
   const vus = process.env.VUS ? { VUS: process.env.VUS } : {};
   if (only.has('kb-a')) {
     await writeFixture(base);
-    runs.push(k6('kb-a-tim-phong.js', 'kb-a', { ...dur, ...vus }));
+    runs.push(await k6('kb-a-tim-phong.js', 'kb-a', { ...dur, ...vus }));
   }
   if (only.has('kb-b'))
     for (let i = 0; i < 5; i += 1) {
       await writeFixture(base);
-      runs.push(k6('kb-b-phong-cuoi.js', `kb-b-${i + 1}`, { LAST_NIGHT: String(i), ...vus }));
+      runs.push(await k6('kb-b-phong-cuoi.js', `kb-b-${i + 1}`, { LAST_NIGHT: String(i), ...vus }));
     }
   if (only.has('kb-c')) {
     await writeFixture(base);
-    runs.push(k6('kb-c-bao-cao.js', 'kb-c', { ...dur, ...vus }));
+    runs.push(await k6('kb-c-bao-cao.js', 'kb-c', { ...dur, ...vus }));
   }
   if (only.has('spike')) {
     await writeFixture(base);
-    runs.push(k6('dot-bien-600.js', 'spike', process.env.DURATION ? { DURATION: process.env.DURATION } : {}));
+    runs.push(await k6('dot-bien-600.js', 'spike', process.env.DURATION ? { DURATION: process.env.DURATION } : {}));
   }
   await wait(65_000); // hold bỏ dở phải được worker giải phóng ≤ 60 giây (NFR-REL-02).
   const checks = await invariants(base.lastRoom.roomTypeId);
