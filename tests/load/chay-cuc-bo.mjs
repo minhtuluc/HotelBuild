@@ -12,7 +12,7 @@
  * staging giống production (HB-175), xem `docs/07-ban-giao/van-hanh/tai-k6.md`.
  *
  * Biến môi trường: `QA_DATABASE_PARAMS` (mặc định pool 50), `DATABASE_MIGRATION_URL`, `REDIS_URL` (DB riêng, ví dụ `/10`); `LOAD_ONLY=kb-a,kb-b`;
- * `DURATION` (mặc định 10m; đột biến 5m); `VUS`; `LOAD_GUESTS` (200); `K6_IMAGE`.
+ * `DURATION` (mặc định 10m; đột biến 5m); `VUS`; `LOAD_GUESTS` (200); `LOAD_HOLD_MINUTES` (rút hạn hold WEB để kiểm REL-02); `K6_IMAGE`.
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
@@ -90,6 +90,10 @@ async function prepare() {
     phones.push(phone);
   }
 
+  // Tuỳ chọn tăng tốc REL-02: rút hạn hold của kênh WEB để mọi hold bỏ dở của KB-A hết hạn **trong** lượt
+  // (mặc định 20 phút thì phần lớn hết hạn sau khi lượt đã xong, bất biến chỉ kiểm được vài hold).
+  if (process.env.LOAD_HOLD_MINUTES)
+    await sql("UPDATE channels SET hold_minutes = $1 WHERE code = 'WEB'", [Number(process.env.LOAD_HOLD_MINUTES)]);
   // KB-B: 5 đêm, mỗi đêm chỉ còn đúng một phòng STD bán được.
   const nights = [0, 1, 2, 3, 4].map((k) => ({ checkIn: day(120 + 2 * k), checkOut: day(121 + 2 * k) }));
   const rooms = await sql("SELECT id FROM rooms WHERE room_type_id = $1 AND status = 'ACTIVE' ORDER BY code", [std.id]);
