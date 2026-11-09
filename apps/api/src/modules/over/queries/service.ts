@@ -14,13 +14,14 @@ import type { Clock } from '@pinehill/domain';
 import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
 import { AppError } from '../../../common/app-error.js';
 import { requireProperty } from '../../../common/rbac/scope.js';
-import { candidatesForCase } from '../detection/candidates.js';
+import { SAME_TYPE_NOTE, UPGRADE_NOTE, candidatesForCase } from '../detection/candidates.js';
 import type { BalancedCandidate, LadderRung } from '../detection/candidates.js';
 import { deadlineOf } from '../detection/engine.js';
 import { loadPropertyFacts } from '../detection/facts.js';
 import type { PropertyFacts } from '../detection/facts.js';
 import type { CaseRow } from '../detection/support.js';
 import { caseStatus, resolutionSource } from '../detection/support.js';
+import { detailCandidates, historyOf, type CaseHistoryEvent } from './detail-view.js';
 import { scanMeta } from './scan-meta.js';
 import type { AlertQuery, CaseCursor, CaseQuery } from './validation.js';
 import { decodeCursor, encodeCursor } from './validation.js';
@@ -36,6 +37,7 @@ export interface CaseSummaryView {
   readonly status: CaseStatusView;
   readonly detectedAt: string;
   readonly resolveDeadline: string;
+  readonly escalatedAt: string | null;
   readonly overdue: boolean;
   readonly resolvedAt: string | null;
   readonly resolvedBy: string | null;
@@ -43,6 +45,7 @@ export interface CaseSummaryView {
   readonly delayReason: string | null;
   readonly affectedBookingIds: readonly string[];
   readonly ladderPreview: readonly LadderRung[];
+  readonly version: number;
 }
 
 export interface AlertItemView {
@@ -59,6 +62,7 @@ export interface AlertItemView {
 
 interface CaseDetail extends CaseSummaryView {
   readonly candidates: readonly BalancedCandidate[];
+  readonly history: readonly CaseHistoryEvent[];
 }
 
 const caseSelect = {
@@ -74,11 +78,15 @@ const caseSelect = {
   delay_reason: true,
   resolved_by: true,
   resolution_source: true,
+  version: true,
 } satisfies Prisma.overbooking_casesSelect;
 
 type SelectedCase = Prisma.overbooking_casesGetPayload<{ select: typeof caseSelect }>;
 
-function toCaseRow(row: SelectedCase): CaseRow {
+/** Ca đọc cho projection: thêm `version` để client gửi `If-Match` (hợp đồng `overbookingCaseSummarySchema`). */
+type QueryCaseRow = CaseRow & { readonly version: bigint };
+
+function toCaseRow(row: SelectedCase): QueryCaseRow {
   return {
     ...row,
     date: row.date.toISOString().slice(0, 10),
@@ -93,15 +101,28 @@ function notFound(): AppError {
 
 function fallbackLadder(): readonly LadderRung[] {
   return [
-    { moveType: 'SAME_TYPE_SAME_PROPERTY', feasible: false, candidateCount: 0 },
-    { moveType: 'UPGRADE_SAME_PROPERTY', feasible: false, candidateCount: 0 },
     {
+      step: 1,
+      moveType: 'SAME_TYPE_SAME_PROPERTY',
+      feasible: false,
+      candidateCount: 0,
+      note: SAME_TYPE_NOTE,
+    },
+    {
+      step: 2,
+      moveType: 'UPGRADE_SAME_PROPERTY',
+      feasible: false,
+      candidateCount: 0,
+      note: UPGRADE_NOTE,
+    },
+    {
+      step: 3,
       moveType: 'SAME_TYPE_CROSS_PROPERTY',
       feasible: false,
       candidateCount: 0,
       note: 'bậc 3 không khả dụng: ba cơ sở cách nhau 160–300 km (> 15 km)',
     },
-    { moveType: 'WALK_OUT', feasible: true, candidateCount: 0 },
+    { step: 4, moveType: 'WALK_OUT', feasible: true, candidateCount: 0 },
   ];
 }
 
@@ -132,7 +153,7 @@ export class OverbookingQueries {
   }
 
   private async summarize(
-    row: CaseRow,
+    row: QueryCaseRow,
     now: Date,
     cache: Map<string, PropertyFacts>,
   ): Promise<SummaryResult> {
@@ -153,6 +174,7 @@ export class OverbookingQueries {
         status: row.status,
         detectedAt: row.detected_at.toISOString(),
         resolveDeadline: deadline.toISOString(),
+        escalatedAt: row.escalated_at?.toISOString() ?? null,
         overdue:
           row.status === 'ESCALATED' ||
           (row.status !== 'RESOLVED' && now.getTime() >= deadline.getTime()),
@@ -162,6 +184,7 @@ export class OverbookingQueries {
         delayReason: row.delay_reason,
         affectedBookingIds: detail.affectedBookingIds,
         ladderPreview: detail.ladderPreview,
+        version: Number(row.version),
       },
       candidates: detail.candidates,
     };
@@ -253,7 +276,8 @@ export class OverbookingQueries {
     const summary = await this.summarize(mapped, this.clock.now(), new Map());
     return {
       ...summary.view,
-      candidates: includeCandidates ? summary.candidates : [],
+      candidates: includeCandidates ? await detailCandidates(this.db, summary.candidates) : [],
+      history: historyOf(mapped),
     } satisfies CaseDetail;
   }
 

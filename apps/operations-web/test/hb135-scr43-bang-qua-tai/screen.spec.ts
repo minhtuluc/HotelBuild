@@ -130,14 +130,10 @@ describe('HB-135 SCR-43', () => {
     await controller.load();
     expect(table(controller.getState())).toContain('máy chủ xác nhận');
     for (const scan of [
-      {
-        scanStatus: 'UNKNOWN' as const,
-        lastSuccessfulScanAt: null,
-        nextScanAt: null,
-        scannedThrough: null,
-      },
-      { ...okScan, scanStatus: 'FAILED' as const },
-      { ...okScan, lastSuccessfulScanAt: null },
+      { status: 'NEVER' as const, lastSuccessAt: null, dataAsOf: null },
+      { ...okScan, status: 'RUNNING' as const },
+      { ...okScan, status: 'FAILED' as const },
+      { ...okScan, lastSuccessAt: null },
     ]) {
       ports.list.mockResolvedValueOnce(page([], { scan }));
       await controller.load();
@@ -147,11 +143,11 @@ describe('HB-135 SCR-43', () => {
     }
     // Quét lỗi: giữ dữ liệu cũ, có nhãn thời điểm quét thành công gần nhất.
     ports.list.mockResolvedValueOnce(
-      page([caseRow('k1')], { scan: { ...okScan, scanStatus: 'FAILED' } }),
+      page([caseRow('k1')], { scan: { ...okScan, status: 'FAILED' } }),
     );
     await controller.load();
     expect(controller.getState().list?.rows).toHaveLength(1);
-    expect(controller.getState().list?.scan.lastSuccessfulScanAt).toBe(okScan.lastSuccessfulScanAt);
+    expect(controller.getState().list?.scan.lastSuccessAt).toBe(okScan.lastSuccessAt);
   });
 
   it('resolve_server_guard', async () => {

@@ -28,6 +28,7 @@ import {
   MOVE,
   operationOf,
   PLAN,
+  CASE_CANDIDATE,
   SCAN,
   WALK_OUT,
 } from './fixtures.js';
@@ -168,9 +169,9 @@ describe('F6 OVER', () => {
       data: [CASE_SUMMARY],
       meta: { limit: 20, nextCursor: null, hasMore: false, overdueCount: 1, scan: SCAN },
     });
-    expect(list.meta.scan.scanStatus).toBe('OK');
-    expect(list.meta.scan.lastSuccessfulScanAt).toBe('2026-12-01T01:00:00Z');
-    // Rỗng thật vs chưa từng quét: `UNKNOWN` + null phải parse được và khác `OK`.
+    expect(list.meta.scan.status).toBe('SUCCEEDED');
+    expect(list.meta.scan.lastSuccessAt).toBe('2026-12-01T01:00:00Z');
+    // Rỗng thật vs chưa từng quét: `NEVER` + null phải parse được và khác `SUCCEEDED`.
     const never = overbookingCaseListSchema.parse({
       data: [],
       meta: {
@@ -178,11 +179,29 @@ describe('F6 OVER', () => {
         nextCursor: null,
         hasMore: false,
         overdueCount: 0,
-        scan: { ...SCAN, scanStatus: 'UNKNOWN', lastSuccessfulScanAt: null },
+        scan: { status: 'NEVER', lastSuccessAt: null, dataAsOf: null },
       },
     });
     expect(never.data).toHaveLength(0);
-    expect(never.meta.scan.scanStatus).not.toBe(list.meta.scan.scanStatus);
+    expect(never.meta.scan.status).not.toBe(list.meta.scan.status);
+    // Hình dạng cũ (HB-120 bản đầu) không còn được nhận: server trả `status/lastSuccessAt/dataAsOf`.
+    expect(
+      overbookingCaseListSchema.safeParse({
+        data: [],
+        meta: {
+          limit: 20,
+          nextCursor: null,
+          hasMore: false,
+          overdueCount: 0,
+          scan: {
+            scanStatus: 'OK',
+            lastSuccessfulScanAt: null,
+            nextScanAt: null,
+            scannedThrough: null,
+          },
+        },
+      }).success,
+    ).toBe(false);
     expect(
       overbookingCaseListSchema.safeParse({
         data: [],
@@ -192,10 +211,19 @@ describe('F6 OVER', () => {
 
     const detail = overbookingCaseDetailSchema.parse({
       ...CASE_SUMMARY,
-      candidates: [CANDIDATE],
+      candidates: [CASE_CANDIDATE],
       history: [{ at: '2026-12-01T01:00:00Z', action: 'DETECTED', actorId: null, note: null }],
     });
     expect(detail.history).toHaveLength(1);
+    expect(detail.candidates[0]?.keepScore).toBe(24);
+    // Ứng viên dạng planner (`keepScore` là bảng phân rã) không phải dạng chi tiết ca.
+    expect(
+      overbookingCaseDetailSchema.safeParse({
+        ...CASE_SUMMARY,
+        candidates: [CANDIDATE],
+        history: [],
+      }).success,
+    ).toBe(false);
     expect(overbookingCaseSummarySchema.parse(CASE_SUMMARY).shortageCount).toBe(2);
 
     const alert = overbookingAlertSchema.parse({
@@ -222,8 +250,8 @@ describe('F6 OVER', () => {
       overbookingAlertsViewSchema.parse({
         data: [alert],
         meta: { limit: 20, nextCursor: null, hasMore: false, scan: SCAN },
-      }).meta.scan.scanStatus,
-    ).toBe('OK');
+      }).meta.scan.status,
+    ).toBe('SUCCEEDED');
     expect(
       bookingRelocationOptionsSchema.parse({
         bookingId: 'b1',

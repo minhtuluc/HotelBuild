@@ -225,3 +225,10 @@ export function prismaSqlState(error: unknown): string | null {
   if (typeof meta !== 'object' || meta === null || !('code' in meta)) return null;
   return typeof meta.code === 'string' ? meta.code : null;
 }
+
+/** Tên khách đã che cho bảng điều chuyển (chỉ chữ cái đầu) — dùng chung plan và chi tiết ca. */
+export function maskedName(fullName: string): string {
+  const trimmed = fullName.trim();
+  if (trimmed.length <= 1) return '***';
+  return `${trimmed.slice(0, 1)}***`;
+}

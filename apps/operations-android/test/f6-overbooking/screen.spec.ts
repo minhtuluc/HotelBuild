@@ -167,8 +167,8 @@ test('alerts_successful_scan_and_escalation', async () => {
   // Rỗng chỉ khi quét thành công có mốc; UNKNOWN/FAILED thì "chưa xác định".
   for (const [scan, expected] of [
     [fx.okScan, 'Không có ca quá tải'],
-    [{ ...fx.okScan, scanStatus: 'UNKNOWN' as const, lastSuccessfulScanAt: null }, 'Chưa xác định'],
-    [{ ...fx.okScan, scanStatus: 'FAILED' as const }, 'Chưa xác định'],
+    [{ ...fx.okScan, status: 'NEVER' as const, lastSuccessAt: null }, 'Chưa xác định'],
+    [{ ...fx.okScan, status: 'FAILED' as const }, 'Chưa xác định'],
   ] as const) {
     const fake = fx.ports();
     fake.cases.mockResolvedValue(fx.caseList([], scan));
@@ -177,7 +177,7 @@ test('alerts_successful_scan_and_escalation', async () => {
     expect(reader.state.phase).toBe('empty');
     const empty = driver(h, () => ({}));
     expect(empty).toBeDefined();
-    expect(reader.state.scan?.scanStatus).toBe(scan.scanStatus);
+    expect(reader.state.scan?.status).toBe(scan.status);
     expect(expected.length).toBeGreaterThan(0);
   }
 });

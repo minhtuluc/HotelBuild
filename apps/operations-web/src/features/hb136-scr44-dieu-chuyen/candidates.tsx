@@ -1,14 +1,68 @@
 'use client';
 import type { ReactElement } from 'react';
 import { formatDateTimeVn } from '@pinehill/ui-web';
-import type { OverbookingCaseDetail } from '@pinehill/contracts';
+import type { OverbookingCaseDetail, RelocationPlan } from '@pinehill/contracts';
 import { text } from './messages';
 import { box } from './parts';
 
-type Candidate = OverbookingCaseDetail['candidates'][number];
+type CaseCandidate = OverbookingCaseDetail['candidates'][number];
+type PlanCandidate = RelocationPlan['candidates'][number];
+
+/** Một dòng hiển thị; điểm lấy nguyên từ máy chủ, chỉ đổi tên trường giữa hai nguồn (HB-220). */
+interface Row {
+  readonly rank: number;
+  readonly bookingId: string;
+  readonly bookingRoomId: string;
+  readonly guestNameMasked: string;
+  readonly priorityGroup: string;
+  readonly score: readonly [number, number, number, number, number, number];
+  readonly createdAt: string;
+  readonly bookingSeq: string;
+  readonly paidAmount: number;
+}
+
+const isCaseCandidate = (row: CaseCandidate | PlanCandidate): row is CaseCandidate =>
+  typeof row.keepScore === 'number';
+
+/** `relocation-plan` trả bảng phân rã của planner; chi tiết ca trả số + `keepScoreBreakdown`. */
+export function candidateRow(row: CaseCandidate | PlanCandidate): Row {
+  const score = isCaseCandidate(row)
+    ? ([
+        row.keepScore,
+        row.keepScoreBreakdown.loyalty,
+        row.keepScoreBreakdown.payment,
+        row.keepScoreBreakdown.nights,
+        row.keepScoreBreakdown.repeat,
+        row.keepScoreBreakdown.arrived,
+      ] as const)
+    : ([
+        row.keepScore.total,
+        row.keepScore.loyaltyTier,
+        row.keepScore.payment,
+        row.keepScore.nights,
+        row.keepScore.returningGuest,
+        row.keepScore.arrived,
+      ] as const);
+  return {
+    rank: row.rank,
+    bookingId: row.bookingId,
+    bookingRoomId: row.bookingRoomId,
+    guestNameMasked: row.guestNameMasked,
+    priorityGroup: row.priorityGroup,
+    score,
+    createdAt: row.createdAt,
+    bookingSeq: row.bookingSeq,
+    paidAmount: row.paidAmount,
+  };
+}
 
 /** Bảng đầy đủ đúng thứ tự máy chủ đặt: không tính lại điểm, không sắp lại, không lược top-N. */
-export function CandidatesTable({ rows }: { rows: readonly Candidate[] }): ReactElement {
+export function CandidatesTable({
+  rows: source,
+}: {
+  rows: readonly (CaseCandidate | PlanCandidate)[];
+}): ReactElement {
+  const rows = source.map(candidateRow);
   return (
     <section style={box} aria-labelledby="hb136-cand-title" data-testid="hb136-candidates">
       <h2 id="hb136-cand-title">{text('candidatesTitle')}</h2>
@@ -47,12 +101,9 @@ export function CandidatesTable({ rows }: { rows: readonly Candidate[] }): React
                   <td>{row.bookingId}</td>
                   <td>{row.guestNameMasked}</td>
                   <td>{row.priorityGroup}</td>
-                  <td>{row.keepScore.total}</td>
-                  <td>{row.keepScore.loyaltyTier}</td>
-                  <td>{row.keepScore.payment}</td>
-                  <td>{row.keepScore.nights}</td>
-                  <td>{row.keepScore.returningGuest}</td>
-                  <td>{row.keepScore.arrived}</td>
+                  {row.score.map((value, index) => (
+                    <td key={index}>{value}</td>
+                  ))}
                   <td>{formatDateTimeVn(row.createdAt)}</td>
                   <td>{row.bookingSeq}</td>
                   <td>{row.paidAmount}</td>

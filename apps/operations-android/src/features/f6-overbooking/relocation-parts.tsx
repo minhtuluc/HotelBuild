@@ -50,16 +50,16 @@ export function Candidates({ rows }: { rows: OverbookingCaseDetail['candidates']
               rank: row.rank,
               name: row.guestNameMasked,
               group: row.priorityGroup,
-              total: row.keepScore.total,
+              total: row.keepScore,
             })}
           </Text>
           <Text style={{ color: color.textMuted }}>
             {text('candidateScore', {
-              tier: row.keepScore.loyaltyTier,
-              payment: row.keepScore.payment,
-              nights: row.keepScore.nights,
-              returning: row.keepScore.returningGuest,
-              arrived: row.keepScore.arrived,
+              tier: row.keepScoreBreakdown.loyalty,
+              payment: row.keepScoreBreakdown.payment,
+              nights: row.keepScoreBreakdown.nights,
+              returning: row.keepScoreBreakdown.repeat,
+              arrived: row.keepScoreBreakdown.arrived,
             })}
           </Text>
         </View>

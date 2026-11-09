@@ -57,12 +57,10 @@ function useAlerts(props: AlertsScreenProps) {
 function scanLine(state: AlertsState): string {
   const scan = state.scan;
   if (scan === null) return '';
-  const at =
-    scan.lastSuccessfulScanAt === null
-      ? text('never')
-      : formatVnDateTime(scan.lastSuccessfulScanAt);
-  if (scan.scanStatus === 'OK') return text('scanOk', { time: at });
-  return scan.scanStatus === 'FAILED' ? text('scanFailed', { time: at }) : text('scanUnknown');
+  const at = scan.lastSuccessAt === null ? text('never') : formatVnDateTime(scan.lastSuccessAt);
+  if (scan.status === 'SUCCEEDED' || (scan.status === 'RUNNING' && scan.lastSuccessAt !== null))
+    return text('scanOk', { time: at });
+  return scan.status === 'FAILED' ? text('scanFailed', { time: at }) : text('scanUnknown');
 }
 
 function Freshness({ state }: { state: AlertsState }): ReactElement {
@@ -73,7 +71,7 @@ function Freshness({ state }: { state: AlertsState }): ReactElement {
         <Text
           testID="alerts-scan"
           accessibilityLiveRegion="polite"
-          style={{ color: state.scan.scanStatus === 'OK' ? color.textMuted : color.warning }}
+          style={{ color: state.scan.status === 'SUCCEEDED' ? color.textMuted : color.warning }}
         >
           {scanLine(state)}
         </Text>
@@ -152,7 +150,7 @@ function AlertCard({
 function emptyMessage(state: AlertsState): string {
   const scan = state.scan;
   if (scan === null || !emptyConfirmed(scan)) return text('notConfirmedEmpty');
-  const at = scan.lastSuccessfulScanAt;
+  const at = scan.lastSuccessAt;
   return text('confirmedEmpty', { time: at === null ? '—' : formatVnDateTime(at) });
 }
 

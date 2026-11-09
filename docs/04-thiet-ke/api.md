@@ -691,7 +691,8 @@ Response 200:
     {
       "id": "9c4b7e21-…", "propertyId": "8f2a1c40-…", "date": "2026-12-25", "roomTypeId": "b1d9c7e2-…",
       "shortageCount": 2, "status": "OPEN", "detectedAt": "2026-12-01T01:00:00Z", "resolveDeadline": "2026-12-24T07:00:00Z",
-      "overdue": true, "resolvedAt": null, "resolvedBy": null, "delayReason": null,
+      "escalatedAt": null, "overdue": true, "resolvedAt": null, "resolvedBy": null,
+      "resolutionSource": null, "delayReason": null, "version": 1,
       "affectedBookingIds": ["a71c0d34-…", "b62d8f01-…"],
       "ladderPreview": [
         { "moveType": "SAME_TYPE_SAME_PROPERTY", "feasible": false, "candidateCount": 0 },
@@ -702,12 +703,13 @@ Response 200:
     }
   ],
   "meta": { "limit": 20, "nextCursor": null, "hasMore": false, "overdueCount": 1,
-    "scan": { "scanStatus": "OK", "lastSuccessfulScanAt": "2026-12-01T01:00:00Z",
-              "nextScanAt": "2026-12-01T02:00:00Z", "scannedThrough": "2027-01-01" } }
+    "scan": { "status": "SUCCEEDED", "lastSuccessAt": "2026-12-01T01:00:00Z",
+              "dataAsOf": "2026-12-01T01:00:00Z" } }
 }
 ```
 
-- `meta.scan` (HB-120 AC14) cho UI phân biệt "rỗng thật" với "chưa quét/scan lỗi": `scanStatus ∈ {OK, FAILED, UNKNOWN}`; `lastSuccessfulScanAt = null` + `UNKNOWN` nghĩa là chưa từng quét thành công. Không suy từ `data.length = 0`.
+- `meta.scan` (HB-120 AC14, hình dạng HB-126/HB-220) cho UI phân biệt "rỗng thật" với "chưa quét/scan lỗi": `status ∈ {NEVER, RUNNING, FAILED, SUCCEEDED}` lấy từ `overbooking_scan_runs`; `NEVER` (và `lastSuccessAt = null`) nghĩa là chưa từng quét thành công; `lastSuccessAt`/`dataAsOf` chỉ đổi sau lượt thành công và giữ mốc cũ khi lượt sau lỗi. Không suy từ `data.length = 0`.
+- `GET /overbooking-cases/{caseId}` trả thêm `history` (mốc `DETECTED`/`ESCALATED`/`RESOLVED` lấy từ cột của ca) và, khi `includeCandidates=true`, `candidates` theo `overbookingCaseCandidateSchema`: `keepScore` là **số** kèm `keepScoreBreakdown {loyalty, payment, nights, repeat, arrived}` của bộ chọn ca, cùng `rank`, tên đã che, kỳ ở và tiền của booking (khác `relocation-plan`, nơi `keepScore` là bảng phân rã của planner).
 
 - Job quét chạy theo `job.overbooking.scanIntervalMinutes`, nhìn trước 30 ngày, gộp trùng theo `(propertyId, date, roomTypeId)` (BR-OVER-05, BR-SYS-02).
 - `resolveDeadline = T−24h`; quá hạn → `overdue = true`, leo thang `OWNER` và hiện trên bảng điều khiển (BR-OVER-04, NFR-OBS-04). `status` dùng enum `OverbookingCaseStatus = OPEN | PROPOSED | RESOLVED | ESCALATED`.

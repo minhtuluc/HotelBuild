@@ -81,11 +81,8 @@ export const keyExpired = (intent: Intent, now: number): boolean =>
   now - intent.createdAt >= KEY_TTL_MS;
 
 /** "Không có ca" chỉ đáng tin khi lượt quét gần nhất thành công và có mốc (AC3); còn lại là chưa xác định. */
-export function emptyConfirmed(scan: {
-  scanStatus: string;
-  lastSuccessfulScanAt: string | null;
-}): boolean {
-  return scan.scanStatus === 'OK' && scan.lastSuccessfulScanAt !== null;
+export function emptyConfirmed(scan: { status: string; lastSuccessAt: string | null }): boolean {
+  return scan.status === 'SUCCEEDED' && scan.lastSuccessAt !== null;
 }
 
 export type Failure =

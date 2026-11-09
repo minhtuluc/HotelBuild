@@ -240,7 +240,7 @@ describe('F6 transport', () => {
 
     const alerts = await api.alerts();
     expect(alerts.data.data).toHaveLength(1);
-    expect(alerts.data.meta.scan.scanStatus).toBe('OK');
+    expect(alerts.data.meta.scan.status).toBe('SUCCEEDED');
   });
 
   it('compensation_intent_and_status', async () => {

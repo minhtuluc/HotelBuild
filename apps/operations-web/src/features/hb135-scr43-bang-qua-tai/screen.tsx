@@ -19,22 +19,18 @@ function serverIssues(state: ControllerState): readonly FieldIssue[] {
 
 function scanText(list: Rows): string {
   const { scan } = list;
-  const at =
-    scan.lastSuccessfulScanAt === null
-      ? text('never')
-      : formatDateTimeVn(scan.lastSuccessfulScanAt);
-  if (scan.scanStatus === 'OK') return text('scanOk', { time: at });
-  return scan.scanStatus === 'FAILED' ? text('scanFailed', { time: at }) : text('scanUnknown');
+  const at = scan.lastSuccessAt === null ? text('never') : formatDateTimeVn(scan.lastSuccessAt);
+  // Đang quét mà đã có lượt thành công trước đó: dữ liệu hiện là của lượt đó (HB-220).
+  if (scan.status === 'SUCCEEDED' || (scan.status === 'RUNNING' && scan.lastSuccessAt !== null))
+    return text('scanOk', { time: at });
+  return scan.status === 'FAILED' ? text('scanFailed', { time: at }) : text('scanUnknown');
 }
 
 /** Độ tươi của lượt quét + số ca quá hạn do máy chủ đếm; dữ liệu cũ được gắn nhãn thời điểm. */
 function ScanPanel({ list }: { list: Rows }): ReactElement {
   return (
     <section aria-label={text('scanOk', { time: '' })} data-testid="hb135-scan" style={box}>
-      <p role={list.scan.scanStatus === 'OK' ? 'status' : 'alert'}>{scanText(list)}</p>
-      {list.scan.scannedThrough === null ? null : (
-        <p>{text('scanThrough', { date: list.scan.scannedThrough })}</p>
-      )}
+      <p role={list.scan.status === 'SUCCEEDED' ? 'status' : 'alert'}>{scanText(list)}</p>
       <p>{text('overdueCount', { count: list.overdueCount })}</p>
     </section>
   );
