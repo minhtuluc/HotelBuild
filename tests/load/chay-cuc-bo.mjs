@@ -11,7 +11,7 @@
  * Số đo cục bộ chỉ để **so sánh trước/sau một thay đổi**. Cổng NFR của HB-184 là lượt chạy trên
  * staging giống production (HB-175), xem `docs/07-ban-giao/van-hanh/tai-k6.md`.
  *
- * Biến môi trường: `DATABASE_MIGRATION_URL`, `REDIS_URL` (DB riêng, ví dụ `/10`); `LOAD_ONLY=kb-a,kb-b`;
+ * Biến môi trường: `QA_DATABASE_PARAMS` (mặc định pool 50), `DATABASE_MIGRATION_URL`, `REDIS_URL` (DB riêng, ví dụ `/10`); `LOAD_ONLY=kb-a,kb-b`;
  * `DURATION` (mặc định 10m; đột biến 5m); `VUS`; `LOAD_GUESTS` (200); `K6_IMAGE`.
  */
 import { spawnSync } from 'node:child_process';
@@ -19,7 +19,10 @@ import { createRequire } from 'node:module';
 import { createHash, randomBytes } from 'node:crypto';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { API_BASE, PASSWORD, api, bootstrap, login, repoRoot, sql, teardown, wait } from '../e2e/f5/qa-f5-lib.mjs';
+// Pool Prisma của API lượt tải: mặc định 50 như khuyến nghị production (xem tai-k6.md); pool mặc định
+// của Prisma (2 × nhân vật lý + 1 = 17 trên máy dev) bão hoà ở 600 VU. Đặt `QA_DATABASE_PARAMS=` để đo pool mặc định.
+process.env.QA_DATABASE_PARAMS ??= 'connection_limit=50&pool_timeout=20';
+const { API_BASE, PASSWORD, api, bootstrap, login, repoRoot, sql, teardown, wait } = await import('../e2e/f5/qa-f5-lib.mjs');
 
 const loadDir = join(repoRoot, 'tests/load');
 const resultsDir = join(loadDir, 'results');

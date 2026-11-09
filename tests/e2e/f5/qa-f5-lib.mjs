@@ -34,7 +34,8 @@ const withDb = (raw, name) => {
 const ownerUrl = withDb(migrationBase, dbName);
 const runtimeUrl = (() => {
   const url = new URL(migrationBase);
-  return `postgresql://app_rw:app_rw_dev@${url.hostname}:${url.port}/${dbName}`;
+  const params = process.env.QA_DATABASE_PARAMS ? `?${process.env.QA_DATABASE_PARAMS}` : "";
+  return `postgresql://app_rw:app_rw_dev@${url.hostname}:${url.port}/${dbName}${params}`;
 })();
 
 const port = await new Promise((resolve, reject) => {
