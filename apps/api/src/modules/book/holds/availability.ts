@@ -13,6 +13,7 @@ import type { Prisma as PrismaTypes } from '@prisma/client';
 import { calculateAvailability } from '@pinehill/domain/inventory';
 import type { AvailabilityInput, UnitIdentity } from '@pinehill/domain/inventory';
 import { loadInventoryFacts } from '../../inv/facts/loader.js';
+import { AppError } from '../../../common/app-error.js';
 import { noAvailability } from './validation.js';
 
 export interface HoldPlan {
@@ -51,4 +52,41 @@ export async function planHold(
   if (channelMinimum < input.roomCount || result.value.continuousUnits.length < input.roomCount)
     throw noAvailability();
   return { facts, units: result.value.continuousUnits.slice(0, input.roomCount) };
+}
+
+type PlanInput = Parameters<typeof planHold>[1] & {
+  readonly adults: number;
+  readonly children: number;
+};
+
+/**
+ * Chặn sớm **trước khoá ADR-014** (HB-225, TD-17): đọc `READ COMMITTED` không khoá. Nếu kỳ đã hết
+ * chỗ thì trả `409 E_INV_NO_AVAILABILITY` ngay, không xếp hàng trên khoá `properties`.
+ *
+ * Thiếu bước này, khi một đơn vị cuối có hàng trăm lệnh cùng giành, mỗi lệnh thua vẫn giữ một
+ * connection để chờ khoá rồi kiểm tồn tuần tự. Hàng đợi vượt `timeout` 10 giây của transaction ⇒
+ * 500, client thử lại ⇒ hàng đợi không bao giờ rút (sụp đổ "metastable" của AC4 HB-076 trên CI).
+ *
+ * Chỉ kết luận **hết chỗ**. Một trạng thái đã commit nói "không đủ" thì trả lời đó đúng ở thời điểm
+ * đọc. Kết quả "còn chỗ" vẫn phải xác nhận lại sau khoá bằng `planHold`. Các trường hợp mà đường
+ * có khoá trả mã khác ở bước trước (loại phòng lạ, vượt sức chứa) không kết luận ở đây, để giữ
+ * nguyên thứ tự mã lỗi.
+ */
+export async function soldOutBeforeLock(
+  tx: PrismaTypes.TransactionClient,
+  input: PlanInput,
+): Promise<boolean> {
+  const type = await tx.room_types.findUnique({
+    where: { id: input.roomTypeId },
+    select: { property_id: true, capacity_adults: true },
+  });
+  if (type === null || type.property_id !== input.propertyId) return false;
+  if (type.capacity_adults * input.roomCount < input.adults + input.children) return false;
+  try {
+    await planHold(tx, input);
+    return false;
+  } catch (error) {
+    if (error instanceof AppError && error.code === 'E_INV_NO_AVAILABILITY') return true;
+    throw error;
+  }
 }

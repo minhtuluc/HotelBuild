@@ -24,12 +24,12 @@ import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import { PRISMA } from '../../../infrastructure/prisma/prisma.module.js';
 import { PermissionRegistry } from '../../../common/rbac/permission-registry.js';
 import { RateQuoteService } from '../../rate/quotes/service.js';
-import { planHold } from './availability.js';
+import { planHold, soldOutBeforeLock } from './availability.js';
 import { inventoryError, lockHeldHold, lockStock } from './lock.js';
 import { requireGuest, requireHoldAccess } from './principal.js';
 import type { HoldCaller } from './principal.js';
 import { HoldProjection } from './projection.js';
-import { invalidState, missing, overCapacity } from './validation.js';
+import { invalidState, missing, noAvailability, overCapacity } from './validation.js';
 import type { HoldInput } from './validation.js';
 import { assertReleasable, insertHold, releaseHold } from './writes.js';
 
@@ -57,6 +57,8 @@ export class HoldsService {
       // api.md §3.4 + BR-BOOK-07: kênh `holdMinutes = 0` (WALKIN, các OTA) không dùng HELD.
       if (channel.hold_minutes === 0)
         throw invalidState('Kênh này không dùng giữ chỗ tạm (holdMinutes = 0).');
+      // HB-225: hết chỗ đã commit ⇒ trả lời ngay, không giữ connection chờ khoá (TD-17).
+      if (await soldOutBeforeLock(tx, input)) throw noAvailability();
       const stock = await lockStock(tx, input.propertyId, input.roomTypeId);
       if (stock.capacityAdults * input.roomCount < input.adults + input.children)
         throw overCapacity();
