@@ -55,6 +55,26 @@ export function redisOptions(url: string): RedisOptions {
   };
 }
 
+/**
+ * HB-229: đóng một `Queue` ngắn hạn mà không làm sập tiến trình. BullMQ 5.81 có lỗi sau: nếu `close()`
+ * chạy khi kết nối còn `initializing` (lệnh `INFO` kiểm phiên bản đang bay), `close()` gỡ mọi listener
+ * rồi `init()` bị reject, và `RedisConnection` phát `error` khi không còn ai nghe ⇒ uncaught ⇒ worker
+ * thoát mã 1. Dưới tải k6 HB-184, job cảnh báo tạo rồi đóng queue ngay (mọi cảnh báo bị dedup chặn) đã
+ * làm worker chết giữa lượt, kéo theo hold hết hạn không được giải phóng (NFR-REL-02). Chờ kết nối sẵn
+ * sàng (hoặc hỏng hẳn) rồi mới đóng thì lỗi không còn.
+ */
+export async function closeQueueSafely(queue: {
+  waitUntilReady(): Promise<unknown>;
+  close(): Promise<void>;
+}): Promise<void> {
+  try {
+    await queue.waitUntilReady();
+  } catch {
+    // Kết nối hỏng thì `close()` bên dưới vẫn dọn client; lỗi đã đi qua listener `error` của queue.
+  }
+  await queue.close();
+}
+
 /** Cổng tạo client BullMQ — bơm được để test không cần Redis. */
 export interface BullmqConstructors {
   createQueue(name: string, connection: ConnectionOptions): QueueLike;

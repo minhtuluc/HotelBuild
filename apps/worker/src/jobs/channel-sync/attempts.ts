@@ -1,6 +1,6 @@
 import { Queue } from 'bullmq';
 import type { Prisma, PrismaClient } from '@prisma/client';
-import { redisOptions } from '../../bullmq.factory.js';
+import { closeQueueSafely, redisOptions } from '../../bullmq.factory.js';
 import type { JobContext } from '../types.js';
 import { CHANNEL_SYNC_FAILED, CHANNEL_SYNC_QUEUE, DEGRADED_AFTER_FAILURES } from './contract.js';
 import type { ChannelSyncSettings } from './settings.js';
@@ -29,7 +29,7 @@ async function bullmqNotify(redisUrl: string, notificationId: string): Promise<v
       },
     );
   } finally {
-    await queue.close();
+    await closeQueueSafely(queue);
   }
 }
 
