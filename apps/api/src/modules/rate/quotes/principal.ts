@@ -41,7 +41,27 @@ function bearerToken(header: string | undefined): string | null {
   return /^Bearer +(\S+)$/i.exec(header)?.[1] ?? null;
 }
 
-export async function quotePrincipal(
+/**
+ * HB-228: nhớ theo request. `QuoteAccess.authorize` (ngoài transaction) và handler `POST /quotes`
+ * (trong transaction `@Idempotent`) cùng gọi hàm này; lần sau không được xin connection thứ hai,
+ * nếu không pool bế tắc khi đồng thời ≥ kích thước pool (k6 HB-184: 500 hàng loạt ở `POST /quotes`).
+ */
+const memo = new WeakMap<FastifyRequest, Promise<Principal>>();
+
+export function quotePrincipal(
+  db: Pick<DatabaseClient, 'auth_sessions'>,
+  request: FastifyRequest,
+  config: ApiConfig,
+  clock: Clock,
+): Promise<Principal> {
+  const cached = memo.get(request);
+  if (cached !== undefined) return cached;
+  const resolved = resolveQuotePrincipal(db, request, config, clock);
+  memo.set(request, resolved);
+  return resolved;
+}
+
+async function resolveQuotePrincipal(
   db: Pick<DatabaseClient, 'auth_sessions'>,
   request: FastifyRequest,
   config: ApiConfig,

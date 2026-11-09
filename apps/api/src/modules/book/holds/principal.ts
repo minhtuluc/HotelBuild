@@ -57,7 +57,31 @@ function bearerToken(header: string | undefined): string | null {
   return /^Bearer +(\S+)$/i.exec(header)?.[1] ?? null;
 }
 
-export async function holdCaller(
+/**
+ * HB-228: kết quả được nhớ theo **chính đối tượng request**. Lần gọi đầu nằm trong `authorize` của
+ * `@Idempotent`, chạy trước khi `IdempotencyStore.run` mở transaction. Lần gọi lại trong handler (đã ở
+ * trong transaction) dùng kết quả đó, không lấy thêm connection.
+ *
+ * Trước đây mỗi lệnh giữ một connection cho transaction rồi lại xin connection thứ hai để kiểm phiên
+ * (TD-59). Khi số lệnh đồng thời ≥ kích thước pool, mọi lệnh chờ lẫn nhau cho đến `timeout` 10 giây
+ * ⇒ 500. Đây là cơ chế của TD-79 và AC4 HB-076 đỏ chập chờn.
+ */
+const memo = new WeakMap<FastifyRequest, Promise<HoldCaller>>();
+
+export function holdCaller(
+  db: PrismaClient,
+  request: FastifyRequest,
+  config: ApiConfig,
+  clock: Clock,
+): Promise<HoldCaller> {
+  const cached = memo.get(request);
+  if (cached !== undefined) return cached;
+  const resolved = resolveHoldCaller(db, request, config, clock);
+  memo.set(request, resolved);
+  return resolved;
+}
+
+async function resolveHoldCaller(
   db: PrismaClient,
   request: FastifyRequest,
   config: ApiConfig,

@@ -57,6 +57,15 @@ export { clock, rows, propertyId, typeId, roomId, room2Id, stay, userId };
 /** `WEB.hold_minutes = 20` (prisma/seed/reference-data.ts); `WALKIN` giữ 0 để kiểm `E_BOOK_INVALID_STATE`. */
 export const WEB_HOLD_MINUTES = 20;
 
+/**
+ * Kích thước pool Prisma của app test (mặc định 50 theo AC4). HB-228 hạ xuống nhỏ hơn số lệnh đồng
+ * thời để bắt lỗi nhân đôi connection. Phải gọi ở top-level của tệp spec, trước `beforeAll`.
+ */
+let connectionLimit = 50;
+export function useConnectionLimit(limit: number): void {
+  connectionLimit = limit;
+}
+
 export let guestId = '';
 export let guestToken = '';
 export let otherGuestId = '';
@@ -210,7 +219,7 @@ beforeAll(async () => {
   await redis.ping();
   // AC4 chạy 200 yêu cầu song song: pool Prisma ≥ 50 như ticket yêu cầu (nền `hb008` cũng dùng 50).
   const runtime = new URL(databaseUrl);
-  runtime.searchParams.set('connection_limit', '50');
+  runtime.searchParams.set('connection_limit', String(connectionLimit));
   runtime.searchParams.set('pool_timeout', '30');
   const module = AppModule.register({
     DATABASE_URL: runtime.href,
