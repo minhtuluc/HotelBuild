@@ -7,6 +7,7 @@ max_lines: 250
 allow:
   - apps/api/src/modules/book/holds/principal.ts
   - apps/api/src/modules/book/bookings/principal.ts
+  - apps/api/src/modules/rate/quotes/principal.ts
   - apps/api/test/holds/fixture.ts
   - apps/api/test/holds/pool-starvation.spec.ts
   - docs/08-thi-cong/tickets/HB-228-caller-khong-mo-ket-noi-long.md
@@ -20,7 +21,8 @@ Các tuyến `@Public` của khách sau đây đều có `@Idempotent`:
 
 - `POST/DELETE /holds`;
 - `POST /bookings`, `POST /bookings/{id}/confirm`;
-- `POST /payments/online`.
+- `POST /payments/online`;
+- `POST /quotes` (`quotePrincipal`). Chỗ này được phát hiện ở lượt k6 đầy đủ: 200 VU ⇒ 500 hàng loạt ở `POST /quotes`.
 
 Thứ tự chạy của chúng: `IdempotencyStore.run` mở transaction (giữ một connection, khoá hàng fence), rồi handler gọi `holdCaller(this.db, …)` / `bookingCaller(this.db, …)` để kiểm phiên (TD-59, `findUsableSession`). Bước kiểm phiên xin **thêm** một connection từ pool.
 
@@ -34,7 +36,7 @@ Bằng chứng:
 
 ## Thay đổi
 
-`holdCaller` / `bookingCaller` nhớ kết quả theo chính đối tượng `FastifyRequest` (`WeakMap`):
+`holdCaller` / `bookingCaller` / `quotePrincipal` nhớ kết quả theo chính đối tượng `FastifyRequest` (`WeakMap`):
 
 - Lần gọi đầu nằm trong `authorize` của access `@Idempotent`, chạy **trước** `claim`/`run`, nên còn ngoài transaction.
 - Lần gọi lại trong handler dùng lại kết quả đó, không truy vấn thêm.
@@ -44,7 +46,8 @@ Ngữ nghĩa xác thực giữ nguyên: cùng một request được kiểm mộ
 ## Tiêu chí nghiệm thu
 
 1. 12 lệnh `POST /holds` đồng thời trên pool 4 ⇒ không lệnh nào 5xx, đúng 1 lệnh `201`, còn lại 409 nghiệp vụ, xong dưới 8 giây. Test: `apps/api/test/holds/pool-starvation.spec.ts::HB228_concurrent_holds_beyond_pool_size_get_business_answers_not_timeouts`, đỏ trên code cũ.
-2. Các bộ `holds`, `bookings`, `huy-booking`, `psp-thanh-toan-truc-tuyen`, `thu-tien-tai-quay`, `webhook-psp`, `observability`, `rbac`, `idempotency` vẫn xanh.
+2. 12 lệnh `POST /quotes` đồng thời trên pool 4 ⇒ cả 12 trả `201` dưới 8 giây. Test: `…::HB228_concurrent_quotes_beyond_pool_size_do_not_deadlock`. Trên code cũ: 12 × 500 sau 10,6 s.
+3. Các bộ `quotes`, `rate`, `holds`, `bookings`, `huy-booking`, `psp-thanh-toan-truc-tuyen`, `thu-tien-tai-quay`, `webhook-psp`, `observability`, `rbac`, `idempotency` vẫn xanh.
 
 ## Cổng phải xanh
 

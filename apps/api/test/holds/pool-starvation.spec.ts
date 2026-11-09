@@ -7,10 +7,22 @@
  * giữ và mọi lệnh chờ connection thứ hai ⇒ bế tắc pool. Đây là cơ chế đo được ở TD-79 và AC4 HB-076.
  * Lượt k6 HB-184 với pool mặc định (17) cũng tái hiện được bằng 20 VU.
  */
+import { randomUUID } from 'node:crypto';
 import { expect, test } from 'vitest';
 import { errorBodySchema } from '@pinehill/contracts';
 import { block } from '../room-blocks/inventory-seed.js';
-import { holdBody, holdRequest, issueQuote, room2Id, stay, useConnectionLimit } from './fixture.js';
+import {
+  guestToken,
+  holdBody,
+  holdRequest,
+  http,
+  issueQuote,
+  propertyId,
+  room2Id,
+  stay,
+  typeId,
+  useConnectionLimit,
+} from './fixture.js';
 
 const POOL = 4;
 const CONCURRENT = 12;
@@ -39,4 +51,33 @@ test('HB228_concurrent_holds_beyond_pool_size_get_business_answers_not_timeouts'
   }
   // Bế tắc pool chỉ được gỡ bởi `timeout` 10 giây của transaction.
   expect(elapsed).toBeLessThan(8000);
+}, 60_000);
+
+test('HB228_concurrent_quotes_beyond_pool_size_do_not_deadlock', async () => {
+  const started = Date.now();
+  const responses = await Promise.all(
+    Array.from({ length: CONCURRENT }, () =>
+      http()
+        .post('/api/v1/quotes')
+        .set('Authorization', `Bearer ${guestToken}`)
+        .set('Idempotency-Key', randomUUID())
+        .send({
+          propertyId,
+          roomTypeId: typeId,
+          channelCode: 'WEB',
+          ratePlanCode: 'FLEX7',
+          checkIn: stay.checkIn,
+          checkOut: stay.checkOut,
+          adults: 2,
+          children: 0,
+          roomCount: 1,
+        }),
+    ),
+  );
+  const statuses = responses.map((response) => response.status);
+  expect(
+    statuses.filter((status) => status !== 201),
+    JSON.stringify(statuses),
+  ).toHaveLength(0);
+  expect(Date.now() - started).toBeLessThan(8000);
 }, 60_000);
