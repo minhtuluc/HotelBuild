@@ -31,7 +31,7 @@ Mã đọc biến ở **một chỗ duy nhất mỗi app** và dừng tiến tr�
 
 | Biến | Loại | Bắt buộc | Dev | CI | Stg / Prod | Nơi lưu (Stg/Prod) | Ghi chú |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `DATABASE_URL` | S | Có | role `app_rw` local | role `app_rw` tạm | role `app_rw` riêng từng môi trường | KHO-CHẠY | URL chứa mật khẩu ⇒ bí mật. Role runtime không có quyền DDL (QĐ-02 mục 4). Prisma cũng đọc `env("DATABASE_URL")`. |
+| `DATABASE_URL` | S | Có | role `app_rw` local | role `app_rw` tạm | role `app_rw` riêng từng môi trường | KHO-CHẠY | URL chứa mật khẩu ⇒ bí mật. Role runtime không có quyền DDL (QĐ-02 mục 4). Prisma cũng đọc `env("DATABASE_URL")`. **Đặt rõ `?connection_limit=…&pool_timeout=…`** cho API: pool mặc định của Prisma (2 × nhân vật lý + 1) bão hoà ở tải đột biến. Đo k6 HB-184 trên một tiến trình: pool 17 cho 21% 5xx ở 600 VU, pool 50 cho 0% ([tai-k6.md](tai-k6.md)). Tổng `connection_limit × số replica` (cộng worker) phải nhỏ hơn `max_connections` của PG. |
 | `REDIS_URL` | S | Có | `redis://` local | service tạm | `redis://`/`rediss://` có xác thực | KHO-CHẠY | Có thể chứa mật khẩu. Cache/khoá phân tán, không sở hữu bất biến tiền/tồn (kiến trúc §8.3). |
 | `JWT_ACCESS_SECRET` | S | Có | sinh ngẫu nhiên trong `.env` | giá trị thử nghiệm | khoá riêng, ngẫu nhiên, khác nhau giữa Stg và Prod | KHO-CHẠY | Ký/xác thực access token HS256 **và** ký liên kết tải tệp xuất (HMAC). Mã chỉ kiểm `min(1)`, **không ép độ dài/entropy** — người vận hành phải sinh ≥ 48 byte ngẫu nhiên. |
 | `JWT_REFRESH_SECRET` | S | Có (schema) | như trên | giá trị thử nghiệm | như trên | KHO-CHẠY | **Hiện không có đường mã nào đọc** (xem mục 8, phát hiện F1). Refresh token là 32 byte ngẫu nhiên, CSDL chỉ lưu SHA-256. |
