@@ -39,6 +39,8 @@ import {
 import { bookingRoomOf, currentRoomOf, keepScoreOf, overbookingCaseOf } from './queries.js';
 import { executeRelocation } from './relocate.js';
 import { executeWalkOut } from './walkout.js';
+import { notifyGuestOfMove } from './notify.js';
+import { NotificationGateway } from '../../noti/gateway.js';
 
 /** F6-D04: duyệt MANAGER chỉ khi có chi phí, đã check-in, khác cơ sở/thành phố. */
 function approvalRequired(
@@ -71,6 +73,7 @@ export class RoomMoveService {
     @Inject(PRISMA) private readonly db: PrismaClient,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(AuditWriter) private readonly audit: AuditWriter,
+    @Inject(NotificationGateway) private readonly notifications: NotificationGateway,
   ) {
     this.ledger = new BookingLedger(clock);
   }
@@ -181,6 +184,7 @@ export class RoomMoveService {
         audit: this.audit,
       });
     else await executeRelocation(tx, actor, row, booking, now, this.audit);
+    await notifyGuestOfMove(tx, this.notifications, row);
     const fresh = await lockMove(tx, moveId);
     const updated = await lockBooking(tx, row.booking_id);
     return { status: 200, body: await this.view(tx, fresh, updated) };
