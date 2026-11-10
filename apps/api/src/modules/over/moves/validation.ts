@@ -10,6 +10,7 @@ import {
   roomMoveConsentSchema,
   roomMoveCreateRequestSchema,
   roomMoveExecuteRequestSchema,
+  walkOutEvidenceSchema,
 } from '@pinehill/contracts';
 import type {
   RoomMoveApproveRequest,
@@ -34,15 +35,18 @@ const flatMoveSchema = z.object({
   walkOutDocNo: z.string().trim().min(1).max(64).optional(),
   guestSignatureRef: z.string().min(1).max(128).optional(),
   staffSignatureRef: z.string().min(1).max(128).optional(),
+  /** Hình dạng hợp đồng công bố (SCR-44 gửi) — HB-222: trước đây bị bỏ êm vì schema không khai báo. */
+  walkOut: walkOutEvidenceSchema.optional(),
 });
 
 export type MoveCommand = z.infer<typeof flatMoveSchema>;
 
-export interface NormalizedMove extends MoveCommand {
+export interface NormalizedMove extends Omit<MoveCommand, 'walkOut'> {
   readonly walkOut: WalkOutEvidence | null;
 }
 
-function evidenceOf(command: MoveCommand): WalkOutEvidence | null {
+/** Chứng từ dạng phẳng của harness HB-124; thiếu một trong ba thì coi như không có. */
+function flatEvidence(command: MoveCommand): WalkOutEvidence | null {
   if (
     command.walkOutDocNo === undefined ||
     command.guestSignatureRef === undefined ||
@@ -56,6 +60,30 @@ function evidenceOf(command: MoveCommand): WalkOutEvidence | null {
     refundRequestId: null,
     compensationPaymentId: null,
   };
+}
+
+const sameDocuments = (a: WalkOutEvidence, b: WalkOutEvidence): boolean =>
+  a.walkOutDocNo === b.walkOutDocNo &&
+  a.guestSignatureRef === b.guestSignatureRef &&
+  a.staffSignatureRef === b.staffSignatureRef;
+
+/**
+ * Nhận cả `walkOut` lồng (hợp đồng) lẫn trường phẳng (HB-124). Hai dạng cùng có mà khác nhau là mơ hồ ⇒
+ * 400. `refundRequestId`/`compensationPaymentId` do máy chủ gắn khi thực thi, không nhận từ client.
+ */
+function evidenceOf(command: MoveCommand): WalkOutEvidence | null {
+  const flat = flatEvidence(command);
+  if (command.walkOut === undefined) return flat;
+  const nested: WalkOutEvidence = {
+    walkOutDocNo: command.walkOut.walkOutDocNo,
+    guestSignatureRef: command.walkOut.guestSignatureRef,
+    staffSignatureRef: command.walkOut.staffSignatureRef,
+    refundRequestId: null,
+    compensationPaymentId: null,
+  };
+  if (flat !== null && !sameDocuments(flat, nested))
+    throw invalid('Chứng từ walk-out gửi hai dạng không khớp nhau.');
+  return nested;
 }
 
 export function moveCreateInput(value: unknown): NormalizedMove {
