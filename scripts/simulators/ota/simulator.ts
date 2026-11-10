@@ -41,12 +41,27 @@ export interface SimulatorReport {
   readonly events: readonly SimulatorEventReport[];
 }
 
+/**
+ * Tuỳ chọn **thêm** (HB-227, QA HB-194 QA-F6-01): lô dữ liệu thật dùng mã cơ sở/loại phòng/kỳ khác
+ * `H029-A`/`STD`/10–12/12/2026 của fixture HB-128, và server đối chiếu `amount` với giá engine. Bỏ
+ * trống thì giữ nguyên payload phase A (tất định theo seed), nên test khoá HB-128 không đổi.
+ */
+export interface SimulatorBooking {
+  readonly propertyCode?: string;
+  readonly roomTypeCode?: string;
+  readonly checkIn?: string;
+  readonly checkOut?: string;
+  /** Số tiền cố định cho mọi sự kiện (lấy từ `POST /quotes/multi-channel`); vắng ⇒ số ngẫu nhiên theo seed. */
+  readonly amount?: number;
+}
+
 export interface SimulatorOptions {
   readonly baseUrl: string;
   readonly clock: Date;
   readonly seed: number;
   readonly scenario: SimulatorScenario;
   readonly accounts: readonly SimulatorAccount[];
+  readonly booking?: SimulatorBooking;
 }
 
 type Provider = 'booking' | 'agoda' | 'airbnb';
@@ -92,6 +107,7 @@ interface EventDraft {
   readonly updatedAt: Date;
   readonly amount: number;
   readonly phoneDigits: number;
+  readonly booking: SimulatorBooking;
 }
 
 /** Thân sự kiện đúng `otaWebhookEventSchema`; thứ tự khoá cố định để raw bytes tất định. */
@@ -101,10 +117,10 @@ function rawOf(draft: EventDraft): string {
     providerAccountId: draft.account.accountId,
     providerBookingCode: draft.bookingCode,
     providerUpdatedAt: draft.updatedAt.toISOString(),
-    propertyCode: 'H029-A',
-    roomTypeCode: 'STD',
-    checkIn: '2026-12-10',
-    checkOut: '2026-12-12',
+    propertyCode: draft.booking.propertyCode ?? 'H029-A',
+    roomTypeCode: draft.booking.roomTypeCode ?? 'STD',
+    checkIn: draft.booking.checkIn ?? '2026-12-10',
+    checkOut: draft.booking.checkOut ?? '2026-12-12',
     adults: 2,
     children: 0,
     roomCount: 1,
@@ -200,8 +216,9 @@ function draftOf(context: ScenarioContext, index: number, eventType?: EventType)
     eventType: eventType ?? EVENT_TYPES[index % EVENT_TYPES.length] ?? 'booking.created',
     bookingCode: `SIM-${context.options.seed}-${index}`,
     updatedAt: new Date(context.options.clock.getTime() + index * 60_000),
-    amount: 1_000_000 + Math.floor(random() * 1_000) * 1_000,
+    amount: context.options.booking?.amount ?? 1_000_000 + Math.floor(random() * 1_000) * 1_000,
     phoneDigits: index,
+    booking: context.options.booking ?? {},
   };
 }
 
