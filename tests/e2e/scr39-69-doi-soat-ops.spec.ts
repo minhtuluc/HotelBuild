@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { loginCollectionStaff } from './operations-web/collect-fixture';
-import { fulfillJson } from './operations-web/fake-api';
+import { fulfillJson, listBody } from './operations-web/fake-api';
 import { operationsWebOnly } from './operations-web/guard';
 
 /**
@@ -43,23 +43,23 @@ async function stubReconcileAndEarlyCheckout(page: Page): Promise<{
   const reconcileBodies: string[] = [];
   const checkoutBodies: string[] = [];
 
+  // Đúng `listResponseSchema(propertySummarySchema)` — stub cũ lệch hợp đồng nên client báo `protocol` (HB-219).
   await page.route(/\/api\/v1\/properties/, (route) =>
     fulfillJson(
       route,
       200,
-      JSON.stringify({
-        data: [
-          {
-            id: 'prop-1',
-            code: 'PH-DL',
-            name: 'PineHill Đà Lạt',
-            timezone: 'Asia/Ho_Chi_Minh',
-            currency: 'VND',
-            active: true,
-          },
-        ],
-        nextCursor: null,
-      }),
+      listBody([
+        {
+          id: 'prop-1',
+          name: 'PineHill Đà Lạt',
+          status: 'ACTIVE',
+          activeRoomCount: 55,
+          overbookLimitPct: 5,
+          checkInTime: '14:00',
+          checkOutTime: '12:00',
+          version: 1,
+        },
+      ]),
     ),
   );
   await page.route(/\/api\/v1\/reports\/revenue-by-channel/, (route) =>
@@ -203,18 +203,21 @@ test('SCR-39 — chốt quỹ theo (người thu, ngày VN), đòi PIN và cản
 
   await expect(page.getByTestId('reconciliation-channel-table')).toContainText('WEB');
   await expect(page.getByTestId('reconciliation-submit')).toBeDisabled();
+  // UI-03: PIN là bước hai — vào màn không có hộp thoại modal chặn form chốt quỹ (HB-219).
+  await expect(page.getByTestId('pin-dialog')).toHaveCount(0);
 
+  await page.locator('input[name="countedCash"]').fill('1900000');
+  await page.getByTestId('pin-open').click();
   await page.locator('input[name="pin"]').fill('123456');
   await page.getByTestId('pin-submit').click();
   await expect(page.getByTestId('pin-verified')).toBeVisible();
 
-  await page.locator('input[name="countedCash"]').fill('1900000');
   await page.getByTestId('reconciliation-submit').click();
 
   await expect(page.getByTestId('reconciliation-result')).toBeVisible();
-  await expect(page.getByTestId('reconciliation-discrepancy-warning')).toContainText(
-    'vượt ngưỡng',
-  );
+  await expect(page.getByTestId('reconciliation-discrepancy-warning')).toContainText('vượt ngưỡng');
+  // PIN đã dùng xong: không tự bật lại hộp thoại modal đè lên kết quả.
+  await expect(page.getByTestId('pin-dialog')).toHaveCount(0);
   expect(spy.reconcileBodies).toHaveLength(1);
   expect(spy.reconcileBodies[0]).toContain('"countedCash":1900000');
   expect(spy.reconcileBodies[0]).toContain('"pinToken":"pin-token-hb111-1234567890"');
@@ -229,11 +232,14 @@ test('SCR-69 — xem trước trả phòng sớm + xác thực PIN mới cho xá
 
   await expect(page.getByTestId('early-checkout-booking')).toContainText('PH-261224-EARLY');
   await expect(page.getByTestId('early-checkout-confirm')).toBeDisabled();
+  // UI-03: xem trước số máy chủ trả rồi mới mở PIN — hộp thoại không tự mở khi vào màn (HB-219).
+  await expect(page.getByTestId('pin-dialog')).toHaveCount(0);
 
   await page.getByTestId('early-checkout-preview-button').click();
   await expect(page.getByTestId('early-checkout-preview')).toContainText('500.000 ₫');
   await expect(page.getByTestId('early-checkout-confirm')).toBeDisabled();
 
+  await page.getByTestId('pin-open').click();
   await page.locator('input[name="pin"]').fill('123456');
   await page.getByTestId('pin-submit').click();
   await expect(page.getByTestId('pin-verified')).toBeVisible();
@@ -242,6 +248,7 @@ test('SCR-69 — xem trước trả phòng sớm + xác thực PIN mới cho xá
   await page.getByTestId('early-checkout-confirm').click();
   await expect(page.getByTestId('early-checkout-result')).toContainText('CHECKED_OUT');
   await expect(page.getByTestId('early-checkout-tasks')).toContainText('1');
+  await expect(page.getByTestId('pin-dialog')).toHaveCount(0);
   expect(spy.checkoutBodies).toHaveLength(1);
   expect(spy.checkoutBodies[0]).toContain('"earlyCheckOut":true');
   expect(spy.checkoutBodies[0]).toContain('"pinToken":"pin-token-hb111-1234567890"');
@@ -250,7 +257,10 @@ test('SCR-69 — xem trước trả phòng sớm + xác thực PIN mới cho xá
 for (const state of STATES) {
   test(`SCR-39 & SCR-69 trạng thái ${state}: hợp đồng §8.1 và axe sạch (AC2)`, async ({ page }) => {
     await loginCollectionStaff(page);
-    for (const path of [`/reconciliation?state=${state}`, `/bookings/b-early/early-checkout?state=${state}`]) {
+    for (const path of [
+      `/reconciliation?state=${state}`,
+      `/bookings/b-early/early-checkout?state=${state}`,
+    ]) {
       await page.goto(path);
       await expect(page.getByText(EXPECTED[state], { exact: false })).toBeVisible();
       const results = await new AxeBuilder({ page })
