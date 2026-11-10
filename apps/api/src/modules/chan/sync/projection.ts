@@ -40,7 +40,9 @@ export interface AutoClosureResult {
  * (BR-CHAN-01). Không bao giờ vượt sức chứa vật lý nên trigger `trg_channel_allotments_capacity` chấp nhận.
  */
 export function quotaFor(units: number, pct: number): number {
-  return units > 0 ? Math.max(1, Math.floor((units * pct) / 100)) : 0;
+  // HB-224: cùng ngữ nghĩa với engine tồn — `0%` là không bán qua kênh, không nâng lên tối thiểu 1.
+  if (units <= 0 || pct <= 0) return 0;
+  return Math.max(1, Math.floor((units * pct) / 100));
 }
 
 interface SupplyRow {

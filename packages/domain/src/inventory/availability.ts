@@ -62,6 +62,11 @@ export interface AvailabilityInput extends Location, NightRange {
   readonly assignments: readonly Assignment[];
   readonly demand: readonly Demand[];
   readonly allotments: readonly ChannelAllotment[];
+  /**
+   * BR-CHAN-01: phần trăm hạn mức mặc định của kênh OTA cho loại phòng (`channel_mappings.allotment_pct`,
+   * HB-224); vắng ⇒ 80. Chỉ dùng khi đêm đó không có dòng `allotments` tường minh. `0` ⇒ không bán.
+   */
+  readonly allotmentPct?: number;
 }
 export interface NightlyAvailability {
   readonly date: string;
@@ -160,8 +165,11 @@ function blockedKeys(
       .map(unitKey),
   );
 }
-function defaultOtaQuota(activeCount: number): number {
-  return activeCount > 0 ? Math.max(1, Math.floor((activeCount * 80) / 100)) : 0;
+export const DEFAULT_ALLOTMENT_PCT = 80;
+/** `floor(pct% × đơn vị ACTIVE)`, tối thiểu 1 khi còn bán được và pct > 0 (BR-CHAN-01). */
+export function otaQuota(activeCount: number, pct: number = DEFAULT_ALLOTMENT_PCT): number {
+  if (activeCount <= 0 || pct <= 0) return 0;
+  return Math.max(1, Math.floor((activeCount * pct) / 100));
 }
 function channelAvailability(
   input: AvailabilityInput,
@@ -175,7 +183,8 @@ function channelAvailability(
     (item) =>
       sameLocation(item, input) && item.channelCode === input.channelCode && item.date === date,
   );
-  const defaultQuota = input.channelCode === 'AGENCY' ? 0 : defaultOtaQuota(activeCount);
+  const defaultQuota =
+    input.channelCode === 'AGENCY' ? 0 : otaQuota(activeCount, input.allotmentPct);
   const quota = allotment?.allotment ?? defaultQuota;
   return Math.max(0, Math.min(pool, quota - used));
 }
@@ -218,7 +227,11 @@ function validFacts(input: AvailabilityInput): boolean {
     input.demand.every(
       (demand) => demand.holdExpiresAt == null || Number.isFinite(demand.holdExpiresAt.getTime()),
     ) &&
-    input.allotments.every((row) => Number.isSafeInteger(row.allotment) && row.allotment >= 0)
+    input.allotments.every((row) => Number.isSafeInteger(row.allotment) && row.allotment >= 0) &&
+    (input.allotmentPct === undefined ||
+      (Number.isInteger(input.allotmentPct) &&
+        input.allotmentPct >= 0 &&
+        input.allotmentPct <= 100))
   );
 }
 /** Pure per-night calculation; callers must fulfill AvailabilityInput normalization preconditions. */
