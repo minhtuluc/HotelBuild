@@ -258,22 +258,14 @@ export const ALERTS = {
   data: [
     {
       caseId: 'c1',
+      bookingId: 'b1',
       propertyId: 'p1',
+      roomTypeId: 'rt1',
       date: '2026-12-25',
-      shortageCount: 2,
       status: 'OPEN',
       overdue: true,
-      resolveDeadline: '2026-12-24T07:00:00Z',
-      bookings: [
-        {
-          bookingId: 'b1',
-          bookingRoomId: 'br1',
-          guestNameMasked: 'N*** V** A',
-          checkIn: '2026-12-24',
-          checkOut: '2026-12-26',
-        },
-      ],
-      links: [{ rel: 'ROOM_MOVE', href: '/api/v1/room-moves' }],
+      label: 'Thiếu 2 phòng ngày 2026-12-25',
+      deepLink: '/bookings/b1?overbookingCaseId=c1',
     },
   ],
   meta: { limit: 20, nextCursor: null, hasMore: false, scan: SCAN },

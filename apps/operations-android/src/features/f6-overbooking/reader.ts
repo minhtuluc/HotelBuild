@@ -13,7 +13,7 @@ import type {
 } from '@pinehill/contracts';
 import { OfflineError } from '../../netinfo';
 import { readFailure, type ReadFailure } from '../../stay/model';
-import { canReadCases, rowOfAlert, rowOfCase, tagOf, type AlertRow } from './model';
+import { canReadCases, rowOfCase, rowsOfAlerts, tagOf, type AlertRow } from './model';
 import type { F6Ports } from './ports';
 
 export type Phase = 'idle' | 'loading' | 'ready' | 'empty' | ReadFailure;
@@ -137,7 +137,7 @@ export class AlertsReader extends Observable<AlertsState> {
     const list = await this.ports.alerts(propertyId);
     return {
       key,
-      rows: list.data.map(rowOfAlert),
+      rows: rowsOfAlerts(list.data),
       scan: list.meta.scan,
       overdueCount: null,
       syncedAt,

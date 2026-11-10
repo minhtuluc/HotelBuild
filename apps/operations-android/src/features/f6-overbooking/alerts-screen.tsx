@@ -94,6 +94,18 @@ function Freshness({ state }: { state: AlertsState }): ReactElement {
   );
 }
 
+/** Lễ tân nhận `label` máy chủ dựng (HB-221); quản lý nhận ca đủ trường để tự ghép câu. */
+function headline(row: AlertRow): string {
+  if (row.label !== null) return row.label;
+  return text('caseLine', { date: row.date, type: row.typeLabel ?? '—', count: row.shortage ?? 0 });
+}
+
+function dueLine(row: AlertRow): string {
+  const state = row.overdue ? text('overdue') : text('inTime');
+  if (row.deadline === null) return state;
+  return `${text('deadline', { time: formatVnDateTime(row.deadline) })} · ${state}`;
+}
+
 function AlertCard({
   row,
   onOpen,
@@ -114,13 +126,9 @@ function AlertCard({
         gap: space.s2,
       }}
     >
-      <Text style={{ fontWeight: '700', color: color.text }}>
-        {text('caseLine', { date: row.date, type: row.typeLabel ?? '—', count: row.shortage })}
-      </Text>
+      <Text style={{ fontWeight: '700', color: color.text }}>{headline(row)}</Text>
       <Text>{text('statusLabel', { status: row.status })}</Text>
-      <Text style={{ color: row.overdue ? color.danger : color.textMuted }}>
-        {`${text('deadline', { time: formatVnDateTime(row.deadline) })} · ${row.overdue ? text('overdue') : text('inTime')}`}
-      </Text>
+      <Text style={{ color: row.overdue ? color.danger : color.textMuted }}>{dueLine(row)}</Text>
       {row.escalatedAt === null ? null : (
         <Text>{text('escalatedAt', { time: formatVnDateTime(row.escalatedAt) })}</Text>
       )}
@@ -134,11 +142,13 @@ function AlertCard({
           onPress={() => onOpen(row.caseId, null)}
         />
       ) : (
-        row.bookings.map((booking) => (
+        row.bookings.map((booking, index) => (
           <ActionButton
             key={booking.bookingId}
             testID={`open-${row.caseId}-${booking.bookingId}`}
-            label={label(booking.guest)}
+            label={label(
+              booking.guest === '' ? text('bookingOrdinal', { n: index + 1 }) : booking.guest,
+            )}
             onPress={() => onOpen(row.caseId, booking)}
           />
         ))

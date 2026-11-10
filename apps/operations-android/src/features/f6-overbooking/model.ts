@@ -46,10 +46,12 @@ export const androidStep = (moveType: string): boolean => ANDROID_STEPS.includes
 export interface AlertRow {
   readonly caseId: string;
   readonly date: string;
-  readonly shortage: number;
+  /** `null` ở projection lễ tân (HB-221): máy chủ chỉ trả `label` dựng sẵn, không trả số thiếu/hạn. */
+  readonly shortage: number | null;
   readonly status: OverbookingCaseSummary['status'];
   readonly overdue: boolean;
-  readonly deadline: string;
+  readonly deadline: string | null;
+  readonly label: string | null;
   readonly typeLabel: string | null;
   readonly escalatedAt: string | null;
   readonly delayReason: string | null;
@@ -65,6 +67,7 @@ export function rowOfCase(item: OverbookingCaseSummary): AlertRow {
     status: item.status,
     overdue: item.overdue,
     deadline: item.resolveDeadline,
+    label: null,
     typeLabel: item.roomTypeCode ?? null,
     escalatedAt: item.escalatedAt,
     delayReason: item.delayReason,
@@ -72,23 +75,35 @@ export function rowOfCase(item: OverbookingCaseSummary): AlertRow {
   };
 }
 
-export function rowOfAlert(item: OverbookingAlert): AlertRow {
-  return {
-    caseId: item.caseId,
-    date: item.date,
-    shortage: item.shortageCount,
-    status: item.status,
-    overdue: item.overdue,
-    deadline: item.resolveDeadline,
-    typeLabel: null,
-    escalatedAt: null,
-    delayReason: null,
-    bookings: item.bookings.map((booking) => ({
-      bookingId: booking.bookingId,
-      bookingRoomId: booking.bookingRoomId,
-      guest: booking.guestNameMasked,
-    })),
-  };
+/**
+ * Projection lễ tân trả **một dòng mỗi booking** (HB-126/HB-221); gom về một thẻ mỗi ca, giữ đúng thứ tự
+ * máy chủ. Không có tên khách (tối thiểu PII) nên nút mở dùng số thứ tự trong ca.
+ */
+export function rowsOfAlerts(items: readonly OverbookingAlert[]): AlertRow[] {
+  const rows = new Map<string, AlertRow>();
+  for (const item of items) {
+    const current = rows.get(item.caseId);
+    const booking = { bookingId: item.bookingId, bookingRoomId: null, guest: '' };
+    rows.set(
+      item.caseId,
+      current === undefined
+        ? {
+            caseId: item.caseId,
+            date: item.date,
+            shortage: null,
+            status: item.status,
+            overdue: item.overdue,
+            deadline: null,
+            label: item.label,
+            typeLabel: null,
+            escalatedAt: null,
+            delayReason: null,
+            bookings: [booking],
+          }
+        : { ...current, bookings: [...current.bookings, booking] },
+    );
+  }
+  return [...rows.values()];
 }
 
 /** "Không có ca" chỉ đáng tin khi lượt quét gần nhất thành công và có mốc (AC1). */

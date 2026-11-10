@@ -301,32 +301,21 @@ export const overbookingAlertsQuerySchema = listQuerySchema.extend({
 });
 
 /**
- * `GET /overbooking-alerts` — projection tối giản cho FRONT_DESK: chỉ booking cần xử lý trong scope,
- * không `keepScore`, không PII ngoài tên đã che; liên kết chỉ tới hành động được phép (AC12).
+ * `GET /overbooking-alerts` — projection tối giản cho FRONT_DESK (HB-126, khoá `strictObject` ở
+ * `apps/api/test/over/detection-helpers/contract.ts`; HB-221 chỉnh hợp đồng theo): **một dòng mỗi booking**
+ * cần xử lý trong scope, không `keepScore`/rank/PII; `label` là câu máy chủ dựng, `deepLink` là tuyến
+ * nội bộ được phép mở (AC12).
  */
-export const overbookingAlertSchema = z.object({
+export const overbookingAlertSchema = z.strictObject({
   caseId: z.string().min(1),
+  bookingId: z.string().min(1),
   propertyId: z.string().min(1),
+  roomTypeId: z.string().min(1),
   date: businessDateSchema,
-  shortageCount: z.number().int().min(0),
-  status: overbookingCaseStatusSchema,
+  status: z.enum(['OPEN', 'PROPOSED', 'ESCALATED']),
   overdue: z.boolean(),
-  resolveDeadline: isoUtcTimestampSchema,
-  bookings: z.array(
-    z.object({
-      bookingId: z.string().min(1),
-      bookingRoomId: z.string().min(1).nullable(),
-      guestNameMasked: z.string().min(1),
-      checkIn: businessDateSchema,
-      checkOut: businessDateSchema,
-    }),
-  ),
-  links: z.array(
-    z.object({
-      rel: z.enum(['SELF', 'ROOM_MOVE', 'RELOCATION_OPTIONS']),
-      href: z.string().min(1),
-    }),
-  ),
+  label: z.string().min(1),
+  deepLink: z.string().startsWith('/'),
 });
 
 export const overbookingAlertsViewSchema = z.object({
