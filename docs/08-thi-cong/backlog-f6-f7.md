@@ -57,7 +57,7 @@ Mục lục: [backlog](backlog.md) · [lộ trình đến deploy](lo-trinh-den-d
 | [HB-157](tickets/HB-157-scr65-walk-in-android.md) | SCR-65 walk-in (Android) | R1 | DeepSeek | HB-151, HB-022 | SCR-65; UC-BOOK-02; TC-BOOK-17 | ≤ 5 bước |
 | [HB-158](tickets/HB-158-scr66-68-buong-phong-doi-soat-android.md) | SCR-66 buồng phòng + SCR-68 (Android) | R1 | DeepSeek | HB-148 | SCR-66, SCR-68; UC-FO-03; BR-RBAC-03 | Từ chối camera không chặn luồng |
 | [HB-159](tickets/HB-159-hang-doi-offline-android.md) | Hàng đợi offline Android (sau khi chốt OPEN-02): bản nháp → chờ đồng bộ → đang gửi → đã xác nhận / cần xử lý; không báo thành công tài chính khi offline | R2 | Codex (test khoá) → DeepSeek | HB-153, HB-154, HB-029 | BR-GEN-08, BR-RBAC-05; api.md §1.6; TC-FO-08 | Không lưu PIN; quá TTL idempotency thì tra kết quả trước |
-| [HB-196](tickets/HB-196-qa-f7.md) | QA F7 (Chromium + WebKit + Maestro) — **Xong (#189)** | R0 | Gemini | HB-152…HB-159 | TC-FO-01…08, TC-BOOK-17 | Log đầy đủ |
+| [HB-196](tickets/HB-196-qa-f7.md) | QA F7 (Chromium + WebKit + Maestro) — **một phần**: Chromium xong, WebKit/Maestro BLOCKED (#189) | R0 | Gemini | HB-152…HB-159 | TC-FO-01…08, TC-BOOK-17 | Log Chromium đủ; WebKit/Maestro chưa chạy — BLOCKED |
 | [HB-197](tickets/HB-197-nghiem-thu-f7.md) | Nghiệm thu F7 | — | lead | HB-196 | lộ trình §7.9 | Bằng chứng đủ |
 
 ## Khoảng trống tài liệu
