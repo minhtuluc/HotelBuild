@@ -292,8 +292,10 @@ flowchart TB
     EASW["eas-build.yml — EAS Build"]
   end
 
-  subgraph PROD["Máy chủ ứng dụng — Docker Engine"]
-    PROXY["Reverse proxy + TLS"]
+  subgraph PROD["Một VPS — docker compose (QĐ-08, infra/prod)"]
+    PROXY["Caddy — TLS Let's Encrypt + HSTS"]
+    WEBC["Container customer-web + operations-web<br/>Next.js standalone"]
+    MIG["Container migrate (chạy một lần)"]
     APIC["Container api<br/>NestJS + Fastify, /api/v1"]
     WORK["Container worker<br/>BullMQ: 4 job + outbox relay"]
     PGS[("Container postgres 16<br/>PITR, WAL archive")]
@@ -301,7 +303,6 @@ flowchart TB
   end
 
   subgraph SAAS["Dịch vụ ngoài"]
-    VERCEL["Vercel — customer-web + operations-web"]
     EAS["EAS Build / EAS Update<br/>2 Android apps, OTA JS"]
     OTASIM["OTA mô phỏng"]
     PSPSB["VNPay / MoMo sandbox"]
@@ -311,7 +312,9 @@ flowchart TB
   CI --> EASW
   CI --> APIC
   EASW --> EAS
-  VERCEL --> PROXY
+  PROXY --> WEBC
+  WEBC --> PROXY
+  MIG --> PGS
   APIC --> PROXY
   APIC --> PGS
   APIC --> RDS
@@ -326,11 +329,11 @@ flowchart TB
 
 | Hạng mục | Quyết định | Ghi chú |
 |----------|-----------|---------|
-| API + worker | **Một image Docker duy nhất**, hai entrypoint (`api.Dockerfile` chạy `node dist/main.js`, `worker.Dockerfile` chạy `node dist/worker.js`) | Cùng mã, cùng phụ thuộc; triển khai tách để job không tranh CPU với HTTP |
+| API + worker | Hai image từ cùng mã (`docker/api.Dockerfile`, `docker/worker.Dockerfile`), hai container riêng; migration là image thứ ba `docker/migrate.Dockerfile` chạy trước | Cùng mã, cùng phụ thuộc; tách container để job không tranh CPU với HTTP (TD-13) |
 | CSDL & cache | PostgreSQL 16 và Redis 7 trong `infra/docker-compose.yml` khi phát triển; container có volume + sao lưu PITR khi vận hành | BR-SYS-03, NFR-REL-04: RPO ≤ 15 phút, RTO ≤ 4 giờ |
-| Customer/operations web | Hai project Vercel độc lập (`customer-web`, `operations-web`), cùng `NEXT_PUBLIC_API_BASE_URL` và contract version gate | ADR-005 |
+| Customer/operations web | Hai container Next.js standalone (`docker/web.Dockerfile`, `APP=…`) trên cùng VPS, sau Caddy; cùng `NEXT_PUBLIC_API_BASE_URL` (đọc lúc chạy) và contract version gate | QĐ-08 (11/11/2026) thay phương án Vercel; ADR-005 |
 | Customer/operations Android | Hai application ID và pipeline EAS độc lập; EAS Update chỉ cho bản vá JS thuần | ADR-006; ngoài phạm vi iOS ([00 §3.2](../00-tong-quan.md)) |
-| Bí mật | GitHub Actions secrets + Vercel Environment Variables + EAS Secrets | NFR-SEC-06: 0 bí mật trong repo; `.env*` bị `.gitignore` |
+| Bí mật | `infra/prod/.env` trên VPS (quyền 600) + GitHub Actions secrets + EAS Secrets | NFR-SEC-06: 0 bí mật trong repo; `.env*` bị `.gitignore` |
 | Nạp cấu hình | `zod` kiểm tra biến môi trường lúc khởi động, thiếu biến thì **dừng tiến trình** | NFR-MAIN-05: giá trị nghiệp vụ đọc từ `SystemSetting`, không hard-code |
 | Quy mô | 1 API, 1 worker là đủ cho 55 phòng và 3 cơ sở; nhân bản API ở tầng sau không cần đổi mã | NFR-USE-01: uptime ≥ 99,5%/tháng |
 
@@ -346,6 +349,7 @@ Bảng khớp **đúng** hai schema `apps/api/src/config/env.ts` và `apps/worke
 | `BUSINESS_TIMEZONE` | api | Có (`Asia/Ho_Chi_Minh`) | Biến thường, BR-GEN-05 |
 | `IDEMPOTENCY_TTL_HOURS` | api | Không (mặc định 24) | Biến thường, khớp BR-GEN-08 |
 | `HOST`, `PORT`, `NODE_ENV`, `CORS_ALLOWED_ORIGINS` | api | Không | Biến thường; `NODE_ENV=production` bật các kiểm fail-fast (không chạy PSP mô phỏng) |
+| `TRUST_PROXY_HOPS` | api | Không | Số hop reverse proxy tin cậy (0–5, vắng = 0: không tin `X-Forwarded-For`). Production sau Caddy đặt `1` để `request.ip` là IP khách thật (TD-71, hạn mức IP) |
 | `EXPORT_DIR` | api, worker | Không (mặc định `<tmpdir>/pinehill-exports`) | Biến thường; hai tiến trình **phải** cùng giá trị (HB-163) |
 | `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_PAYMENT_URL` | api | Có khi bật kênh VNPay | Secret (URL là biến thường) |
 | `MOMO_PARTNER_CODE`, `MOMO_ACCESS_KEY`, `MOMO_SECRET_KEY`, `MOMO_PAYMENT_URL` | api | Có khi bật kênh MoMo | Secret (URL là biến thường) |

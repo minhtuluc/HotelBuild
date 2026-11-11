@@ -90,6 +90,9 @@ const apiEnvSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   // Mặc định chỉ nghe loopback (dev); container đặt HOST=0.0.0.0 (AC6).
   HOST: z.string().min(1).default('127.0.0.1'),
+  // HB-175 / TD-71 (bao-mat-ci.md "Đứng sau reverse proxy"): số hop proxy tin cậy phía trước API. Mặc định 0
+  // (dev/test: không tin `X-Forwarded-For`). Production sau Caddy đặt 1. Không có giá trị "tin mọi proxy".
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).optional(),
 });
 
 export type ApiConfig = z.output<typeof apiEnvSchema>;

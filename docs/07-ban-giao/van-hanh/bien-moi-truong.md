@@ -50,6 +50,7 @@ Mã đọc biến ở **một chỗ duy nhất mỗi app** và dừng tiến tr�
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | C | Không | trống ⇒ không xuất | — | URL collector nội bộ | KHO-CHẠY | Nếu endpoint có kèm thông tin xác thực thì coi là **S**. API/worker xuất đủ span, việc lấy mẫu ở collector. |
 | `OTEL_SAMPLE_RATIO` | C | Không | `1` | — | trong `[0,1; 1]` | KHO-CHẠY | Chỉ đặt cờ sampled của W3C; không bỏ span. |
 | `PORT`, `HOST` | C | Không | `3000`, `127.0.0.1` | — | `HOST=0.0.0.0`, `PORT=3000` (đã cứng trong `docker/api.Dockerfile`) | image | |
+| `TRUST_PROXY_HOPS` | C | Không | vắng (0) | `1` | `1` (sau Caddy, [infra/prod](../../../infra/prod/README.md)) | KHO-CHẠY | Số hop proxy tin cậy; không có giá trị "tin mọi proxy" (TD-71) |
 
 ## 3. Worker (`apps/worker`)
 

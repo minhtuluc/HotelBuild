@@ -1,0 +1,199 @@
+# HB-175 — production/staging trên một VPS (QĐ-08). Một lệnh:
+#   docker compose --env-file .env -f infra/prod/docker-compose.yml up -d --build   (build tại chỗ)
+#   docker compose --env-file .env -f infra/prod/docker-compose.yml pull && ... up -d (image GHCR, HB-177)
+# Chỉ Caddy mở cổng ra ngoài (80/443). PostgreSQL/Redis/api/web chỉ trong mạng nội bộ `backend`.
+# Mọi bí mật đọc từ `.env` trên VPS (mẫu: infra/prod/.env.prod.example), không có trong repo.
+name: pinehill
+
+x-api-env: &api-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://app_rw:${APP_RW_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-pinehill}
+  REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379/0
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?}
+  BUSINESS_TIMEZONE: Asia/Ho_Chi_Minh
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  EXPORT_DIR: /exports
+  SMTP_URL: ${SMTP_URL:-}
+  SMTP_FROM: ${SMTP_FROM:-}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      API_HOST: ${API_HOST:?}
+      OPS_HOST: ${OPS_HOST:?}
+      CUSTOMER_HOST: ${CUSTOMER_HOST:?}
+      CADDY_GLOBAL_OPTIONS: ${CADDY_GLOBAL_OPTIONS:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api: { condition: service_healthy }
+      customer-web: { condition: service_healthy }
+      operations-web: { condition: service_healthy }
+    networks:
+      edge: {}
+      # BFF của hai web gọi `https://API_HOST` phía máy chủ: alias để tên host trỏ về Caddy cả khi DNS công
+      # khai chưa có (staging `*.localhost`), production thì đi cùng một đường.
+      backend:
+        aliases: ['${API_HOST:?}', '${OPS_HOST:?}', '${CUSTOMER_HOST:?}']
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pinehill}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:-pinehill}
+    # WAL `replica` sẵn cho PITR/WAL archive (HB-179); không mở cổng ra host.
+    command: ['postgres', '-c', 'wal_level=replica', '-c', 'max_connections=200']
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [backend]
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    # AOF (kiến trúc §7): idempotency/hold dùng Postgres làm nguồn chân lý, Redis giữ hàng đợi BullMQ.
+    command: ['sh', '-c', 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"']
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?}
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -a "$$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [backend]
+
+  migrate:
+    image: ${IMAGE_REGISTRY:-pinehill}/migrate:${IMAGE_TAG:-local}
+    build: { context: ../.., dockerfile: docker/migrate.Dockerfile }
+    restart: 'no'
+    environment:
+      NODE_ENV: production
+      DATABASE_MIGRATION_URL: postgresql://${POSTGRES_USER:-pinehill}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-pinehill}
+      DATABASE_URL: postgresql://app_rw:${APP_RW_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-pinehill}
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [backend]
+
+  api:
+    image: ${IMAGE_REGISTRY:-pinehill}/api:${IMAGE_TAG:-local}
+    build: { context: ../.., dockerfile: docker/api.Dockerfile }
+    restart: unless-stopped
+    environment:
+      <<: *api-env
+      # Sau đúng một hop Caddy (TD-71): `request.ip` = IP khách thật cho hạn mức theo IP.
+      TRUST_PROXY_HOPS: '1'
+      CORS_ALLOWED_ORIGINS: https://${OPS_HOST:?},https://${CUSTOMER_HOST:?}
+      GUEST_WEB_BASE_URL: https://${CUSTOMER_HOST:?}
+      PAYMENT_PSP_CALLBACK_BASE_URL: https://${API_HOST:?}
+      PAYMENT_RETURN_URL_ORIGINS: https://${CUSTOMER_HOST:?}
+      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:?}
+      VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:?}
+      MOMO_PARTNER_CODE: ${MOMO_PARTNER_CODE:?}
+      MOMO_ACCESS_KEY: ${MOMO_ACCESS_KEY:?}
+      MOMO_SECRET_KEY: ${MOMO_SECRET_KEY:?}
+    volumes:
+      - exports:/exports
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/api/v1/system/health >/dev/null']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks: [backend]
+
+  worker:
+    image: ${IMAGE_REGISTRY:-pinehill}/worker:${IMAGE_TAG:-local}
+    build: { context: ../.., dockerfile: docker/worker.Dockerfile }
+    restart: unless-stopped
+    environment:
+      <<: *api-env
+      ENABLE_REPEATABLE_SCHEDULERS: 'true'
+      NOTI_SMTP_URL: ${NOTI_SMTP_URL:-}
+      NOTI_SMTP_FROM: ${NOTI_SMTP_FROM:-}
+    volumes:
+      - exports:/exports
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    networks: [backend]
+
+  customer-web:
+    image: ${IMAGE_REGISTRY:-pinehill}/customer-web:${IMAGE_TAG:-local}
+    build:
+      context: ../..
+      dockerfile: docker/web.Dockerfile
+      args:
+        APP: customer-web
+        NEXT_PUBLIC_FRONT_DESK_CONTACT: ${FRONT_DESK_CONTACT:-}
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: https://${API_HOST:?}/api/v1
+      SESSION_APP_ORIGIN: https://${CUSTOMER_HOST:?}
+      # Staging local (`CADDY_GLOBAL_OPTIONS=local_certs`): tin root CA nội bộ của Caddy, chép vào `./ca/root.crt`
+      # sau lần `up` đầu (README). Production (Let's Encrypt) để trống `WEB_EXTRA_CA_CERTS`.
+      NODE_EXTRA_CA_CERTS: ${WEB_EXTRA_CA_CERTS:-}
+    volumes:
+      - ./ca:/extra-ca:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/api/ready >/dev/null']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    networks: [backend]
+
+  operations-web:
+    image: ${IMAGE_REGISTRY:-pinehill}/operations-web:${IMAGE_TAG:-local}
+    build:
+      context: ../..
+      dockerfile: docker/web.Dockerfile
+      args:
+        APP: operations-web
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: https://${API_HOST:?}/api/v1
+      SESSION_APP_ORIGIN: https://${OPS_HOST:?}
+      # Staging local (`CADDY_GLOBAL_OPTIONS=local_certs`): tin root CA nội bộ của Caddy, chép vào `./ca/root.crt`
+      # sau lần `up` đầu (README). Production (Let's Encrypt) để trống `WEB_EXTRA_CA_CERTS`.
+      NODE_EXTRA_CA_CERTS: ${WEB_EXTRA_CA_CERTS:-}
+    volumes:
+      - ./ca:/extra-ca:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/api/ready >/dev/null']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    networks: [backend]
+
+networks:
+  edge: {}
+  backend: {}
+
+volumes:
+  pgdata: {}
+  redisdata: {}
+  exports: {}
+  caddy_data: {}
+  caddy_config: {}

@@ -36,13 +36,22 @@ function isAllowedOrigin(origin: string, config: ApiConfig): boolean {
   return /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 }
 
+/** Tin đúng `hops` proxy gần nhất (đếm từ kết nối TCP); 0/vắng ⇒ không tin `X-Forwarded-For`. */
+export function trustProxyOf(
+  hops: number | undefined,
+): false | ((address: string, hop: number) => boolean) {
+  if (hops === undefined || hops <= 0) return false;
+  return (_address, hop) => hop < hops;
+}
+
 export async function createApp(
   config: ApiConfig,
   probes?: readonly HealthProbe[],
 ): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule.register(config, probes),
-    new FastifyAdapter(),
+    // `trustProxy` = số hop (không bao giờ `true`): chỉ hop cuối do Caddy gắn được tin (TD-71).
+    new FastifyAdapter({ trustProxy: trustProxyOf(config.TRUST_PROXY_HOPS) }),
     { bufferLogs: true },
   );
   app.useLogger(app.get(Logger));

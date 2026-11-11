@@ -1,0 +1,37 @@
+# HB-175 — reverse proxy + TLS cho một VPS (QĐ-08). Host đọc từ biến môi trường của container caddy.
+# Production: Let's Encrypt tự cấp/gia hạn (cần DNS trỏ về VPS, cổng 80/443 mở).
+# Tuỳ chọn toàn cục qua CADDY_GLOBAL_OPTIONS:
+#   production: `email ops@<miền>` (thông báo hết hạn chứng chỉ của Let's Encrypt)
+#   staging local: `local_certs` ⇒ CA nội bộ của Caddy, host `*.localhost`
+{
+	{$CADDY_GLOBAL_OPTIONS}
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		# NFR-SEC-03: HSTS + chặn MIME sniffing; không lộ phần mềm máy chủ.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+{$API_HOST} {
+	import common
+	# Caddy bỏ `X-Forwarded-For` khách tự gửi và đặt IP kết nối thật; API tin đúng 1 hop (TRUST_PROXY_HOPS=1).
+	reverse_proxy api:3000
+}
+
+{$OPS_HOST} {
+	import common
+	header X-Frame-Options "DENY"
+	reverse_proxy operations-web:3000
+}
+
+{$CUSTOMER_HOST} {
+	import common
+	header X-Frame-Options "DENY"
+	reverse_proxy customer-web:3000
+}
