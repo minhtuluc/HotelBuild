@@ -3,6 +3,7 @@
  * `allowedActions`/`writeIntent` mà hợp đồng yêu cầu; không chứa trường máy chủ tự khai từ client.
  */
 import { z } from 'zod';
+import { roomMoveConsentSchema } from '@pinehill/contracts';
 import { money, toBigInt } from './support.js';
 
 export interface MoveRow {
@@ -27,6 +28,9 @@ export interface MoveRow {
   created_at: Date;
   updated_at: Date;
   version: bigint;
+  /** HB-230 (migration 0011). */
+  overbooking_case_id: string | null;
+  consent_json: unknown;
 }
 
 export interface MergeRow {
@@ -79,10 +83,17 @@ export function walkOutOf(row: MoveRow) {
   };
 }
 
+/** `consent_json` đã qua ràng buộc `jsonb_typeof = object`; vẫn parse để không trả dữ liệu lạ ra ngoài. */
+function consentOf(value: unknown) {
+  if (value === null || value === undefined) return null;
+  const parsed = roomMoveConsentSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
 export function moveView(row: MoveRow, options: MoveViewOptions) {
   return {
     id: row.id,
-    overbookingCaseId: null,
+    overbookingCaseId: row.overbooking_case_id,
     bookingId: row.booking_id,
     bookingRoomId: row.booking_room_id,
     moveType: row.move_type,
@@ -95,7 +106,7 @@ export function moveView(row: MoveRow, options: MoveViewOptions) {
     priceLocked: true as const,
     compensationAmount: money(row.compensation_amount),
     transportCost: money(row.transport_cost),
-    consent: null,
+    consent: consentOf(row.consent_json),
     approvedBy: row.approved_by,
     approvedAt: row.approved_by === null ? null : row.updated_at.toISOString(),
     status: row.status,

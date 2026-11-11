@@ -64,6 +64,15 @@ export interface ProposedMoveInput {
   readonly fromRoomId: string | null;
   readonly target: RoomTarget | null;
   readonly keepScore: number;
+  /** Giờ máy chủ gắn vào `consent.recordedAt` khi client không gửi (HB-230). */
+  readonly now: Date;
+}
+
+/** HB-230: chỉ lưu đồng ý do client gửi, kèm mốc ghi nhận (giờ máy chủ nếu client không gửi). */
+function consentJson(command: NormalizedMove, now: Date): string | null {
+  const consent = command.recordedConsent;
+  if (consent === null) return null;
+  return JSON.stringify({ ...consent, recordedAt: consent.recordedAt ?? now.toISOString() });
 }
 
 /** INSERT lệnh PROPOSED; các cột nullable lấy từ lệnh (walk-out không có phòng đích). */
@@ -74,13 +83,15 @@ async function insertMoveRow(tx: Tx, input: ProposedMoveInput): Promise<MoveRow>
   const created = await tx.$queryRaw<MoveRow[]>`
       INSERT INTO room_moves(booking_id, booking_room_id, move_type, from_room_id, to_room_id,
         from_property_id, to_property_id, reason, keep_score, price_locked, compensation_amount,
-        transport_cost, walk_out_doc_no, guest_signature_ref, staff_signature_ref, status)
+        transport_cost, walk_out_doc_no, guest_signature_ref, staff_signature_ref, status,
+        overbooking_case_id, consent_json)
       VALUES(${booking.id}::uuid, ${command.bookingRoomId}::uuid, ${command.moveType},
         ${fromRoomId}::uuid, ${targetId}::uuid, ${booking.property_id}::uuid,
         ${targetPropertyId}::uuid, ${maskOperationalText(command.reason)}, ${keepScore},
         true, ${BigInt(command.compensationAmount)}, ${BigInt(command.transportCost)},
         ${command.walkOut?.walkOutDocNo ?? null}, ${command.walkOut?.guestSignatureRef ?? null},
-        ${command.walkOut?.staffSignatureRef ?? null}, 'PROPOSED')
+        ${command.walkOut?.staffSignatureRef ?? null}, 'PROPOSED',
+        ${command.overbookingCaseId ?? null}::uuid, ${consentJson(command, input.now)}::jsonb)
       RETURNING *`;
   return created[0]!;
 }
