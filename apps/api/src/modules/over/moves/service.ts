@@ -21,6 +21,7 @@ import { activeAssignmentsOf, lockBooking, lockMove, type BookingRow } from './w
 import {
   businessConflict,
   businessDate,
+  invalid,
   moveETag,
   notFound,
   requireIfMatch,
@@ -80,15 +81,13 @@ export class RoomMoveService {
 
   async create(tx: Tx, actor: AuthorizedActor, body: unknown) {
     const command = moveCreateInput(body);
-    if (command.overbookingCaseId !== undefined) {
-      const overbooking = await overbookingCaseOf(tx, command.overbookingCaseId);
-      requireProperties(actor, [overbooking.property_id]);
-      if (overbooking.status === 'RESOLVED')
-        throw businessConflict('E_OVER_MOVE_NOT_ALLOWED', 'Ca quá tải đã đóng.');
-    }
+    const caseProperty = await this.openCaseProperty(tx, actor, command.overbookingCaseId);
     const booking = await lockBooking(tx, command.bookingId);
     requireProperties(actor, [booking.property_id]);
     assertBookingMovable(booking.status);
+    // HB-230: lệnh gắn với ca nào thì ca đó phải thuộc đúng cơ sở của booking.
+    if (caseProperty !== null && caseProperty !== booking.property_id)
+      throw invalid('Ca quá tải không thuộc cơ sở của booking.');
     const bookingRoom = await bookingRoomOf(tx, command.bookingRoomId, booking.id);
     const fromRoomId = await currentRoomOf(tx, command.bookingRoomId);
     assertMoveTypeAllowed(command, booking.status);
@@ -107,8 +106,23 @@ export class RoomMoveService {
       fromRoomId,
       target,
       keepScore,
+      now: this.clock.now(),
     });
     return { id: row.id, body: await this.view(tx, row, booking) };
+  }
+
+  /** Ca quá tải được tham chiếu phải còn mở và trong phạm vi; trả cơ sở của ca (hoặc `null`). */
+  private async openCaseProperty(
+    tx: Tx,
+    actor: AuthorizedActor,
+    caseId: string | undefined,
+  ): Promise<string | null> {
+    if (caseId === undefined) return null;
+    const overbooking = await overbookingCaseOf(tx, caseId);
+    requireProperties(actor, [overbooking.property_id]);
+    if (overbooking.status === 'RESOLVED')
+      throw businessConflict('E_OVER_MOVE_NOT_ALLOWED', 'Ca quá tải đã đóng.');
+    return overbooking.property_id;
   }
 
   async approve(tx: Tx, actor: AuthorizedActor, moveId: string, body: unknown) {

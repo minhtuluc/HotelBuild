@@ -14,6 +14,7 @@ import {
 } from '@pinehill/contracts';
 import type {
   RoomMoveApproveRequest,
+  RoomMoveConsent,
   RoomMoveExecuteRequest,
   WalkOutEvidence,
 } from '@pinehill/contracts';
@@ -43,6 +44,11 @@ export type MoveCommand = z.infer<typeof flatMoveSchema>;
 
 export interface NormalizedMove extends Omit<MoveCommand, 'walkOut'> {
   readonly walkOut: WalkOutEvidence | null;
+  /**
+   * HB-230: bằng chứng đồng ý **do client gửi** (lưu `room_moves.consent_json`). Khác `consent` (đã
+   * điền mặc định chỉ để đối chiếu hợp đồng): không lưu giá trị máy chủ tự điền như thể là bằng chứng.
+   */
+  readonly recordedConsent: RoomMoveConsent | null;
 }
 
 /** Chứng từ dạng phẳng của harness HB-124; thiếu một trong ba thì coi như không có. */
@@ -106,7 +112,7 @@ export function moveCreateInput(value: unknown): NormalizedMove {
     ...(walkOut === null ? {} : { walkOut }),
   });
   if (!contract.success) throw invalid('Lệnh điều chuyển không đúng hợp đồng OVER.');
-  return { ...command, consent, walkOut };
+  return { ...command, consent, walkOut, recordedConsent: command.consent ?? null };
 }
 
 export function moveApproveInput(value: unknown): RoomMoveApproveRequest {

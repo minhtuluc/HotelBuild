@@ -467,24 +467,25 @@ model outbox_events {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model overbooking_cases {
-  id                String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  property_id       String     @db.Uuid
-  date              DateTime   @db.Date
-  room_type_id      String     @db.Uuid
-  shortage_count    Int        @db.SmallInt
-  status            String     @default("OPEN")
-  detected_at       DateTime   @default(now()) @db.Timestamptz(6)
-  resolved_at       DateTime?  @db.Timestamptz(6)
-  escalated_at      DateTime?  @db.Timestamptz(6)
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  property_id       String       @db.Uuid
+  date              DateTime     @db.Date
+  room_type_id      String       @db.Uuid
+  shortage_count    Int          @db.SmallInt
+  status            String       @default("OPEN")
+  detected_at       DateTime     @default(now()) @db.Timestamptz(6)
+  resolved_at       DateTime?    @db.Timestamptz(6)
+  escalated_at      DateTime?    @db.Timestamptz(6)
   delay_reason      String?
-  resolved_by       String?    @db.Uuid
-  created_at        DateTime   @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime   @default(now()) @db.Timestamptz(6)
-  version           BigInt     @default(1)
+  resolved_by       String?      @db.Uuid
+  created_at        DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime     @default(now()) @db.Timestamptz(6)
+  version           BigInt       @default(1)
   resolution_source String?
-  properties        properties @relation(fields: [property_id], references: [id], onUpdate: NoAction)
-  users             users?     @relation(fields: [resolved_by], references: [id], onUpdate: NoAction)
-  room_types        room_types @relation(fields: [room_type_id], references: [id], onUpdate: NoAction)
+  properties        properties   @relation(fields: [property_id], references: [id], onUpdate: NoAction)
+  users             users?       @relation(fields: [resolved_by], references: [id], onUpdate: NoAction)
+  room_types        room_types   @relation(fields: [room_type_id], references: [id], onUpdate: NoAction)
+  room_moves        room_moves[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -839,35 +840,38 @@ model room_merges {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model room_moves {
-  id                                                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  booking_id                                         String        @db.Uuid
-  booking_room_id                                    String        @db.Uuid
+  id                                                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  booking_id                                         String             @db.Uuid
+  booking_room_id                                    String             @db.Uuid
   move_type                                          String
-  from_room_id                                       String?       @db.Uuid
-  to_room_id                                         String?       @db.Uuid
-  from_property_id                                   String?       @db.Uuid
-  to_property_id                                     String?       @db.Uuid
+  from_room_id                                       String?            @db.Uuid
+  to_room_id                                         String?            @db.Uuid
+  from_property_id                                   String?            @db.Uuid
+  to_property_id                                     String?            @db.Uuid
   reason                                             String
-  keep_score                                         Int           @default(0) @db.SmallInt
-  price_locked                                       Boolean       @default(true)
-  compensation_amount                                BigInt        @default(0)
-  transport_cost                                     BigInt        @default(0)
+  keep_score                                         Int                @default(0) @db.SmallInt
+  price_locked                                       Boolean            @default(true)
+  compensation_amount                                BigInt             @default(0)
+  transport_cost                                     BigInt             @default(0)
   walk_out_doc_no                                    String?
   guest_signature_ref                                String?
   staff_signature_ref                                String?
-  approved_by                                        String?       @db.Uuid
-  status                                             String        @default("PROPOSED")
-  created_at                                         DateTime      @default(now()) @db.Timestamptz(6)
-  updated_at                                         DateTime      @default(now()) @db.Timestamptz(6)
-  version                                            BigInt        @default(1)
+  approved_by                                        String?            @db.Uuid
+  status                                             String             @default("PROPOSED")
+  created_at                                         DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at                                         DateTime           @default(now()) @db.Timestamptz(6)
+  version                                            BigInt             @default(1)
+  overbooking_case_id                                String?            @db.Uuid
+  consent_json                                       Json?
+  overbooking_cases                                  overbooking_cases? @relation(fields: [overbooking_case_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
   payments                                           payments[]
-  users                                              users?        @relation(fields: [approved_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  bookings                                           bookings      @relation(fields: [booking_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  booking_rooms                                      booking_rooms @relation(fields: [booking_room_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  properties_room_moves_from_property_idToproperties properties?   @relation("room_moves_from_property_idToproperties", fields: [from_property_id], references: [id], onUpdate: NoAction)
-  rooms_room_moves_from_room_idTorooms               rooms?        @relation("room_moves_from_room_idTorooms", fields: [from_room_id], references: [id], onUpdate: NoAction)
-  properties_room_moves_to_property_idToproperties   properties?   @relation("room_moves_to_property_idToproperties", fields: [to_property_id], references: [id], onUpdate: NoAction)
-  rooms_room_moves_to_room_idTorooms                 rooms?        @relation("room_moves_to_room_idTorooms", fields: [to_room_id], references: [id], onUpdate: NoAction)
+  users                                              users?             @relation(fields: [approved_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  bookings                                           bookings           @relation(fields: [booking_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  booking_rooms                                      booking_rooms      @relation(fields: [booking_room_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  properties_room_moves_from_property_idToproperties properties?        @relation("room_moves_from_property_idToproperties", fields: [from_property_id], references: [id], onUpdate: NoAction)
+  rooms_room_moves_from_room_idTorooms               rooms?             @relation("room_moves_from_room_idTorooms", fields: [from_room_id], references: [id], onUpdate: NoAction)
+  properties_room_moves_to_property_idToproperties   properties?        @relation("room_moves_to_property_idToproperties", fields: [to_property_id], references: [id], onUpdate: NoAction)
+  rooms_room_moves_to_room_idTorooms                 rooms?             @relation("room_moves_to_room_idTorooms", fields: [to_room_id], references: [id], onUpdate: NoAction)
 
   @@index([booking_id, created_at(sort: Desc)], map: "idx_room_moves_booking")
 }

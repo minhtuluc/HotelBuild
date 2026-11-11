@@ -1639,6 +1639,15 @@ ALTER TABLE operations ADD CONSTRAINT ck_operations_succeeded CHECK (
            OR (result_ref IS NOT NULL AND result_path IS NOT NULL)))
 );
 
+-- Migration 0011 (HB-230, TD-80): `RoomMove` lưu ca quá tải và bằng chứng đồng ý của khách mà hợp đồng
+-- `roomMoveSchema` đã công bố (`overbookingCaseId`, `consent`). Nullable: lệnh cũ không điền lại.
+-- `ON DELETE RESTRICT`: ca đã có lệnh điều chuyển không được xoá.
+ALTER TABLE room_moves
+  ADD COLUMN overbooking_case_id uuid REFERENCES overbooking_cases(id) ON DELETE RESTRICT,
+  ADD COLUMN consent_json jsonb;
+ALTER TABLE room_moves ADD CONSTRAINT ck_room_moves_consent_object
+  CHECK (consent_json IS NULL OR jsonb_typeof(consent_json) = 'object');
+
 CREATE FUNCTION fn_immutable_record() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   -- Cascade chỉ khi parent đã qua guard xoá DRAFT/HELD và lưu bằng chứng vào AuditLog.
@@ -2169,6 +2178,8 @@ CREATE INDEX idx_notifications_pending
 -- Buồng phòng, điều chuyển, công suất (BR-FO-06, UC-OVER-02, BR-RATE-04.3)
 CREATE INDEX idx_housekeeping_date_status ON housekeeping_tasks (business_date, status);
 CREATE INDEX idx_room_moves_booking ON room_moves (booking_id, created_at DESC);
+CREATE INDEX idx_room_moves_overbooking_case ON room_moves (overbooking_case_id)
+  WHERE overbooking_case_id IS NOT NULL;
 CREATE UNIQUE INDEX uq_room_merges_active_primary
   ON room_merges (primary_booking_id) WHERE status = 'ACTIVE';
 CREATE UNIQUE INDEX uq_room_merges_active_secondary
