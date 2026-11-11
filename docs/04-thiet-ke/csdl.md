@@ -2240,6 +2240,13 @@ REVOKE UPDATE, DELETE, TRUNCATE ON audit_logs FROM app_rw, app_ro, analytics_ro;
 REVOKE UPDATE, DELETE, TRUNCATE ON price_snapshots, refund_approvals FROM app_rw, app_ro, analytics_ro;
 REVOKE DELETE, TRUNCATE ON refund_allocations, payments, refund_requests FROM app_rw, app_ro, analytics_ro;
 
+-- Migration 0012 (HB-238, TD-12): bảng tạo sau baseline (0002…0010) và lịch sử trạng thái booking.
+-- `apps/api/test/migration/table-privileges.spec.ts` khoá quyền thực của app_rw trên mọi bảng.
+REVOKE DELETE, TRUNCATE ON refund_payout_operations, channel_cancel_tombstones, channel_sales_closures,
+  overbooking_scan_runs, operations FROM app_rw, app_ro, analytics_ro;
+REVOKE UPDATE, DELETE, TRUNCATE ON channel_sync_attempts, refund_payout_simulator_transfers,
+  booking_status_history FROM app_rw, app_ro, analytics_ro;
+
 -- TD-12: hàm bảo vệ mới không mở EXECUTE cho PUBLIC; chỉ vai trò chạy trigger (app_rw) giữ quyền.
 REVOKE ALL ON FUNCTION fn_lock_refund_booking() FROM PUBLIC;
 REVOKE ALL ON FUNCTION fn_guard_refund_cap() FROM PUBLIC;
@@ -2247,7 +2254,8 @@ GRANT EXECUTE ON FUNCTION fn_lock_refund_booking() TO app_rw;
 GRANT EXECUTE ON FUNCTION fn_guard_refund_cap() TO app_rw;
 
 -- Quyền mặc định cho bảng tạo về sau; mọi migration PHẢI chạy lại khối REVOKE ở trên
--- cho các bảng append-only mới (xem §8.3 Quy tắc migration).
+-- cho các bảng append-only mới (xem §8.3 Quy tắc migration). Từ HB-238, test `table-privileges.spec.ts`
+-- đỏ khi bảng mới chưa được quyết quyền.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_rw;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO app_ro;
