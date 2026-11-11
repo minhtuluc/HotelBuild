@@ -1,48 +1,69 @@
-# Pine Hill — Thiết kế OOAD hệ thống đặt phòng
+# Pine Hill — hệ thống đặt phòng chuỗi khách sạn–homestay
 
-Bộ yêu cầu, phân tích, thiết kế và workspace thi công cho chuỗi khách sạn–homestay. Repository chứa **tài liệu thiết kế, công cụ kiểm tra** và **nền tảng thi công F0** (4 shell frontend + `packages/contracts`, `api-client`, `ui-web`, `ui-native`, `config`). Backend (`apps/api`, `apps/worker`) và `packages/domain` chưa được dựng; chưa có ứng dụng vận hành.
+Monorepo gồm **một backend chung** (API + worker) và bốn ứng dụng giao diện, cùng bộ tài liệu yêu cầu/thiết kế đã dùng để thi công.
 
-- [Bản đồ tài liệu](docs/README.md)
-- [Hướng dẫn bàn giao cho đội thi công](docs/07-ban-giao/huong-dan-thi-cong.md)
-- [Kết quả kiểm chứng và công việc còn lại](docs/07-ban-giao/ket-qua-kiem-chung.md)
-- [Quy tắc nghiệp vụ](docs/02-nghiep-vu/quy-tac-nghiep-vu.md)
-- [API](docs/04-thiet-ke/api.md) · [CSDL](docs/04-thiet-ke/csdl.md) · [Quyết định kiến trúc](docs/04-thiet-ke/adr/README.md)
-- [Ma trận truy vết](docs/06-truy-vet/ma-tran-truy-vet.md)
+| Thư mục | Vai trò |
+| --- | --- |
+| `apps/api` | API REST NestJS/Fastify, Prisma + PostgreSQL 16, Redis 7 |
+| `apps/worker` | Job nền BullMQ: hết hạn hold, outbox, đồng bộ kênh, thông báo, quét quá tải, chi hoàn… |
+| `apps/customer-web` | Web khách (Next.js, cổng 3001) |
+| `apps/operations-web` | Web vận hành (Next.js, cổng 3002; BFF `app/api/session/**`) |
+| `apps/customer-android`, `apps/operations-android` | Ứng dụng Expo/React Native |
+| `packages/contracts` | Hợp đồng zod + OpenAPI (nguồn sự thật của API) |
+| `packages/domain` | Engine thuần: giá, tồn, chính sách huỷ, chỉ số báo cáo |
+| `packages/api-client`, `ui-web`, `ui-native`, `config` | Client API, UI dùng chung, cấu hình lint/TS |
 
-## Kiến trúc sản phẩm tham chiếu
+Tài liệu: [bản đồ tài liệu](docs/README.md) · [quy tắc nghiệp vụ](docs/02-nghiep-vu/quy-tac-nghiep-vu.md) · [API](docs/04-thiet-ke/api.md) · [CSDL](docs/04-thiet-ke/csdl.md) · [ADR](docs/04-thiet-ke/adr/README.md) · [ma trận truy vết](docs/06-truy-vet/ma-tran-truy-vet.md) · [nợ kỹ thuật](docs/07-ban-giao/no-ky-thuat.md) · [vận hành](docs/07-ban-giao/van-hanh/) · [lộ trình đến deploy](docs/08-thi-cong/lo-trinh-den-deploy.md).
 
-Thiết kế mục tiêu dùng **một backend chung** cho toàn hệ thống và bốn ứng dụng giao diện độc lập:
+## Dựng trên máy sạch
 
-| Sản phẩm | Thư mục thi công dự kiến | Người dùng chính |
-|---|---|---|
-| Customer Web | `apps/customer-web` | Khách tự tìm phòng, đặt, thanh toán, huỷ/đổi ngày |
-| Customer Android | `apps/customer-android` | Khách sử dụng trên thiết bị Android |
-| Operations Web | `apps/operations-web` | Lễ tân, quản lý, kế toán, chủ chuỗi, quản trị hệ thống |
-| Operations Android | `apps/operations-android` | Lễ tân, quản lý cơ sở, buồng phòng tại hiện trường |
-| Backend + worker dùng chung | `apps/api`, `apps/worker` | API, transaction nghiệp vụ, job nền, outbox và tích hợp |
-
-Các hợp đồng API và mô hình miền dùng chung nằm trong `packages/contracts` và `packages/domain`; UI web/native không chia sẻ component một cách gượng ép. Cây thư mục này là **blueprint cho giai đoạn thi công**, không phải tuyên bố các app đã được triển khai.
-
-## Kiểm tra tại máy
-
-Node.js 22.13 trở lên:
+Cần: **Node.js ≥ 22.13**, **pnpm 10.34.5** (`corepack enable` sẽ lấy đúng bản khai trong `package.json`), **Docker** có `docker compose`. Android cần thêm Android SDK/thiết bị — xem [van-hanh/android.md](docs/07-ban-giao/van-hanh/android.md).
 
 ```sh
-npm ci
-npm run check
+git clone <repo> pine-hill && cd pine-hill
+corepack enable
+pnpm install --frozen-lockfile
+
+cp .env.example .env              # chỉ dùng local; .env đã bị .gitignore chặn
+# Hai khoá JWT để trống ở tệp mẫu — sinh ngẫu nhiên (chú thích trong .env.example):
+sed -i "s#^JWT_ACCESS_SECRET=.*#JWT_ACCESS_SECRET=$(openssl rand -base64 48)#" .env
+sed -i "s#^JWT_REFRESH_SECRET=.*#JWT_REFRESH_SECRET=$(openssl rand -base64 48)#" .env
+pnpm infra:up                     # PostgreSQL 16 + Redis 7 + Mailpit, chờ healthy
+set -a; . ./.env; set +a          # nạp biến vào shell hiện tại
+
+pnpm migrate                      # migration bằng role chủ (DATABASE_MIGRATION_URL)
+pnpm db:dev-roles                 # đặt mật khẩu login cho role runtime app_rw (chỉ dev)
+SEED_DEV_PASSWORD='<mật khẩu dev>' pnpm db:seed   # 3 cơ sở, 55 phòng, 7 tài khoản dev (một mỗi vai trò)
 ```
 
-Lệnh kiểm tra liên kết/anchor Markdown, cú pháp Mermaid, mã yêu cầu và truy vết, công cụ trích DDL, các ràng buộc CSDL bằng PostgreSQL nhúng. Xem scripts trong [package.json](package.json) và hướng dẫn bàn giao để phân biệt kiểm tra đã thực thi với nghiệm thu ứng dụng trong tương lai. PostgreSQL nhúng không thay thế kiểm thử cạnh tranh và vận hành trên PostgreSQL 16.
+Các dòng còn để trống trong `.env` (`EXPORT_DIR`, `NOTI_SMTP_*`, `OTEL_*`) nghĩa là "dùng mặc định/tắt". Nếu máy đã có môi trường dev khác dùng chung PostgreSQL/Redis, đổi tên CSDL trong hai URL và chỉ số DB của `REDIS_URL` (ví dụ `/5`) để worker không nhận job của môi trường kia.
 
-Không dùng DDL mẫu để chạy trực tiếp vào cơ sở dữ liệu đang vận hành. Khi thi công, chuyển DDL thành migration được review, kiểm tra dữ liệu, backup và diễn tập phục hồi trước triển khai.
+Chi tiết cổng, `psql`, migration và mật khẩu runtime: [infra/README.md](infra/README.md). Danh mục biến môi trường: [van-hanh/bien-moi-truong.md](docs/07-ban-giao/van-hanh/bien-moi-truong.md).
 
-## Kiểm thử PostgreSQL 16 thật
+### Chạy
 
-Trỏ `DATABASE_URL` tới cluster PostgreSQL 16 dành riêng cho kiểm thử, với quyền tạo database/role và extension. Runner xác minh major version, tạo database tên ngẫu nhiên, chạy DDL/test rồi xoá database tạm. Không dùng cluster production; role kiểm thử là cấp cluster.
+Mỗi lệnh một terminal (đã nạp `.env`):
 
-```powershell
-$env:DATABASE_URL = 'postgresql://USER:PASSWORD@127.0.0.1:5432/postgres'
-npm run test:postgres
+```sh
+pnpm --filter @pinehill/api dev              # http://127.0.0.1:3000/api/v1  (health: /api/v1/system/health)
+pnpm --filter @pinehill/worker dev           # job nền
+pnpm --filter @pinehill/customer-web dev     # http://127.0.0.1:3001
+pnpm --filter @pinehill/operations-web dev   # http://127.0.0.1:3002
 ```
 
-Thay USER/PASSWORD bằng thông tin local; không commit credential. Ca cạnh tranh dùng hai kết nối độc lập, quan sát khóa thật và kiểm cả commit/rollback. Kết quả mới nhất và các cổng chưa nghiệm thu nằm trong báo cáo kiểm chứng ở đầu trang.
+Tài khoản dev do `db:seed` tạo: `owner`, `manager`, `frontdesk`, `housekeeping`, `reservation`, `accountant`, `sysadmin`, cùng mật khẩu `SEED_DEV_PASSWORD`. Production không dùng seed dev — tạo chủ chuỗi bằng `pnpm owner:bootstrap` ([go-live.md](docs/07-ban-giao/van-hanh/go-live.md)).
+
+## Kiểm tra
+
+| Lệnh | Phạm vi |
+| --- | --- |
+| `pnpm run ci` | Cổng của mọi PR: phạm vi ticket, OpenAPI/hợp đồng, import, typecheck, lint, test đơn vị, build |
+| `pnpm test:integration` | Integration API + worker trên PostgreSQL 16/Redis 7 thật (cần `DATABASE_MIGRATION_URL`, `REDIS_URL`) |
+| `pnpm db:drift` | `schema.prisma` khớp chuỗi migration |
+| `pnpm test:e2e` | Playwright cho hai web |
+| `npm run check` | Liên kết/anchor Markdown, Mermaid, mã yêu cầu và truy vết của tài liệu |
+| `node tests/load/chay-cuc-bo.mjs` | Tải k6 cục bộ (podman/docker) — [van-hanh/tai-k6.md](docs/07-ban-giao/van-hanh/tai-k6.md) |
+
+Quy trình thi công (một ticket một nhánh `ticket/HB-nnn-slug`, đặc tả trong `docs/08-thi-cong/tickets/`, test khoá `*.locked.*` không được sửa): [docs/08-thi-cong/README.md](docs/08-thi-cong/README.md).
+
+Không chạy DDL mẫu trong tài liệu vào cơ sở dữ liệu đang vận hành; triển khai chỉ qua migration đã review ([van-hanh/migration.md](docs/07-ban-giao/van-hanh/migration.md)).
