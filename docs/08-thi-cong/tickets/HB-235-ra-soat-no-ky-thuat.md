@@ -27,6 +27,8 @@ allow:
 | TD-19 | Đóng | Đường cộng `used` ở `chan/inbound/inventory.ts` (HB-129) |
 | TD-13 | Đóng | Kiến trúc §1 (dòng 4, bảng công nghệ, cây thư mục) sửa idempotency → PostgreSQL; §7 theo HB-175 |
 | TD-06, TD-08 | Một phần | Có `GET`; TD-08 thêm `GET/POST` ở HB-236; còn thiếu sửa/ngừng |
+| TD-16, TD-24 | Đóng | HB-200/HB-202 đã merge; runner 900 s, CI integration 11,5 phút |
+| TD-17 | Đóng | HB-225/228/231 đã merge; k6 200 VU 0 lỗi 5xx |
 | TD-09 | Còn mở, gán người nhận và hạn | HB-040 cố ý chưa có đến/đi/ở |
 
 Các mục chạm tiền, tồn, bảo mật (TD-18, TD-23, TD-64, TD-65, TD-66…) xử lý bằng ticket sửa mã riêng, không đóng bằng tài liệu.
