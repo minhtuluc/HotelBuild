@@ -2,6 +2,7 @@
  * `MERGE_CONNECTING`: một booking giữ hai phòng thông nhau, không cần consent nên lệnh vào thẳng
  * APPROVED; tạo chỉ kiểm tra điều kiện, thực thi mới ghi chiết khấu 10% và phát outbox/audit.
  */
+import { BookingLedger } from '../../pay/ledger/service.js';
 import { evaluateRoomMerge } from '@pinehill/domain/overbooking';
 import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
 import type { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
@@ -150,6 +151,9 @@ export async function executeConnecting(
     throw businessConflict('E_OVER_MOVE_NOT_ALLOWED', 'Quyết định ghép không khớp mô hình.');
   const value = decision.value;
   await applyDiscount(tx, booking.id, value.netCombinedReference.amount, now);
+  // HB-237 (TD-18): chiếu lại số dư từ sổ cái. `reduceObligation` chỉ ước `Σ ROOM − paid_amount`, bỏ qua
+  // phụ thu và tiền đã hoàn, mà `GET /bookings/{id}` trả thẳng cột `balance_due`.
+  await new BookingLedger({ now: () => now }).sync(tx, booking.id, actor);
   await tx.$executeRaw`
     UPDATE room_merges SET status='ACTIVE', updated_at=${now}::timestamptz
      WHERE id=${row.id}::uuid`;
