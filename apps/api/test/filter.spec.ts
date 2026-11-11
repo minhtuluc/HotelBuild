@@ -6,6 +6,7 @@ import type { FastifyInstance } from 'fastify';
 import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
+import { Prisma } from '@prisma/client';
 import { errorBodySchema } from '@pinehill/contracts';
 import { AllExceptionsFilter } from '../src/common/all-exceptions.filter.js';
 import { AppError } from '../src/common/app-error.js';
@@ -22,6 +23,34 @@ class ProbeController {
   @Get('known')
   known(): never {
     throw new AppError(404, 'E_GEN_NOT_FOUND', 'Không tìm thấy tài nguyên.');
+  }
+
+  /** HB-231: hết thời gian chờ connection (P2024) là quá tải tạm thời ⇒ 503 + Retry-After. */
+  @Get('pool-timeout')
+  poolTimeout(): never {
+    throw new Prisma.PrismaClientKnownRequestError('Timed out fetching a new connection', {
+      code: 'P2024',
+      clientVersion: 'test',
+    });
+  }
+
+  @Get('transaction-timeout')
+  transactionTimeout(): never {
+    throw new Prisma.PrismaClientKnownRequestError(
+      'Unable to start a transaction in the given time',
+      {
+        code: 'P2028',
+        clientVersion: 'test',
+      },
+    );
+  }
+
+  @Get('other-prisma')
+  otherPrisma(): never {
+    throw new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+      code: 'P2002',
+      clientVersion: 'test',
+    });
   }
 
   /** `message` rỗng ⇒ ứng viên body không khớp `errorBodySchema` ⇒ filter phải thoái hoá về 500. */
@@ -101,4 +130,31 @@ it('query values never enter error-body paths or fallback error log paths', asyn
     expect(errorBodySchema.parse(response.body).path).toBe(path);
   }
   expect(JSON.stringify(errors.mock.calls)).not.toContain('012345678934');
+});
+
+describe('HB-231 — CSDL quá tải trả 503 + Retry-After, lỗi khác vẫn 500', () => {
+  it.each(['pool-timeout', 'transaction-timeout'])(
+    '%s ⇒ 503 E_GEN_SERVICE_UNAVAILABLE',
+    async (route) => {
+      const { server, errors } = await start();
+      const res = await request(server).get(`/probe/${route}`);
+      expect(res.status).toBe(503);
+      expect(res.headers['retry-after']).toBe('1');
+      const body = errorBodySchema.parse(res.body);
+      expect(body).toMatchObject({ code: 'E_GEN_SERVICE_UNAVAILABLE', retryAfterSeconds: 1 });
+      // Không lộ thông điệp nội bộ của Prisma.
+      expect(JSON.stringify(res.body)).not.toContain('connection');
+      expect(errors).toHaveBeenCalledWith(
+        expect.objectContaining({ failureKind: 'CAPACITY' }),
+        expect.any(String),
+      );
+    },
+  );
+
+  it('lỗi Prisma khác (P2002) vẫn là lỗi không lường trước ⇒ 500', async () => {
+    const { server } = await start();
+    const res = await request(server).get('/probe/other-prisma');
+    expect(res.status).toBe(500);
+    expect(res.headers['retry-after']).toBeUndefined();
+  });
 });

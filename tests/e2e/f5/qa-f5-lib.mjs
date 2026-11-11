@@ -221,7 +221,8 @@ export async function bootstrap({ beforeWorker } = {}) {
     ...process.env,
     DATABASE_URL: runtimeUrl,
     REDIS_URL: redisBase,
-    LOG_LEVEL: 'silent',
+    // Lượt dài (k6 HB-184/HB-231): `QA_API_LOG_LEVEL=error` + `QA_API_LOG=<tệp>` để giữ log lỗi của API.
+    LOG_LEVEL: process.env.QA_API_LOG_LEVEL ?? 'silent',
     BUSINESS_TIMEZONE: TZ,
     JWT_ACCESS_SECRET: randomBytes(32).toString('hex'),
     JWT_REFRESH_SECRET: randomBytes(32).toString('hex'),
@@ -243,6 +244,7 @@ export async function bootstrap({ beforeWorker } = {}) {
     { cwd: join(repoRoot, 'apps/api'), env, stdio: ['ignore', 'pipe', 'pipe'], detached: true },
   );
   apiChild.stdout.on('data', (d) => process.env.QA_DEBUG && process.stdout.write('[api-out] ' + d));
+  if (process.env.QA_API_LOG) apiChild.stdout.on('data', (d) => appendFileSync(process.env.QA_API_LOG, d));
   apiChild.on('exit', (code, sig) => console.log('[api] exit', code, sig));
   apiChild.stderr.on('data', (data) => process.stderr.write(`[api] ${data}`));
   children.push(apiChild);
