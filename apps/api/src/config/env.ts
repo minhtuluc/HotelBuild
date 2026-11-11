@@ -103,10 +103,20 @@ export class ConfigError extends Error {
 
 /** Nơi DUY NHẤT trong apps/api đọc process.env; lỗi chỉ nêu tên biến, không in giá trị. */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
-  const parsed = apiEnvSchema.safeParse(env);
+  // HB-233: biến khai nhưng để trống (`KEY=` trong `.env` sao từ `.env.example`, nạp bằng `set -a`) nghĩa
+  // là **chưa đặt**, đúng như `.env.example` mô tả. Trước đây `z.string().min(1).optional()` từ chối chuỗi
+  // rỗng nên API/worker không khởi động được trên máy sạch.
+  const parsed = apiEnvSchema.safeParse(withoutEmptyValues(env));
   if (!parsed.success) {
     const names = [...new Set(parsed.error.issues.map((issue) => issue.path.join('.')))].join(', ');
     throw new ConfigError(`Cấu hình thiếu/sai: ${names}`);
   }
   return parsed.data;
+}
+
+/** Bỏ các biến có giá trị rỗng/chỉ khoảng trắng; biến bắt buộc vẫn báo thiếu đúng tên. */
+function withoutEmptyValues(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return Object.fromEntries(
+    Object.entries(env).filter(([, value]) => value === undefined || value.trim() !== ''),
+  );
 }
