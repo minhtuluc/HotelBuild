@@ -81,7 +81,7 @@ Mỗi dòng có **mặc định**: nếu người dùng chưa trả lời khi t�
 
 | # | Quyết định | Hạn | Mặc định |
 |---|---|---|---|
-| 1 | Hosting production cho api/worker/PostgreSQL/Redis (kiến trúc §7 chỉ chốt Vercel cho web, EAS cho Android) | Trước HB-175 | Một VPS Docker Engine (vd. Hetzner/DigitalOcean) + backup off-site; IaC trung lập nhà cung cấp |
+| 1 | Hosting production cho api/worker/PostgreSQL/Redis (kiến trúc §7 chỉ chốt Vercel cho web, EAS cho Android) | Trước HB-175 | **Đã chốt — [QĐ-08](../05-ke-hoach/nhat-ky/QD-08-hosting.md)**: một VPS chạy Docker Compose, cả hai web chạy trên VPS; nhà cung cấp/vùng và tên miền còn chờ chủ dự án |
 | 2 | Credential sandbox VNPay/MoMo của dự án | Trước HB-094 nghiệm thu | Adapter giả lập cùng hợp đồng §5.2; không nhận tiền thật |
 | 3 | Pháp lý dữ liệu: lịch lưu giữ, quyền riêng tư, xử lý yêu cầu khách | Trước HB-191 | BR-SYS-04: booking/thanh toán 10 năm, audit 5 năm — giả định demo |
 | 4 | Bộ quan sát (Prometheus + Grafana tự host hay SaaS) | Trước HB-181 | OTel Collector → Prometheus + Grafana tự host |
