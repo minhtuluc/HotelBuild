@@ -9,6 +9,7 @@ import { InjectPinoLogger } from 'nestjs-pino';
 import { CLOCK, ID_GENERATOR } from '../infrastructure/ports.js';
 import { requestPath } from './safe-request.js';
 import { AppError } from './app-error.js';
+import { CAPACITY_RETRY_AFTER_SECONDS, capacityExhausted } from './capacity-error.js';
 import { parseTraceparent } from '../infrastructure/tracing/trace-context.js';
 import { resolveCorrelationId } from './request-id.js';
 
@@ -125,6 +126,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ...(exception.retryAfterSeconds === undefined
           ? {}
           : { retryAfterSeconds: exception.retryAfterSeconds }),
+      };
+    }
+    if (capacityExhausted(exception)) {
+      this.logger.error(
+        { ...diagnostic, failureKind: 'CAPACITY' },
+        'CSDL hết năng lực tạm thời — trả 503 kèm Retry-After',
+      );
+      return {
+        status: 503,
+        code: UNAVAILABLE.code,
+        message: UNAVAILABLE.message,
+        retryAfterSeconds: CAPACITY_RETRY_AFTER_SECONDS,
       };
     }
     if (exception instanceof HttpException) {

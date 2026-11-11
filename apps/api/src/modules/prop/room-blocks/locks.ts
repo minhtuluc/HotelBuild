@@ -3,6 +3,7 @@ import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js'
 import { requireProperty } from '../../../common/rbac/scope.js';
 import { AppError } from '../../../common/app-error.js';
 import { RetryTransaction } from '../../../common/idempotency/transaction-retry.js';
+import { capacityExhausted } from '../../../common/capacity-error.js';
 import { missing } from './validation.js';
 import { assertLockedActor } from './locked-actor.js';
 const retry = () =>
@@ -26,6 +27,8 @@ export function inventoryError(error: unknown): never {
     if (retryable(error)) throw retry();
     if (exclusion(error)) throw new AppError(409, 'E_INV_ROOM_TAKEN', 'Lịch phòng đã thay đổi.');
   }
+  // HB-231: quá tải CSDL giữ nguyên lỗi gốc để filter trả 503 + Retry-After thay vì 500.
+  if (capacityExhausted(error)) throw error;
   if (
     error instanceof Prisma.PrismaClientKnownRequestError ||
     error instanceof Prisma.PrismaClientUnknownRequestError
