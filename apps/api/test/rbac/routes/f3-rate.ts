@@ -51,4 +51,15 @@ export function f3Rate(keyed: Oracle): void {
     status: 422,
     method: RequestMethod.POST,
   };
+  // HB-236 / api.md §2.4 / BR-RBAC-02,04: MANAGER/OWNER xem khuyến mãi; chỉ OWNER tạo. Oracle gửi thân sai → 400.
+  keyed[`${RequestMethod.GET}:promotions`] = {
+    roles: ['MANAGER', 'OWNER'],
+    status: 200,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.POST}:promotions`] = {
+    roles: ['OWNER'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
 }
