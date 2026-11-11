@@ -17,6 +17,7 @@ expo-env.d.ts
 .env
 .env.*
 !.env.example
+!infra/prod/.env.prod.example
 *.pem
 *.key
 
@@ -41,3 +42,4 @@ test-results/
 *.log
 npm-debug.log*
 .agent-qc/
+infra/prod/ca/
