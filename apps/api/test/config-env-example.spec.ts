@@ -36,4 +36,16 @@ describe('HB-233 cấu hình API từ .env.example', () => {
       loadConfig({ ...envExample(), JWT_ACCESS_SECRET: '', JWT_REFRESH_SECRET: '  ' }),
     ).toThrow(/JWT_ACCESS_SECRET, JWT_REFRESH_SECRET/);
   });
+
+  it('HB233_blank_node_env_is_rejected_not_silently_development', () => {
+    // NODE_ENV trống không được lặng lẽ thành "development": production sẽ bỏ qua các cổng fail-fast.
+    expect(() =>
+      loadConfig({
+        ...envExample(),
+        JWT_ACCESS_SECRET: 'a'.repeat(64),
+        JWT_REFRESH_SECRET: 'b'.repeat(64),
+        NODE_ENV: '   ',
+      }),
+    ).toThrow(/NODE_ENV/);
+  });
 });

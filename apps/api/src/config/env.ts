@@ -106,6 +106,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   // HB-233: biến khai nhưng để trống (`KEY=` trong `.env` sao từ `.env.example`, nạp bằng `set -a`) nghĩa
   // là **chưa đặt**, đúng như `.env.example` mô tả. Trước đây `z.string().min(1).optional()` từ chối chuỗi
   // rỗng nên API/worker không khởi động được trên máy sạch.
+  // Riêng `NODE_ENV` để trống **không** được coi là chưa đặt: nó điều khiển fail-fast production
+  // (`pspSettings` từ chối cổng mock, CORS đóng origin dev). Đoán "development" ở đây sẽ tắt các cổng đó.
+  if (env.NODE_ENV !== undefined && env.NODE_ENV.trim() === '')
+    throw new ConfigError('Cấu hình thiếu/sai: NODE_ENV');
   const parsed = apiEnvSchema.safeParse(withoutEmptyValues(env));
   if (!parsed.success) {
     const names = [...new Set(parsed.error.issues.map((issue) => issue.path.join('.')))].join(', ');
