@@ -7,6 +7,7 @@ import { ChannelOtaBookingsModule } from './modules/chan/ota-bookings/module.js'
 import { ChannelMonitoringModule } from './modules/chan/monitoring/module.js';
 import { RateCalendarModule } from './modules/rate/calendar/module.js';
 import { SeasonsModule } from './modules/rate/seasons/module.js';
+import { PromotionsModule } from './modules/rate/promotions/module.js';
 import { PropertyAdminModule } from './modules/prop/property-admin/module.js';
 import { serializeSafeRequest } from './common/safe-request.js';
 import { AuditLogsModule } from './modules/sys/audit-logs/module.js';
@@ -168,6 +169,7 @@ export class AppModule {
         ChannelMonitoringModule,
         RateCalendarModule,
         SeasonsModule,
+        PromotionsModule,
         CancellationPoliciesModule,
         QuotesMultiChannelModule,
         QuotesModule,
