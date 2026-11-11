@@ -18,7 +18,9 @@ import {
   type BookingRow,
   type RoomTarget,
 } from '../moves/writes.js';
+import { BookingLedger } from '../../pay/ledger/service.js';
 import { businessConflict, businessDate, type Tx } from '../support.js';
+import { refundMergeOverpayment, type MergeRefund } from './overpayment.js';
 import type { MergeRow } from '../views.js';
 import {
   applyDiscount,
@@ -193,6 +195,19 @@ async function applyShareEffects(
   });
   await applyDiscount(tx, context.primary.id, decision.primaryNetAfterDiscount.amount, now);
   await applyDiscount(tx, context.secondary.id, decision.secondaryNetAfterDiscount.amount, now);
+  // HB-234: khách đã trả đủ giá cũ ⇒ phần trả thừa sau chiết khấu thành hồ sơ hoàn PENDING.
+  const ledger = new BookingLedger({ now: () => now });
+  const refunds: MergeRefund[] = [];
+  for (const booking of [context.primary, context.secondary]) {
+    const refund = await refundMergeOverpayment(tx, {
+      ledger,
+      actor,
+      booking,
+      mergeId: row.id,
+      now,
+    });
+    if (refund !== null) refunds.push(refund);
+  }
   await tx.$executeRaw`
     UPDATE room_merges SET status='ACTIVE', updated_at=${now}::timestamptz
      WHERE id=${row.id}::uuid`;
@@ -206,6 +221,7 @@ async function applyShareEffects(
       secondaryBookingId: context.secondary.id,
       roomId: context.target.id,
       discountAmount: decision.discountAmount.amount,
+      refundRequestIds: refunds.map((refund) => refund.refundRequestId),
     },
   });
   await audit.record(tx, {
@@ -219,6 +235,11 @@ async function applyShareEffects(
       roomId: context.target.id,
       beds,
       discountAmount: decision.discountAmount.amount,
+      refunds: refunds.map(({ bookingId, refundRequestId, amount }) => ({
+        bookingId,
+        refundRequestId,
+        amount,
+      })),
     },
     reason: null,
   });

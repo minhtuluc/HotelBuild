@@ -8,13 +8,14 @@ import { evaluateWalkOut, type WalkOutDecision } from '@pinehill/domain/overbook
 import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
 import type { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import type { BookingLedger } from '../../pay/ledger/service.js';
-import { businessConflict, invalid, money } from '../support.js';
+import { businessConflict, money } from '../support.js';
 import type { Tx } from '../support.js';
 import type { MoveRow } from '../views.js';
 import { approverOf, firstNight } from './queries.js';
 import {
   closeBookingForWalkOut,
   insertWalkOutRefund,
+  reservationLegs,
   refundFeeOf,
   releaseAssignmentsOf,
   setMoveStatus,
@@ -101,24 +102,6 @@ async function decideWalkOut(
   if (decision.value.missingDocuments.length > 0)
     throw businessConflict('E_OVER_MOVE_NOT_ALLOWED', 'Thiếu chứng từ walk-out bắt buộc.');
   return { decision: decision.value, paymentId: projection.sources[0]?.paymentId ?? null };
-}
-
-/** Phân bổ NET trên các nguồn thu còn khả dụng, thứ tự UUID ổn định như `BookingLedger`. */
-function reservationLegs(
-  sources: readonly { paymentId: string; available: bigint }[],
-  net: bigint,
-): { paymentId: string; amount: bigint }[] {
-  let left = net;
-  const legs: { paymentId: string; amount: bigint }[] = [];
-  for (const source of [...sources].sort((a, b) => a.paymentId.localeCompare(b.paymentId))) {
-    if (left <= 0n) break;
-    if (source.available <= 0n) continue;
-    const amount = source.available < left ? source.available : left;
-    legs.push({ paymentId: source.paymentId, amount });
-    left -= amount;
-  }
-  if (left > 0n) throw invalid('Quỹ hoàn không đủ cho số phải hoàn của walk-out.');
-  return legs;
 }
 
 /** Nhả mọi phòng, void nghĩa vụ ROOM, huỷ booking rồi giữ chỗ hoàn trong cùng transaction. */
