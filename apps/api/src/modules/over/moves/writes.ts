@@ -180,8 +180,23 @@ export interface WalkOutRefundInput {
   readonly paymentId: string | null;
 }
 
-/** Hồ sơ hoàn HOTEL_RELOCATION PENDING, 100% trên số đã thu, phí theo cấu hình (F6-D02). */
-export async function insertWalkOutRefund(tx: Tx, input: WalkOutRefundInput): Promise<string> {
+export interface RelocationRefundInput {
+  readonly booking: BookingRow;
+  /** Khoá idempotent của sự kiện (`uq_refund_event`): `walkout:<moveId>` hoặc `merge:<mergeId>`. */
+  readonly eventKey: string;
+  readonly actor: AuthorizedActor;
+  readonly requestedAmount: bigint;
+  readonly refundFee: bigint;
+  readonly evidenceRefs: readonly string[];
+  readonly now: Date;
+  readonly paymentId: string | null;
+}
+
+/** Hồ sơ hoàn HOTEL_RELOCATION PENDING, 100% số được hoàn, duyệt theo luồng hoàn hai cấp hiện có. */
+export async function insertRelocationRefund(
+  tx: Tx,
+  input: RelocationRefundInput,
+): Promise<string> {
   const ratePlan = await tx.$queryRaw<
     { cancellation_policy_id: string }[]
   >`SELECT cancellation_policy_id FROM rate_plans WHERE id=${input.booking.rate_plan_id}::uuid`;
@@ -193,13 +208,37 @@ export async function insertWalkOutRefund(tx: Tx, input: WalkOutRefundInput): Pr
     INSERT INTO refund_requests(booking_id, event_key, payment_id, policy_id, hours_before_check_in,
       applied_tier_id, refund_percent, requested_amount, refund_fee, status, is_force_majeure,
       evidence_refs, reason, requested_by, requester_type, requester_id, created_at, updated_at)
-    VALUES(${input.booking.id}::uuid, ${`walkout:${input.moveId}`},
+    VALUES(${input.booking.id}::uuid, ${input.eventKey},
       ${input.paymentId}::uuid, ${policyId}::uuid, ${hours.toFixed(2)}::numeric,
       NULL, 100::numeric, ${input.requestedAmount}, ${input.refundFee}, 'PENDING', false,
       ${[...input.evidenceRefs]}::text[], 'HOTEL_RELOCATION', ${input.actor.id}::uuid, 'USER',
       ${input.actor.id}, ${input.now}::timestamptz, ${input.now}::timestamptz)
     RETURNING id`;
   return rows[0]!.id;
+}
+
+/** Hồ sơ hoàn walk-out: 100% trên số đã thu, phí theo cấu hình (F6-D02). */
+export function insertWalkOutRefund(tx: Tx, input: WalkOutRefundInput): Promise<string> {
+  const { moveId, ...rest } = input;
+  return insertRelocationRefund(tx, { ...rest, eventKey: `walkout:${moveId}` });
+}
+
+/** Phân bổ số hoàn NET trên các nguồn thu còn khả dụng, thứ tự UUID ổn định như `BookingLedger`. */
+export function reservationLegs(
+  sources: readonly { paymentId: string; available: bigint }[],
+  net: bigint,
+): { paymentId: string; amount: bigint }[] {
+  let left = net;
+  const legs: { paymentId: string; amount: bigint }[] = [];
+  for (const source of [...sources].sort((a, b) => a.paymentId.localeCompare(b.paymentId))) {
+    if (left <= 0n) break;
+    if (source.available <= 0n) continue;
+    const amount = source.available < left ? source.available : left;
+    legs.push({ paymentId: source.paymentId, amount });
+    left -= amount;
+  }
+  if (left > 0n) throw invalid('Quỹ hoàn không đủ cho số phải hoàn.');
+  return legs;
 }
 
 /** Huỷ toàn booking do walk-out: giữ paidAmount, void nghĩa vụ, ghi lịch sử trạng thái. */
