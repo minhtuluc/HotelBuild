@@ -49,7 +49,7 @@ Trên staging, k6 phải chạy từ nhiều IP, hoặc sau proxy có `trustProx
 | --- | --- | --- |
 | Bế tắc pool ở tuyến khách `@Idempotent` (`/holds`, `/bookings`, `/payments/online`, `/quotes`): mỗi lệnh xin connection thứ hai bên trong transaction | `main`, 20 VU: KB-B có cả 20 hold trả 500 sau 10,08 s. 200 VU: 500 hàng loạt ở `POST /quotes` | HB-228 (#277) |
 | Worker sập (`Connection is closed`, BullMQ đóng `Queue` lúc kết nối còn khởi tạo) ⇒ không còn ai giải phóng hold hết hạn | REL-02 đỏ: 175 rồi 543 hold quá hạn | HB-229 (#278) |
-| Pool Prisma mặc định (17) bão hoà | Spike 2 phút trên DB sạch: pool 17 cho 21,4% 5xx / 187 rps; pool 50 cho 0% / 353 rps | Cấu hình, xem [bien-moi-truong.md](bien-moi-truong.md) |
+| Quá tải trả `500` thay vì `503` (TD-81) | Đột biến 600 VU sau lượt tải: 11–22% lệnh lỗi, **100% là `CAPACITY`** (Prisma P2024/P2028: không lấy được connection/transaction trong `maxWait`) | HB-231: trả `503 E_GEN_SERVICE_UNAVAILABLE` + `Retry-After: 1` |
 
 **Số đo (lượt cuối, đủ bản sửa)**
 
@@ -62,6 +62,8 @@ Trên staging, k6 phải chạy từ nhiều IP, hoặc sau proxy có `trustProx
 | Bất biến | BB-01 bán trùng 0 · đêm phòng cuối vượt sức chứa 0 · hold quá hạn chưa giải phóng 0 (hạn hold rút còn 2 phút để mọi hold của KB-A hết hạn trong lượt) · tiền âm 0 | Đạt |
 
 **Đọc kết quả**
+
+> **Đính chính (11/11/2026, HB-231).** Bản trước ghi "pool 17 cho 21,4% 5xx, pool 50 cho 0%". Phép so đó đặt cạnh hai điều kiện khác nhau: lượt 21,4% chạy **sau** 30 phút tải, lượt 0% chạy trên DB sạch. Đo lại cùng điều kiện (đột biến 2 phút trên DB sạch, pool **17**): 0% 5xx, 328 rps. Kích thước pool không phải nguyên nhân. Lỗi chỉ xuất hiện khi đột biến đến sau một lượt tải dài: CPU của tiến trình đơn bão hoà và transaction quá `maxWait` 1 giây.
 
 KB-A ở 200 VU và đột biến 600 VU đều chạm trần **một** tiến trình Node: khoảng 180 rps với hỗn hợp này. Ở 50 VU (KB-C), cùng các truy vấn đó có lưới tồn p95 217 ms và báo giá 98 ms. Vì vậy không có truy vấn nào chậm bất thường; độ trễ tăng là do xếp hàng ở CPU/pool.
 
