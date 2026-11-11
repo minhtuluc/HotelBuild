@@ -12,7 +12,7 @@
 | 2 | Kiểm tra tồn và giữ chỗ phải nằm trong **một** transaction có khoá bi quan | BR-INV-02 | Một workflow sở hữu transaction; nhiều instance tuân cùng giao thức khóa PostgreSQL theo ADR-014 |
 | 2 | Cùng đầu vào giá → cùng kết quả trên customer web, customer Android, operations web, operations Android và API | BR-RATE-17, NFR-MAIN-01 | `packages/domain` là nguồn tính authoritative ở backend; frontend chỉ hiển thị `PriceQuote` từ API — ADR-001, ADR-007 |
 | 3 | Mọi thao tác ghi sinh `AuditLog` trong cùng transaction | BR-GEN-07, BR-SYS-01 | Unit of Work bao cả thực thể nghiệp vụ lẫn bản ghi kiểm toán |
-| 4 | Thao tác ghi idempotent theo `Idempotency-Key` (24 giờ) | BR-GEN-08, NFR-REL-06 | Kho idempotency đặt ở Redis, không ở tầng giao diện |
+| 4 | Thao tác ghi idempotent theo `Idempotency-Key` (24 giờ) | BR-GEN-08, NFR-REL-06 | Kho idempotency là bảng PostgreSQL `idempotency_keys` (cùng transaction với lệnh, ADR-017), không ở Redis hay tầng giao diện |
 | 5 | Đồng bộ tồn/giá lên OTA ngay khi có thay đổi, chậm nhất 5 phút | BR-CHAN-02, NFR-REL-03 | Outbox giao dịch + hàng đợi việc nền; gọi OTA là I/O bất đồng bộ |
 | 6 | Giải phóng hold trong ≤ 60 giây | BR-INV-04, NFR-REL-02 | Job quét Booking trên PostgreSQL, giờ DB sau khóa; hoạt động cả khi Redis mất |
 | 8 | Quá tải phải được xử lý trước T−24h | BR-OVER-04, NFR-OBS-04 | Job quét quá tải theo giờ + cảnh báo leo thang |
@@ -89,7 +89,7 @@ flowchart TB
 | API | NestJS 11 + Fastify, Node 22 LTS | HTTP, xác thực, điều phối ca sử dụng, phát sự kiện | ADR-002 |
 | Worker | Cùng image Docker, entrypoint khác | 4 job nền + outbox relay | ADR-004, ADR-012 |
 | CSDL | PostgreSQL 16 + `btree_gist` | Nguồn chân lý tồn phòng, kiểm toán, outbox | ADR-003 |
-| Cache & khoá | Redis 7 | Hold, khoá phân tán, cache báo giá/tồn, idempotency | ADR-004 |
+| Cache & khoá | Redis 7 | Hàng đợi BullMQ, cache báo giá (TTL), hạn mức tần suất, projection hold (nguồn chân lý vẫn là PostgreSQL) | ADR-004, ADR-014, ADR-017 |
 | Adapter OTA | `ChannelAdapter` + ACL | Chuẩn hoá payload OTA thành lệnh miền; mô phỏng trong phạm vi môn học | ADR-008 |
 | Adapter PSP | `PaymentGatewayAdapter` | Tạo giao dịch, nhận callback, không chạm dữ liệu thẻ | ADR-009 |
 | Thông báo | Cổng ra `NotificationPort` | Hàng đợi thông báo đa kênh, ghi `Notification` | BR-SYS-06 |
@@ -209,10 +209,10 @@ ooad-homestay/
 │   ├── api/
 │   │   ├── src/
 │   │   │   ├── main.ts, app.module.ts
-│   │   │   ├── common/{filters,guards,interceptors,decorators,errors}/
+│   │   │   ├── common/{filters,guards,interceptors,decorators,errors,idempotency}/  (idempotency/store.ts: bảng PostgreSQL `idempotency_keys`)
 │   │   │   ├── infrastructure/
 │   │   │   │   ├── prisma/prisma.service.ts, prisma.unit-of-work.ts
-│   │   │   │   ├── redis/{cache.service.ts,lock.service.ts,idempotency.store.ts}
+│   │   │   │   ├── redis/  (client Redis: cache báo giá, hạn mức, projection hold)
 │   │   │   │   ├── queue/{bullmq.module.ts,queue.producer.ts}
 │   │   │   │   ├── outbox/{outbox.relay.ts,outbox.publisher.ts}
 │   │   │   │   ├── adapters/ota/{booking-com,agoda,airbnb}.adapter.ts
