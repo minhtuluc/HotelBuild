@@ -5,7 +5,8 @@
  * Bất biến BR-CHAN-01 / BR-INV-05 của tồn từng kênh trên mỗi đêm:
  * 1. tồn kênh luôn trong `[0, max(0, pool)]` — không âm, không vượt tồn chung;
  * 2. kênh trực tiếp WEB/PHONE/WALKIN không có quota: tồn kênh = `max(0, pool)`;
- * 3. OTA không có dòng allotment: quota = `floor(80% đơn vị ACTIVE)`, tối thiểu 1 khi có đơn vị ACTIVE
+ * 3. OTA không có dòng allotment: quota = `floor(pct% đơn vị ACTIVE)` với `pct = allotmentPct` của ánh xạ
+ *    kênh (HB-224/HB-232; vắng ⇒ 80), tối thiểu 1 khi có đơn vị ACTIVE và pct > 0, 0 khi pct = 0
  *    (tính **trước** khoá phòng), 0 khi không có; AGENCY thiếu cấu hình = 0;
  * 4. allotment tường minh thắng mặc định; `used` vượt allotment vẫn cho tồn 0, không âm;
  * 5. tồn kênh = `max(0, min(pool, quota − used))`.
@@ -47,6 +48,7 @@ const configuration = fc.record({
     { maxLength: 25 },
   ),
   allotment: fc.option(fc.nat({ max: 20 }), { nil: undefined }),
+  allotmentPct: fc.option(fc.integer({ min: 0, max: 100 }), { nil: undefined }),
 });
 type Configuration = typeof configuration extends fc.Arbitrary<infer T> ? T : never;
 
@@ -81,6 +83,7 @@ function inputOf(config: Configuration): AvailabilityInput {
     blocks,
     demand,
     allotments,
+    ...(config.allotmentPct === undefined ? {} : { allotmentPct: config.allotmentPct }),
   };
 }
 
@@ -89,7 +92,8 @@ function expectedQuota(config: Configuration): number | null {
   if (config.allotment !== undefined) return config.allotment;
   if (config.channelCode === 'AGENCY') return 0;
   const active = config.rooms.filter((status) => status === 'ACTIVE').length;
-  return active > 0 ? Math.max(1, Math.floor((active * 80) / 100)) : 0;
+  const pct = config.allotmentPct ?? 80;
+  return active > 0 && pct > 0 ? Math.max(1, Math.floor((active * pct) / 100)) : 0;
 }
 
 it('HB226_channel_quota_invariants_hold_for_10000_seeded_configurations', () => {
