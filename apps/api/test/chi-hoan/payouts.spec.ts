@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test } from 'vitest';
 import { z } from 'zod';
+import { refundPayoutViewSchema } from '@pinehill/contracts';
 import type { PrismaClient } from '@prisma/client';
 import { claimPayouts } from '../../../../apps/worker/src/jobs/refund-payout/claim.js';
 import { simulatedPayoutGateway } from '../../../../apps/worker/src/jobs/refund-payout/psp.js';
@@ -107,6 +108,8 @@ test('kế toán tạo chứng từ chi PENDING đúng một lần; trạng thá
 
   const created = await pay(cashier.token, refund.refundId, { ...vnpay, pinToken: cashier.pin });
   expect(created.status).toBe(202);
+  // TD-64: phản hồi thật khớp đúng hợp đồng mà api-client dùng để giải mã.
+  expect(refundPayoutViewSchema.safeParse(created.body).success).toBe(true);
   const body = payoutBody.parse(created.body);
   expect(body.operations).toHaveLength(1);
   expect(body.operations[0]).toMatchObject({ status: 'READY', amount: refund.netRefund });

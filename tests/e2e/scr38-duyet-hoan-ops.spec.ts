@@ -52,7 +52,7 @@ for (const committed of [false, true]) test(`unknown payout committed=${committe
   await page.route(/\/api\/v1\/refund-requests\/[^/]+\/pay$/, async (route) => {
     if (route.request().method() !== 'POST') return route.continue();
     keys.push(route.request().headers()['idempotency-key']!);
-    if (committed) expect((await route.fetch()).status()).toBe(200);
+    if (committed) expect((await route.fetch()).status()).toBe(202);
     await route.abort('failed');
   });
   await prepareRefundPay(page, booking.id);

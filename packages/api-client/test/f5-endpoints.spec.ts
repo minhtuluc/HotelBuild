@@ -75,6 +75,28 @@ const REFUND = {
   createdAt: '2026-09-19T03:20:11Z',
 };
 
+/** Phản hồi 202 thật của `/pay` (TD-64): trạng thái kỹ thuật từng leg, không phải hồ sơ hoàn. */
+const PAYOUT_VIEW = {
+  refundRequestId: 'r1',
+  status: 'APPROVED',
+  operations: [
+    {
+      id: 'op1',
+      status: 'UNKNOWN',
+      method: 'BANK_TRANSFER',
+      amount: 652_000,
+      originalPaymentId: 'pay1',
+      refundPaymentId: 'pay-refund-1',
+      bankNote: 'CK 652000',
+      attempts: 0,
+      providerTxnId: null,
+      lastError: 'MANUAL_TRANSFER_AWAITING_CONFIRMATION',
+      createdAt: '2026-11-13T03:00:00.000Z',
+      finishedAt: null,
+    },
+  ],
+};
+
 const DECISION = {
   id: 'r1',
   status: 'APPROVED',
@@ -170,10 +192,7 @@ const ROUTES: Record<string, (request: Recorded) => Outcome> = {
     status: 200,
     body: { ...REFUND, status: 'CANCELLED' },
   }),
-  'POST /api/v1/refund-requests/r1/pay': () => ({
-    status: 200,
-    body: { ...REFUND, status: 'PAID' },
-  }),
+  'POST /api/v1/refund-requests/r1/pay': () => ({ status: 202, body: PAYOUT_VIEW }),
   'POST /api/v1/bookings/b1/cancel-preview': () => ({ status: 200, body: CANCEL_PREVIEW }),
   'POST /api/v1/bookings/b1/cancel': () => ({ status: 200, body: CANCEL_RESPONSE }),
   'POST /api/v1/bookings/b1/reschedule': () => ({ status: 200, body: BOOKING }),
@@ -295,7 +314,10 @@ describe('hợp đồng F5 qua HTTP thật', () => {
 
     await api.reject('r1', { note: 'Thiếu minh chứng' });
     await api.cancel('r1', { reason: 'Khách rút yêu cầu' });
-    await api.pay('r1', { method: 'BANK_TRANSFER', bankNote: 'CK 652000' });
+    const paid = await api.pay('r1', { method: 'BANK_TRANSFER', bankNote: 'CK 652000' });
+    expect(paid.status).toBe(202);
+    expect(paid.data.refundRequestId).toBe('r1');
+    expect(paid.data.operations[0]?.status).toBe('UNKNOWN');
     expect(recorded(5).bodyText).toContain('"pinToken"');
     expect(recorded(4).bodyText).not.toContain('pinToken');
   });
@@ -323,10 +345,7 @@ describe('hợp đồng F5 qua HTTP thật', () => {
 
 it('refund payout reuses a caller durable key over retries', async () => {
   let calls = 0;
-  handler = () =>
-    ++calls === 1
-      ? { status: 503, body: {} }
-      : { status: 200, body: { ...REFUND, status: 'PAID' } };
+  handler = () => (++calls === 1 ? { status: 503, body: {} } : { status: 202, body: PAYOUT_VIEW });
   await createRefundApi(client()).pay(
     'r1',
     { method: 'CASH' },
