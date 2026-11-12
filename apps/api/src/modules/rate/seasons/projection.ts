@@ -17,6 +17,7 @@ export function seasonSummary(row: seasons): SeasonSummary {
     multiplier: Number(row.multiplier),
     priority: row.priority,
     weekendSurchargeEnabled: row.weekend_surcharge_enabled,
+    status: row.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
     version,
   });
 }

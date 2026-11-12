@@ -6,13 +6,14 @@ import { CLOCK, ID_GENERATOR } from '../../../infrastructure/ports.js';
 import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import { SeasonsController } from './controller.js';
 import { SeasonsService } from './service.js';
-import { SeasonAccess } from './access.js';
+import { SeasonAccess, SeasonUpdateAccess } from './access.js';
 import { seasonPermissions } from './permissions.js';
 
 @Module({
   controllers: [SeasonsController],
   providers: [
     SeasonAccess,
+    SeasonUpdateAccess,
     seasonPermissions,
     {
       provide: SeasonsService,

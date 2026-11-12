@@ -19,6 +19,7 @@ import {
   multiChannelQuoteSchema,
   promotionCreateRequestSchema,
   promotionUpdateRequestSchema,
+  seasonUpdateRequestSchema,
   promotionQuerySchema,
   promotionSummarySchema,
   rateCalendarOverrideRequestSchema,
@@ -223,6 +224,25 @@ export function registerF3Paths(registry: OpenAPIRegistry, errorBodyComponent: z
       201: { description: 'Khuyến mãi đã tạo' },
       403: errorResponse('E_RBAC_FORBIDDEN'),
       422: errorResponse('E_RATE_PROMO_INVALID'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'put',
+    path: '/api/v1/seasons/{seasonId}',
+    operationId: 'seasonsUpdate',
+    summary:
+      'Sửa hoặc ngừng mùa (`status: INACTIVE`); `propertyId` cố định, báo giá đã phát giữ nguyên (TD-06)',
+    ...bearerWrite(['rate']),
+    parameters: [...idempotencyHeaders, pathParam('seasonId'), ifMatchHeader],
+    request: { body: jsonBody(seasonUpdateRequestSchema) },
+    responses: {
+      204: { description: 'Đã cập nhật mùa' },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
+      404: errorResponse('E_GEN_NOT_FOUND'),
+      412: errorResponse('E_GEN_VERSION_CONFLICT'),
+      422: errorResponse('E_RATE_CONFIGURATION_INVALID'),
+      428: errorResponse('E_GEN_PRECONDITION_REQUIRED'),
     },
   });
 

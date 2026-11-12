@@ -75,6 +75,8 @@ export const seasonSummarySchema = z.object({
   multiplier,
   priority: z.number().int().min(0),
   weekendSurchargeEnabled: z.boolean(),
+  /** HB-241: mùa đã ngừng vẫn liệt kê để màn hình bật lại; optional để phản hồi cũ vẫn đọc được. */
+  status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
   version: z.number().int().min(0),
 });
 
@@ -87,6 +89,25 @@ export const seasonCreateRequestSchema = z.strictObject({
   priority: z.number().int().min(0),
   weekendSurchargeEnabled: z.boolean(),
 });
+
+/**
+ * HB-241 (TD-06): sửa hoặc ngừng mùa. Gửi **chỉ** trường đổi, kèm `reason` cho audit. `propertyId`
+ * cố định (mùa thuộc một cơ sở). Ngừng = `status: 'INACTIVE'`: báo giá mới bỏ qua mùa này.
+ */
+export const seasonUpdateRequestSchema = z
+  .strictObject({
+    name: z.string().min(1).max(120).optional(),
+    startDate: businessDateSchema.optional(),
+    endDate: businessDateSchema.optional(),
+    multiplier: multiplier.optional(),
+    priority: z.number().int().min(0).optional(),
+    weekendSurchargeEnabled: z.boolean().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+    reason: z.string().min(1).max(500),
+  })
+  .refine((body) => Object.keys(body).some((key) => key !== 'reason'), {
+    message: 'Cần ít nhất một trường để sửa',
+  });
 
 /**
  * Bổ sung tuyến đọc kênh (HB-060 SCR-28 + HB-042 SCR-25, chủ dự án duyệt 05/10/2026):
@@ -286,6 +307,7 @@ export const ratePlanAdminSchema = z.object({
 export type RateCalendar = z.infer<typeof rateCalendarSchema>;
 export type RateCalendarOverrideRequest = z.infer<typeof rateCalendarOverrideRequestSchema>;
 export type SeasonCreateRequest = z.infer<typeof seasonCreateRequestSchema>;
+export type SeasonUpdateRequest = z.infer<typeof seasonUpdateRequestSchema>;
 export type SeasonSummary = z.infer<typeof seasonSummarySchema>;
 export type SeasonQuery = z.infer<typeof seasonQuerySchema>;
 export type ChannelUpdateRequest = z.infer<typeof channelUpdateRequestSchema>;

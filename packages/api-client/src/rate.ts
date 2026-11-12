@@ -21,6 +21,7 @@ import {
   ratePlanAdminSchema,
   ratePlanUpdateRequestSchema,
   seasonCreateRequestSchema,
+  seasonUpdateRequestSchema,
   type CancellationPolicy,
   type CancellationPolicyUpdateRequest,
   type ChannelDetail,
@@ -38,6 +39,7 @@ import {
   type RatePlanAdmin,
   type RatePlanUpdateRequest,
   type SeasonCreateRequest,
+  type SeasonUpdateRequest,
   type SeasonSummary,
 } from '@pinehill/contracts';
 import { ApiClient, type ApiResponse } from './client.js';
@@ -59,6 +61,12 @@ export interface RateApi {
     cursor?: string;
   }): Promise<ApiResponse<ListPage<SeasonSummary>>>;
   createSeason(input: SeasonCreateRequest): Promise<ApiResponse<undefined>>;
+  /** HB-241: sửa/ngừng mùa (`status: 'INACTIVE'`) — 204, `ifMatch` = `"<version>"` của bản đang xem. */
+  updateSeason(
+    seasonId: string,
+    input: SeasonUpdateRequest,
+    ifMatch: string,
+  ): Promise<ApiResponse<undefined>>;
   listChannels(query?: {
     limit?: number;
     cursor?: string;
@@ -133,6 +141,13 @@ export function createRateApi(client: ApiClient): RateApi {
         method: 'POST',
         path: '/seasons',
         body: seasonCreateRequestSchema.parse(input),
+      }),
+    updateSeason: (seasonId, input, ifMatch) =>
+      client.requestVoid({
+        method: 'PUT',
+        path: `/seasons/${encodeURIComponent(seasonId)}`,
+        body: seasonUpdateRequestSchema.parse(input),
+        ifMatch,
       }),
     listChannels: (query) =>
       client.request({

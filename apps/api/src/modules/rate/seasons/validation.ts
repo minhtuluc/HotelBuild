@@ -5,8 +5,9 @@
 import {
   seasonCreateRequestSchema,
   seasonQuerySchema,
-  type SeasonCreateRequest,
+  seasonUpdateRequestSchema,
   type SeasonQuery,
+  type SeasonUpdateRequest,
 } from '@pinehill/contracts';
 import { seasonCodeFor } from './catalogue.js';
 import type { SeasonCode } from './catalogue.js';
@@ -58,7 +59,15 @@ function exceedsStorageScale(multiplier: number): boolean {
   return Math.abs(Math.round(multiplier * 1000) - multiplier * 1000) > MULTIPLIER_SCALE_TOLERANCE;
 }
 
-function seasonIssues(data: SeasonCreateRequest, name: string): readonly Issue[] {
+/** Phần dữ liệu mùa mà luật kiểm (dùng chung cho tạo và bản gộp khi sửa). */
+export interface SeasonTerms {
+  readonly startDate: string;
+  readonly endDate: string;
+  readonly multiplier: number;
+  readonly priority: number;
+}
+
+export function seasonIssues(data: SeasonTerms, name: string): readonly Issue[] {
   const issues: Issue[] = [];
   if (name === '') issues.push({ field: 'name', issue: 'REQUIRED' });
   if (!isCivilDate(data.startDate)) issues.push({ field: 'startDate', issue: 'INVALID_DATE' });
@@ -87,5 +96,50 @@ export function createInput(value: unknown): SeasonCreateInput {
     priority: data.priority,
     weekendSurchargeEnabled: data.weekendSurchargeEnabled,
     code: seasonCodeFor(data.startDate),
+  };
+}
+
+/** Trường sửa được (HB-241, TD-06); `name` đã che PII như lệnh tạo. */
+export interface SeasonChanges {
+  readonly name?: string;
+  readonly startDate?: string;
+  readonly endDate?: string;
+  readonly multiplier?: number;
+  readonly priority?: number;
+  readonly weekendSurchargeEnabled?: boolean;
+  readonly status?: 'ACTIVE' | 'INACTIVE';
+}
+
+export interface SeasonUpdateInput {
+  readonly changes: SeasonChanges;
+  readonly reason: string;
+}
+
+export function updateInput(value: unknown): SeasonUpdateInput {
+  const parsed = seasonUpdateRequestSchema.safeParse(value);
+  if (!parsed.success)
+    configuration(parsed.error.issues[0]?.path.join('.') || 'request', 'INVALID_VALUE');
+  const reason = parsed.data.reason.trim();
+  if (reason === '') configuration('reason', 'REQUIRED');
+  return { changes: { ...nameChange(parsed.data), ...termChanges(parsed.data) }, reason };
+}
+
+function nameChange(body: SeasonUpdateRequest): SeasonChanges {
+  if (body.name === undefined) return {};
+  const name = body.name.trim();
+  if (name === '') configuration('name', 'REQUIRED');
+  return { name: maskText(name) };
+}
+
+function termChanges(body: SeasonUpdateRequest): SeasonChanges {
+  return {
+    ...(body.startDate === undefined ? {} : { startDate: body.startDate }),
+    ...(body.endDate === undefined ? {} : { endDate: body.endDate }),
+    ...(body.multiplier === undefined ? {} : { multiplier: body.multiplier }),
+    ...(body.priority === undefined ? {} : { priority: body.priority }),
+    ...(body.weekendSurchargeEnabled === undefined
+      ? {}
+      : { weekendSurchargeEnabled: body.weekendSurchargeEnabled }),
+    ...(body.status === undefined ? {} : { status: body.status }),
   };
 }

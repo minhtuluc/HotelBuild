@@ -19,3 +19,12 @@ theo `startDate`; SE-TET là cửa sổ không ghim theo dương lịch nên nh�
 ngoài mọi cửa sổ gom về `SE-LOW`. Mã này **không** tham gia tính giá (engine chỉ dùng khoảng ngày,
 `priority`, hệ số) và không được trả ra API, nên đổi cách suy mã không đổi giá; muốn chọn tay thì phải
 thêm trường `code` vào hợp đồng — việc của ticket hợp đồng, không thuộc HB-054.
+
+## HB-241 — sửa/ngừng mùa (TD-06)
+
+`PUT /seasons/{seasonId}` (OWNER, `Idempotency-Key`, `If-Match` bắt buộc, 204) nhận **chỉ** trường đổi kèm
+`reason`. Service khoá dòng, gộp thay đổi vào bản lưu rồi chạy lại `seasonIssues` trên bản gộp (ví dụ chỉ
+dời `endDate` vẫn phải ≥ `startDate` đang lưu). Đổi `startDate` thì `code` được suy lại như lệnh tạo;
+trùng `(cơ sở, mã, ngày bắt đầu)` ⇒ `DUPLICATE_SEASON`. Ngừng = `status: INACTIVE`: loader giá chỉ đọc mùa
+`ACTIVE` nên lịch giá và báo giá mới bỏ qua mùa này. `GET /seasons` vẫn liệt kê mùa đã ngừng (kèm
+`status`) để màn hình bật lại. Mùa toàn chuỗi (`property_id IS NULL`) không đi tuyến này (404).
