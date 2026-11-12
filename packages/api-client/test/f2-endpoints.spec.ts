@@ -239,6 +239,46 @@ describe('hợp đồng F2 qua HTTP thật', () => {
     expect(grid.data).toEqual(body);
   });
 
+  it('HB-242: GET /operations/day-board gửi cơ sở + ngày và giải mã đủ nhóm', async () => {
+    const booking = {
+      bookingId: 'b1',
+      code: 'PH-261110-ABCDE',
+      guestName: 'Khách thử',
+      roomTypeId: 'rt1',
+      roomCount: 1,
+      checkIn: '2026-11-10',
+      checkOut: '2026-11-12',
+      status: 'CONFIRMED',
+      channelCode: 'WEB',
+      balanceDue: 1_100_000,
+    };
+    const body = {
+      propertyId: 'p1',
+      date: '2026-11-10',
+      capturedAt: '2026-11-10T03:00:00.000Z',
+      arrivals: { total: 1, items: [booking], truncated: false },
+      departures: { total: 0, items: [], truncated: false },
+      inHouse: { total: 1, items: [booking], truncated: false },
+      overbooking: { openFromDate: 2, onDate: 1 },
+      degradedChannels: [
+        {
+          channelId: 'c1',
+          code: 'OTA_AGODA',
+          name: 'Agoda',
+          consecutiveFailures: 3,
+          lastSyncAt: null,
+        },
+      ],
+    };
+    handler = () => ({ status: 200, body });
+    const board = await createInventoryApi(client()).dayBoard({
+      propertyId: 'p1',
+      date: '2026-11-10',
+    });
+    expect(recorded(0).url).toBe('/api/v1/operations/day-board?propertyId=p1&date=2026-11-10');
+    expect(board.data).toEqual(body);
+  });
+
   it('PUT /channel-allotments gửi lô trong một yêu cầu kèm If-Match', async () => {
     await createInventoryApi(client()).putAllotments(
       {

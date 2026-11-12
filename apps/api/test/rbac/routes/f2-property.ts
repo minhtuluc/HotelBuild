@@ -28,6 +28,12 @@ export function f2Property(keyed: Oracle): void {
     status: 400,
     method: RequestMethod.GET,
   };
+  // HB-242 (TD-09): SCR-23 thuộc lễ tân/quản lý/chủ; oracle không gửi `propertyId` → 400.
+  keyed[`${RequestMethod.GET}:operations/day-board`] = {
+    roles: ['FRONT_DESK', 'MANAGER', 'OWNER'],
+    status: 400,
+    method: RequestMethod.GET,
+  };
   keyed[`${RequestMethod.GET}:channel-allotments`] = {
     roles: ['MANAGER', 'OWNER'],
     status: 400,

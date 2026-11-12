@@ -21,4 +21,5 @@ export * from './report.js';
 export * from './notification.js';
 export * from './channel.js';
 export * from './overbooking.js';
+export * from './day-board.js';
 export * from './env.js';
