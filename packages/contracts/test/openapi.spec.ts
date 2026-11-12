@@ -70,6 +70,7 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['post', '/api/v1/room-blocks', 'bearer'],
   ['delete', '/api/v1/room-blocks/{roomBlockId}', 'bearer'],
   ['get', '/api/v1/inventory/grid', 'bearer'],
+  ['get', '/api/v1/operations/day-board', 'bearer'],
   ['get', '/api/v1/channel-allotments', 'bearer'],
   ['put', '/api/v1/channel-allotments', 'bearer'],
   ['get', '/api/v1/audit-logs', 'bearer'],
@@ -177,7 +178,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 121 path của F0…F8 (kèm logout khách TD-58, sửa/ngừng khuyến mãi HB-240, sửa/ngừng mùa HB-241, tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151, 3 path HB-204, confirm-transfer HB-215 và hợp đồng F6 HB-120)', () => {
+  it('có đủ 122 path của F0…F8 (kèm logout khách TD-58, sửa/ngừng khuyến mãi HB-240, sửa/ngừng mùa HB-241, bảng ngày HB-242, tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151, 3 path HB-204, confirm-transfer HB-215 và hợp đồng F6 HB-120)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -208,6 +209,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/room-blocks',
         '/api/v1/room-blocks/{roomBlockId}',
         '/api/v1/inventory/grid',
+        '/api/v1/operations/day-board',
         '/api/v1/channel-allotments',
         '/api/v1/audit-logs',
         '/api/v1/system-settings',

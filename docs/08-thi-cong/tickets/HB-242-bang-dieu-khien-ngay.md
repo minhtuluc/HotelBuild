@@ -7,7 +7,9 @@ max_lines: 700
 allow:
   - packages/contracts/src/day-board.ts
   - packages/contracts/src/index.ts
-  - packages/contracts/src/openapi/paths/f2.ts
+  - packages/contracts/src/openapi/paths/day-board.ts
+  - packages/contracts/src/openapi/registry.ts
+  - packages/contracts/test/openapi.spec.ts
   - packages/contracts/openapi.json
   - packages/api-client/src/f2.ts
   - packages/api-client/test/f2-endpoints.spec.ts
