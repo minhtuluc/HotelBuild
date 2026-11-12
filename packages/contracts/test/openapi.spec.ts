@@ -84,6 +84,7 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   // HB-059: bổ sung tuyến đọc mùa cho SCR-27 (thêm tuyến, không phá vỡ hợp đồng).
   ['get', '/api/v1/seasons', 'bearer'],
   ['post', '/api/v1/seasons', 'bearer'],
+  ['put', '/api/v1/seasons/{seasonId}', 'bearer'],
   // HB-060/HB-042: bổ sung tuyến đọc kênh (thêm tuyến, không phá vỡ hợp đồng).
   ['get', '/api/v1/channels', 'bearer'],
   ['get', '/api/v1/channels/{channelId}', 'bearer'],
@@ -176,7 +177,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 120 path của F0…F8 (kèm logout khách TD-58, sửa/ngừng khuyến mãi HB-240, tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151, 3 path HB-204, confirm-transfer HB-215 và hợp đồng F6 HB-120)', () => {
+  it('có đủ 121 path của F0…F8 (kèm logout khách TD-58, sửa/ngừng khuyến mãi HB-240, sửa/ngừng mùa HB-241, tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151, 3 path HB-204, confirm-transfer HB-215 và hợp đồng F6 HB-120)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -217,6 +218,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/operations/{operationId}/download',
         '/api/v1/room-types/{roomTypeId}/rate-calendar',
         '/api/v1/seasons',
+        '/api/v1/seasons/{seasonId}',
         '/api/v1/channels',
         '/api/v1/channels/{channelId}',
         '/api/v1/promotions',
