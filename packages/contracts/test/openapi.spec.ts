@@ -91,6 +91,7 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   // HB-061: bổ sung tuyến đọc khuyến mãi cho SCR-29 (thêm tuyến, không phá vỡ hợp đồng).
   ['get', '/api/v1/promotions', 'bearer'],
   ['post', '/api/v1/promotions', 'bearer'],
+  ['put', '/api/v1/promotions/{promotionId}', 'bearer'],
   ['post', '/api/v1/quotes/multi-channel', 'bearer'],
   ['get', '/api/v1/rate-plans', 'public'],
   ['put', '/api/v1/rate-plans/{ratePlanId}', 'bearer'],
@@ -175,7 +176,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 119 path của F0…F8 (kèm logout khách TD-58, tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151, 3 path HB-204, confirm-transfer HB-215 và hợp đồng F6 HB-120)', () => {
+  it('có đủ 120 path của F0…F8 (kèm logout khách TD-58, sửa/ngừng khuyến mãi HB-240, tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151, 3 path HB-204, confirm-transfer HB-215 và hợp đồng F6 HB-120)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -219,6 +220,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/channels',
         '/api/v1/channels/{channelId}',
         '/api/v1/promotions',
+        '/api/v1/promotions/{promotionId}',
         '/api/v1/quotes/multi-channel',
         '/api/v1/rate-plans',
         '/api/v1/rate-plans/admin',

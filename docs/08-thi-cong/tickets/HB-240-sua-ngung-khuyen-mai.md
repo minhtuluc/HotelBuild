@@ -8,6 +8,7 @@ allow:
   - packages/contracts/src/rate.ts
   - packages/contracts/src/openapi/paths/f3.ts
   - packages/contracts/openapi.json
+  - packages/contracts/test/openapi.spec.ts
   - packages/api-client/src/rate.ts
   - packages/api-client/test/f3-endpoints.spec.ts
   - apps/api/src/modules/rate/promotions/**
