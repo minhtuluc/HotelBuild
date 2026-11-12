@@ -13,6 +13,8 @@ allow:
   - tests/e2e/fake-api/f5/refunds.ts
   - tests/e2e/fake-api/f5/refund-facts.ts
   - tests/e2e/scr38-duyet-hoan-ops.spec.ts
+  - packages/web-session/test/f5-refunds.spec.ts
+  - packages/web-session/test/f5-refund-evidence.spec.ts
   - docs/04-thiet-ke/api.md
   - docs/07-ban-giao/no-ky-thuat.md
   - docs/08-thi-cong/tickets/HB-239-hop-dong-chi-hoan.md
@@ -40,6 +42,7 @@ TD-64 ghi rằng phản hồi `202` của `POST /refund-requests/{id}/pay` "chư
 1. `packages/api-client/test/f5-endpoints.spec.ts`: `pay` nhận `202` + payout view và giải mã được. Trên code cũ test này **đỏ** với lỗi "Phản hồi không khớp hợp đồng".
 2. `apps/api/test/chi-hoan/payouts.spec.ts`: phản hồi thật khớp `refundPayoutViewSchema`.
 3. E2E `scr38-duyet-hoan-ops.spec.ts` xanh trên Chromium.
+4. `packages/web-session` (`f5-refunds`, `f5-refund-evidence`) nhận `202` + payout view, rồi đọc lại hồ sơ để kiểm `PAID` và số tiền (đúng cách SCR-38 làm).
 
 ## Còn lại
 

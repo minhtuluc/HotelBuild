@@ -29,7 +29,8 @@ test('fake payout creates one linked successful REFUND payment, preserving colle
   const key = crypto.randomUUID();
   const path = `/refund-requests/${refund.id}/pay`;
   const response = await f.raw(path, body, cashier.accessToken, 'POST', key);
-  expect(response.status).toBe(200);
+  // TD-64: `/pay` trả 202 + trạng thái kỹ thuật leg chi; hồ sơ PAID đọc lại từ danh sách.
+  expect(response.status).toBe(202);
   const result = (await cashier.refunds.list({ bookingId: booking.id })).data.data[0]!;
   expect(result).toMatchObject({
     status: 'PAID',
@@ -82,8 +83,15 @@ test('server fee snapshot reserves and pays NET, reducing reservation once at ap
   });
   const cashier = await f.actor('synthetic-cashier', 'ACCOUNTANT');
   await cashier.verify(booking.id);
-  const result = (await cashier.refunds.pay(refund.id, { method: 'VNPAY' })).data;
+  const payout = (await cashier.refunds.pay(refund.id, { method: 'VNPAY' })).data;
+  expect(payout.operations).toEqual([
+    expect.objectContaining({ status: 'SUCCEEDED', amount: 90000, method: 'VNPAY' }),
+  ]);
+  const result = (await cashier.refunds.list({ bookingId: booking.id })).data.data.find(
+    (item) => item.id === refund.id,
+  );
   expect(result).toMatchObject({
+    status: 'PAID',
     approvedAmount: 100000,
     netRefund: 90000,
     eventNetRefund: 90000,

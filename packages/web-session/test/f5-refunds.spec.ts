@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { refundRequestSchema } from '@pinehill/contracts';
+import { refundPayoutViewSchema } from '@pinehill/contracts';
 import { setup, online } from './f5-fixtures.js';
 const f = setup();
 async function paid() {
@@ -49,9 +49,14 @@ test('approve only reserves funds; ACCOUNTANT payout changes PAID and balance ex
   const path = `/refund-requests/${refund.id}/pay`;
   const body = { method: 'VNPAY', pinToken: pin };
   const paid = await f.raw(path, body, cashier.accessToken, 'POST', key);
-  expect(paid.status).toBe(200);
-  const result = refundRequestSchema.parse(await paid.json());
-  expect(result.status).toBe('PAID');
+  // TD-64: 202 + trạng thái kỹ thuật leg chi; hồ sơ PAID đọc lại, không suy từ phản hồi `/pay`.
+  expect(paid.status).toBe(202);
+  const result = refundPayoutViewSchema.parse(await paid.json());
+  expect(result).toMatchObject({ refundRequestId: refund.id, status: 'PAID' });
+  const reread = (await cashier.refunds.list({ bookingId: booking.id })).data.data.find(
+    (item) => item.id === refund.id,
+  );
+  expect(reread?.status).toBe('PAID');
   const replay = await f.raw(path, body, cashier.accessToken, 'POST', key);
   expect(replay.headers.get('idempotency-replayed')).toBe('true');
   expect(await replay.json()).toEqual(result);
