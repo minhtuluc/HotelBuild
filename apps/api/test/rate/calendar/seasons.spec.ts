@@ -73,6 +73,7 @@ test('AC3 — POST seasons lưu mùa, suy mã theo bảng BR-RATE-05 §4.2 và G
       multiplier: 1.35,
       priority: 40,
       weekendSurchargeEnabled: true,
+      status: 'ACTIVE',
       version: 1,
     },
   ]);

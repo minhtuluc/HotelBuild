@@ -58,6 +58,7 @@ const ROUTES: Record<string, (request: Recorded) => Outcome> = {
   'PATCH /api/v1/channels/c1': () => ({ status: 204 }),
   'POST /api/v1/promotions': () => ({ status: 201 }),
   'PUT /api/v1/promotions/pr1': () => ({ status: 204 }),
+  'PUT /api/v1/seasons/s1': () => ({ status: 204 }),
   'POST /api/v1/quotes/multi-channel': () => ({
     status: 200,
     body: {
@@ -207,6 +208,16 @@ describe('hợp đồng F3 qua HTTP thật', () => {
     expect(recorded(0).url).toBe('/api/v1/seasons');
     expect(recorded(1).headers['if-match']).toBe('"4"');
     expect(recorded(2).url).toBe('/api/v1/promotions');
+  });
+
+  it('HB-241: sửa mùa đi PUT kèm If-Match và lý do; thân chỉ có lý do bị chặn trước khi gửi', async () => {
+    const api = createRateApi(client());
+    const done = await api.updateSeason('s1', { multiplier: 1.45, reason: 'Nhu cầu tăng' }, '"2"');
+    expect(done.status).toBe(204);
+    expect(recorded(0)).toMatchObject({ method: 'PUT', url: '/api/v1/seasons/s1' });
+    expect(recorded(0).headers['if-match']).toBe('"2"');
+    expect(JSON.parse(recorded(0).bodyText)).toEqual({ multiplier: 1.45, reason: 'Nhu cầu tăng' });
+    expect(() => api.updateSeason('s1', { reason: 'Không đổi gì' }, '"2"')).toThrow();
   });
 
   it('HB-240: ngừng khuyến mãi đi PUT kèm If-Match và lý do; thân rỗng bị chặn trước khi gửi', async () => {
