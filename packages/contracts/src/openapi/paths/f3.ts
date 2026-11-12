@@ -18,6 +18,7 @@ import {
   multiChannelQuoteRequestSchema,
   multiChannelQuoteSchema,
   promotionCreateRequestSchema,
+  promotionUpdateRequestSchema,
   promotionQuerySchema,
   promotionSummarySchema,
   rateCalendarOverrideRequestSchema,
@@ -222,6 +223,26 @@ export function registerF3Paths(registry: OpenAPIRegistry, errorBodyComponent: z
       201: { description: 'Khuyến mãi đã tạo' },
       403: errorResponse('E_RBAC_FORBIDDEN'),
       422: errorResponse('E_RATE_PROMO_INVALID'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'put',
+    path: '/api/v1/promotions/{promotionId}',
+    operationId: 'promotionsUpdate',
+    summary:
+      'Sửa hoặc ngừng khuyến mãi (`status: INACTIVE`); `code`/`type` cố định, báo giá đã phát giữ nguyên (TD-08)',
+    ...bearerWrite(['rate']),
+    parameters: [...idempotencyHeaders, pathParam('promotionId'), ifMatchHeader],
+    request: { body: jsonBody(promotionUpdateRequestSchema) },
+    responses: {
+      204: { description: 'Đã cập nhật khuyến mãi' },
+      400: errorResponse('E_GEN_VALIDATION_FAILED'),
+      403: errorResponse('E_RBAC_FORBIDDEN'),
+      404: errorResponse('E_GEN_NOT_FOUND'),
+      412: errorResponse('E_GEN_VERSION_CONFLICT'),
+      422: errorResponse('E_RATE_PROMO_INVALID'),
+      428: errorResponse('E_GEN_PRECONDITION_REQUIRED'),
     },
   });
 

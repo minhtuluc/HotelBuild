@@ -77,7 +77,7 @@ test('every discovered protected HTTP route has an independent oracle and runs a
     for (const role of roles) {
       clock.value += 61000;
       const token = await login(role);
-      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':operationId', roomId).replace(':notificationId', roomId).replace(':guestId', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId).replace(':taskId', roomId).replace(':key', 'refund.feeAmount').replace(':propertyId', roomId).replace(':refundRequestId', roomId).replace(':bookingId', roomId).replace(':roomTypeId', roomId).replace(':roomId', roomId).replace(':userId', roomId)}`;
+      const path = `/api/v1/${route.path.replace(':id', roomId).replace(':operationId', roomId).replace(':notificationId', roomId).replace(':guestId', roomId).replace(':roomBlockId', roomId).replace(':ratePlanId', roomId).replace(':policyId', roomId).replace(':promotionId', roomId).replace(':taskId', roomId).replace(':key', 'refund.feeAmount').replace(':propertyId', roomId).replace(':refundRequestId', roomId).replace(':bookingId', roomId).replace(':roomTypeId', roomId).replace(':roomId', roomId).replace(':userId', roomId)}`;
       const pending = routeRequest(route.method, path);
       const result = await pending
         .set('Authorization', `Bearer ${token}`)

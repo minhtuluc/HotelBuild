@@ -21,7 +21,7 @@ export function uuid(value: unknown): string {
   if (!p.success) throw invalid();
   return p.data.toLowerCase();
 }
-export function paramId(params: unknown, name: 'ratePlanId' | 'policyId'): string {
+export function paramId(params: unknown, name: 'ratePlanId' | 'policyId' | 'promotionId'): string {
   const p = z.record(z.string(), z.unknown()).safeParse(params);
   if (!p.success) throw invalid();
   return uuid(p.data[name]);
