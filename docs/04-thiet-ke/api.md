@@ -112,12 +112,17 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |
 |--------|-----------|-------|-------------------|---------------|----|----|
 | GET | `/api/v1/properties` | Danh sách cơ sở kèm số phòng `ACTIVE` | HOUSEKEEPING | `status` | UC-PROP-01 | BR-PROP-01,02 |
-| GET | `/api/v1/public/properties` | Danh sách cơ sở cho journey khách — chỉ mã, tên, giờ nhận/trả (không lộ số phòng/trần bán vượt) | — | — | UC-INV-02 | BR-PROP-01,02 |
+| GET | `/api/v1/public/properties` | Danh sách cơ sở cho journey khách — chỉ mã, tên, giờ nhận/trả và `photos[]` (HB-244); không lộ số phòng/trần bán vượt | — | — | UC-INV-02 | BR-PROP-01,02 |
 | PATCH | `/api/v1/properties/{propertyId}` | Sửa cơ sở, đổi trần bán vượt (trần theo cơ sở, tổng chuỗi = tổng trần cơ sở), giờ nhận/trả phòng | OWNER | `overbookLimitPct`, `checkInTime`, `checkOutTime` | UC-PROP-01 | BR-OVER-01,02, BR-GEN-04 |
 | POST | `/api/v1/room-types` | Tạo loại phòng (sức chứa, giá cơ bản, sàn/trần) | OWNER | `propertyId`, `code`, `capacityAdults`, `capacityChildren`, `basePrice`, `minPrice`, `maxPrice`, `allowShared` | UC-PROP-02 | BR-PROP-03,04, BR-RATE-03,04 |
 | GET | `/api/v1/room-types` | Danh sách loại phòng kèm sức chứa, sàn–trần giá và `sellingUnits` (số đơn vị bán ACTIVE, dùng cho hạn mức kênh BR-INV-05) (màn SCR-20, SCR-25) | HOUSEKEEPING | `propertyId` | UC-PROP-02 | BR-PROP-03,04, BR-RATE-03,04, BR-INV-05 |
 | GET | `/api/v1/rooms` | Danh sách phòng vật lý | HOUSEKEEPING | `propertyId`, `roomTypeId`, `floor`, `status` | UC-PROP-03 | BR-PROP-05 |
 | PATCH | `/api/v1/room-types/{roomTypeId}` | Sửa giá cơ bản/sàn/trần, sức chứa và trạng thái; lý do bắt buộc | OWNER | `If-Match`, `reason` | UC-PROP-02 | BR-PROP-04, BR-RATE-03,04 |
+| GET | `/api/v1/public/room-types/{roomTypeId}` | Loại phòng công khai cho SCR-03: `code`, `name`, sức chứa, `photos[]`. Chỉ loại `ACTIVE` của cơ sở `ACTIVE`, còn lại 404 (HB-244) | — | — | UC-INV-02 | BR-PROP-01 |
+| GET | `/api/v1/properties/{propertyId}/photos` | Danh sách ảnh công khai của cơ sở + `etag` để thay (HB-244) | MANAGER, OWNER | — | UC-PROP-01 | BR-RBAC-02 |
+| PUT | `/api/v1/properties/{propertyId}/photos` | **Thay cả** danh sách ảnh (≤ 20, thứ tự mảng = thứ tự hiển thị, mảng rỗng = gỡ hết). `url` là `https://…` hoặc `/images/…` (chưa có kho tệp, HB-138). `If-Match` = `etag` vừa đọc: thiếu ⇒ 428, đã đổi ⇒ 412. Audit `PROPERTY_PHOTOS_REPLACED` kèm lý do (204) | OWNER | `photos[]` (`url`, `alt`, `width`, `height`), `reason`; `If-Match` | UC-PROP-01 | BR-RBAC-02 |
+| GET | `/api/v1/room-types/{roomTypeId}/photos` | Như trên, cho loại phòng (HB-244) | MANAGER, OWNER | — | UC-PROP-02 | BR-RBAC-02 |
+| PUT | `/api/v1/room-types/{roomTypeId}/photos` | Như trên, cho loại phòng; audit `ROOM_TYPE_PHOTOS_REPLACED` (HB-244) | OWNER | như trên | UC-PROP-02 | BR-RBAC-02 |
 | POST | `/api/v1/rooms` | Tạo phòng vật lý theo mã BR; loại phòng cùng cơ sở | MANAGER, OWNER | `propertyId`, `roomTypeId`, `code`, `floor` | UC-PROP-03 | BR-PROP-05 |
 | PATCH | `/api/v1/rooms/{roomId}` | Sửa tầng, trạng thái, ghi chú; không đổi cơ sở/loại phòng | MANAGER, OWNER | `floor`, `status`, `note`, `If-Match` | UC-PROP-03 | BR-PROP-06 |
 | PUT | `/api/v1/rooms/{roomId}/connecting-room` | Gán/gỡ phòng thông nhau (đối xứng hai chiều) | MANAGER | `connectingRoomId` | UC-PROP-03 | BR-OVER-15 |
@@ -199,7 +204,7 @@ xác minh lại trước khi hiện bản nhập.
 |--------|-----------|-------|-------------------|---------------|----|----|
 | GET | `/api/v1/inventory/grid` | Lịch tồn phòng dạng lưới ngày × loại phòng | FRONT_DESK, RESERVATION_AGENT, MANAGER, OWNER | `propertyId`, `from`, `to`, `roomTypeId`, `channelCode` | UC-INV-01 | BR-INV-01,07, NFR-PERF-01 |
 | GET | `/api/v1/operations/day-board` | Bảng điều khiển ngày SCR-23 (HB-242, TD-09): một ảnh chụp `RepeatableRead` cho **một cơ sở × một ngày nghiệp vụ VN** (vắng `date` ⇒ hôm nay theo đồng hồ CSDL). `arrivals` = `check_in = date` và `CONFIRMED`/`CHECKED_IN`; `departures` = `check_out = date` và `CHECKED_IN`/`CHECKED_OUT`; `inHouse` = ở qua đêm `date` (`check_in ≤ date < check_out`, `CONFIRMED`/`CHECKED_IN`). Mỗi nhóm có `total` thật, tối đa 200 dòng, cờ `truncated`; dòng gồm mã, tên khách, loại phòng, số phòng, ngày, trạng thái, kênh, `balanceDue` (không SĐT/giấy tờ). `overbooking` = số ca `OPEN`/`PROPOSED`/`ESCALATED` từ `date` trở đi và đúng `date`; `degradedChannels` = kênh `ACTIVE` đang `DEGRADED`. `capturedAt` là đồng hồ CSDL | FRONT_DESK, MANAGER, OWNER | `propertyId`, `date` | UC-INV-01, UC-FO-01, UC-OVER-01 | BR-INV-01, BR-CHAN-02 |
-| GET | `/api/v1/inventory/availability` | **Tìm phòng trống** theo kỳ lưu trú (§3.8) | — | `propertyId`, `roomTypeId`, `checkIn`, `checkOut`, `adults`, `children`, `roomCount`, `channelCode` | UC-INV-02 | BR-INV-01,02,07, BR-PROP-06 |
+| GET | `/api/v1/inventory/availability` | **Tìm phòng trống** theo kỳ lưu trú (§3.8); mỗi loại phòng có `photos[]` của đúng loại phòng ở cơ sở đó (HB-244) | — | `propertyId`, `roomTypeId`, `checkIn`, `checkOut`, `adults`, `children`, `roomCount`, `channelCode` | UC-INV-02 | BR-INV-01,02,07, BR-PROP-06 |
 | GET | `/api/v1/channel-allotments` | Allotment theo kênh × loại phòng × ngày | MANAGER | `channelId`, `roomTypeId`, `from`, `to` | UC-INV-03 | BR-INV-05, BR-CHAN-01,08 |
 | PUT | `/api/v1/channel-allotments` | Đặt lại allotment theo lô trong một transaction | MANAGER | `channelId`, `roomTypeId`, `date`, `allotment` | UC-INV-03 | BR-INV-05, BR-CHAN-01,06 |
 

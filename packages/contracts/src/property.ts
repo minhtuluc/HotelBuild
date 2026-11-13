@@ -5,6 +5,38 @@ import { propertyStatusSchema, roomBlockReasonSchema, roomStatusSchema } from '.
 
 const clockTime = z.string().regex(/^\d{2}:\d{2}$/, 'Giờ phải có dạng HH:mm');
 
+/**
+ * HB-244: một ảnh công khai. Chưa có kho tệp (HB-138) nên `url` là URL `https://` tuyệt đối hoặc đường dẫn
+ * tĩnh `/images/…` của web khách (cùng CHECK của csdl §3.2.10). `width`/`height` là kích thước thật (px)
+ * để giao diện giữ tỉ lệ khung khi chưa tải xong ảnh.
+ */
+export const publicPhotoSchema = z.object({
+  url: z
+    .string()
+    .max(2048)
+    // Mỗi đoạn sau `/images/` không bắt đầu bằng `.` ⇒ chặn `..` và tệp ẩn (cùng CHECK csdl §3.2.10).
+    .regex(
+      /^(https:\/\/\S+|\/images\/([A-Za-z0-9_-][A-Za-z0-9._-]*\/)*[A-Za-z0-9_-][A-Za-z0-9._-]*)$/,
+      'URL https:// hoặc đường dẫn /images/…',
+    ),
+  alt: z.string().trim().min(1).max(300),
+  width: z.number().int().min(1).max(10000),
+  height: z.number().int().min(1).max(10000),
+});
+
+/** `GET /properties/{id}/photos`, `GET /room-types/{id}/photos`: danh sách theo thứ tự + ETag cho `PUT`. */
+export const photoListSchema = z.object({
+  photos: z.array(publicPhotoSchema),
+  /** Băm danh sách hiện tại; gửi lại trong `If-Match` khi thay (412 nếu đã đổi). */
+  etag: z.string().min(1),
+});
+
+/** `PUT …/photos`: thay **cả** danh sách (tối đa 20, thứ tự mảng = thứ tự hiển thị); mảng rỗng = gỡ hết. */
+export const photoReplaceRequestSchema = z.strictObject({
+  photos: z.array(publicPhotoSchema.strict()).max(20),
+  reason: z.string().trim().min(1).max(500),
+});
+
 export const propertySummarySchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(120),
@@ -25,6 +57,22 @@ export const propertyPublicSummarySchema = z.object({
   name: z.string().min(1).max(120),
   checkInTime: clockTime,
   checkOutTime: clockTime,
+  /** HB-244: ảnh cơ sở theo thứ tự hiển thị; optional để phản hồi cũ vẫn đọc được. */
+  photos: z.array(publicPhotoSchema).optional(),
+});
+
+/**
+ * HB-244: `GET /public/room-types/{roomTypeId}` — thông tin công khai của một loại phòng cho màn chi tiết
+ * (SCR-03), kể cả khi chưa có báo giá. Chỉ loại phòng `ACTIVE` của cơ sở `ACTIVE`; còn lại 404.
+ */
+export const roomTypePublicSchema = z.object({
+  id: z.string().min(1),
+  propertyId: z.string().min(1),
+  code: z.string().min(1),
+  name: z.string().min(1).max(120),
+  capacityAdults: z.number().int().min(1),
+  capacityChildren: z.number().int().min(0),
+  photos: z.array(publicPhotoSchema),
 });
 
 /** `PATCH /properties/{propertyId}` — sửa cơ sở, đổi trần bán vượt và giờ nhận/trả (BR-OVER-01,02). */
@@ -144,3 +192,8 @@ export const roomUpdateRequestSchema = z.strictObject({
 export type RoomTypeUpdateRequest = z.infer<typeof roomTypeUpdateRequestSchema>;
 export type RoomCreateRequest = z.infer<typeof roomCreateRequestSchema>;
 export type RoomUpdateRequest = z.infer<typeof roomUpdateRequestSchema>;
+
+export type PublicPhoto = z.infer<typeof publicPhotoSchema>;
+export type PhotoList = z.infer<typeof photoListSchema>;
+export type PhotoReplaceRequest = z.infer<typeof photoReplaceRequestSchema>;
+export type RoomTypePublic = z.infer<typeof roomTypePublicSchema>;

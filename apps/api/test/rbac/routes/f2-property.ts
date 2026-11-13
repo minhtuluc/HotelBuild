@@ -28,6 +28,20 @@ export function f2Property(keyed: Oracle): void {
     status: 400,
     method: RequestMethod.GET,
   };
+  // HB-244: ảnh công khai. Oracle thay `:propertyId`/`:roomTypeId` bằng UUID không phải cơ sở/loại phòng
+  // ⇒ vai trò được phép đọc nhận 404; PUT không gửi If-Match ⇒ 428 (chỉ OWNER).
+  for (const owner of ['properties/:propertyId', 'room-types/:roomTypeId']) {
+    keyed[`${RequestMethod.GET}:${owner}/photos`] = {
+      roles: ['MANAGER', 'OWNER'],
+      status: 404,
+      method: RequestMethod.GET,
+    };
+    keyed[`${RequestMethod.PUT}:${owner}/photos`] = {
+      roles: ['OWNER'],
+      status: 428,
+      method: RequestMethod.PUT,
+    };
+  }
   // HB-242 (TD-09): SCR-23 thuộc lễ tân/quản lý/chủ; oracle không gửi `propertyId` → 400.
   keyed[`${RequestMethod.GET}:operations/day-board`] = {
     roles: ['FRONT_DESK', 'MANAGER', 'OWNER'],

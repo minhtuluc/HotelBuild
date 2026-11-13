@@ -8,6 +8,8 @@ import { propertyView, publicView, typeView, roomView } from './projection.js';
 export const typeInclude = { rooms: { select: { bed_count: true, status: true } } } as const;
 export const propertyInclude = {
   _count: { select: { rooms: { where: { status: 'ACTIVE' } } } },
+  // HB-244: ảnh công khai (chỉ `publicView` dùng; view nhân viên bỏ qua).
+  property_photos: { orderBy: { position: 'asc' } },
 } as const;
 export async function roomToken(tx: Prisma.TransactionClient, id: string) {
   const rows = await tx.$queryRaw<
@@ -41,7 +43,7 @@ export class PropertyReads {
           orderBy: { id: 'asc' },
           take: q.limit + 1,
         });
-        return page(rows, total, q, actor ? propertyView : publicView);
+        return page(rows, total, q, (row) => (actor ? propertyView(row) : publicView(row)));
       },
       { isolationLevel: 'RepeatableRead' },
     );

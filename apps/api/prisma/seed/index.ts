@@ -19,6 +19,7 @@ import {
 } from './reference-data.js';
 import { CANCELLATION_POLICIES, RATE_PLANS } from './policies.js';
 import { SYSTEM_SETTINGS } from './settings.js';
+import { seedDemoPhotos } from './photos.js';
 
 export interface SeedSummary {
   properties: number;
@@ -313,6 +314,9 @@ export async function runSeed(options: SeedOptions): Promise<SeedSummary> {
       summary.users = 0;
     } else {
       summary.users = await seedDevAccounts(client, options.dbPassword ?? resolveDevPassword());
+      // HB-244: ảnh minh hoạ khớp file tĩnh của web khách; chỉ cho cơ sở/loại phòng chưa có ảnh.
+      const photos = await seedDemoPhotos(client);
+      process.stdout.write(`Ảnh minh hoạ dev (HB-244): đã chèn ${photos} dòng\n`);
     }
     await client.query('COMMIT');
     return summary;
