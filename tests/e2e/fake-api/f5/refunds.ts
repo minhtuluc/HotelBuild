@@ -8,7 +8,7 @@ import {
 } from '../../../../packages/contracts/src/index.js';
 import type { FakeActor, FakeRequest, FakeResponse } from '../core/types.js';
 import { FixtureState, error, now } from './state.js';
-import { refundFacts, refundNet, recordRefundPayment } from './refund-facts.js';
+import { payoutView, refundFacts, refundNet, recordRefundPayment } from './refund-facts.js';
 export function refundResponse(
   state: FixtureState,
   request: FakeRequest,
@@ -157,13 +157,15 @@ export function refundResponse(
       if (payment.method === 'CASH' && !input.bankNote?.trim())
         return error(request, 400, 'E_PAY_REASON_TOO_SHORT');
       if (refundNet(value) <= 0) return error(request, 422, 'E_PAY_AMOUNT_MISMATCH');
-      recordRefundPayment(state, value, input.method, actor.key);
+      const refundPayment = recordRefundPayment(state, value, input.method, actor.key);
       value.status = 'PAID';
       value.paidAt = now();
       state.consume(pin!);
       const stored = state.booking(value.bookingId, actor)!;
       stored.value.refundedAmount += refundNet(value);
       state.updateBalance(stored);
+      // Giống API thật (TD-64): 202 + trạng thái kỹ thuật leg chi; UI đọc lại hồ sơ để thấy PAID.
+      return { status: 202, body: payoutView(value, refundPayment, input.bankNote ?? null) };
     }
     return { status: 200, body: refundFacts(state, value) };
   });

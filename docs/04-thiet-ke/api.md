@@ -268,7 +268,7 @@ theo `tiers[i].hoursBeforeCheckIn/refundPercent/chargeFirstNight` chỉ ra dòng
 | GET | `/api/v1/refund-requests` | Danh sách hồ sơ, số tiền đã giữ/chi, tuổi hồ sơ, version | Tập quyền §6.3 | `bookingId`, `status`, `propertyId` | UC-PAY-04 | BR-CANCEL-16 |
 | POST | `/api/v1/refund-requests/{refundRequestId}/reject` | Từ chối PENDING, ghi lý do và trả hạn mức hoàn | MANAGER/OWNER | `note`, `pinToken` 🔒 | UC-PAY-04 | BR-CANCEL-15,17 |
 | POST | `/api/v1/refund-requests/{refundRequestId}/cancel` | Rút yêu cầu còn PENDING; không khôi phục booking hay assignment | Người tạo hoặc MANAGER/OWNER | `reason` | UC-PAY-04 | BR-CANCEL-18 |
-| POST | `/api/v1/refund-requests/{refundRequestId}/pay` | Chi tiền hoàn về phương thức gốc | ACCOUNTANT | `method`, `bankNote`, `pinToken` 🔒 | UC-PAY-04 | BR-CANCEL-12,16, BR-PAY-08,09 |
+| POST | `/api/v1/refund-requests/{refundRequestId}/pay` | Chi tiền hoàn về phương thức gốc. Trả **202** `RefundPayoutView` (`refundRequestId`, `status`, `operations[]` trạng thái kỹ thuật từng leg); hồ sơ thành `PAID` khi worker hoặc `/confirm-transfer` chốt, client đọc lại hồ sơ (TD-64) | ACCOUNTANT | `method`, `bankNote`, `pinToken` 🔒 | UC-PAY-04 | BR-CANCEL-12,16, BR-PAY-08,09 |
 | POST | `/api/v1/refund-requests/{refundRequestId}/confirm-transfer` | **Xác nhận đã chuyển khoản tay** bằng mã tham chiếu ngân hàng cho leg chờ đối soát | ACCOUNTANT | `bankReference`, `note`, `evidenceRefs[]`, `pinToken` 🔒 | UC-PAY-04 | BR-CANCEL-12,16, BR-PAY-08,09 |
 | POST | `/api/v1/reconciliation/daily/close` | Chốt ca/ngày, ghi nhận chênh lệch | ACCOUNTANT | `propertyId`, `businessDate`, `countedCash`, `note` | UC-PAY-05 | BR-PAY-06,10 |
 

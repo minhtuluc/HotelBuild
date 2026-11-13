@@ -93,12 +93,15 @@ export interface RefundApi {
   ): Promise<ApiResponse<RefundDecision>>;
   reject(refundRequestId: string, input: RefundRejectRequest): Promise<ApiResponse<RefundRequest>>;
   cancel(refundRequestId: string, input: RefundCancelRequest): Promise<ApiResponse<RefundRequest>>;
-  /** 🔒 Chi hoàn về phương thức gốc, chỉ khi APPROVED (BR-CANCEL-16). */
+  /**
+   * 🔒 Chi hoàn về phương thức gốc, chỉ khi APPROVED (BR-CANCEL-16). Trả **202** với trạng thái kỹ
+   * thuật từng leg; hồ sơ `PAID` phải đọc lại, không suy từ phản hồi này (TD-64).
+   */
   pay(
     refundRequestId: string,
     input: RefundPayRequest,
     options?: { idempotencyKey: string },
-  ): Promise<ApiResponse<RefundRequest>>;
+  ): Promise<ApiResponse<RefundPayoutView>>;
   /**
    * 🔒 HB-215: xác nhận đã chuyển khoản tay bằng mã tham chiếu ngân hàng cho leg chờ đối soát.
    * Chỉ hợp lệ khi server báo `awaitingTransferConfirmation`.
@@ -156,7 +159,8 @@ export function createRefundApi(client: ApiClient): RefundApi {
         body: refundPayRequestSchema.parse(input),
         ...(options === undefined ? {} : { idempotencyKey: options.idempotencyKey }),
         pinProtected: true,
-        decoder: refundRequestSchema,
+        // 202: API ghi leg chi rồi trả trạng thái kỹ thuật (`RefundPayoutView`), không phải hồ sơ hoàn (TD-64).
+        decoder: refundPayoutViewSchema,
       }),
     confirmTransfer: (refundRequestId, input, options) =>
       client.request({

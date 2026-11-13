@@ -19,7 +19,7 @@ export function refundFacts(state: FixtureState, value: RefundRequest): RefundRe
   };
 }
 export function recordRefundPayment(state: FixtureState, value: RefundRequest,
-  method: Payment['method'], actor: string): void {
+  method: Payment['method'], actor: string): Payment {
   const id = crypto.randomUUID();
   const payment: Payment = { paymentId: id, bookingId: value.bookingId, type: 'REFUND',
     method, amount: refundNet(value), status: 'SUCCEEDED',
@@ -29,4 +29,19 @@ export function recordRefundPayment(state: FixtureState, value: RefundRequest,
   state.refundPayments.set(value.id, payment);
   const stored = state.context.getBooking?.(value.bookingId);
   if (stored) stored.value.payments = [...(stored.value.payments ?? []), payment];
+  return payment;
+}
+
+/** Phản hồi 202 của `/pay` (`RefundPayoutView`): một leg đã quyết toán ngay trong fixture. */
+export function payoutView(value: RefundRequest, payment: Payment, bankNote: string | null) {
+  return {
+    refundRequestId: value.id,
+    status: value.status,
+    operations: [{
+      id: `synthetic-payout-${payment.paymentId}`, status: 'SUCCEEDED', method: payment.method,
+      amount: payment.amount, originalPaymentId: value.paymentId, refundPaymentId: payment.paymentId,
+      bankNote, attempts: 1, providerTxnId: payment.providerTxnId, lastError: null,
+      createdAt: payment.createdAt, finishedAt: payment.paidAt,
+    }],
+  };
 }

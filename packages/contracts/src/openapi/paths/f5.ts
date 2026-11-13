@@ -271,7 +271,11 @@ export function registerF5Paths(registry: OpenAPIRegistry, errorBodyComponent: z
     parameters: [...idempotencyHeaders, pathParam('refundRequestId')],
     request: { body: jsonBody(refundPayRequestSchema) },
     responses: {
-      200: { description: 'Hồ sơ đã chi', ...jsonBody(refundRequestSchema) },
+      202: {
+        description:
+          'Đã ghi leg chi; trạng thái kỹ thuật từng leg (worker quyết toán sau, đọc lại hồ sơ để biết PAID)',
+        ...jsonBody(refundPayoutViewSchema),
+      },
       401: errorResponse('E_AUTH_PIN_REQUIRED'),
       403: errorResponse('E_RBAC_FORBIDDEN', 'E_PAY_REFUND_FORCE_MAJEURE_FORBIDDEN'),
       409: errorResponse('E_PAY_REFUND_NOT_APPROVED'),
