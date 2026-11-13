@@ -43,3 +43,6 @@ test-results/
 npm-debug.log*
 .agent-qc/
 infra/prod/ca/
+
+# HB-179: chứng chỉ/cấu hình kho S3 cục bộ cho diễn tập (sinh trên máy, không commit)
+infra/prod/backup/s3-certs/
