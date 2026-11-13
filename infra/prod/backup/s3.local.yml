@@ -1,0 +1,53 @@
+# HB-179 — CHỈ cho staging/diễn tập trên máy dev: SeaweedFS làm kho S3 "off-site" giả trong cùng compose.
+# (Docker Hub không còn image MinIO community.) Production dùng kho S3 thật ở nhà cung cấp/vùng khác VPS
+# (README §Sao lưu), KHÔNG dùng file này.
+#   docker compose --env-file .env -f docker-compose.yml -f backup/s3.local.yml up -d postgres backup
+# TLS tự ký trong ./backup/s3-certs (sinh bằng lệnh ở README) ⇒ BACKUP_S3_VERIFY_TLS=n, URI_STYLE=path.
+services:
+  s3:
+    image: chrislusf/seaweedfs:3.97
+    command:
+      - server
+      - -dir=/data
+      - -s3
+      - -s3.port.https=9000
+      - -s3.cert.file=/certs/public.crt
+      - -s3.key.file=/certs/private.key
+      - -s3.config=/etc/seaweedfs/s3.json
+    volumes:
+      - s3data:/data
+      - ./backup/s3-certs:/certs:ro
+      - ./backup/s3-certs/s3.json:/etc/seaweedfs/s3.json:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'echo "s3.bucket.list" | weed shell -master=localhost:9333 >/dev/null 2>&1']
+      interval: 5s
+      timeout: 10s
+      retries: 30
+    networks: [backend]
+
+  s3-bucket:
+    image: chrislusf/seaweedfs:3.97
+    depends_on:
+      s3: { condition: service_healthy }
+    entrypoint:
+      - sh
+      - -c
+      # `weed shell` trả 0 cả khi filer chưa sẵn sàng ⇒ thử lại tới khi bucket thật sự xuất hiện.
+      - |
+        for i in $$(seq 1 60); do
+          echo "s3.bucket.create -name $$B" | weed shell -master=s3:9333 >/dev/null 2>&1
+          echo "s3.bucket.list" | weed shell -master=s3:9333 2>/dev/null | grep -q "$$B" && exit 0
+          sleep 2
+        done
+        echo "không tạo được bucket $$B" >&2
+        exit 1
+    environment:
+      B: ${BACKUP_S3_BUCKET:?}
+    networks: [backend]
+
+  postgres:
+    depends_on:
+      s3-bucket: { condition: service_completed_successfully }
+
+volumes:
+  s3data: {}

@@ -18,6 +18,32 @@ x-api-env: &api-env
   SMTP_FROM: ${SMTP_FROM:-}
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
 
+# HB-179 — pgBackRest: cùng cấu hình kho cho postgres (archive-push), backup (lập lịch) và restore-drill.
+# Kho S3-compatible **off-site** (khác nhà cung cấp/vùng với VPS), mã hoá AES-256 phía máy bằng
+# BACKUP_CIPHER_PASS — mất khoá này là mất mọi bản sao lưu: cất ngoài VPS (README §Sao lưu).
+x-pgbackrest-env: &pgbackrest-env
+  PGBACKREST_STANZA: pinehill
+  PGBACKREST_PG1_PATH: /var/lib/postgresql/data
+  PGBACKREST_PG1_SOCKET_PATH: /var/run/postgresql
+  PGBACKREST_PG1_USER: ${POSTGRES_USER:-pinehill}
+  PGBACKREST_REPO1_TYPE: s3
+  PGBACKREST_REPO1_PATH: ${BACKUP_S3_PATH:-/pinehill}
+  PGBACKREST_REPO1_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:?}
+  PGBACKREST_REPO1_S3_BUCKET: ${BACKUP_S3_BUCKET:?}
+  PGBACKREST_REPO1_S3_REGION: ${BACKUP_S3_REGION:?}
+  PGBACKREST_REPO1_S3_KEY: ${BACKUP_S3_KEY:?}
+  PGBACKREST_REPO1_S3_KEY_SECRET: ${BACKUP_S3_KEY_SECRET:?}
+  PGBACKREST_REPO1_S3_URI_STYLE: ${BACKUP_S3_URI_STYLE:-host}
+  PGBACKREST_REPO1_S3_VERIFY_TLS: ${BACKUP_S3_VERIFY_TLS:-y}
+  PGBACKREST_REPO1_STORAGE_PORT: ${BACKUP_S3_PORT:-443}
+  PGBACKREST_REPO1_CIPHER_TYPE: aes-256-cbc
+  PGBACKREST_REPO1_CIPHER_PASS: ${BACKUP_CIPHER_PASS:?}
+  PGBACKREST_REPO1_RETENTION_FULL: ${BACKUP_RETENTION_FULL:-14}
+  PGBACKREST_COMPRESS_TYPE: zst
+  PGBACKREST_START_FAST: 'y'
+  PGBACKREST_LOG_LEVEL_CONSOLE: info
+  PGBACKREST_LOG_LEVEL_FILE: 'off'
+
 services:
   caddy:
     image: caddy:2.10-alpine
@@ -47,21 +73,78 @@ services:
         aliases: ['${API_HOST:?}', '${OPS_HOST:?}', '${CUSTOMER_HOST:?}']
 
   postgres:
-    image: postgres:16-alpine
+    image: ${IMAGE_REGISTRY:-pinehill}/postgres:${IMAGE_TAG:-local}
+    build: { context: ../.., dockerfile: docker/postgres.Dockerfile }
     restart: unless-stopped
     environment:
+      <<: *pgbackrest-env
       POSTGRES_USER: ${POSTGRES_USER:-pinehill}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
       POSTGRES_DB: ${POSTGRES_DB:-pinehill}
-    # WAL `replica` sẵn cho PITR/WAL archive (HB-179); không mở cổng ra host.
-    command: ['postgres', '-c', 'wal_level=replica', '-c', 'max_connections=200']
+    # HB-179: mỗi đoạn WAL đẩy lên kho ngay khi đầy, và ép đổi đoạn mỗi 5 phút khi có ghi ⇒ RPO ≤ 5 phút
+    # (yêu cầu ≤ 15). archive_command lỗi (kho sập) ⇒ WAL giữ lại trên đĩa và thử lại, không mất dữ liệu.
+    # Không mở cổng ra host.
+    command:
+      - postgres
+      - -c
+      - wal_level=replica
+      - -c
+      - max_connections=200
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=pgbackrest archive-push %p
+      - -c
+      - archive_timeout=300
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - pgrun:/var/run/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
       interval: 5s
       timeout: 5s
       retries: 20
+    networks: [backend]
+
+  # HB-179: sidecar lập lịch sao lưu — full khi chưa có, full hằng ngày 02:00 VN, verify Chủ nhật.
+  backup:
+    image: ${IMAGE_REGISTRY:-pinehill}/postgres:${IMAGE_TAG:-local}
+    build: { context: ../.., dockerfile: docker/postgres.Dockerfile }
+    restart: unless-stopped
+    user: postgres
+    entrypoint: ['/usr/local/bin/pinehill-backup']
+    environment:
+      <<: *pgbackrest-env
+      BACKUP_FULL_AT_UTC: ${BACKUP_FULL_AT_UTC:-19:00}
+    volumes:
+      - pgdata:/var/lib/postgresql/data:ro
+      - pgrun:/var/run/postgresql
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      # Bản sao lưu mới nhất trong kho cũ hơn 26 giờ ⇒ unhealthy (cảnh báo HB-182 đọc trạng thái này).
+      test: ['CMD', 'sh', '-c', 'test $$(( $$(date +%s) - $$(cat /var/lib/pgbackrest/last-full) )) -lt 93600']
+      interval: 5m
+      timeout: 10s
+      retries: 1
+      start_period: 2h
+    networks: [backend]
+
+  # HB-179: diễn tập PITR vào volume tạm — chỉ chạy tay: `docker compose --profile drill run --rm restore-drill`.
+  restore-drill:
+    image: ${IMAGE_REGISTRY:-pinehill}/postgres:${IMAGE_TAG:-local}
+    build: { context: ../.., dockerfile: docker/postgres.Dockerfile }
+    profiles: [drill]
+    restart: 'no'
+    user: postgres
+    entrypoint: ['/usr/local/bin/pinehill-restore-drill']
+    environment:
+      <<: *pgbackrest-env
+      POSTGRES_DB: ${POSTGRES_DB:-pinehill}
+      RESTORE_TARGET: ${RESTORE_TARGET:-}
+      RESTORE_SET: ${RESTORE_SET:-}
+    volumes:
+      - restoredata:/var/lib/postgresql/data
     networks: [backend]
 
   redis:
@@ -193,6 +276,8 @@ networks:
 
 volumes:
   pgdata: {}
+  pgrun: {}
+  restoredata: {}
   redisdata: {}
   exports: {}
   caddy_data: {}

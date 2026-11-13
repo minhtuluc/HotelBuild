@@ -1,6 +1,6 @@
 # Production/staging trên một VPS (HB-175, QĐ-08)
 
-Một `docker compose` gồm 8 dịch vụ:
+Một `docker compose` gồm 9 dịch vụ (cộng `restore-drill` chỉ chạy tay):
 
 | Dịch vụ                          | Image                             | Ra ngoài?   | Ghi chú                                                                                                                                                  |
 | -------------------------------- | --------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -9,7 +9,8 @@ Một `docker compose` gồm 8 dịch vụ:
 | `worker`                         | `docker/worker.Dockerfile`        | không       | job nền BullMQ; `ENABLE_REPEATABLE_SCHEDULERS=true`                                                                                                      |
 | `customer-web`, `operations-web` | `docker/web.Dockerfile` (`APP=…`) | không       | Next.js standalone                                                                                                                                       |
 | `migrate`                        | `docker/migrate.Dockerfile`       | không       | chạy một lần: `scripts/migrate.mjs` + đặt mật khẩu `app_rw` ([runtime-role.mjs](runtime-role.mjs)); api/worker chỉ khởi động khi bước này **thành công** |
-| `postgres`                       | `postgres:16-alpine`              | không       | volume `pgdata`, `wal_level=replica` (PITR: HB-179)                                                                                                      |
+| `postgres`                       | `docker/postgres.Dockerfile`      | không       | `postgres:16-alpine` + pgBackRest; volume `pgdata`; WAL đẩy liên tục lên kho S3 off-site, mã hoá (HB-179)                                               |
+| `backup`                         | `docker/postgres.Dockerfile`      | không       | sidecar: full hằng ngày 02:00 VN, `verify` Chủ nhật; unhealthy nếu bản mới nhất > 26 giờ ([runbook](../../docs/07-ban-giao/van-hanh/sao-luu-phuc-hoi.md))     |
 | `redis`                          | `redis:7.4-alpine`                | không       | AOF, có mật khẩu, volume `redisdata`                                                                                                                     |
 
 ## Chuẩn bị VPS (một lần)
@@ -25,6 +26,8 @@ cp infra/prod/.env.prod.example infra/prod/.env && chmod 600 infra/prod/.env
 openssl rand -hex 24   # POSTGRES_PASSWORD, APP_RW_PASSWORD, REDIS_PASSWORD (mỗi biến một lần)
 openssl rand -base64 48  # JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
 ```
+
+Kho sao lưu (HB-179): tạo bucket S3 ở nhà cung cấp/vùng **khác** VPS, khoá truy cập riêng cho bucket, rồi điền `BACKUP_S3_*` và `BACKUP_CIPHER_PASS` (`openssl rand -base64 48`, cất bản sao ngoài VPS).
 
 Thiếu biến bắt buộc ⇒ `docker compose` dừng ngay với tên biến (`${VAR:?}`); api/worker cũng tự kiểm cấu hình và không khởi động khi sai.
 
@@ -69,6 +72,6 @@ curl --cacert ca/root.crt https://api.localhost/api/v1/system/health
 
 - `docker compose --env-file .env down` giữ nguyên volume (dữ liệu còn).
 - **Không** chạy `down -v` trên production: lệnh này xoá `pgdata`.
-- Sao lưu và khôi phục: HB-179 (WAL + full off-site, mã hoá). Trước khi HB-179 xong, **chưa** có backup tự động.
+- Sao lưu và khôi phục: WAL liên tục + full hằng ngày lên kho S3 off-site, mã hoá AES-256 (HB-179). Cấu hình, cất giữ khoá, diễn tập và phục hồi sự cố: [sao-luu-phuc-hoi.md](../../docs/07-ban-giao/van-hanh/sao-luu-phuc-hoi.md). **Mất `BACKUP_CIPHER_PASS` là mất mọi bản sao lưu**, nên cất khoá ngoài VPS.
 - Rollback: chạy lại lệnh `up -d` với `IMAGE_TAG` cũ. Migration chỉ tiến, không có `down` ([migration.md](../../docs/07-ban-giao/van-hanh/migration.md)). Runbook đầy đủ ở HB-180.
 ````

@@ -99,6 +99,10 @@ Khoá ký ứng dụng, `EXPO_TOKEN` và mọi bí mật build **không** thuộ
 | `BOOTSTRAP_OWNER_USERNAME`, `BOOTSTRAP_OWNER_PASSWORD` | `pnpm owner:bootstrap` | S (mật khẩu), C (tên) | Stg, Prod, một lần | GH-ENV hoặc nhập tay; tài khoản tạo ra có `must_change_password = true`, chỉ chạy khi chưa có OWNER hoạt động. Xoá khỏi môi trường ngay sau lần chạy. |
 | `SEED_DEV_PASSWORD` | seed tài khoản dev | S | Dev | **Không dùng ở Prod**: mã dừng khi `NODE_ENV=production` mà thiếu; `migration.md` cấm seed dev trên production. |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | `infra/docker-compose.yml` | S (mật khẩu) | Dev | Mặc định dev nằm trong compose và `.env.example`; **chỉ cho máy lập trình**. Staging/production do IaC của HB-175 quyết. |
+| `BACKUP_S3_ENDPOINT`, `BACKUP_S3_PORT`, `BACKUP_S3_REGION`, `BACKUP_S3_BUCKET`, `BACKUP_S3_PATH`, `BACKUP_S3_URI_STYLE`, `BACKUP_S3_VERIFY_TLS`, `BACKUP_RETENTION_FULL`, `BACKUP_FULL_AT_UTC` | `infra/prod/docker-compose.yml` (pgBackRest trong `postgres`, `backup`, `restore-drill`) | C | Stg, Prod | `infra/prod/.env` trên VPS. Kho S3 off-site, khác nhà cung cấp/vùng với VPS (HB-179, [sao-luu-phuc-hoi.md](sao-luu-phuc-hoi.md)). |
+| `BACKUP_S3_KEY`, `BACKUP_S3_KEY_SECRET` | như trên | S | Stg, Prod | Khoá truy cập **chỉ cho bucket sao lưu**, không dùng khoá root của tài khoản. |
+| `BACKUP_CIPHER_PASS` | như trên (mã hoá `aes-256-cbc` của kho) | S | Stg, Prod | **Mất khoá là mất mọi bản sao lưu.** Cất ít nhất 2 nơi ngoài VPS; đổi khoá phải tạo stanza mới (runbook §2). |
+| `RESTORE_TARGET`, `RESTORE_SET`, `DRILL_MAX_CONNECTIONS` | `restore-drill` (profile `drill`) | C | Stg, Prod, chỉ lúc diễn tập/phục hồi | Truyền khi chạy lệnh, không đặt cố định trong `.env`. |
 | `SMTP_URL` | `.env.example`, `infra/README.md` (Mailpit) | C | Dev | Không có đường mã đọc `SMTP_URL` hôm nay (xem F2). Gửi thật dùng `NOTI_SMTP_URL`. |
 | `TEMPO_OTLP_HTTP_ENDPOINT` | `infra/observability/otel-collector.yml` (`${env:…}`) | C (S nếu có token) | Stg, Prod | KHO-CHẠY của collector. |
 | `GRAFANA_BASE_URL` | `infra/observability/prometheus-rules.yml` | C | Stg, Prod | Chỉ tạo liên kết trong cảnh báo. |
