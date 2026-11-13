@@ -7,6 +7,7 @@ import {
   allotmentRowSchema,
   auditLogEntrySchema,
   availabilitySchema,
+  dayBoardSchema,
   inventoryGridSchema,
   listResponseSchema,
   operationRefSchema,
@@ -28,6 +29,8 @@ import {
   backupRequestSchema,
   restoreRequestSchema,
   type AllotmentPutRequest,
+  type DayBoard,
+  type DayBoardQuery,
   type AllotmentRow,
   type Availability,
   type AuditLogEntry,
@@ -184,6 +187,8 @@ export function createPropertyApi(client: ApiClient): PropertyApi {
 }
 
 export interface InventoryApi {
+  /** HB-242 (TD-09): bảng điều khiển ngày SCR-23 — đến/đi/ở, ca quá tải mở, kênh DEGRADED. */
+  dayBoard(query: DayBoardQuery): Promise<ApiResponse<DayBoard>>;
   grid(query: {
     propertyId: string;
     from: string;
@@ -214,6 +219,13 @@ export interface InventoryApi {
 
 export function createInventoryApi(client: ApiClient): InventoryApi {
   return {
+    dayBoard: (query) =>
+      client.request({
+        method: 'GET',
+        path: '/operations/day-board',
+        query,
+        decoder: dayBoardSchema,
+      }),
     grid: (query) =>
       client.request({
         method: 'GET',
