@@ -57,3 +57,16 @@ Tài liệu này ghi nhận các thay đổi/bổ sung hợp đồng API hoặc 
   - Thêm `photos?: { url: string; alt: string; width: number; height: number }[]` (không phá vỡ) vào `PropertyPublicSummary` và vào mục loại phòng trong `Availability`.
   - Thêm `GET /api/v1/public/room-types/{roomTypeId}` (hoặc trường `roomType` trong `Quote`) trả `code`, `name`, `capacityAdults`, `photos[]` để màn chi tiết phòng hiện bộ ảnh.
 - **Trạng thái tạm trên Frontend:** Ảnh tĩnh theo mã ô; áp phích ga quay về tranh SVG minh hoạ khi chưa có ảnh.
+
+---
+
+## Phản hồi của Backend (13/11/2026, HB-243)
+
+| # | Yêu cầu | Trạng thái | Cách dùng |
+|---|---|---|---|
+| 1 | `propertyScope` trong đăng nhập / làm mới phiên | **Đã làm** (HB-243) | `POST /auth/login` và `POST /auth/refresh` của **nhân viên** trả thêm `role` và `propertyScope` (`tokenPairSchema`, trường optional), cùng giá trị ký trong access token và khớp `GET /auth/me`. Phiên khách không có hai trường này. OWNER có phạm vi toàn chuỗi dù mảng có thể rỗng, giống `/auth/me` |
+| 2a | `bookingCode` cho ca quá tải | **Đã làm** (HB-243) | Một ca có thể ảnh hưởng nhiều booking, nên trường là `affectedBookingCodes: string[]`, sắp **đúng thứ tự** `affectedBookingIds`, có ở cả `GET /overbooking-cases` lẫn `GET /overbooking-cases/{id}` |
+| 2b | Tạo hoặc gắn `caseId` khi đánh dấu trùng OTA | **Không làm** | "Nghi trùng" (`duplicate-flag`) chỉ là ghi chú soát xét: không huỷ booking, không đổi tồn. Ca quá tải thì do quét **thiếu phòng** theo đêm sinh ra. Hai việc này không tương ứng một-một, nên tự sinh ca từ cờ trùng sẽ tạo ra ca sai. Khi gặp booking trùng thật, quầy huỷ booking theo luồng huỷ. Nếu đêm đó còn thiếu phòng, ca quá tải tự xuất hiện ở lần quét kế tiếp và có `affectedBookingCodes` để đối chiếu |
+| 3 | Khách tự giải phóng giữ chỗ | **Đã có sẵn** | `DELETE /holds/{holdId}?reason=…`, kèm `Idempotency-Key`. Khách giải phóng được hold **của mình** (hold người khác ⇒ 404); trả 204 và phòng về tồn ngay. Gọi qua `createBookingApi(...).releaseHold(holdId, reason)`. `holdId` chính là `bookingId` của booking `HELD`. `api.md` trước đây ghi nhầm vai trò là FRONT_DESK, đã sửa |
+| 4 | Lọc nhiều trạng thái `GET /bookings` | **Đã làm** (HB-243) | Tham số **mới** `statuses=CONFIRMED,CHECKED_IN`. `status` (một giá trị) giữ nguyên để không phá client cũ; gửi cả hai ⇒ 400. Trong `api-client`: `list({ statuses: ['CONFIRMED', 'CHECKED_IN'] })` |
+| 5 | Ảnh cơ sở / loại phòng trong API công khai | **Đang làm** (HB-244) | Cần migration (bảng ảnh) và tuyến `GET /public/room-types/{roomTypeId}`. Sẽ báo trong `API-MOI-CHO-FRONTEND.md` khi PR mở |

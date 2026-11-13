@@ -87,8 +87,8 @@ PostgreSQL là nguồn bền: claim UNIQUE, thay đổi nghiệp vụ, audit/out
 
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |
 |--------|-----------|-------|-------------------|---------------|----|----|
-| POST | `/api/v1/auth/login` | Đăng nhập nội bộ, trả cặp access/refresh | — | `username`, `password`, `clientSurface?` (T10) | UC-AUTH-01 | BR-RBAC-06 |
-| POST | `/api/v1/auth/refresh` | Xoay refresh token | — | `refreshToken` | UC-AUTH-01 | BR-RBAC-05 |
+| POST | `/api/v1/auth/login` | Đăng nhập nội bộ, trả cặp access/refresh kèm `role` + `propertyScope` (cùng giá trị ký trong access token, HB-243) | — | `username`, `password`, `clientSurface?` (T10) | UC-AUTH-01 | BR-RBAC-06 |
+| POST | `/api/v1/auth/refresh` | Xoay refresh token; phiên nhân viên trả kèm `role` + `propertyScope` như đăng nhập (HB-243) | — | `refreshToken` | UC-AUTH-01 | BR-RBAC-05 |
 | POST | `/api/v1/auth/pin/verify` | Xác thực PIN 6 số, trả `pinToken` | FRONT_DESK | `pin` | UC-AUTH-01 | BR-RBAC-05 |
 | PUT | `/api/v1/users/{userId}/access` | Gán vai trò, phạm vi cơ sở, trạng thái; chống tự nâng quyền và không vô hiệu OWNER cuối | OWNER/SYSADMIN | `role`, `propertyScope[]`, `isActive` | UC-AUTH-02 | BR-RBAC-01,02 |
 | POST | `/api/v1/guest-auth/register` | Khách đăng ký tài khoản | — | `fullName`, `phone`, `email`, `password`, `consentMarketing` | UC-AUTH-03 | BR-CRM-01 |
@@ -248,7 +248,7 @@ theo `tiers[i].hoursBeforeCheckIn/refundPercent/chargeFirstNight` chỉ ra dòng
 |--------|-----------|-------|-------------------|---------------|----|----|
 | POST | `/api/v1/bookings` | **Tạo booking** (web/quầy/điện thoại) — §3.2 | GUEST | `propertyId`, `roomTypeId`, `ratePlanCode`, `channelCode`, `quoteId`, `guest`, `checkIn`, `checkOut`, `adults`, `children`, `roomCount`, `promotionCodes[]` | UC-BOOK-01, UC-BOOK-02, UC-BOOK-03 | BR-BOOK-01…16 |
 | POST | `/api/v1/walk-in` | **Tạo booking khách vãng lai** — gộp quote → booking trên kênh cấu hình `WALKIN` trong một lệnh; thu cọc kế tiếp bằng `POST /payments` | FRONT_DESK | `propertyId`, `roomTypeId`, `ratePlanCode`, `checkIn`, `checkOut`, `adults`, `children`, `roomCount`, `guest`, `promotionCodes[]`, `note` | UC-BOOK-02 | BR-BOOK-01,07,16 |
-| GET | `/api/v1/bookings` | Tra cứu booking (khách chỉ booking của mình), lọc/phân trang tại DB | GUEST hoặc tập quyền §6.3 | `propertyId`, `status`, `channelCode`, `from`, `to`, `q` | UC-BOOK-07 | BR-RBAC-02 |
+| GET | `/api/v1/bookings` | Tra cứu booking (khách chỉ booking của mình), lọc/phân trang tại DB | GUEST hoặc tập quyền §6.3 | `propertyId`, `status`, `statuses` (danh sách phân tách dấu phẩy, vd. `CONFIRMED,CHECKED_IN`; không dùng cùng `status` ⇒ 400, HB-243), `channelCode`, `from`, `to`, `q` | UC-BOOK-07 | BR-RBAC-02 |
 | GET | `/api/v1/bookings/{bookingId}` | Chi tiết theo quyền, snapshot điều khoản và version; không cấp HOUSEKEEPING | GUEST hoặc tập quyền §6.3 | — | UC-BOOK-07 | BR-RBAC-02,03 |
 | DELETE | `/api/v1/bookings/{bookingId}` | Xoá cứng **chỉ** `DRAFT`/`HELD` chưa phát sinh thanh toán; **PHẢI** ghi `AuditLog.beforeJson` trước khi xoá (204) | FRONT_DESK | `reason` | UC-BOOK-05 | BR-BOOK-14, BR-BOOK-17 |
 | POST | `/api/v1/bookings/{bookingId}/confirm` | Xác nhận booking | FRONT_DESK | `paymentId` | UC-BOOK-01, UC-BOOK-02, UC-BOOK-03 | BR-BOOK-09 |
@@ -256,7 +256,7 @@ theo `tiers[i].hoursBeforeCheckIn/refundPercent/chargeFirstNight` chỉ ra dòng
 | POST | `/api/v1/bookings/{bookingId}/cancel-preview` | Xem trước tiền hoàn, không đổi trạng thái | GUEST | `reason`, `isForceMajeure` | UC-BOOK-08 | BR-CANCEL-01…06 |
 | POST | `/api/v1/bookings/{bookingId}/cancel` | **Huỷ booking** (toàn phần hoặc **một phần** theo `bookingRoomIds[]` khi `roomCount > 1`) — §3.3 | GUEST | `reason`, `note`, `isForceMajeure`, `evidenceRefs[]`, `bookingRoomIds[]` | UC-BOOK-08 | BR-BOOK-11,14, BR-CANCEL-01…19 |
 | POST | `/api/v1/holds` | **Giữ chỗ có thời hạn** — §3.4 | GUEST | `propertyId`, `roomTypeId`, `channelCode`, `checkIn`, `checkOut`, `adults`, `children`, `roomCount`, `quoteId` | UC-BOOK-04 | BR-BOOK-04,07, BR-INV-02 |
-| DELETE | `/api/v1/holds/{holdId}` | Giải phóng hold ngay, trả phòng về tồn khả dụng (204) | FRONT_DESK | `reason` | UC-BOOK-04 | BR-INV-04 |
+| DELETE | `/api/v1/holds/{holdId}` | Giải phóng hold ngay, trả phòng về tồn khả dụng (204). **Khách** giải phóng được hold của chính mình (hold người khác ⇒ 404); nhân viên cần `holds.release` + phạm vi cơ sở | GUEST (hold của mình), FRONT_DESK | `reason` | UC-BOOK-04 | BR-INV-04 |
 
 ### 2.6. PAY — Thanh toán & hoàn tiền (5 UC)
 
@@ -296,7 +296,7 @@ theo `tiers[i].hoursBeforeCheckIn/refundPercent/chargeFirstNight` chỉ ra dòng
 
 | Method | Đường dẫn | Mô tả | Vai trò tối thiểu | Tham số chính | UC | BR |
 |--------|-----------|-------|-------------------|---------------|----|----|
-| GET | `/api/v1/overbooking-cases` | **Danh sách ca quá tải** — §3.9 | MANAGER | `propertyId`, `status`, `dateFrom`, `dateTo`, `roomTypeId`, `overdueOnly` | UC-OVER-01 | BR-OVER-03,04,05 |
+| GET | `/api/v1/overbooking-cases` | **Danh sách ca quá tải** — §3.9; mỗi ca có `affectedBookingCodes` (mã `PH-…`) theo đúng thứ tự `affectedBookingIds` (HB-243) | MANAGER | `propertyId`, `status`, `dateFrom`, `dateTo`, `roomTypeId`, `overdueOnly` | UC-OVER-01 | BR-OVER-03,04,05 |
 | GET | `/api/v1/overbooking-cases/{caseId}` | Chi tiết ca quá tải + ứng viên điều chuyển đã xếp hạng | MANAGER | `includeCandidates` | UC-OVER-01 | BR-OVER-11,12 |
 | POST | `/api/v1/overbooking-cases/{caseId}/relocation-plan` | Tính thang xử lý **4 bậc** và thứ tự `keepScore`; trả phương án `PROPOSED`, **chưa gán phòng** | MANAGER | `strategy` (`AUTO`/`MANUAL`) | UC-OVER-02 | BR-OVER-06,11,12 |
 | POST | `/api/v1/overbooking-cases/{caseId}/resolve` | Đóng ca quá tải sau khi xử lý xong; ca `ESCALATED`/quá hạn vẫn đóng được (BR-OVER-16) | MANAGER | `resolutionNote` | UC-OVER-01 | BR-OVER-04 |
