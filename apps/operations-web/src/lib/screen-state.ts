@@ -54,6 +54,12 @@ export function readFailureState(error: ApiError): ScreenState | undefined {
   return error.status === 403 || error.status === 401 ? { kind: 'forbidden' } : undefined;
 }
 
+/** Nhận diện lỗi tạm quá tải hệ thống (HTTP 503 hoặc `E_GEN_SERVICE_UNAVAILABLE`) theo TD-41. */
+export function isServiceUnavailable(caught: unknown): boolean {
+  if (!isApiError(caught)) return false;
+  return caught.status === 503 || caught.code === 'E_GEN_SERVICE_UNAVAILABLE';
+}
+
 /**
  * Lỗi khi **ghi**: 412/428/409 phiên bản → xung đột (không tự ghi đè); 400/422 → lỗi theo trường
  * (giữ nguyên bản nhập); 403/401 → thiếu quyền; mọi trường hợp còn lại (mạng, hết thời gian, 5xx)

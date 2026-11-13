@@ -21,8 +21,24 @@ import type {
   CheckOutResponse,
   PinToken,
 } from '@pinehill/contracts';
-import { StateSurface, formatDateTimeVn, formatMoney, type ScreenState } from '@pinehill/ui-web';
+import {
+  StateSurface,
+  formatDateTimeVn,
+  formatMoney,
+  space,
+  type ScreenState,
+} from '@pinehill/ui-web';
 import { createSessionClient } from '@pinehill/web-session/client';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_SUBTITLE_STYLE,
+  OPS_TABULAR_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../../../components/editorial-styles';
 import { useForcedState } from '../../../../../components/forced-state';
 import { ScreenAlert } from '../../../../../components/screen-alert';
 import { t } from '../../../../../lib/i18n';
@@ -40,16 +56,17 @@ function PreviewCard({ preview }: { preview: CheckOutPreview | null }): ReactEle
   return (
     <section
       data-testid="early-checkout-preview"
-      style={{ display: 'grid', gap: 6, border: '1px solid var(--color-border)', padding: 12 }}
+      className="ph-card"
+      style={{ ...OPS_TABULAR_STYLE, display: 'grid', gap: space.s2, padding: space.s4 }}
     >
-      <h2 style={{ margin: 0 }}>{opsReconcileText('previewTitle')}</h2>
+      <h2 style={OPS_SUBTITLE_STYLE}>{opsReconcileText('previewTitle')}</h2>
       <p data-testid="early-checkout-fee" style={{ margin: 0 }}>
         {opsReconcileText('feeAmount', { amount: formatMoney(preview.feeAmount) })}
       </p>
       <p style={{ margin: 0 }}>
         {opsReconcileText('extrasAmount', { amount: formatMoney(preview.extrasAmount) })}
       </p>
-      <p data-testid="early-checkout-balance" style={{ margin: 0 }}>
+      <p data-testid="early-checkout-balance" style={{ margin: 0, fontWeight: 600 }}>
         {opsReconcileText('balanceDueAfter', { amount: formatMoney(preview.balanceDue) })}
       </p>
     </section>
@@ -61,9 +78,9 @@ function ResultCard({ result }: { result: CheckOutResponse | null }): ReactEleme
   return (
     <section
       data-testid="early-checkout-result"
-      style={{ display: 'grid', gap: 6, border: '1px solid var(--color-border)', padding: 12 }}
+      style={{ ...OPS_TABULAR_STYLE, ...opsNoticeStyle('success') }}
     >
-      <h2 style={{ margin: 0 }}>{opsReconcileText('doneTitle')}</h2>
+      <h2 style={OPS_SUBTITLE_STYLE}>{opsReconcileText('doneTitle')}</h2>
       <p style={{ margin: 0 }}>
         {opsReconcileText('doneStatus', {
           status: result.status,
@@ -207,8 +224,8 @@ export function EarlyCheckoutScreen({ baseUrl }: { baseUrl: string }): ReactElem
 
   if (forced !== undefined) {
     return (
-      <section data-testid="early-checkout-screen" style={{ display: 'grid', gap: 12 }}>
-        <h1 style={{ margin: 0 }}>{opsReconcileText('earlyTitle')}</h1>
+      <section data-testid="early-checkout-screen" style={OPS_PAGE_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{opsReconcileText('earlyTitle')}</h1>
         <StateSurface state={forced}>
           <p>{t('screen.demo')}</p>
         </StateSurface>
@@ -217,19 +234,27 @@ export function EarlyCheckoutScreen({ baseUrl }: { baseUrl: string }): ReactElem
   }
 
   return (
-    <section
-      data-testid="early-checkout-screen"
-      style={{ display: 'grid', gap: 12, padding: '16px 0' }}
-    >
-      <h1 style={{ margin: 0 }}>{opsReconcileText('earlyTitle')}</h1>
-      <p style={{ margin: 0 }}>{opsReconcileText('earlyIntro')}</p>
-      <Link href={`/bookings/${encodeURIComponent(bookingId)}`} data-testid="early-checkout-back">
-        {opsReconcileText('backToBooking')}
-      </Link>
+    <section data-testid="early-checkout-screen" style={OPS_PAGE_STYLE}>
+      <h1 style={OPS_TITLE_STYLE}>{opsReconcileText('earlyTitle')}</h1>
+      <p style={OPS_INTRO_STYLE}>{opsReconcileText('earlyIntro')}</p>
+      <div>
+        <Link
+          href={`/bookings/${encodeURIComponent(bookingId)}`}
+          className="ph-btn"
+          style={OPS_COMPACT_BTN_STYLE}
+          data-testid="early-checkout-back"
+        >
+          {opsReconcileText('backToBooking')}
+        </Link>
+      </div>
       <StateSurface state={state}>
         {error === null ? null : <ScreenAlert error={error} onRetry={() => void load()} />}
         {booking === null ? null : (
-          <div data-testid="early-checkout-booking" style={{ display: 'grid', gap: 4 }}>
+          <div
+            data-testid="early-checkout-booking"
+            className="ph-card"
+            style={{ ...OPS_TABULAR_STYLE, display: 'grid', gap: 4, padding: space.s4 }}
+          >
             <p style={{ margin: 0 }}>
               {opsReconcileText('bookingInfo', {
                 code: booking.code,
@@ -247,8 +272,11 @@ export function EarlyCheckoutScreen({ baseUrl }: { baseUrl: string }): ReactElem
             </p>
           </div>
         )}
-        <div style={{ display: 'grid', gap: 8, maxWidth: 480 }}>
-          <label style={{ display: 'grid', gap: 4 }}>
+        <div
+          className="ph-card"
+          style={{ display: 'grid', gap: space.s3, maxWidth: 480, padding: space.s4 }}
+        >
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {opsReconcileText('earlyNote')}
             <input
               name="note"
@@ -263,6 +291,8 @@ export function EarlyCheckoutScreen({ baseUrl }: { baseUrl: string }): ReactElem
           </label>
           <button
             type="button"
+            className="ph-btn"
+            style={OPS_COMPACT_BTN_STYLE}
             data-testid="early-checkout-preview-button"
             disabled={busy}
             onClick={() => void runPreview()}
@@ -284,6 +314,8 @@ export function EarlyCheckoutScreen({ baseUrl }: { baseUrl: string }): ReactElem
           />
           <button
             type="button"
+            className="ph-btn-primary"
+            style={OPS_COMPACT_BTN_STYLE}
             data-testid="early-checkout-confirm"
             disabled={busy || !canConfirmEarlyCheckout(step, preview)}
             onClick={() => void confirmEarly()}

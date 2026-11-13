@@ -6,7 +6,7 @@ export const allotmentsCatalog = {
   'ops.nav.allotments': 'Hạn mức kênh',
   'allotments.title': 'Allotment theo kênh',
   'allotments.intro':
-    'Hạn mức bán của một kênh × một loại phòng theo ngày. Hạn mức mỗi kênh không vượt số đơn vị bán đang hoạt động của loại phòng; tổng các kênh không bị giới hạn (BR-INV-05). Kênh trực tiếp không có hạn mức riêng (BR-CHAN-08).',
+    'Hạn mức bán của một kênh × một loại phòng theo ngày. Hạn mức mỗi kênh không vượt số đơn vị bán đang hoạt động của loại phòng; tổng các kênh không bị giới hạn. Kênh trực tiếp không có hạn mức riêng.',
   'allotments.col.date': 'Ngày',
   'allotments.col.allotment': 'Hạn mức',
   'allotments.col.used': 'Đã dùng',

@@ -1,6 +1,8 @@
 'use client';
 import { useState, type ReactElement } from 'react';
 import type { RoomTypeSummary } from '@pinehill/contracts';
+import { space } from '@pinehill/ui-web';
+import { OPS_COMPACT_BTN_STYLE, OPS_SUBTITLE_STYLE } from '../../components/editorial-styles';
 import { ConfirmDialog, SelectInput, TextInput, box } from './parts';
 import { text } from './messages';
 import {
@@ -13,7 +15,7 @@ import {
   type MappingDraft,
 } from './model';
 
-const submitStyle = { minHeight: 44, justifySelf: 'start' } as const;
+const submitStyle = { ...OPS_COMPACT_BTN_STYLE, justifySelf: 'start' } as const;
 
 function typeOptions(types: readonly RoomTypeSummary[]) {
   return types.map((type) => ({ id: type.id, label: type.code }));
@@ -44,15 +46,20 @@ export function MappingForm(props: {
   };
   return (
     <form
-      style={box}
+      className="ph-card"
+      style={{ ...box, padding: space.s4 }}
       aria-labelledby="hb132-mapping-title"
       onSubmit={(event) => {
         event.preventDefault();
         check();
       }}
     >
-      <h2 id="hb132-mapping-title">{text('mappingTitle')}</h2>
-      <p>{text('mappingUnreadable')}</p>
+      <h2 id="hb132-mapping-title" style={OPS_SUBTITLE_STYLE}>
+        {text('mappingTitle')}
+      </h2>
+      <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 13 }}>
+        {text('mappingUnreadable')}
+      </p>
       <SelectInput
         name="roomTypeId"
         label={text('roomType')}
@@ -94,6 +101,7 @@ export function MappingForm(props: {
       />
       <button
         type="submit"
+        className="ph-btn-primary"
         disabled={props.busy}
         style={submitStyle}
         data-testid="hb132-mapping-submit"
@@ -140,7 +148,8 @@ export function ClosureForm(props: {
   };
   return (
     <form
-      style={box}
+      className="ph-card"
+      style={{ ...box, padding: space.s4 }}
       aria-labelledby="hb132-closure-title"
       onSubmit={(event) => {
         event.preventDefault();
@@ -149,8 +158,12 @@ export function ClosureForm(props: {
         if (found.length === 0) setAsking(true);
       }}
     >
-      <h2 id="hb132-closure-title">{text('closureTitle')}</h2>
-      <p>{text('closureRole')}</p>
+      <h2 id="hb132-closure-title" style={OPS_SUBTITLE_STYLE}>
+        {text('closureTitle')}
+      </h2>
+      <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 13 }}>
+        {text('closureRole')}
+      </p>
       <SelectInput
         name="closureRoomTypeId"
         label={text('roomType')}
@@ -193,6 +206,7 @@ export function ClosureForm(props: {
       />
       <button
         type="submit"
+        className="ph-btn-primary"
         disabled={props.busy}
         style={submitStyle}
         data-testid="hb132-closure-submit"

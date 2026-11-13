@@ -9,6 +9,16 @@ import { useState, type FormEvent, type ReactElement } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { AuditLogEntry } from '@pinehill/contracts';
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_FILTER_ROW_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../components/editorial-styles';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { useForcedState } from '../../../components/forced-state';
 import { t } from '../../../lib/i18n';
@@ -52,7 +62,7 @@ function FilterForm({
     update: (next: string) => void,
     type = 'text',
   ): ReactElement => (
-    <label style={{ display: 'grid', gap: 4 }}>
+    <label style={OPS_FIELD_LABEL_STYLE}>
       {t(key)}
       {type === 'datetime-local' ? ' (' + auditText('vnTime') + ')' : null}
       <input
@@ -67,11 +77,12 @@ function FilterForm({
   return (
     <form
       data-testid="audit-filters"
+      className="ph-card ph-filter-row"
       onSubmit={(event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         onApply();
       }}
-      style={{ display: 'flex', gap: 'var(--space-s2, 8px)', flexWrap: 'wrap', alignItems: 'end' }}
+      style={OPS_FILTER_ROW_STYLE}
     >
       {text('audit.filter.actor', draft.actorId, (value) => onChange({ ...draft, actorId: value }))}
       {text('audit.filter.entityType', draft.entityType, (value) =>
@@ -93,10 +104,10 @@ function FilterForm({
         (value) => onChange({ ...draft, to: value }),
         'datetime-local',
       )}
-      <button type="submit" style={{ minHeight: 44 }}>
+      <button type="submit" className="ph-btn-primary" style={OPS_COMPACT_BTN_STYLE}>
         {t('audit.filter.apply')}
       </button>
-      <button type="button" onClick={onClear} style={{ minHeight: 44 }}>
+      <button type="button" className="ph-btn" onClick={onClear} style={OPS_COMPACT_BTN_STYLE}>
         {t('audit.filter.clear')}
       </button>
     </form>
@@ -132,11 +143,11 @@ export function AuditLogsScreen(): ReactElement {
   }
 
   return (
-    <section
-      style={{ padding: 'var(--space-s6, 24px)', display: 'grid', gap: 'var(--space-s4, 16px)' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('audit.title')}</h1>
-      <p style={{ margin: 0 }}>{t('audit.intro')}</p>
+    <section style={OPS_PAGE_STYLE}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{t('audit.title')}</h1>
+        <p style={OPS_INTRO_STYLE}>{t('audit.intro')}</p>
+      </header>
       <FilterForm
         draft={draft}
         onChange={setDraft}
@@ -151,28 +162,30 @@ export function AuditLogsScreen(): ReactElement {
       <div style={{ display: 'flex', gap: 'var(--space-s2, 8px)', flexWrap: 'wrap' }}>
         <button
           type="button"
+          className="ph-btn"
           data-testid="audit-reload"
           onClick={() => {
             void load();
           }}
-          style={{ minHeight: 44 }}
+          style={OPS_COMPACT_BTN_STYLE}
         >
           {t('audit.reload')}
         </button>
         <button
           type="button"
+          className="ph-btn"
           data-testid="audit-export"
           onClick={() => {
             downloadCsv(rows);
           }}
           disabled={rows.length === 0}
-          style={{ minHeight: 44 }}
+          style={OPS_COMPACT_BTN_STYLE}
         >
           {t('audit.export')}
         </button>
       </div>
       {workspace.state.phase === 'expired' ? (
-        <p role="alert">
+        <p role="alert" style={opsNoticeStyle('danger')}>
           {auditText('expired')} <a href="/login">{auditText('login')}</a>
         </p>
       ) : null}
@@ -180,17 +193,18 @@ export function AuditLogsScreen(): ReactElement {
         {readError === null ? null : <ScreenAlert error={readError} onRetry={() => void load()} />}
         {rows.length === 0 ? null : (
           <>
-            <p role="status" data-testid="audit-count" style={{ margin: 0 }}>
+            <p role="status" data-testid="audit-count" style={{ margin: 0, fontSize: 13 }}>
               {t('audit.updated', { count: rows.length })}
             </p>
             <AuditLogTable rows={rows} />
             {nextCursor === null ? null : (
               <button
                 type="button"
+                className="ph-btn"
                 data-testid="audit-more"
                 onClick={() => void loadMore()}
                 disabled={loadingMore || workspace.state.phase !== 'ready'}
-                style={{ minHeight: 44, justifySelf: 'start' }}
+                style={{ ...OPS_COMPACT_BTN_STYLE, justifySelf: 'start' }}
               >
                 {t('audit.more')}
               </button>

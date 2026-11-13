@@ -1,6 +1,15 @@
 'use client';
 import type { ReactElement } from 'react';
 import { StateSurface } from '@pinehill/ui-web';
+import {
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_SUBTITLE_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../components/editorial-styles';
 import { useForcedState } from '../../../components/forced-state';
 import { t } from '../../../lib/i18n';
 import { tierIndexFromField } from '../../../lib/rate-plans';
@@ -29,16 +38,11 @@ type Model = ReturnType<typeof useRateConfig>;
 function RateContent({ model }: { model: Model }): ReactElement {
   const { state, controller } = model;
   return (
-    <section
-      style={{
-        padding: 'var(--space-s6, 24px)',
-        display: 'grid',
-        gap: 'var(--space-s4, 16px)',
-        minWidth: 0,
-      }}
-    >
-      <h1 style={{ margin: 0 }}>{t('ratePlans.title')}</h1>
-      <p style={{ margin: 0 }}>{t('ratePlans.intro')}</p>
+    <section style={OPS_PAGE_STYLE}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{t('ratePlans.title')}</h1>
+        <p style={OPS_INTRO_STYLE}>{t('ratePlans.intro')}</p>
+      </header>
       <AdminPanels
         state={state}
         controller={controller}
@@ -54,7 +58,7 @@ function RateContent({ model }: { model: Model }): ReactElement {
 function Saved({ saved }: { saved: string | null }): ReactElement | null {
   if (saved === null) return null;
   return (
-    <p role="status" data-testid="rate-plans-saved">
+    <p role="status" data-testid="rate-plans-saved" style={opsNoticeStyle('success')}>
       {rs('confirmed', { code: saved })}
     </p>
   );
@@ -73,9 +77,9 @@ function RateLists({ model }: { model: Model }): ReactElement | null {
   if (!model.state.data) return null;
   return (
     <>
-      <h2 style={{ margin: 0 }}>{t('ratePlans.planSection')}</h2>
+      <h2 style={OPS_SUBTITLE_STYLE}>{t('ratePlans.planSection')}</h2>
       <Plans model={model} />
-      <h2 style={{ margin: 0 }}>{t('ratePlans.policySection')}</h2>
+      <h2 style={OPS_SUBTITLE_STYLE}>{t('ratePlans.policySection')}</h2>
       <Policies model={model} />
     </>
   );
@@ -84,12 +88,7 @@ function Plans({ model }: { model: Model }): ReactElement {
   const plans = model.state.data?.ratePlans;
   if (!plans?.length) return <p>{rs('emptyPlans')}</p>;
   return (
-    <div
-      role="region"
-      aria-label={rs('planTable')}
-      tabIndex={0}
-      style={{ maxWidth: '100%', overflowX: 'auto' }}
-    >
+    <div role="region" aria-label={rs('planTable')} tabIndex={0} style={OPS_TABLE_WRAP_STYLE}>
       <RatePlanTable
         plans={plans}
         policies={model.state.data?.policies ?? []}

@@ -44,26 +44,86 @@ export function SessionStatus(): ReactElement {
   }
 
   return (
-    <header
+    <section
+      aria-label={text('navLabel')}
       data-testid="account-status"
+      className="ph-card"
       style={{
         display: 'flex',
         flexWrap: 'wrap',
-        gap: 'var(--space-s3, 12px)',
+        gap: '12px 16px',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingBottom: 'var(--space-s3, 12px)',
-        borderBottom: '1px solid var(--color-border, #E5E7EB)',
+        padding: '14px 20px',
       }}
     >
       <nav aria-label={text('navLabel')} style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <a href="/">{text('home')}</a>
-        {status === 'in' ? <a href="/profile">{text('profileLink')}</a> : null}
-        {status === 'out' ? <a href="/account/login">{text('loginLink')}</a> : null}
-        {status === 'out' ? <a href="/account/register">{text('registerLink')}</a> : null}
+        <a
+          href="/"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            minHeight: 44,
+            color: 'var(--color-text)',
+            textDecoration: 'underline',
+            textUnderlineOffset: 3,
+          }}
+        >
+          {text('home')}
+        </a>
+        {status === 'in' ? (
+          <a
+            href="/profile"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              minHeight: 44,
+              color: 'var(--color-primary)',
+              textDecoration: 'underline',
+              textUnderlineOffset: 3,
+            }}
+          >
+            {text('profileLink')}
+          </a>
+        ) : null}
+        {status === 'out' ? (
+          <a
+            href="/account/login"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              minHeight: 44,
+              color: 'var(--color-primary)',
+              textDecoration: 'underline',
+              textUnderlineOffset: 3,
+            }}
+          >
+            {text('loginLink')}
+          </a>
+        ) : null}
+        {status === 'out' ? (
+          <a
+            href="/account/register"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              minHeight: 44,
+              color: 'var(--color-primary)',
+              textDecoration: 'underline',
+              textUnderlineOffset: 3,
+            }}
+          >
+            {text('registerLink')}
+          </a>
+        ) : null}
       </nav>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        <span role="status" data-testid="account-status-text" data-status={status}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span
+          role="status"
+          data-testid="account-status-text"
+          data-status={status}
+          style={{ fontSize: 14, color: 'var(--color-textMuted)' }}
+        >
           {status === 'checking' ? text('statusChecking') : null}
           {status === 'in' ? text('statusIn') : null}
           {status === 'out' ? text('statusOut') : null}
@@ -72,9 +132,9 @@ export function SessionStatus(): ReactElement {
           <button
             type="button"
             data-testid="account-logout"
+            className="ph-btn"
             disabled={busy}
             onClick={() => void logout()}
-            style={{ minHeight: 44, padding: '8px 12px' }}
           >
             {busy ? text('loggingOut') : text('logout')}
           </button>
@@ -84,11 +144,11 @@ export function SessionStatus(): ReactElement {
         <p
           role="alert"
           data-testid="account-logout-partial"
-          style={{ margin: 0, flexBasis: '100%' }}
+          style={{ margin: 0, flexBasis: '100%', color: 'var(--color-danger)' }}
         >
           {text('logoutPartial')}
         </p>
       ) : null}
-    </header>
+    </section>
   );
 }

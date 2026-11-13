@@ -9,7 +9,18 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { createPropertyApi, createRateApi, isApiError, type ApiClient } from '@pinehill/api-client';
 import type { PropertySummary, RoomTypeSummary } from '@pinehill/contracts';
-import { StateSurface, type ScreenState } from '@pinehill/ui-web';
+import { StateSurface, color, space, type ScreenState } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_SUBTITLE_STYLE,
+  OPS_TABULAR_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../components/editorial-styles';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { useForcedState } from '../../../components/forced-state';
 import { useOpsSession } from '../../../lib/ops-session';
@@ -210,21 +221,23 @@ export function RateCalendarScreen(): ReactElement {
 
   const selectedType = roomTypes.find((type) => type.id === filters.roomTypeId);
   return (
-    <section
-      style={{ padding: 'var(--space-s6, 24px)', display: 'grid', gap: 'var(--space-s4, 16px)' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('rate.title')}</h1>
-      <p style={{ margin: 0 }}>{t('rate.intro')}</p>
+    <section style={OPS_PAGE_STYLE}>
+      <div style={OPS_HEADER_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{t('rate.title')}</h1>
+        <p style={OPS_INTRO_STYLE}>{t('rate.intro')}</p>
+      </div>
       <div
+        className="ph-card"
         style={{
           display: 'grid',
-          gap: 'var(--space-s2, 8px)',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(11rem, 1fr))',
-          maxWidth: 760,
+          gap: space.s3,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 11rem), 1fr))',
+          alignItems: 'end',
+          padding: space.s4,
           minWidth: 0,
         }}
       >
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('rate.form.property')}
           <select
             value={filters.propertyId}
@@ -240,7 +253,7 @@ export function RateCalendarScreen(): ReactElement {
             ))}
           </select>
         </label>
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('rate.form.roomType')}
           <select
             value={filters.roomTypeId}
@@ -255,7 +268,7 @@ export function RateCalendarScreen(): ReactElement {
             ))}
           </select>
         </label>
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('rate.form.from')}
           <input
             type="date"
@@ -265,7 +278,7 @@ export function RateCalendarScreen(): ReactElement {
             }}
           />
         </label>
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('rate.form.to')}
           <input
             type="date"
@@ -275,14 +288,15 @@ export function RateCalendarScreen(): ReactElement {
             }}
           />
         </label>
-        <div style={{ display: 'flex', gap: 'var(--space-s2, 8px)', alignItems: 'end' }}>
+        <div style={{ display: 'flex', gap: space.s2, alignItems: 'end', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => {
               setSaved(null);
               setApplied({ ...filters });
             }}
-            style={{ minHeight: 44 }}
+            className="ph-btn-primary"
+            style={OPS_COMPACT_BTN_STYLE}
           >
             {t('rate.form.load')}
           </button>
@@ -293,7 +307,8 @@ export function RateCalendarScreen(): ReactElement {
               setState({ kind: 'refreshing', updatedAt: new Date().toISOString(), stale: false });
               setApplied({ ...applied });
             }}
-            style={{ minHeight: 44 }}
+            className="ph-btn"
+            style={OPS_COMPACT_BTN_STYLE}
           >
             {t('rate.reload')}
           </button>
@@ -301,7 +316,11 @@ export function RateCalendarScreen(): ReactElement {
       </div>
       <StateSurface state={state}>
         {saved === null ? null : (
-          <p role="status" data-testid="rate-save-success" style={{ margin: 0 }}>
+          <p
+            role="status"
+            data-testid="rate-save-success"
+            style={{ ...opsNoticeStyle('success'), color: color.success, fontWeight: 500 }}
+          >
             {t('rate.saved', { days: saved })}
           </p>
         )}
@@ -309,9 +328,9 @@ export function RateCalendarScreen(): ReactElement {
           <ScreenAlert error={readError} onRetry={() => void load(applied)} />
         )}
         {warnings.length === 0 ? null : (
-          <div data-testid="rate-warnings">
-            <h2 style={{ fontSize: 'var(--text-h2, 18px)', margin: 0 }}>{t('rate.warnings')}</h2>
-            <ul>
+          <div data-testid="rate-warnings" style={opsNoticeStyle('warning')}>
+            <h2 style={OPS_SUBTITLE_STYLE}>{t('rate.warnings')}</h2>
+            <ul style={{ margin: 0, paddingInlineStart: 20 }}>
               {warnings.map((warning) => (
                 <li key={warning}>{warning}</li>
               ))}
@@ -323,7 +342,7 @@ export function RateCalendarScreen(): ReactElement {
             onSubmit={(event) => {
               void submit(event);
             }}
-            style={{ display: 'grid', gap: 'var(--space-s3, 12px)' }}
+            style={{ display: 'grid', gap: space.s3 }}
           >
             <RateCalendarTable
               days={days}
@@ -334,46 +353,59 @@ export function RateCalendarScreen(): ReactElement {
               minPrice={selectedType?.minPrice}
               maxPrice={selectedType?.maxPrice}
             />
-            <label style={{ display: 'grid', gap: 4, maxWidth: 320 }}>
-              {t('rate.form.priority')}
-              <input
-                type="number"
-                min={0}
-                name="priority"
-                value={priority}
-                onChange={(event) => {
-                  setPriority(event.target.value);
+            <div className="ph-card" style={{ display: 'grid', gap: space.s3, maxWidth: 520 }}>
+              <label style={OPS_FIELD_LABEL_STYLE}>
+                {t('rate.form.priority')}
+                <input
+                  type="number"
+                  min={0}
+                  name="priority"
+                  value={priority}
+                  onChange={(event) => {
+                    setPriority(event.target.value);
+                  }}
+                  style={OPS_TABULAR_STYLE}
+                />
+              </label>
+              <label style={OPS_FIELD_LABEL_STYLE}>
+                {t('rate.form.reason')}
+                <input
+                  type="text"
+                  name="reason"
+                  value={reason}
+                  onChange={(event) => {
+                    setReason(event.target.value);
+                  }}
+                />
+              </label>
+              <label
+                style={{
+                  display: 'flex',
+                  gap: space.s2,
+                  alignItems: 'center',
+                  minHeight: 44,
+                  cursor: 'pointer',
                 }}
-                style={{ minHeight: 44 }}
-              />
-            </label>
-            <label style={{ display: 'grid', gap: 4, maxWidth: 480 }}>
-              {t('rate.form.reason')}
-              <input
-                type="text"
-                name="reason"
-                value={reason}
-                onChange={(event) => {
-                  setReason(event.target.value);
-                }}
-                style={{ minHeight: 44 }}
-              />
-            </label>
-            <label style={{ display: 'flex', gap: 'var(--space-s2, 8px)', alignItems: 'center' }}>
-              <input
-                type="checkbox"
-                name="confirmLarge"
-                checked={confirmLarge}
-                onChange={(event) => {
-                  setConfirmLarge(event.target.checked);
-                }}
-                style={{ minWidth: 24, minHeight: 24 }}
-              />
-              {t('rate.form.confirmLarge')}
-            </label>
-            <button type="submit" style={{ minHeight: 44, justifySelf: 'start' }}>
-              {t('rate.form.save')}
-            </button>
+              >
+                <input
+                  type="checkbox"
+                  name="confirmLarge"
+                  checked={confirmLarge}
+                  onChange={(event) => {
+                    setConfirmLarge(event.target.checked);
+                  }}
+                  style={{ minWidth: 20, minHeight: 20 }}
+                />
+                {t('rate.form.confirmLarge')}
+              </label>
+              <button
+                type="submit"
+                className="ph-btn-primary"
+                style={{ ...OPS_COMPACT_BTN_STYLE, justifySelf: 'start' }}
+              >
+                {t('rate.form.save')}
+              </button>
+            </div>
           </form>
         )}
       </StateSurface>

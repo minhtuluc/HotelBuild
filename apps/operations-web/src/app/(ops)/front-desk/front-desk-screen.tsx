@@ -3,6 +3,7 @@ import { useState, type ReactElement } from 'react';
 import {
   StateSurface,
   color,
+  fontFamily,
   formatDateTimeVn,
   radius,
   space,
@@ -19,6 +20,7 @@ import { deskEmpty } from './front-desk-model';
 import { ActionPanel } from './action-panel';
 import { DeskTables, type DeskPanel } from './desk-tables';
 import { WalkInPanel } from './walk-in-panel';
+import { useWorkingProperty } from '../../../session/staff-session';
 import { deskText } from './messages';
 
 function surface(state: DeskState): ScreenState {
@@ -33,8 +35,19 @@ function surface(state: DeskState): ScreenState {
 
 function ForcedDesk({ state }: { state: ScreenState }): ReactElement {
   return (
-    <section data-testid="front-desk-screen" style={{ display: 'grid', gap: 12 }}>
-      <h1 style={{ margin: 0, fontSize: typography.h1.web }}>{deskText('title')}</h1>
+    <section
+      data-testid="front-desk-screen"
+      style={{
+        maxWidth: 1360,
+        marginInline: 'auto',
+        padding: `clamp(${space.s4}px, 3vw, ${space.s6}px)`,
+        display: 'grid',
+        gap: space.s4,
+      }}
+    >
+      <h1 style={{ margin: 0, fontFamily: fontFamily.sans, fontSize: typography.h1.web }}>
+        {deskText('title')}
+      </h1>
       <StateSurface state={state}>
         <p>{t('screen.demo')}</p>
       </StateSurface>
@@ -52,56 +65,76 @@ function DeskControls({
   onWalkIn: () => void;
 }): ReactElement {
   const data = desk.state.data;
-  const button = {
-    minHeight: touchTargetPx,
-    border: `1px solid ${color.borderStrong}`,
-    borderRadius: radius.sm,
-    padding: space.s2,
-    background: color.surface,
-  } as const;
   return (
     <div
-      style={{ display: 'flex', flexWrap: 'wrap', gap: space.s3, alignItems: 'end' }}
+      className="ph-card"
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: space.s3,
+        alignItems: 'end',
+        justifyContent: 'space-between',
+        padding: space.s4,
+        minWidth: 0,
+      }}
       aria-label={deskText('title')}
     >
-      <label style={{ display: 'grid', gap: 4 }}>
-        {deskText('property')}
-        <select
-          name="propertyId"
-          style={button}
-          value={data?.propertyId ?? ''}
-          disabled={data === null}
-          onChange={(event) => {
-            onSelect(event.target.value);
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: space.s3, alignItems: 'end' }}>
+        <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 500 }}>
+          {deskText('property')}
+          <select
+            name="propertyId"
+            value={data?.propertyId ?? ''}
+            disabled={data === null}
+            onChange={(event) => {
+              onSelect(event.target.value);
+            }}
+          >
+            {(data?.properties ?? []).map((property) => (
+              <option key={property.id} value={property.id}>
+                {property.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p
+          data-testid="desk-date"
+          style={{
+            margin: 0,
+            minHeight: touchTargetPx,
+            padding: `0 ${space.s3}px`,
+            display: 'inline-flex',
+            alignItems: 'center',
+            background: color.bg,
+            border: `1px solid ${color.border}`,
+            borderRadius: radius.sm,
+            fontSize: 14,
+            fontVariantNumeric: 'tabular-nums',
+            color: color.text,
           }}
         >
-          {(data?.properties ?? []).map((property) => (
-            <option key={property.id} value={property.id}>
-              {property.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <p style={{ margin: 0 }} data-testid="desk-date">
-        {deskText('businessDate')}: {formatBusinessDate(desk.date)}
-      </p>
-      <button
-        type="button"
-        style={button}
-        disabled={data === null || desk.state.phase === 'loading'}
-        onClick={desk.reload}
-      >
-        {deskText('reload')}
-      </button>
-      <button
-        type="button"
-        data-testid="walk-in-open"
-        style={button}
-        disabled={data === null}
-        onClick={onWalkIn}
-      >
-        {deskText('walkIn')}
-      </button>
+          {deskText('businessDate')}: {formatBusinessDate(desk.date)}
+        </p>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: space.s2, alignItems: 'center' }}>
+        <button
+          type="button"
+          className="ph-btn"
+          disabled={data === null || desk.state.phase === 'loading'}
+          onClick={desk.reload}
+        >
+          {deskText('reload')}
+        </button>
+        <button
+          type="button"
+          data-testid="walk-in-open"
+          className="ph-btn-primary"
+          disabled={data === null}
+          onClick={onWalkIn}
+        >
+          {deskText('walkIn')}
+        </button>
+      </div>
     </div>
   );
 }
@@ -111,12 +144,32 @@ function DeskMeta({ state, onRetry }: { state: DeskState; onRetry: () => void })
   return (
     <>
       {data === null ? null : (
-        <p style={{ margin: 0 }} data-testid="desk-captured">
+        <p
+          style={{
+            margin: 0,
+            fontSize: 13,
+            color: color.textMuted,
+            fontVariantNumeric: 'tabular-nums',
+          }}
+          data-testid="desk-captured"
+        >
           {deskText('captured', { time: formatDateTimeVn(data.capturedAt) })}
         </p>
       )}
       {data?.truncated === true ? (
-        <p role="status" style={{ margin: 0 }}>
+        <p
+          role="status"
+          style={{
+            margin: 0,
+            padding: `${space.s2}px ${space.s3}px`,
+            background: '#FDF8EF',
+            border: `1px solid ${color.border}`,
+            boxShadow: `inset 0 0 0 1px ${color.warning}`,
+            borderRadius: radius.sm,
+            color: color.warning,
+            fontSize: 13,
+          }}
+        >
           {deskText('truncated')}
         </p>
       ) : null}
@@ -183,17 +236,29 @@ function Overlays({
  */
 export function FrontDeskScreen({ baseUrl }: { baseUrl: string }): ReactElement {
   const forced = useForcedState();
-  const desk = useFrontDesk(baseUrl, forced === undefined);
+  const { propertyId: workingPropertyId } = useWorkingProperty();
+  const desk = useFrontDesk(baseUrl, forced === undefined, workingPropertyId);
   const [panel, setPanel] = useState<DeskPanel | null>(null);
   const [walkIn, setWalkIn] = useState(false);
   if (forced !== undefined) return <ForcedDesk state={forced} />;
   return (
     <section
       data-testid="front-desk-screen"
-      style={{ display: 'grid', gap: space.s4, padding: `${space.s4} 0`, maxWidth: 1280 }}
+      style={{
+        display: 'grid',
+        gap: space.s4,
+        padding: `clamp(${space.s4}px, 3vw, ${space.s6}px)`,
+        maxWidth: 1360,
+        marginInline: 'auto',
+        minWidth: 0,
+      }}
     >
-      <h1 style={{ margin: 0, fontSize: typography.h1.web }}>{deskText('title')}</h1>
-      <p style={{ margin: 0, color: color.textMuted }}>{deskText('intro')}</p>
+      <div style={{ display: 'grid', gap: space.s1 }}>
+        <h1 style={{ margin: 0, fontFamily: fontFamily.sans, fontSize: typography.h1.web }}>
+          {deskText('title')}
+        </h1>
+        <p style={{ margin: 0, color: color.textMuted, maxWidth: '58rem' }}>{deskText('intro')}</p>
+      </div>
       <DeskControls
         desk={desk}
         onSelect={(propertyId) => {

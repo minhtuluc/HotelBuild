@@ -195,12 +195,18 @@ export function WalkOutPanel(props: {
   const { view } = props.move;
   const close = () => setAsking(null);
   return (
-    <section style={box} aria-labelledby="hb137-walk-title" data-testid="hb137-walk">
+    <section
+      className="ph-card"
+      style={box}
+      aria-labelledby="hb137-walk-title"
+      data-testid="hb137-walk"
+    >
       <WalkSummary view={view} />
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div className="ph-actions">
         {moveActionAllowed(props.role, 'APPROVE', view) ? (
           <button
             type="button"
+            className="ph-btn-primary"
             disabled={props.busy}
             onClick={() => setAsking('approve')}
             style={{ minHeight: 44 }}
@@ -212,6 +218,7 @@ export function WalkOutPanel(props: {
         {moveActionAllowed(props.role, 'EXECUTE', view) ? (
           <button
             type="button"
+            className="ph-btn-primary"
             disabled={props.busy}
             onClick={() => setAsking('execute')}
             style={{ minHeight: 44 }}
@@ -360,14 +367,22 @@ export function CompensationPanel(props: {
   if (props.payments === null) return null;
   const allowed = canPayCompensation(props.role, props.move.view, props.payments.payments);
   return (
-    <section style={box} aria-labelledby="hb137-pay-title" data-testid="hb137-pay">
-      <h2 id="hb137-pay-title">{text('payTitle')}</h2>
-      <p>{text('payApproved', { amount: props.payments.approvedAmount })}</p>
+    <section
+      className="ph-card"
+      style={box}
+      aria-labelledby="hb137-pay-title"
+      data-testid="hb137-pay"
+    >
+      <h2 id="hb137-pay-title" style={{ margin: 0 }}>
+        {text('payTitle')}
+      </h2>
+      <p style={{ margin: 0 }}>{text('payApproved', { amount: props.payments.approvedAmount })}</p>
       <PaymentLines view={props.payments} />
-      <p>{text('payRole')}</p>
+      <p style={{ margin: 0 }}>{text('payRole')}</p>
       {allowed ? (
         <button
           type="button"
+          className="ph-btn-primary"
           disabled={props.busy}
           onClick={() => setAsking(true)}
           style={{ minHeight: 44, justifySelf: 'start' }}

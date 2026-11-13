@@ -1,7 +1,7 @@
 /** Điều khiển dùng chung của SCR-57/58: vùng chạm ≥ 48 dp, nhãn trợ năng và trạng thái đầy đủ. */
 import type { ReactElement } from 'react';
 import { Pressable, Text } from 'react-native';
-import { color, space, touchTargetDp } from '@pinehill/ui-native';
+import { color, radius, space, touchTargetDp } from '@pinehill/ui-native';
 
 export function ActionButton({
   testID,
@@ -29,10 +29,10 @@ export function ActionButton({
         minHeight: touchTargetDp,
         justifyContent: 'center',
         paddingHorizontal: space.s3,
-        borderRadius: 8,
+        borderRadius: radius.md,
         ...(filled
           ? { backgroundColor: color.primary }
-          : { borderWidth: 1, borderColor: color.border }),
+          : { borderWidth: 1, borderColor: color.border, backgroundColor: color.surface }),
         ...(disabled ? { opacity: 0.5 } : {}),
       }}
     >
@@ -40,7 +40,7 @@ export function ActionButton({
         style={{
           textAlign: 'center',
           fontWeight: '600',
-          color: filled ? color.surface : color.primary,
+          color: filled ? color.primaryContrast : color.primary,
         }}
       >
         {label}
@@ -74,8 +74,9 @@ export function CheckRow({
         minHeight: touchTargetDp,
         justifyContent: 'center',
         paddingHorizontal: space.s3,
-        borderWidth: 1,
-        borderRadius: 8,
+        backgroundColor: color.surface,
+        borderWidth: checked ? 2 : 1,
+        borderRadius: radius.md,
         borderColor: checked ? color.primary : color.border,
       }}
     >

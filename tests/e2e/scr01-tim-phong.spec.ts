@@ -18,6 +18,51 @@ async function openHome(page: Page): Promise<void> {
 }
 
 test.describe('SCR-01 trang chủ & khối tìm phòng (HB-080)', () => {
+  test('hiện đủ ảnh slot, không còn khung chờ và có ảnh chia sẻ link', async ({ page, request }) => {
+    await page.goto('/?anh=1');
+    const images = page.locator('img.ph-photo');
+    await expect(images).toHaveCount(14);
+    await expect(page.locator('[data-testid^="photo-slot-"]')).toHaveCount(0);
+    expect(await images.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('src')))).toEqual(
+      [
+        'ga-DL-poster',
+        'ga-DL-phong',
+        'ga-DL-canh',
+        'ga-PT-poster',
+        'ga-PT-phong',
+        'ga-PT-canh',
+        'ga-VT-poster',
+        'ga-VT-phong',
+        'ga-VT-canh',
+        'hang-STD',
+        'hang-SUP',
+        'hang-DLX',
+        'hang-FAM',
+        'hang-DOR',
+      ].map((id) => `/images/pine-hill/${id}.webp`),
+    );
+
+    for (let index = 0; index < 14; index += 1) {
+      const image = images.nth(index);
+      await image.scrollIntoViewIfNeeded();
+      await expect
+        .poll(() =>
+          image.evaluate(
+            (node) => node instanceof HTMLImageElement && node.complete && node.naturalWidth > 0,
+          ),
+        )
+        .toBe(true);
+    }
+
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+      'content',
+      /\/images\/pine-hill\/chia-se\.webp$/,
+    );
+    const share = await request.get('/images/pine-hill/chia-se.webp');
+    expect(share.status()).toBe(200);
+    expect(share.headers()['content-type']).toContain('image/webp');
+  });
+
   test('hiện khối tìm phòng với cơ sở lấy từ tuyến công khai (AC1)', async ({ page }) => {
     await openHome(page);
     await expect(page.getByRole('heading', { name: 'Tìm phòng trống' })).toBeVisible();
@@ -95,5 +140,10 @@ test.describe('SCR-01 trang chủ & khối tìm phòng (HB-080)', () => {
       return element === null ? 0 : element.scrollWidth - element.clientWidth;
     });
     expect(overflow).toBeLessThanOrEqual(1);
+    const capacityHeights = await page.locator('.ph-class-cap').evaluateAll((nodes) =>
+      nodes.map((node) => Math.round(node.getBoundingClientRect().height)),
+    );
+    expect(capacityHeights).toHaveLength(5);
+    expect(capacityHeights.every((height) => height < 40)).toBe(true);
   });
 });

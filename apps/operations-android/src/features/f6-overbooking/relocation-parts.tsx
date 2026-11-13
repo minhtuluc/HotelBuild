@@ -4,17 +4,12 @@ import { Text, View } from 'react-native';
 import type { BookingRelocationOptions, OverbookingCaseDetail, UserMe } from '@pinehill/contracts';
 import { color, space } from '@pinehill/ui-native';
 import { ActionButton } from '../../arrivals/controls';
+import { theme } from '../../theme';
 import { f6Text as text } from './messages';
 import { androidStep } from './model';
 import type { MoveState } from './reader';
 
-const card = {
-  borderWidth: 1,
-  borderColor: color.border,
-  borderRadius: 8,
-  padding: space.s3,
-  gap: space.s2,
-} as const;
+const card = theme.card;
 
 /** Thang đúng như máy chủ trả; bậc không khả dụng nêu lý do, không giả khả dụng. */
 export function Ladder({ steps }: { steps: OverbookingCaseDetail['ladderPreview'] }): ReactElement {
@@ -45,7 +40,7 @@ export function Candidates({ rows }: { rows: OverbookingCaseDetail['candidates']
       </Text>
       {rows.map((row) => (
         <View key={row.bookingRoomId} testID={`candidate-${row.rank}`} accessible style={card}>
-          <Text style={{ fontWeight: '600', color: color.text }}>
+          <Text style={[{ fontWeight: '600', color: color.text }, theme.tabular]}>
             {text('candidateLine', {
               rank: row.rank,
               name: row.guestNameMasked,
@@ -53,7 +48,7 @@ export function Candidates({ rows }: { rows: OverbookingCaseDetail['candidates']
               total: row.keepScore,
             })}
           </Text>
-          <Text style={{ color: color.textMuted }}>
+          <Text style={[theme.muted, theme.tabular]}>
             {text('candidateScore', {
               tier: row.keepScoreBreakdown.loyalty,
               payment: row.keepScoreBreakdown.payment,
@@ -105,7 +100,7 @@ function OptionCard(props: {
           target: option.targetRoomId ?? option.targetPropertyId ?? '—',
         })}
       </Text>
-      <Text>
+      <Text style={[theme.body, theme.tabular]}>
         {text('optionMoney', { comp: option.compensationAmount, transport: option.transportCost })}
       </Text>
       <Text>{text('optionLocked')}</Text>
@@ -158,7 +153,7 @@ export function MoveSummary({ move }: { move: MoveState; role: UserMe['role'] })
         {text('moveCreated', { id: view.id, status: view.status })}
       </Text>
       <Text>{text('moveRooms', { from: view.fromRoomId ?? '—', to: view.toRoomId ?? '—' })}</Text>
-      <Text>
+      <Text style={[theme.body, theme.tabular]}>
         {text('optionMoney', { comp: view.compensationAmount, transport: view.transportCost })}
       </Text>
       <Text>{text('optionLocked')}</Text>

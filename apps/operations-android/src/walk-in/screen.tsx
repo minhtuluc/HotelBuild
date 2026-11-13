@@ -4,10 +4,11 @@
  */
 import { useEffect, useState, type ReactElement } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { color, space, typography } from '@pinehill/ui-native';
+import { color, space } from '@pinehill/ui-native';
 import { todayVN } from '../housekeeping/reader';
 import { formatVnd } from '../lookup/view';
 import type { Session } from '../session';
+import { theme } from '../theme';
 import { ActionButton } from './controls';
 import { DepositStep } from './deposit';
 import type { WalkInFlow, WalkInState } from './flow';
@@ -24,12 +25,12 @@ function Done({ state, onAnother }: { state: WalkInState; onAnother: () => void 
   const code = state.result?.booking.code ?? '';
   const paid = state.payment;
   return (
-    <View testID="walk-in-done" accessibilityLiveRegion="polite" style={{ gap: space.s2 }}>
-      <Text style={{ color: color.success, fontWeight: '700' }}>
+    <View testID="walk-in-done" accessibilityLiveRegion="polite" style={theme.card}>
+      <Text style={[theme.alertSuccess, { fontWeight: '600' }]}>
         {paid === null ? text('doneWithoutDeposit', { code }) : text('doneWithDeposit', { code })}
       </Text>
       {paid === null ? null : (
-        <Text>
+        <Text style={[theme.body, theme.tabular]}>
           {text('paymentReference', {
             id: paid.paymentId,
             amount: formatVnd(paid.amount),
@@ -158,15 +159,16 @@ export function WalkInScreen({ session, createFlow, onBack }: WalkInScreenProps)
   }, [session, createFlow]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: color.surface }}>
-      <ScrollView contentContainerStyle={{ padding: space.s4, gap: space.s3 }}>
-        <Text
-          accessibilityRole="header"
-          style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}
-        >
+    <View style={{ flex: 1, backgroundColor: color.bg }}>
+      <ScrollView contentContainerStyle={theme.scrollContent}>
+        <Text accessibilityRole="header" style={theme.title}>
           {text('title')}
         </Text>
-        {property === null ? <Text testID="walk-in-no-property">{text('noProperty')}</Text> : null}
+        {property === null ? (
+          <Text testID="walk-in-no-property" style={theme.alertDanger}>
+            {text('noProperty')}
+          </Text>
+        ) : null}
         {flow === null || state === null || property === null ? null : (
           <>
             <StepHeader step={state.step} />

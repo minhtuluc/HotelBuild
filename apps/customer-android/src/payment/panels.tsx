@@ -6,6 +6,7 @@ import type { PaymentView } from './flow';
 import { approvedAmount, safePaymentUrl } from './model';
 import { Link } from 'expo-router';
 import { paymentText as text } from './messages';
+import { theme } from '../theme';
 
 const money = (amount: number): string => text('money', { amount: formatVnd(amount) });
 
@@ -25,18 +26,15 @@ export function PaymentButton({
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={{
-        minHeight: touchTargetDp,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: radius.sm,
-        borderWidth: 1,
-        borderColor: color.primary,
-        padding: space.s3,
-        opacity: disabled ? 0.5 : 1,
-      }}
+      style={[
+        theme.buttonSecondary,
+        {
+          borderColor: color.primary,
+          opacity: disabled ? 0.5 : 1,
+        },
+      ]}
     >
-      <Text style={{ color: color.primary }}>{label}</Text>
+      <Text style={theme.buttonPlainText}>{label}</Text>
     </Pressable>
   );
 }
@@ -45,27 +43,26 @@ export function PaymentSummary({ view }: { view: PaymentView }): ReactElement | 
   if (!offer) return null;
   const amount = approvedAmount(offer.booking, offer.balance);
   return (
-    <View style={{ gap: space.s2 }}>
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+    <View style={theme.card}>
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {text('booking', { code: offer.booking.code })}
       </Text>
-      <Text style={{ color: color.text }}>
+      <Text style={[theme.body, theme.tabular]}>
         {text('total', { amount: money(offer.balance.totalAmount) })}
       </Text>
-      <Text style={{ color: color.text }}>
+      <Text style={[theme.body, theme.tabular]}>
         {text('paid', { amount: money(offer.balance.paidAmount) })}
       </Text>
-      <Text style={{ color: color.text }}>
+      <Text style={[theme.body, theme.tabular]}>
         {text('balance', { amount: money(offer.balance.balanceDue) })}
       </Text>
-      <Text style={{ color: color.text, fontWeight: '700' }}>
+      <Text style={[theme.moneyInline, theme.tabular]}>
         {text('deposit', {
           amount: amount === null ? text('unavailableAmount') : money(amount),
         })}
       </Text>
-      <Text style={{ color: color.text }}>
-        {text('bookingStatus', { status: offer.booking.status })}
-      </Text>
+      <View style={theme.divider} />
+      <Text style={theme.body}>{text('bookingStatus', { status: offer.booking.status })}</Text>
       {offer.booking.holdExpiresAt ? (
         <Text style={{ color: color.textMuted }}>
           {text('holdExpiry', { time: formatDateTimeVn(offer.booking.holdExpiresAt) })}
@@ -115,8 +112,9 @@ export function PaymentMethods({
           style={{
             minHeight: touchTargetDp,
             padding: space.s3,
-            borderWidth: 1,
-            borderRadius: radius.sm,
+            backgroundColor: color.surface,
+            borderWidth: method === value ? 2 : 1,
+            borderRadius: radius.md,
             borderColor: method === value ? color.primary : color.border,
           }}
         >

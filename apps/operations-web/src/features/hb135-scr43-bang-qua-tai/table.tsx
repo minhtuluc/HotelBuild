@@ -1,11 +1,11 @@
 'use client';
-import { useState, type ReactElement } from 'react';
-import { formatDateTimeVn } from '@pinehill/ui-web';
+import { useState, type CSSProperties, type ReactElement } from 'react';
+import { color, fontFamily, formatDateTimeVn, radius, space, typography } from '@pinehill/ui-web';
 import type { OverbookingCaseSummary } from '@pinehill/contracts';
 import type { Rows } from './controller';
 import { text } from './messages';
 import { resolveIssues, type FieldIssue } from './model';
-import { ConfirmDialog, TextInput, box } from './parts';
+import { ConfirmDialog, TextInput } from './parts';
 
 export const STATUS_TEXT = {
   OPEN: 'stOpen',
@@ -13,6 +13,22 @@ export const STATUS_TEXT = {
   RESOLVED: 'stResolved',
   ESCALATED: 'stEscalated',
 } as const;
+
+const STATUS_BADGE_STYLES: Readonly<Record<OverbookingCaseSummary['status'], CSSProperties>> = {
+  OPEN: { background: '#F9EEDB', color: '#6D3908', border: `1px solid ${color.border}` },
+  PROPOSED: { background: '#E4EAF6', color: '#24346E', border: `1px solid ${color.border}` },
+  RESOLVED: { background: '#E7F3EE', color: '#0D5A4A', border: `1px solid ${color.border}` },
+  ESCALATED: { background: '#FADDDD', color: '#991B1B', border: `1px solid ${color.danger}` },
+};
+
+const BADGE_BASE: CSSProperties = {
+  display: 'inline-block',
+  padding: '2px 8px',
+  borderRadius: radius.sm,
+  fontSize: 12,
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+};
 
 const when = (value: string | null): string =>
   value === null ? text('none') : formatDateTimeVn(value);
@@ -39,30 +55,60 @@ function Row({
 }): ReactElement {
   return (
     <tr data-testid={`hb135-row-${row.id}`}>
-      <th scope="row">{row.date}</th>
+      <th scope="row" style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+        {row.date}
+      </th>
       <td>{row.roomTypeCode ?? row.roomTypeId}</td>
       <td>{row.shortageCount}</td>
-      <td>{text(STATUS_TEXT[row.status])}</td>
       <td>
-        {when(row.resolveDeadline)} ·{' '}
-        <strong>{row.overdue ? text('overdue') : text('inTime')}</strong>
+        <span style={{ ...BADGE_BASE, ...STATUS_BADGE_STYLES[row.status] }}>
+          {text(STATUS_TEXT[row.status])}
+        </span>
+      </td>
+      <td>
+        <span>{when(row.resolveDeadline)}</span>{' '}
+        <strong
+          style={{
+            ...BADGE_BASE,
+            background: row.overdue ? '#FADDDD' : '#E7F3EE',
+            color: row.overdue ? '#991B1B' : color.success,
+            border: `1px solid ${row.overdue ? color.danger : color.border}`,
+          }}
+        >
+          {row.overdue ? text('overdue') : text('inTime')}
+        </strong>
       </td>
       <td>{when(row.escalatedAt)}</td>
       <td>{resolvedBy(row)}</td>
       <td>{row.delayReason ?? text('none')}</td>
       <td>
-        <a href={`/overbooking/relocation?caseId=${encodeURIComponent(row.id)}`}>{text('open')}</a>
-        {canResolve && row.status !== 'RESOLVED' ? (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onAsk(row)}
-            style={{ minHeight: 44, marginLeft: 8 }}
-            data-testid={`hb135-resolve-${row.id}`}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: space.s2, alignItems: 'center' }}>
+          <a
+            href={`/overbooking/relocation?caseId=${encodeURIComponent(row.id)}`}
+            className="ph-btn"
+            style={{ whiteSpace: 'nowrap' }}
           >
-            {text('resolve')}
-          </button>
-        ) : null}
+            {text('open')}
+          </a>
+          {canResolve && row.status !== 'RESOLVED' ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onAsk(row)}
+              className="ph-btn-primary"
+              style={{
+                textTransform: 'none',
+                letterSpacing: '0.02em',
+                fontSize: 13,
+                padding: '0 12px',
+                whiteSpace: 'nowrap',
+              }}
+              data-testid={`hb135-resolve-${row.id}`}
+            >
+              {text('resolve')}
+            </button>
+          ) : null}
+        </div>
       </td>
     </tr>
   );
@@ -79,9 +125,14 @@ function Table(props: {
       role="region"
       aria-label={text('listLabel')}
       tabIndex={0}
-      style={{ overflowX: 'auto', maxWidth: '100%' }}
+      style={{
+        overflowX: 'auto',
+        maxWidth: '100%',
+        border: `1px solid ${color.border}`,
+        borderRadius: radius.sm,
+      }}
     >
-      <table data-testid="hb135-table">
+      <table data-testid="hb135-table" style={{ fontVariantNumeric: 'tabular-nums' }}>
         <thead>
           <tr>
             <th scope="col">{text('colDate')}</th>
@@ -134,7 +185,7 @@ function ResolveDialog(props: {
         if (found.length === 0) props.onConfirm(note);
       }}
     >
-      <p>{text('resolveNote')}</p>
+      <p style={{ margin: 0, fontSize: 14, color: color.textMuted }}>{text('resolveNote')}</p>
       <TextInput
         name="resolutionNote"
         label={text('resolutionNote')}
@@ -162,12 +213,43 @@ export function CaseTable(props: {
   const [target, setTarget] = useState<OverbookingCaseSummary | null>(null);
   const rows = props.list?.rows ?? [];
   return (
-    <section style={box} aria-labelledby="hb135-list-title" data-testid="hb135-list">
-      <h2 id="hb135-list-title">{text('listLabel')}</h2>
-      {props.list === null ? null : <p>{text('total', { total: props.list.total })}</p>}
+    <section
+      className="ph-card"
+      style={{ display: 'grid', gap: space.s3, minWidth: 0 }}
+      aria-labelledby="hb135-list-title"
+      data-testid="hb135-list"
+    >
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: space.s2,
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+        }}
+      >
+        <h2
+          id="hb135-list-title"
+          style={{ margin: 0, fontFamily: fontFamily.sans, fontSize: typography.h2.web }}
+        >
+          {text('listLabel')}
+        </h2>
+        {props.list === null ? null : (
+          <p
+            style={{
+              margin: 0,
+              fontSize: 13,
+              color: color.textMuted,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {text('total', { total: props.list.total })}
+          </p>
+        )}
+      </div>
       {rows.length === 0 ? (
         props.list === null ? null : (
-          <p data-testid="hb135-empty">
+          <p data-testid="hb135-empty" style={{ margin: 0, color: color.textMuted }}>
             {props.confirmedEmpty ? text('confirmedEmpty') : text('notConfirmedEmpty')}
           </p>
         )
@@ -178,7 +260,8 @@ export function CaseTable(props: {
         <button
           type="button"
           onClick={props.onMore}
-          style={{ minHeight: 44, justifySelf: 'start' }}
+          className="ph-btn"
+          style={{ justifySelf: 'start' }}
         >
           {text('loadMore')}
         </button>

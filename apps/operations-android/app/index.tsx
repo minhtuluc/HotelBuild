@@ -1,6 +1,7 @@
 /** Điểm vào Operations Android: đăng nhập → me() → đổi mật khẩu/PIN/chọn cơ sở → màn chính. */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { color } from '@pinehill/ui-native';
 import type { BookingSummary, UserMe } from '@pinehill/contracts';
 import { createSession } from '../src/session-factory';
 import LoginScreen from './login';
@@ -160,8 +161,15 @@ export default function RootScreen(): ReactElement {
 
   if (stage === 'boot') {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator accessibilityLabel={t('session.restoring')} />
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: color.bg,
+        }}
+      >
+        <ActivityIndicator accessibilityLabel={t('session.restoring')} color={color.primary} />
       </View>
     );
   }

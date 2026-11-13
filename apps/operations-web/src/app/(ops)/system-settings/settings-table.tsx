@@ -3,7 +3,12 @@
 /** Bảng tham số hệ thống của SCR-17 (tách khỏi màn hình cho gọn). */
 import type { ReactElement } from 'react';
 import type { SystemSetting } from '@pinehill/contracts';
-import { formatDateTimeVn } from '@pinehill/ui-web';
+import { formatDateTimeVn, space } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+} from '../../../components/editorial-styles';
 import { t } from '../../../lib/i18n';
 import { auditLogHref } from '../../../lib/system-settings';
 
@@ -27,19 +32,17 @@ export function SettingsTable({
     t('settings.col.actions'),
   ];
   return (
-    <div style={{ overflowX: 'auto', minWidth: 0, maxWidth: '100%' }}>
-      <table data-testid="settings-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
+    <div style={OPS_TABLE_WRAP_STYLE}>
+      <table data-testid="settings-table" style={{ ...OPS_TABULAR_STYLE, width: '100%' }}>
+        <caption
+          style={{ textAlign: 'start', padding: `${space.s3}px ${space.s4}px`, fontWeight: 600 }}
+        >
           {t('settings.title')}
         </caption>
         <thead>
           <tr>
             {headers.map((label) => (
-              <th
-                key={label}
-                scope="col"
-                style={{ textAlign: 'start', borderBottom: '1px solid var(--color-border)' }}
-              >
+              <th key={label} scope="col">
                 {label}
               </th>
             ))}
@@ -58,15 +61,24 @@ export function SettingsTable({
               <td>{formatDateTimeVn(row.updatedAt)}</td>
               <td>{row.version}</td>
               <td>
-                <a href={auditLogHref(row.key)} data-testid={`setting-history-${row.key}`}>
-                  {t('settings.history')}
-                </a>
-                {/* Trạng thái `forbidden` không render ô sửa (AC5). */}
-                {canEdit ? (
-                  <button type="button" onClick={() => onEdit(row)} style={{ minHeight: 44 }}>
-                    {t('settings.edit')}
-                  </button>
-                ) : null}
+                <div
+                  style={{ display: 'flex', gap: space.s2, alignItems: 'center', flexWrap: 'wrap' }}
+                >
+                  <a href={auditLogHref(row.key)} data-testid={`setting-history-${row.key}`}>
+                    {t('settings.history')}
+                  </a>
+                  {/* Trạng thái `forbidden` không render ô sửa (AC5). */}
+                  {canEdit ? (
+                    <button
+                      type="button"
+                      className="ph-btn"
+                      onClick={() => onEdit(row)}
+                      style={OPS_COMPACT_BTN_STYLE}
+                    >
+                      {t('settings.edit')}
+                    </button>
+                  ) : null}
+                </div>
               </td>
             </tr>
           ))}

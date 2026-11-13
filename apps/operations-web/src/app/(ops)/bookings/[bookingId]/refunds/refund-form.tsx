@@ -1,7 +1,13 @@
 'use client';
 import type { ReactElement } from 'react';
 import type { BookingSummary } from '@pinehill/contracts';
-import { formatMoney } from '@pinehill/ui-web';
+import { formatMoney, space } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_SUBTITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../../../components/editorial-styles';
 import { t } from '../../../../../lib/i18n';
 import { PinDialog } from '../collect/collect-parts';
 import { pinIssue } from '../collect/collect-model';
@@ -29,7 +35,7 @@ function RefundFields({
       {intent.action !== 'create' ? null : (
         <>
           <p style={{ margin: 0 }}>{t('ops.refunds.createNote')}</p>
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {t('ops.refunds.payment')}
             <select
               name="paymentId"
@@ -44,11 +50,15 @@ function RefundFields({
               ))}
             </select>
           </label>
-          {payments.length ? null : <p role="alert">{t('ops.refunds.noPayments')}</p>}
+          {payments.length ? null : (
+            <p role="alert" style={opsNoticeStyle('warning')}>
+              {t('ops.refunds.noPayments')}
+            </p>
+          )}
         </>
       )}
       {intent.action !== 'approve' ? null : (
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('ops.refunds.amount')}
           <input
             name="approvedAmount"
@@ -60,7 +70,7 @@ function RefundFields({
         </label>
       )}
       {confirmTransfer ? (
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('ops.refunds.bankReference')}
           <input
             name="bankReference"
@@ -71,7 +81,7 @@ function RefundFields({
           />
         </label>
       ) : null}
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {noteLabel}
         <textarea
           name="note"
@@ -82,7 +92,7 @@ function RefundFields({
         />
       </label>
       {!cash ? null : (
-        <label>
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 44 }}>
           <input
             type="checkbox"
             checked={c.recipient}
@@ -93,7 +103,7 @@ function RefundFields({
         </label>
       )}
       {c.issue === null ? null : (
-        <p role="alert" data-testid="refund-issue">
+        <p role="alert" data-testid="refund-issue" style={opsNoticeStyle('danger')}>
           {t(`ops.refunds.issue.${c.issue}`)}
         </p>
       )}
@@ -132,25 +142,27 @@ export function RefundForm({
   return (
     <form
       data-testid="refund-form"
+      className="ph-card"
       onSubmit={(event) => {
         event.preventDefault();
         void c.send();
       }}
       style={{
         display: 'grid',
-        gap: 12,
+        gap: space.s3,
         maxWidth: 560,
-        padding: 16,
-        border: '1px solid var(--color-border)',
+        padding: space.s4,
         minWidth: 0,
       }}
     >
-      <h2 style={{ margin: 0 }}>{label}</h2>
+      <h2 style={OPS_SUBTITLE_STYLE}>{label}</h2>
       <RefundFields c={c} booking={booking} />
       <RefundPin c={c} />
-      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+      <div className="ph-actions">
         <button
           type="submit"
+          className="ph-btn-primary"
+          style={OPS_COMPACT_BTN_STYLE}
           data-testid="refund-confirm"
           disabled={
             c.blocked ||
@@ -161,7 +173,13 @@ export function RefundForm({
         >
           {t('ops.refunds.confirm', { action: label })}
         </button>
-        <button type="button" disabled={c.busy} onClick={c.reset}>
+        <button
+          type="button"
+          className="ph-btn"
+          style={OPS_COMPACT_BTN_STYLE}
+          disabled={c.busy}
+          onClick={c.reset}
+        >
           {t('ops.refunds.close')}
         </button>
       </div>

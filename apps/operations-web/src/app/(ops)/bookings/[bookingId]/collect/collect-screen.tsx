@@ -19,13 +19,14 @@ import {
   isApiError,
 } from '@pinehill/api-client';
 import type { BookingBalance, BookingSummary, Payment, PinToken } from '@pinehill/contracts';
-import { StateSurface, formatMoney, type ScreenState } from '@pinehill/ui-web';
+import { StateSurface, fontFamily, space, typography, type ScreenState } from '@pinehill/ui-web';
 import { createSessionClient } from '@pinehill/web-session/client';
 import { ScreenAlert } from '../../../../../components/screen-alert';
 import { useForcedState } from '../../../../../components/forced-state';
 import { t } from '../../../../../lib/i18n';
 import { readFailureState, writeFailureState } from '../../../../../lib/screen-state';
 import { CollectBody } from './collect-body';
+import { BookingSummaryCard } from './collect-parts';
 import {
   amountIssue,
   canSendPayment,
@@ -297,65 +298,101 @@ export function CollectScreen({ baseUrl }: { baseUrl: string }): ReactElement {
 
   if (forced !== undefined) {
     return (
-      <section data-testid="collect-screen" style={{ display: 'grid', gap: 12 }}>
-        <h1 style={{ margin: 0 }}>{t('ops.collect.title')}</h1>
+      <section
+        data-testid="collect-screen"
+        style={{
+          maxWidth: 1120,
+          marginInline: 'auto',
+          padding: `clamp(${space.s4}px, 3vw, ${space.s6}px)`,
+          display: 'grid',
+          gap: space.s4,
+        }}
+      >
+        <h1 style={{ margin: 0, fontFamily: fontFamily.sans, fontSize: typography.h1.web }}>
+          {t('ops.collect.title')}
+        </h1>
         <StateSurface state={forced} />
       </section>
     );
   }
 
   return (
-    <section data-testid="collect-screen" style={{ display: 'grid', gap: 12, padding: '16px 0' }}>
-      <h1 style={{ margin: 0 }}>{t('ops.collect.title')}</h1>
-      <Link href={`/bookings/${encodeURIComponent(bookingId)}`} data-testid="collect-back">
-        {t('ops.collect.back')}
-      </Link>
+    <section
+      data-testid="collect-screen"
+      style={{
+        maxWidth: 1120,
+        marginInline: 'auto',
+        padding: `clamp(${space.s4}px, 3vw, ${space.s6}px)`,
+        display: 'grid',
+        gap: space.s4,
+        minWidth: 0,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: space.s3,
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <h1 style={{ margin: 0, fontFamily: fontFamily.sans, fontSize: typography.h1.web }}>
+          {t('ops.collect.title')}
+        </h1>
+        <Link
+          href={`/bookings/${encodeURIComponent(bookingId)}`}
+          data-testid="collect-back"
+          className="ph-btn"
+        >
+          {t('ops.collect.back')}
+        </Link>
+      </div>
       <StateSurface state={state}>
-        {booking === null || balance === null ? null : (
-          <>
-            <p data-testid="collect-booking" style={{ margin: 0 }}>
-              {t('ops.collect.booking', { code: booking.code, status: booking.status })}
-            </p>
-            <p data-testid="collect-balance" style={{ margin: 0 }}>
-              {t('ops.collect.balance', {
-                paid: formatMoney(balance.paidAmount),
-                due: formatMoney(balance.balanceDue),
-              })}
-            </p>
-          </>
-        )}
         {error === null ? null : <ScreenAlert error={error} onRetry={() => void load()} />}
-        <CollectBody
-          step={step}
-          pin={pin}
-          pinIssueValue={pinIssue(pin)}
-          lockedMinutes={lockedMinutes}
-          wrong={wrong}
-          unavailable={unavailable}
-          balance={balance}
-          booking={booking}
-          type={type}
-          method={method}
-          amount={amount}
-          note={note}
-          amountIssueValue={amountIssueValue}
-          payment={payment}
-          busy={busy}
-          onPin={setPin}
-          onVerify={() => void verify()}
-          onType={(value) => {
-            setType(value);
-            if (booking !== null && balance !== null)
-              setAmount(String(suggestedAmount(booking, balance, value)));
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
+            gap: space.s4,
+            alignItems: 'start',
           }}
-          onMethod={setMethod}
-          onAmount={setAmount}
-          onNote={setNote}
-          onSend={() => {
-            if (canSendPayment(step, amountIssueValue)) void send();
-          }}
-          onPrint={() => window.print()}
-        />
+        >
+          {booking === null || balance === null ? null : (
+            <BookingSummaryCard booking={booking} balance={balance} />
+          )}
+          <CollectBody
+            step={step}
+            pin={pin}
+            pinIssueValue={pinIssue(pin)}
+            lockedMinutes={lockedMinutes}
+            wrong={wrong}
+            unavailable={unavailable}
+            balance={balance}
+            booking={booking}
+            type={type}
+            method={method}
+            amount={amount}
+            note={note}
+            amountIssueValue={amountIssueValue}
+            payment={payment}
+            busy={busy}
+            onPin={setPin}
+            onVerify={() => void verify()}
+            onType={(value) => {
+              setType(value);
+              if (booking !== null && balance !== null)
+                setAmount(String(suggestedAmount(booking, balance, value)));
+            }}
+            onMethod={setMethod}
+            onAmount={setAmount}
+            onNote={setNote}
+            onSend={() => {
+              if (canSendPayment(step, amountIssueValue)) void send();
+            }}
+            onPrint={() => window.print()}
+          />
+        </div>
       </StateSurface>
     </section>
   );

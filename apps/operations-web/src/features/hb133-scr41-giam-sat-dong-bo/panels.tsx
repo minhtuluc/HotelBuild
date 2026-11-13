@@ -1,7 +1,13 @@
 'use client';
 import { useState, type ReactElement } from 'react';
-import { formatDateTimeVn } from '@pinehill/ui-web';
+import { formatDateTimeVn, space } from '@pinehill/ui-web';
 import type { ChannelSyncStatusView } from '@pinehill/contracts';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_SUBTITLE_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+} from '../../components/editorial-styles';
 import { text } from './messages';
 import { emptySync, syncIssues, type FieldIssue, type SyncDraft } from './model';
 import { ConfirmDialog, SelectInput, TextInput, box } from './parts';
@@ -12,24 +18,33 @@ const when = (value: string | null): string =>
 /** Số liệu đúng như máy chủ trả: không đếm lỗi, không tự đặt DEGRADED. */
 export function StatusPanel({ status }: { status: ChannelSyncStatusView }): ReactElement {
   return (
-    <section style={box} aria-labelledby="hb133-status-title" data-testid="hb133-status">
-      <h2 id="hb133-status-title">{text('statusTitle')}</h2>
-      <p data-testid="hb133-sync-state">
+    <section
+      className="ph-card"
+      style={{ ...box, padding: space.s4 }}
+      aria-labelledby="hb133-status-title"
+      data-testid="hb133-status"
+    >
+      <h2 id="hb133-status-title" style={OPS_SUBTITLE_STYLE}>
+        {text('statusTitle')}
+      </h2>
+      <p data-testid="hb133-sync-state" style={{ margin: 0, fontWeight: 600 }}>
         {status.syncStatus === 'OK' ? text('statusOk') : text('statusDegraded')}
       </p>
-      <p>{text('failures', { count: status.consecutiveFailures })}</p>
-      <p>{text('lastSync', { time: when(status.lastSyncAt) })}</p>
-      <p>{text('lastSuccess', { time: when(status.lastSuccessAt) })}</p>
-      <p>{text('lastVerified', { time: when(status.lastVerifiedAt) })}</p>
-      {status.lastError === null ? null : <p>{text('lastError', { error: status.lastError })}</p>}
+      <p style={{ margin: 0 }}>{text('failures', { count: status.consecutiveFailures })}</p>
+      <p style={{ margin: 0 }}>{text('lastSync', { time: when(status.lastSyncAt) })}</p>
+      <p style={{ margin: 0 }}>{text('lastSuccess', { time: when(status.lastSuccessAt) })}</p>
+      <p style={{ margin: 0 }}>{text('lastVerified', { time: when(status.lastVerifiedAt) })}</p>
+      {status.lastError === null ? null : (
+        <p style={{ margin: 0 }}>{text('lastError', { error: status.lastError })}</p>
+      )}
       {status.history.length === 0 ? null : (
         <div
           role="region"
           aria-label={text('historyTitle')}
           tabIndex={0}
-          style={{ overflowX: 'auto', maxWidth: '100%' }}
+          style={OPS_TABLE_WRAP_STYLE}
         >
-          <table>
+          <table style={OPS_TABULAR_STYLE}>
             <thead>
               <tr>
                 <th scope="col">{text('colAt')}</th>
@@ -69,7 +84,8 @@ export function SyncForm(props: {
   };
   return (
     <form
-      style={box}
+      className="ph-card"
+      style={{ ...box, padding: space.s4 }}
       aria-labelledby="hb133-sync-title"
       onSubmit={(event) => {
         event.preventDefault();
@@ -78,8 +94,12 @@ export function SyncForm(props: {
         if (found.length === 0) setAsking(true);
       }}
     >
-      <h2 id="hb133-sync-title">{text('syncTitle')}</h2>
-      <p>{text('syncRole')}</p>
+      <h2 id="hb133-sync-title" style={OPS_SUBTITLE_STYLE}>
+        {text('syncTitle')}
+      </h2>
+      <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 13 }}>
+        {text('syncRole')}
+      </p>
       <SelectInput
         name="scope"
         label={text('scope')}
@@ -112,8 +132,9 @@ export function SyncForm(props: {
       ) : null}
       <button
         type="submit"
+        className="ph-btn-primary"
         disabled={props.busy}
-        style={{ minHeight: 44, justifySelf: 'start' }}
+        style={{ ...OPS_COMPACT_BTN_STYLE, justifySelf: 'start' }}
         data-testid="hb133-sync-submit"
       >
         {text('syncNow')}

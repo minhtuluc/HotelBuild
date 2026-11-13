@@ -63,14 +63,19 @@ function Actions({
   onCancel: () => void;
 }): ReactElement {
   return (
-    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-      <button type="submit" data-testid="form-submit" style={CONTROL} disabled={busy || disabled}>
+    <div className="ph-actions">
+      <button
+        className="ph-btn-primary"
+        type="submit"
+        data-testid="form-submit"
+        disabled={busy || disabled}
+      >
         {busy ? userText('submitting') : label}
       </button>
       <button
+        className="ph-btn"
         type="button"
         data-testid="form-cancel"
-        style={CONTROL}
         disabled={busy}
         onClick={onCancel}
       >
@@ -313,20 +318,20 @@ export function PinConfirm({
           onReload={rest.onReload}
         />
       )}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div className="ph-actions">
         <button
+          className="ph-btn-primary"
           type="button"
           data-testid="pin-confirm-submit"
-          style={CONTROL}
           disabled={rest.busy}
           onClick={onConfirm}
         >
           {rest.busy ? userText('submitting') : userText('pinConfirm')}
         </button>
         <button
+          className="ph-btn"
           type="button"
           data-testid="pin-confirm-cancel"
-          style={CONTROL}
           disabled={rest.busy}
           onClick={rest.onCancel}
         >

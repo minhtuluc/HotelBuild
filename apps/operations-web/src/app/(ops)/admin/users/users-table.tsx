@@ -2,9 +2,13 @@
 import type { ReactElement } from 'react';
 import type { UserSummary } from '@pinehill/contracts';
 import { formatDateTimeVn, space } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+} from '../../../../components/editorial-styles';
 import type { PropertyOption } from './controller';
 import { roleLabel } from './role-select';
-import { CONTROL } from './styles';
 import { canClearPin, canManageUsers, isLocked } from './users-model';
 import { userText } from './messages';
 import type { UserRole } from '@pinehill/contracts';
@@ -37,7 +41,8 @@ function RowActions({
         <button
           type="button"
           data-testid={`edit-${user.id}`}
-          style={CONTROL}
+          className="ph-btn"
+          style={OPS_COMPACT_BTN_STYLE}
           aria-label={userText('editFor', { name: user.fullName })}
           onClick={() => {
             onEdit(user);
@@ -50,7 +55,8 @@ function RowActions({
         <button
           type="button"
           data-testid={`clear-pin-${user.id}`}
-          style={CONTROL}
+          className="ph-btn"
+          style={OPS_COMPACT_BTN_STYLE}
           aria-label={userText('clearPinFor', { name: user.fullName })}
           onClick={() => {
             onClearPin(user);
@@ -82,12 +88,16 @@ export function UsersTable({
   onClearPin: (user: UserSummary) => void;
 }): ReactElement {
   return (
-    <div role="region" aria-label={userText('list')} tabIndex={0} style={{ overflowX: 'auto' }}>
+    <div role="region" aria-label={userText('list')} tabIndex={0} style={OPS_TABLE_WRAP_STYLE}>
       <table
         data-testid="users-table"
-        style={{ borderCollapse: 'collapse', width: '100%', minWidth: 720 }}
+        style={{ ...OPS_TABULAR_STYLE, borderCollapse: 'collapse', width: '100%', minWidth: 720 }}
       >
-        <caption style={{ textAlign: 'left', padding: space.s2 }}>{userText('list')}</caption>
+        <caption
+          style={{ textAlign: 'left', padding: `${space.s3}px ${space.s4}px`, fontWeight: 600 }}
+        >
+          {userText('list')}
+        </caption>
         <thead>
           <tr>
             {(

@@ -12,12 +12,21 @@ import type { GuestLoyalty, GuestSummary } from '@pinehill/contracts';
 import { StateSurface, formatDateTimeVn, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
+import {
+  OPS_FIELD_LABEL_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+  OPS_TITLE_STYLE,
+} from '../../../../components/editorial-styles';
 import { useOpsSession } from '../../../../lib/ops-session';
 import { t } from '../../../../lib/i18n';
 import { readFailureState } from '../../../../lib/screen-state';
 import { EMPTY_SEARCH, searchParams, TIER_LABEL_KEY } from '../crm-shared';
 
-const FIELD_STYLE = { display: 'grid', gap: 4 } as const;
+const FIELD_STYLE = OPS_FIELD_LABEL_STYLE;
 
 interface Loaded {
   guests: readonly GuestSummary[];
@@ -87,61 +96,76 @@ export function LoyaltyScreen(): ReactElement {
   }
 
   return (
-    <section
-      style={{ padding: 'var(--space-s6, 24px)', display: 'grid', gap: 'var(--space-s4, 16px)' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('crm.loyalty.title')}</h1>
-      <p style={{ margin: 0 }}>{t('crm.loyalty.intro')}</p>
-      <label style={FIELD_STYLE}>
-        {t('crm.loyalty.pick')}
-        <select name="guestId" value={guestId} onChange={(event) => setGuestId(event.target.value)}>
-          <option value="">{t('crm.loyalty.empty')}</option>
-          {guests.map((guest) => (
-            <option key={guest.id} value={guest.id}>
-              {guest.fullName} · {guest.phone}
-            </option>
-          ))}
-        </select>
-      </label>
+    <section style={OPS_PAGE_STYLE}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 className="ph-display" style={OPS_TITLE_STYLE}>
+          {t('crm.loyalty.title')}
+        </h1>
+        <p style={OPS_INTRO_STYLE}>{t('crm.loyalty.intro')}</p>
+      </header>
+      <div className="ph-card" style={{ maxWidth: 520 }}>
+        <label style={FIELD_STYLE}>
+          {t('crm.loyalty.pick')}
+          <select
+            name="guestId"
+            value={guestId}
+            onChange={(event) => setGuestId(event.target.value)}
+          >
+            <option value="">{t('crm.loyalty.empty')}</option>
+            {guests.map((guest) => (
+              <option key={guest.id} value={guest.id}>
+                {guest.fullName} · {guest.phone}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <StateSurface state={state}>
         {readError === null ? null : (
           <ScreenAlert error={readError} onRetry={() => void load(guestId)} />
         )}
         {loyalty === null ? null : (
-          <table data-testid="loyalty-table" style={{ borderCollapse: 'collapse' }}>
-            <tbody>
-              <tr>
-                <th scope="row" style={{ textAlign: 'start' }}>
-                  {t('crm.loyalty.tier')}
-                </th>
-                <td data-testid="loyalty-tier">{t(TIER_LABEL_KEY[loyalty.loyaltyTier])}</td>
-              </tr>
-              <tr>
-                <th scope="row" style={{ textAlign: 'start' }}>
-                  {t('crm.loyalty.points')}
-                </th>
-                <td data-testid="loyalty-points">{loyalty.loyaltyPoints}</td>
-              </tr>
-              <tr>
-                <th scope="row" style={{ textAlign: 'start' }}>
-                  {t('crm.loyalty.stays12')}
-                </th>
-                <td>{loyalty.staysLast12Months}</td>
-              </tr>
-              <tr>
-                <th scope="row" style={{ textAlign: 'start' }}>
-                  {t('crm.loyalty.totalStays')}
-                </th>
-                <td>{loyalty.totalStays}</td>
-              </tr>
-              <tr>
-                <th scope="row" style={{ textAlign: 'start' }}>
-                  {t('crm.loyalty.updatedAt')}
-                </th>
-                <td>{formatDateTimeVn(loyalty.updatedAt)}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="ph-card" style={OPS_TABLE_WRAP_STYLE}>
+            <table
+              data-testid="loyalty-table"
+              style={{ width: '100%', borderCollapse: 'collapse' }}
+            >
+              <tbody>
+                <tr>
+                  <th scope="row" style={{ textAlign: 'start' }}>
+                    {t('crm.loyalty.tier')}
+                  </th>
+                  <td data-testid="loyalty-tier">{t(TIER_LABEL_KEY[loyalty.loyaltyTier])}</td>
+                </tr>
+                <tr>
+                  <th scope="row" style={{ textAlign: 'start' }}>
+                    {t('crm.loyalty.points')}
+                  </th>
+                  <td data-testid="loyalty-points" style={OPS_TABULAR_STYLE}>
+                    {loyalty.loyaltyPoints}
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row" style={{ textAlign: 'start' }}>
+                    {t('crm.loyalty.stays12')}
+                  </th>
+                  <td style={OPS_TABULAR_STYLE}>{loyalty.staysLast12Months}</td>
+                </tr>
+                <tr>
+                  <th scope="row" style={{ textAlign: 'start' }}>
+                    {t('crm.loyalty.totalStays')}
+                  </th>
+                  <td style={OPS_TABULAR_STYLE}>{loyalty.totalStays}</td>
+                </tr>
+                <tr>
+                  <th scope="row" style={{ textAlign: 'start' }}>
+                    {t('crm.loyalty.updatedAt')}
+                  </th>
+                  <td>{formatDateTimeVn(loyalty.updatedAt)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         )}
       </StateSurface>
     </section>

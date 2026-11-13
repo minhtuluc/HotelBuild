@@ -14,8 +14,15 @@ export function PlanPanel(props: {
   const [strategy, setStrategy] = useState<'AUTO' | 'MANUAL'>('AUTO');
   const [asking, setAsking] = useState(false);
   return (
-    <section style={box} aria-labelledby="hb136-plan-title" data-testid="hb136-plan">
-      <h2 id="hb136-plan-title">{text('planTitle')}</h2>
+    <section
+      className="ph-card"
+      style={box}
+      aria-labelledby="hb136-plan-title"
+      data-testid="hb136-plan"
+    >
+      <h2 id="hb136-plan-title" style={{ margin: 0 }}>
+        {text('planTitle')}
+      </h2>
       <SelectInput
         name="strategy"
         label={text('planStrategy')}
@@ -28,6 +35,7 @@ export function PlanPanel(props: {
       />
       <button
         type="button"
+        className="ph-btn-primary"
         disabled={props.busy}
         onClick={() => setAsking(true)}
         style={{ minHeight: 44, justifySelf: 'start' }}

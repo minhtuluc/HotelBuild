@@ -24,3 +24,12 @@ export function mobileEnv(): MobileEnv {
   cached ??= readMobileEnv(process.env);
   return cached;
 }
+
+/** Chế độ demo chỉ bật khi có cờ `EXPO_PUBLIC_DEMO_MODE=true` và không ở bản production (TD-44). */
+export function readDemoEnabled(source: Readonly<Record<string, string | undefined>>): boolean {
+  return source.EXPO_PUBLIC_DEMO_MODE === 'true' && source.EXPO_PUBLIC_APP_VARIANT !== 'production';
+}
+
+export function isDemoEnabled(): boolean {
+  return readDemoEnabled(process.env);
+}

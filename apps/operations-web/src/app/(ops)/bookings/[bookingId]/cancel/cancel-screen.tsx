@@ -17,6 +17,11 @@ import type {
   CancellationPolicy,
 } from '@pinehill/contracts';
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
+import {
+  OPS_PAGE_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../../../components/editorial-styles';
 import { ScreenAlert } from '../../../../../components/screen-alert';
 import { useForcedState } from '../../../../../components/forced-state';
 import { useOpsSession } from '../../../../../lib/ops-session';
@@ -182,18 +187,18 @@ export function CancelScreen(): ReactElement {
 
   if (forced !== undefined) {
     return (
-      <section data-testid="cancel-screen" style={{ display: 'grid', gap: 12 }}>
-        <h1 style={{ margin: 0 }}>{t('ops.cancel.title')}</h1>
+      <section data-testid="cancel-screen" style={OPS_PAGE_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{t('ops.cancel.title')}</h1>
         <StateSurface state={forced} />
       </section>
     );
   }
 
   return (
-    <section data-testid="cancel-screen" style={{ display: 'grid', gap: 12, padding: '16px 0' }}>
-      <h1 style={{ margin: 0 }}>{t('ops.cancel.title')}</h1>
+    <section data-testid="cancel-screen" style={OPS_PAGE_STYLE}>
+      <h1 style={OPS_TITLE_STYLE}>{t('ops.cancel.title')}</h1>
       {booking === null ? null : (
-        <p data-testid="cancel-booking" style={{ margin: 0 }}>
+        <p data-testid="cancel-booking" style={opsNoticeStyle('neutral')}>
           <code>{booking.code}</code> · {booking.status} · {formatBusinessDate(booking.checkIn)} →{' '}
           {formatBusinessDate(booking.checkOut)} · {booking.roomCount} {t('ops.cancel.rooms')}
         </p>
@@ -201,7 +206,7 @@ export function CancelScreen(): ReactElement {
       <StateSurface state={state}>
         {error === null ? null : <ScreenAlert error={error} onRetry={() => void load()} />}
         {stale ? (
-          <p role="status" data-testid="cancel-stale" style={{ margin: 0 }}>
+          <p role="status" data-testid="cancel-stale" style={opsNoticeStyle('warning')}>
             {t('ops.cancel.stale')}
           </p>
         ) : null}

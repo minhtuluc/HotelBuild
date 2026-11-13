@@ -6,9 +6,10 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import type { BookingSummary, CheckInResponse, RoomSummary } from '@pinehill/contracts';
-import { color, space, touchTargetDp } from '@pinehill/ui-native';
+import { color, space } from '@pinehill/ui-native';
 import { statusText, stayPeriodText } from '../lookup/messages';
 import { formatVnd } from '../lookup/view';
+import { theme } from '../theme';
 import { ActionButton, CheckRow } from './controls';
 import { formatVnDateTime } from './format';
 import { arrivalsText as text } from './messages';
@@ -40,13 +41,7 @@ type Result =
   | { kind: 'offline' }
   | { kind: 'failed'; failure: ActionFailure };
 
-const field = {
-  minHeight: touchTargetDp,
-  paddingHorizontal: space.s3,
-  borderWidth: 1,
-  borderRadius: 8,
-  color: color.text,
-} as const;
+const field = theme.field;
 
 function FailureNotice({ failure }: { failure: ActionFailure }): ReactElement {
   switch (failure.kind) {
@@ -102,22 +97,21 @@ function Facts({
 }): ReactElement {
   const owes = booking.balanceDue > 0;
   return (
-    <View style={{ gap: space.s2 }}>
-      <Text
-        accessibilityRole="header"
-        style={{ fontSize: 24, fontWeight: '700', color: color.text }}
-      >
+    <View style={theme.card}>
+      <Text accessibilityRole="header" style={theme.title}>
         {text('checkInTitle', { code: booking.code })}
       </Text>
-      <Text>{statusText(booking.status)}</Text>
-      <Text>{stayPeriodText(booking.checkIn, booking.checkOut, booking.nights)}</Text>
-      <Text>
+      <Text style={theme.body}>{statusText(booking.status)}</Text>
+      <Text style={theme.body}>
+        {stayPeriodText(booking.checkIn, booking.checkOut, booking.nights)}
+      </Text>
+      <Text style={[theme.body, theme.tabular]}>
         {text('totalLine', {
           total: formatVnd(booking.totalAmount),
           paid: formatVnd(booking.paidAmount),
         })}
       </Text>
-      <Text testID="check-in-balance" style={{ fontWeight: '700' }}>
+      <Text testID="check-in-balance" style={theme.moneyInline}>
         {text('balanceLine', { balance: formatVnd(booking.balanceDue) })}
       </Text>
       {owes ? <Text style={{ color: color.textMuted }}>{text('balanceNote')}</Text> : null}
@@ -193,13 +187,15 @@ function Done({
 }): ReactElement {
   const codes = response.roomIds.map((id) => rooms.find((room) => room.id === id)?.code ?? id);
   return (
-    <View style={{ flex: 1, padding: space.s4, gap: space.s3, backgroundColor: color.surface }}>
-      <View testID="check-in-done" accessibilityLiveRegion="polite" style={{ gap: space.s2 }}>
-        <Text style={{ color: color.success, fontWeight: '700' }}>
+    <View style={theme.screen}>
+      <View testID="check-in-done" accessibilityLiveRegion="polite" style={theme.card}>
+        <Text style={[theme.alertSuccess, { fontWeight: '600' }]}>
           {text('done', { code: booking.code, time: formatVnDateTime(response.checkedInAt) })}
         </Text>
-        <Text>{text('roomsAssigned', { rooms: codes.join(', ') })}</Text>
-        <Text>{text('earlyFee', { amount: formatVnd(response.earlyCheckInFee) })}</Text>
+        <Text style={theme.body}>{text('roomsAssigned', { rooms: codes.join(', ') })}</Text>
+        <Text style={[theme.body, theme.tabular]}>
+          {text('earlyFee', { amount: formatVnd(response.earlyCheckInFee) })}
+        </Text>
       </View>
       <ActionButton testID="check-in-close" label={text('closeDetail')} onPress={onClose} />
     </View>
@@ -276,8 +272,8 @@ export function CheckInDetail(props: CheckInDetailProps): ReactElement {
     return <Done booking={booking} response={result.response} rooms={rooms} onClose={onClose} />;
   const unknown = result?.kind === 'failed' && result.failure.kind === 'unknownOutcome';
   return (
-    <View style={{ flex: 1, backgroundColor: color.surface }}>
-      <ScrollView contentContainerStyle={{ padding: space.s4, gap: space.s3 }}>
+    <View style={{ flex: 1, backgroundColor: color.bg }}>
+      <ScrollView contentContainerStyle={theme.scrollContent}>
         <Facts booking={booking} onCollectBalance={onCollectBalance} />
         <RoomPicker
           count={booking.roomCount}

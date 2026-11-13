@@ -1,8 +1,8 @@
 /** Ô nhập PIN của SCR-63: che ký tự, giá trị chỉ ở state cục bộ của màn hình và bị xoá sau khi gửi (AC5). */
 import { useState, type ReactElement } from 'react';
 import { Text, TextInput, View } from 'react-native';
-import { color, space, touchTargetDp } from '@pinehill/ui-native';
 import { ActionButton } from '../../arrivals/controls';
+import { theme } from '../../theme';
 import { f6Text as text } from './messages';
 import type { PinAction, PinMessage } from './flow';
 
@@ -31,11 +31,11 @@ export function PinForm(props: {
         ? text('pinLockedFor', { seconds: props.lockedFor })
         : text(MESSAGE[props.message]);
   return (
-    <View testID="pin-form" accessible style={{ gap: space.s2 }}>
-      <Text accessibilityRole="header" style={{ fontWeight: '700', color: color.text }}>
+    <View testID="pin-form" accessible style={theme.card}>
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {text('pinTitle', { action: label })}
       </Text>
-      <Text style={{ color: color.textMuted }}>{text('pinNote')}</Text>
+      <Text style={theme.muted}>{text('pinNote')}</Text>
       <TextInput
         testID="pin-input"
         accessibilityLabel={text('pin')}
@@ -47,16 +47,10 @@ export function PinForm(props: {
         importantForAutofill="no"
         value={pin}
         onChangeText={setPin}
-        style={{
-          minHeight: touchTargetDp,
-          borderWidth: 1,
-          borderColor: color.border,
-          borderRadius: 8,
-          paddingHorizontal: space.s3,
-        }}
+        style={theme.field}
       />
       {shown === null ? null : (
-        <Text testID="pin-message" accessibilityLiveRegion="polite" style={{ color: color.danger }}>
+        <Text testID="pin-message" accessibilityLiveRegion="polite" style={theme.alertDanger}>
           {shown}
         </Text>
       )}

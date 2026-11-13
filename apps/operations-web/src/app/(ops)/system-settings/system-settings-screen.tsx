@@ -1,6 +1,14 @@
 'use client';
 import type { ReactElement } from 'react';
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../components/editorial-styles';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { useForcedState } from '../../../components/forced-state';
 import { t } from '../../../lib/i18n';
@@ -36,27 +44,25 @@ export function SystemSettingsScreen(): ReactElement {
     );
   const blocked = state.busy || !['ready', 'empty', 'validation'].includes(state.phase);
   return (
-    <section
-      style={{
-        padding: 'var(--space-s6, 24px)',
-        display: 'grid',
-        gap: 'var(--space-s4, 16px)',
-        minWidth: 0,
-      }}
-    >
-      <h1 style={{ margin: 0 }}>{t('settings.title')}</h1>
-      <p style={{ margin: 0 }}>{t('settings.intro')}</p>
-      <button
-        type="button"
-        data-testid="settings-reload"
-        disabled={state.busy}
-        onClick={() => void controller?.load()}
-        style={{ minHeight: 44, justifySelf: 'start' }}
-      >
-        {settingsText('reload')}
-      </button>
+    <section style={OPS_PAGE_STYLE}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{t('settings.title')}</h1>
+        <p style={OPS_INTRO_STYLE}>{t('settings.intro')}</p>
+      </header>
+      <div>
+        <button
+          type="button"
+          className="ph-btn"
+          data-testid="settings-reload"
+          disabled={state.busy}
+          onClick={() => void controller?.load()}
+          style={OPS_COMPACT_BTN_STYLE}
+        >
+          {settingsText('reload')}
+        </button>
+      </div>
       {state.phase === 'expired' ? (
-        <p role="alert">
+        <p role="alert" style={opsNoticeStyle('danger')}>
           {settingsText('expired')} <a href="/login">{settingsText('login')}</a>
         </p>
       ) : null}
@@ -73,7 +79,7 @@ export function SystemSettingsScreen(): ReactElement {
         />
       ) : null}
       {state.saved ? (
-        <p role="status" data-testid="settings-saved" style={{ margin: 0 }}>
+        <p role="status" data-testid="settings-saved" style={opsNoticeStyle('success')}>
           {t('settings.saved', { key: state.saved })}
         </p>
       ) : null}

@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useState, type ReactElement } from 'react';
-import { color, radius, space, typography } from '@pinehill/ui-web';
+import { color, fontFamily, space, typography } from '@pinehill/ui-web';
 import type { RoomTypeSummary, WalkInResult } from '@pinehill/contracts';
 import type { DeskApi, DeskProperty } from './front-desk-api';
 import {
@@ -98,18 +98,30 @@ export function WalkInPanel({
     <section
       aria-labelledby="desk-walk-in-title"
       data-testid="walk-in-panel"
+      className="ph-card"
       style={{
         border: `1px solid ${color.borderStrong}`,
-        borderRadius: radius.md,
-        padding: space.s4,
+        boxShadow: `inset 0 0 0 1px ${color.primary}`,
         display: 'grid',
-        gap: space.s3,
+        gap: space.s4,
       }}
     >
-      <h2 id="desk-walk-in-title" style={{ margin: 0, fontSize: typography.h2.web }}>
-        {deskText('walkInTitle')}
-      </h2>
-      <StepIndicator step={step} />
+      <div
+        style={{
+          display: 'grid',
+          gap: space.s2,
+          borderBottom: `1px solid ${color.border}`,
+          paddingBottom: space.s3,
+        }}
+      >
+        <h2
+          id="desk-walk-in-title"
+          style={{ margin: 0, fontFamily: fontFamily.sans, fontSize: typography.h2.web }}
+        >
+          {deskText('walkInTitle')}
+        </h2>
+        <StepIndicator step={step} />
+      </div>
       {step === 'stay' ? (
         <StayStep
           stay={stay}

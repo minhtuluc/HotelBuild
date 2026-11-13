@@ -23,6 +23,7 @@ export function FilterForm(props: {
   const all = { id: '', label: text('all') };
   return (
     <form
+      className="ph-card"
       aria-labelledby="hb138-filter-title"
       style={{ ...box, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))' }}
       onSubmit={(event) => {
@@ -32,7 +33,7 @@ export function FilterForm(props: {
         if (found.length === 0) props.onApply(draft);
       }}
     >
-      <h2 id="hb138-filter-title" style={{ gridColumn: '1 / -1' }}>
+      <h2 id="hb138-filter-title" style={{ gridColumn: '1 / -1', margin: 0 }}>
         {text('filterTitle')}
       </h2>
       <SelectInput
@@ -70,6 +71,7 @@ export function FilterForm(props: {
       </label>
       <button
         type="submit"
+        className="ph-btn-primary"
         disabled={props.busy}
         style={{ minHeight: 44, justifySelf: 'start' }}
         data-testid="hb138-apply"

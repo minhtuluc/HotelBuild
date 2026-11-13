@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import type { BookingSummary, NoShowPreview, NoShowResponse } from '@pinehill/contracts';
-import { color, space, touchTargetDp, typography } from '@pinehill/ui-native';
+import { color, space } from '@pinehill/ui-native';
 import { ActionButton } from '../arrivals/controls';
 import { formatVnDateTime } from '../arrivals/format';
 import type { ActionFailure } from '../arrivals/model';
@@ -19,6 +19,7 @@ import { noShowPreviewPort } from '../preview/ports';
 import type { PreviewState } from '../preview/reader';
 import { PreviewStatus } from '../preview/status';
 import type { Session } from '../session';
+import { theme } from '../theme';
 import { noShowText as text } from './messages';
 import {
   countdownToMark,
@@ -120,11 +121,15 @@ function Countdown({
       mark: formatVnDateTime(markableFrom),
     });
   return (
-    <View style={{ gap: space.s1 }}>
-      <Text testID="no-show-countdown" accessibilityLiveRegion="none" style={{ fontWeight: '700' }}>
+    <View style={theme.card}>
+      <Text
+        testID="no-show-countdown"
+        accessibilityLiveRegion="none"
+        style={[theme.moneyInline, theme.tabular]}
+      >
         {label}
       </Text>
-      <Text style={{ color: color.textMuted }}>{text('countdownNote')}</Text>
+      <Text style={theme.muted}>{text('countdownNote')}</Text>
     </View>
   );
 }
@@ -139,20 +144,20 @@ function PreviewBlock({
 }): ReactElement {
   const value = state.value;
   return (
-    <View testID="no-show-preview" style={{ gap: space.s1 }}>
-      <Text accessibilityRole="header" style={{ fontWeight: '700', color: color.text }}>
+    <View testID="no-show-preview" style={theme.card}>
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {previewText('title')}
       </Text>
       <PreviewStatus phase={state.phase} testID="no-show-preview-status" onRetry={onRetry} />
       {state.phase === 'ready' && value !== null ? (
         <>
-          <Text testID="no-show-preview-penalty" style={{ fontWeight: '700' }}>
+          <Text testID="no-show-preview-penalty" style={[theme.moneyInline, theme.tabular]}>
             {text('previewPenalty', { amount: formatVnd(value.penaltyAmount) })}
           </Text>
-          <Text testID="no-show-preview-refund">
+          <Text testID="no-show-preview-refund" style={[theme.body, theme.tabular]}>
             {text('previewRefund', { amount: formatVnd(value.expectedRefundAmount) })}
           </Text>
-          <Text testID="no-show-preview-time" style={{ color: color.textMuted }}>
+          <Text testID="no-show-preview-time" style={theme.muted}>
             {previewText('computed', { time: formatVnDateTime(value.computedAt) })}
           </Text>
         </>
@@ -171,13 +176,17 @@ function Done({
   onClose: () => void;
 }): ReactElement {
   return (
-    <View style={{ flex: 1, padding: space.s4, gap: space.s3, backgroundColor: color.surface }}>
-      <View testID="no-show-done" accessibilityLiveRegion="polite" style={{ gap: space.s2 }}>
-        <Text style={{ color: color.success, fontWeight: '700' }}>
+    <View style={theme.screen}>
+      <View testID="no-show-done" accessibilityLiveRegion="polite" style={theme.card}>
+        <Text style={[theme.alertSuccess, { fontWeight: '600' }]}>
           {text('done', { code: booking.code, time: formatVnDateTime(response.markedAt) })}
         </Text>
-        <Text>{text('penalty', { amount: formatVnd(response.penaltyAmount) })}</Text>
-        <Text>{text('refundRequest', { value: response.refundRequestId ?? '—' })}</Text>
+        <Text style={[theme.body, theme.tabular]}>
+          {text('penalty', { amount: formatVnd(response.penaltyAmount) })}
+        </Text>
+        <Text style={theme.body}>
+          {text('refundRequest', { value: response.refundRequestId ?? '—' })}
+        </Text>
       </View>
       <ActionButton testID="no-show-close" label={text('close')} onPress={onClose} />
     </View>
@@ -231,7 +240,7 @@ function ReasonField({
 }): ReactElement {
   return (
     <>
-      <Text>{text('reasonLabel')}</Text>
+      <Text style={theme.body}>{text('reasonLabel')}</Text>
       <TextInput
         testID="no-show-reason"
         accessibilityLabel={text('reasonLabel')}
@@ -239,13 +248,7 @@ function ReasonField({
         maxLength={600}
         editable={!busy}
         onChangeText={onChange}
-        style={{
-          minHeight: touchTargetDp,
-          paddingHorizontal: space.s3,
-          borderWidth: 1,
-          borderRadius: 8,
-          color: color.text,
-        }}
+        style={theme.field}
       />
       {issue === null ? null : (
         <Text
@@ -305,16 +308,17 @@ export function NoShowScreen(props: NoShowScreenProps): ReactElement {
     return <Done booking={booking} response={result.response} onClose={onClose} />;
   const unknown = result?.kind === 'failed' && result.failure.kind === 'unknownOutcome';
   return (
-    <View style={{ flex: 1, backgroundColor: color.surface }}>
-      <ScrollView contentContainerStyle={{ padding: space.s4, gap: space.s3 }}>
-        <Text
-          accessibilityRole="header"
-          style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}
-        >
+    <View style={{ flex: 1, backgroundColor: color.bg }}>
+      <ScrollView contentContainerStyle={theme.scrollContent}>
+        <Text accessibilityRole="header" style={theme.title}>
           {text('title', { code: booking.code })}
         </Text>
-        <Text>{text('stay', { checkIn: formatBusinessDate(booking.checkIn) })}</Text>
-        <Text>{text('paid', { paid: formatVnd(booking.paidAmount) })}</Text>
+        <Text style={theme.body}>
+          {text('stay', { checkIn: formatBusinessDate(booking.checkIn) })}
+        </Text>
+        <Text style={[theme.body, theme.tabular]}>
+          {text('paid', { paid: formatVnd(booking.paidAmount) })}
+        </Text>
         <PreviewBlock
           state={preview.state}
           onRetry={() => {

@@ -1,18 +1,12 @@
 /** Màn hình đăng nhập/đăng ký/khôi phục phiên cho khách (SCR-71). */
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
-import { color, space, touchTargetDp, typography, waitMessage } from '@pinehill/ui-native';
+import { color, waitMessage } from '@pinehill/ui-native';
 import { isApiError } from '@pinehill/api-client';
 import { createSession } from '../src/session-factory';
 import { Session } from '../src/session';
 import { t } from '../src/strings';
-
-const fieldStyle = {
-  minHeight: touchTargetDp,
-  borderWidth: 1,
-  borderColor: color.border,
-  paddingHorizontal: space.s3,
-};
+import { theme } from '../src/theme';
 
 export default function GuestScreen(): ReactElement {
   const session = useMemo(createSession, []);
@@ -82,35 +76,38 @@ export default function GuestScreen(): ReactElement {
 
   if (!booted) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator accessibilityLabel={t('session.restoring')} />
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: color.bg,
+        }}
+      >
+        <ActivityIndicator accessibilityLabel={t('session.restoring')} color={color.primary} />
       </View>
     );
   }
   if (authenticated) {
     return (
-      <View style={{ padding: space.s4, gap: space.s3 }}>
-        <Text style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}>
-          {t('home.title')}
-        </Text>
+      <View style={theme.screen}>
+        <Text style={theme.title}>{t('home.title')}</Text>
         <Pressable
           testID="logout"
           accessibilityRole="button"
           accessibilityLabel={t('home.logout')}
           onPress={() => void session.logout().then(() => setAuthenticated(false))}
-          style={{ minHeight: touchTargetDp, justifyContent: 'center' }}
+          style={theme.buttonSecondary}
         >
-          <Text style={{ color: color.danger }}>{t('home.logout')}</Text>
+          <Text style={{ color: color.danger, fontWeight: '500' }}>{t('home.logout')}</Text>
         </Pressable>
       </View>
     );
   }
 
   return (
-    <View style={{ padding: space.s4, gap: space.s3 }}>
-      <Text style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}>
-        {t('guest.title')}
-      </Text>
+    <View style={theme.screen}>
+      <Text style={theme.title}>{t('guest.title')}</Text>
       <TextInput
         testID="phone"
         accessibilityLabel={t('guest.phone')}
@@ -118,7 +115,7 @@ export default function GuestScreen(): ReactElement {
         value={phone}
         onChangeText={setPhone}
         keyboardType="phone-pad"
-        style={fieldStyle}
+        style={theme.field}
       />
       {mode === 'register' ? (
         <TextInput
@@ -127,7 +124,7 @@ export default function GuestScreen(): ReactElement {
           placeholder={t('guest.fullName')}
           value={fullName}
           onChangeText={setFullName}
-          style={fieldStyle}
+          style={theme.field}
         />
       ) : null}
       <TextInput
@@ -137,10 +134,10 @@ export default function GuestScreen(): ReactElement {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
-        style={fieldStyle}
+        style={theme.field}
       />
       {error === null ? null : (
-        <Text accessibilityLiveRegion="polite" style={{ color: color.danger }}>
+        <Text accessibilityLiveRegion="polite" style={theme.alertDanger}>
           {error}
         </Text>
       )}
@@ -150,15 +147,9 @@ export default function GuestScreen(): ReactElement {
         accessibilityLabel={mode === 'login' ? t('guest.login') : t('guest.register')}
         disabled={busy}
         onPress={() => void submit()}
-        style={{
-          minHeight: touchTargetDp,
-          justifyContent: 'center',
-          paddingHorizontal: space.s3,
-          backgroundColor: color.primary,
-          borderRadius: 8,
-        }}
+        style={theme.buttonPrimary}
       >
-        <Text style={{ color: color.surface, fontWeight: '600', textAlign: 'center' }}>
+        <Text style={theme.buttonPrimaryText}>
           {busy ? t('state.loading') : mode === 'login' ? t('guest.login') : t('guest.register')}
         </Text>
       </Pressable>
@@ -167,8 +158,9 @@ export default function GuestScreen(): ReactElement {
         accessibilityRole="button"
         accessibilityLabel={mode === 'login' ? t('guest.register') : t('guest.login')}
         onPress={() => setMode(mode === 'login' ? 'register' : 'login')}
+        style={theme.buttonPlain}
       >
-        <Text style={{ color: color.primary }}>
+        <Text style={theme.buttonPlainText}>
           {mode === 'login' ? t('guest.register') : t('guest.login')}
         </Text>
       </Pressable>
@@ -177,8 +169,9 @@ export default function GuestScreen(): ReactElement {
         accessibilityRole="button"
         accessibilityLabel={t('guest.forgot')}
         onPress={() => void forgot()}
+        style={theme.buttonPlain}
       >
-        <Text style={{ color: color.primary }}>{t('guest.forgot')}</Text>
+        <Text style={theme.buttonPlainText}>{t('guest.forgot')}</Text>
       </Pressable>
     </View>
   );

@@ -1,11 +1,12 @@
 /** Điều khiển riêng của SCR-59/61 (nhóm chọn một, ô PIN); nút và ô chọn dùng lại từ `arrivals/controls`. */
 import { useState, type ReactElement } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import { color, space, touchTargetDp } from '@pinehill/ui-native';
+import { color, radius, space, touchTargetDp } from '@pinehill/ui-native';
 import { ActionButton } from '../arrivals/controls';
 import type { ActionFailure } from '../arrivals/model';
 import { pinIssue } from './model';
 import { stayText as text } from './messages';
+import { theme } from '../theme';
 import type { SubmitOutcome, UnlockOutcome } from './writer';
 
 export function ChoiceRow({
@@ -33,8 +34,9 @@ export function ChoiceRow({
         minHeight: touchTargetDp,
         justifyContent: 'center',
         paddingHorizontal: space.s3,
-        borderWidth: 1,
-        borderRadius: 8,
+        backgroundColor: color.surface,
+        borderWidth: selected ? 2 : 1,
+        borderRadius: radius.md,
         borderColor: selected ? color.primary : color.border,
       }}
     >
@@ -150,13 +152,7 @@ export function PinPanel({
         editable={!busy}
         autoCorrect={false}
         onChangeText={setPin}
-        style={{
-          minHeight: touchTargetDp,
-          paddingHorizontal: space.s3,
-          borderWidth: 1,
-          borderRadius: 8,
-          color: color.text,
-        }}
+        style={theme.field}
       />
       {message === null ? null : (
         <Text testID="pin-message" accessibilityRole="alert" style={{ color: color.danger }}>

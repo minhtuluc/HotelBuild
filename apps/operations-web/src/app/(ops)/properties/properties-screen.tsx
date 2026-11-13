@@ -7,7 +7,20 @@
  */
 import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import type { PropertySummary, PropertyUpdateRequest } from '@pinehill/contracts';
-import { StateSurface, formatStatusWithEnum } from '@pinehill/ui-web';
+import { StateSurface, color, formatStatusWithEnum, space } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_HEADER_ROW_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_SUBTITLE_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../components/editorial-styles';
 import { useForcedState } from '../../../components/forced-state';
 import { t } from '../../../lib/i18n';
 import { VERSION_NEW } from '../../../lib/screen-state';
@@ -65,14 +78,11 @@ function PropertyTable({
   onEdit: (row: PropertySummary) => void;
 }): ReactElement {
   return (
-    <div
-      role="region"
-      aria-label={t('properties.title')}
-      tabIndex={0}
-      style={{ overflowX: 'auto' }}
-    >
-      <table data-testid="properties-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
+    <div role="region" aria-label={t('properties.title')} tabIndex={0} style={OPS_TABLE_WRAP_STYLE}>
+      <table data-testid="properties-table" style={OPS_TABULAR_STYLE}>
+        <caption
+          style={{ textAlign: 'start', padding: space.s3, fontWeight: 500, color: color.text }}
+        >
           {t('properties.title')}
         </caption>
         <thead>
@@ -86,11 +96,7 @@ function PropertyTable({
               t('properties.col.version'),
               t('properties.col.actions'),
             ].map((label) => (
-              <th
-                key={label}
-                scope="col"
-                style={{ textAlign: 'start', borderBottom: '1px solid var(--color-border)' }}
-              >
+              <th key={label} scope="col">
                 {label}
               </th>
             ))}
@@ -99,7 +105,7 @@ function PropertyTable({
         <tbody>
           {rows.map((row) => (
             <tr key={row.id}>
-              <td>{row.name}</td>
+              <td style={{ fontWeight: 500 }}>{row.name}</td>
               <td>{formatStatusWithEnum(t(`enum.propertyStatus.${row.status}`), row.status)}</td>
               <td>{row.activeRoomCount}</td>
               <td>{row.overbookLimitPct}</td>
@@ -109,7 +115,12 @@ function PropertyTable({
               <td>{row.version}</td>
               <td>
                 {canEdit ? (
-                  <button type="button" onClick={() => onEdit(row)} style={{ minHeight: 44 }}>
+                  <button
+                    type="button"
+                    onClick={() => onEdit(row)}
+                    className="ph-btn"
+                    style={OPS_COMPACT_BTN_STYLE}
+                  >
                     {t('properties.edit')}
                   </button>
                 ) : null}
@@ -141,7 +152,7 @@ function PropertyEditor({
     update: (value: string) => void,
     type = 'text',
   ): ReactElement => (
-    <label style={{ display: 'grid', gap: 4 }}>
+    <label style={OPS_FIELD_LABEL_STYLE}>
       {label}
       <input
         type={type}
@@ -156,25 +167,27 @@ function PropertyEditor({
     <form
       data-testid="property-editor"
       onSubmit={onSubmit}
-      style={{ display: 'grid', gap: 'var(--space-s2, 8px)', maxWidth: 420 }}
+      className="ph-card"
+      style={{ display: 'grid', gap: space.s4, maxWidth: 480, minWidth: 0 }}
     >
       <fieldset
         disabled={disabled}
-        style={{ display: 'grid', gap: 'var(--space-s2, 8px)', border: 0, padding: 0 }}
+        style={{ display: 'grid', gap: space.s3, border: 0, padding: 0, margin: 0 }}
       >
-        <legend>
+        <legend style={{ ...OPS_SUBTITLE_STYLE, marginBottom: space.s1 }}>
           {t('properties.form.legend', { name: draft.row.name, version: draft.row.version })}
         </legend>
         {text(t('properties.form.name'), draft.name, (value) =>
           onChange({ ...draft, name: value }),
         )}
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('properties.form.overbook')}
           <input
             type="number"
             min={0}
             max={100}
             value={draft.overbookLimitPct}
+            style={OPS_TABULAR_STYLE}
             onChange={(event) =>
               onChange({ ...draft, overbookLimitPct: Number(event.target.value) })
             }
@@ -192,7 +205,7 @@ function PropertyEditor({
           (value) => onChange({ ...draft, checkOutTime: value }),
           'time',
         )}
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('properties.form.status')}
           <select
             value={draft.status}
@@ -211,11 +224,22 @@ function PropertyEditor({
           onChange({ ...draft, reason: value }),
         )}
       </fieldset>
-      <div style={{ display: 'flex', gap: 'var(--space-s2, 8px)' }}>
-        <button disabled={disabled} type="submit" style={{ minHeight: 44 }}>
+      <div style={{ display: 'flex', gap: space.s2, flexWrap: 'wrap' }}>
+        <button
+          disabled={disabled}
+          type="submit"
+          className="ph-btn-primary"
+          style={OPS_COMPACT_BTN_STYLE}
+        >
           {t('properties.form.save')}
         </button>
-        <button disabled={disabled} type="button" onClick={onCancel} style={{ minHeight: 44 }}>
+        <button
+          disabled={disabled}
+          type="button"
+          onClick={onCancel}
+          className="ph-btn"
+          style={OPS_COMPACT_BTN_STYLE}
+        >
           {t('properties.form.cancel')}
         </button>
       </div>
@@ -266,7 +290,11 @@ function PropertyBody({ model }: { model: PropertyModel }): ReactElement {
   return (
     <>
       {saved ? (
-        <p role="status" data-testid="save-success" style={{ margin: 0 }}>
+        <p
+          role="status"
+          data-testid="save-success"
+          style={{ ...opsNoticeStyle('success'), color: color.success, fontWeight: 500 }}
+        >
           {t('properties.saved', { name: saved.name, version: saved.version })}
         </p>
       ) : null}
@@ -302,9 +330,17 @@ function PropertyComparison({ model }: { model: PropertyModel }): ReactElement |
   const { state, current, adopt } = model;
   if (state.phase !== 'conflict' || !state.canCompare || !current) return null;
   return (
-    <div data-testid="admin-comparison">
-      <p>{adminText('current', { version: current.version, name: current.name })}</p>
-      <button type="button" disabled={state.busy} onClick={adopt} style={{ minHeight: 44 }}>
+    <div data-testid="admin-comparison" style={opsNoticeStyle('warning')}>
+      <p style={{ margin: 0 }}>
+        {adminText('current', { version: current.version, name: current.name })}
+      </p>
+      <button
+        type="button"
+        disabled={state.busy}
+        onClick={adopt}
+        className="ph-btn"
+        style={{ ...OPS_COMPACT_BTN_STYLE, justifySelf: 'start' }}
+      >
         {adminText('adopt')}
       </button>
     </div>
@@ -321,24 +357,22 @@ export function PropertiesScreen(): ReactElement {
       </StateSurface>
     );
   return (
-    <section
-      style={{
-        padding: 'var(--space-s6, 24px)',
-        display: 'grid',
-        gap: 'var(--space-s4, 16px)',
-        minWidth: 0,
-      }}
-    >
-      <h1 style={{ margin: 0 }}>{t('properties.title')}</h1>
-      <p style={{ margin: 0 }}>{t('properties.intro')}</p>
-      <button
-        type="button"
-        disabled={state.busy}
-        onClick={() => void controller?.load()}
-        style={{ minHeight: 44, justifySelf: 'start' }}
-      >
-        {t('properties.reload')}
-      </button>
+    <section style={OPS_PAGE_STYLE}>
+      <div style={OPS_HEADER_ROW_STYLE}>
+        <div style={OPS_HEADER_STYLE}>
+          <h1 style={OPS_TITLE_STYLE}>{t('properties.title')}</h1>
+          <p style={OPS_INTRO_STYLE}>{t('properties.intro')}</p>
+        </div>
+        <button
+          type="button"
+          disabled={state.busy}
+          onClick={() => void controller?.load()}
+          className="ph-btn"
+          style={OPS_COMPACT_BTN_STYLE}
+        >
+          {t('properties.reload')}
+        </button>
+      </div>
       <AdminPanels
         state={state}
         controller={controller}

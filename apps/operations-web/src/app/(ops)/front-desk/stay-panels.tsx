@@ -1,11 +1,11 @@
 'use client';
 import { useState, type ReactElement } from 'react';
 import { isApiError } from '@pinehill/api-client';
-import { formatDateTimeVn, formatMoney } from '@pinehill/ui-web';
+import { color, formatDateTimeVn, formatMoney, radius, space } from '@pinehill/ui-web';
 import type { BookingSummary, CheckOutResponse, NoShowResponse } from '@pinehill/contracts';
 import type { DeskApi } from './front-desk-api';
 import { actionFailure, checkOutBody, type ActionFailure } from './front-desk-model';
-import { CONTROL, FailureNotice } from './desk-tables';
+import { FailureNotice } from './desk-tables';
 import {
   pinFailure,
   pinGrantValid,
@@ -99,8 +99,21 @@ export function CheckOutPanel({
   };
   if (result !== null)
     return (
-      <div role="status" data-testid="check-out-done" style={{ display: 'grid', gap: 4 }}>
-        <p style={{ margin: 0 }}>
+      <div
+        role="status"
+        data-testid="check-out-done"
+        style={{
+          display: 'grid',
+          gap: 6,
+          padding: `${space.s3}px ${space.s4}px`,
+          background: '#E7F3EE',
+          border: `1px solid ${color.border}`,
+          boxShadow: `inset 0 0 0 1px ${color.success}`,
+          borderRadius: radius.sm,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        <p style={{ margin: 0, color: color.success, fontWeight: 500 }}>
           {deskText('checkoutDone', {
             code: booking.code,
             time: formatDateTimeVn(result.checkedOutAt),
@@ -119,8 +132,20 @@ export function CheckOutPanel({
       </div>
     );
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <p style={{ margin: 0 }} data-testid="checkout-policy">
+    <div style={{ display: 'grid', gap: space.s3, maxWidth: 560 }}>
+      <p
+        style={{
+          margin: 0,
+          padding: `${space.s2}px ${space.s3}px`,
+          background: '#FDF8EF',
+          border: `1px solid ${color.border}`,
+          boxShadow: `inset 0 0 0 1px ${color.warning}`,
+          borderRadius: radius.sm,
+          fontSize: 13,
+          color: color.warning,
+        }}
+        data-testid="checkout-policy"
+      >
         {deskText('checkoutNote')}
       </p>
       <PinDialog
@@ -138,7 +163,7 @@ export function CheckOutPanel({
         title={deskText('checkOutTitle', { code: booking.code })}
         description={deskText('pinRequired')}
       />
-      <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 44 }}>
         <input
           type="checkbox"
           name="earlyCheckOut"
@@ -150,7 +175,7 @@ export function CheckOutPanel({
         />
         {deskText('earlyCheckout')}
       </label>
-      <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 44 }}>
         <input
           type="checkbox"
           name="lateCheckOut"
@@ -162,10 +187,9 @@ export function CheckOutPanel({
         />
         {deskText('lateCheckout')}
       </label>
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 500 }}>
         {deskText('note')}
         <input
-          style={CONTROL}
           name="note"
           maxLength={500}
           value={note}
@@ -178,7 +202,8 @@ export function CheckOutPanel({
       {failure === null ? null : <FailureNotice failure={failure} onInspect={onInspect} />}
       <button
         type="button"
-        style={CONTROL}
+        className="ph-btn-primary"
+        style={{ justifySelf: 'start' }}
         disabled={busy || step !== 'verified'}
         onClick={() => {
           void submit();
@@ -222,8 +247,21 @@ export function NoShowPanel({
   };
   if (result !== null)
     return (
-      <div role="status" data-testid="no-show-done" style={{ display: 'grid', gap: 4 }}>
-        <p style={{ margin: 0 }}>
+      <div
+        role="status"
+        data-testid="no-show-done"
+        style={{
+          display: 'grid',
+          gap: 6,
+          padding: `${space.s3}px ${space.s4}px`,
+          background: '#E7F3EE',
+          border: `1px solid ${color.border}`,
+          boxShadow: `inset 0 0 0 1px ${color.success}`,
+          borderRadius: radius.sm,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        <p style={{ margin: 0, color: color.success, fontWeight: 500 }}>
           {deskText('noShowDone', { code: booking.code, time: formatDateTimeVn(result.markedAt) })}
         </p>
         <p style={{ margin: 0 }}>
@@ -240,15 +278,26 @@ export function NoShowPanel({
         event.preventDefault();
         void submit();
       }}
-      style={{ display: 'grid', gap: 12 }}
+      style={{ display: 'grid', gap: space.s3, maxWidth: 560 }}
     >
-      <p style={{ margin: 0 }} data-testid="no-show-policy">
+      <p
+        style={{
+          margin: 0,
+          padding: `${space.s2}px ${space.s3}px`,
+          background: '#FDF8EF',
+          border: `1px solid ${color.border}`,
+          boxShadow: `inset 0 0 0 1px ${color.warning}`,
+          borderRadius: radius.sm,
+          fontSize: 13,
+          color: color.warning,
+        }}
+        data-testid="no-show-policy"
+      >
         {deskText('noShowPolicy')}
       </p>
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 500 }}>
         {deskText('reason')}
         <input
-          style={CONTROL}
           name="reason"
           required
           maxLength={500}
@@ -260,7 +309,12 @@ export function NoShowPanel({
         />
       </label>
       {failure === null ? null : <FailureNotice failure={failure} onInspect={onInspect} />}
-      <button type="submit" style={CONTROL} disabled={busy || reason.trim() === ''}>
+      <button
+        type="submit"
+        className="ph-btn-primary"
+        style={{ justifySelf: 'start' }}
+        disabled={busy || reason.trim() === ''}
+      >
         {deskText('submitNoShow')}
       </button>
     </form>

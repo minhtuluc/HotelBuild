@@ -4,7 +4,7 @@ import { makeTranslate } from '@pinehill/ui-web/messages';
 const messages = {
   reconcileTitle: 'Đối soát doanh thu và chốt quỹ cuối ngày',
   reconcileIntro:
-    'Chốt quỹ theo (người thu, ngày nghiệp vụ VN — BR-PAY-06). Chênh lệch vượt ngưỡng cấu hình tự động cảnh báo quản lý (BR-PAY-10).',
+    'Chốt quỹ theo (người thu, ngày nghiệp vụ VN). Chênh lệch vượt ngưỡng cấu hình tự động cảnh báo quản lý.',
   property: 'Cơ sở',
   businessDate: 'Ngày nghiệp vụ (VN)',
   reload: 'Tải dữ liệu',
@@ -27,11 +27,11 @@ const messages = {
   countedCashResult: 'Tiền mặt thực đếm: {amount}',
   difference: 'Chênh lệch (thực đếm − kỳ vọng): {amount}',
   discrepancyAlert:
-    'Cảnh báo chênh lệch quỹ vượt ngưỡng! Hệ thống đã ghi nhận cảnh báo gửi quản lý cơ sở (BR-PAY-10).',
+    'Cảnh báo chênh lệch quỹ vượt ngưỡng! Hệ thống đã ghi nhận cảnh báo gửi quản lý cơ sở.',
   auditRef: 'Mã nhật ký kiểm toán: {id}',
   earlyTitle: 'Xử lý trả phòng sớm',
   earlyIntro:
-    'Xem trước phụ thu trả phòng sớm theo chính sách gói giá (BR-CANCEL-09, BR-FO-05) trước khi xác nhận trả phòng và giải phóng các đêm còn lại.',
+    'Xem trước phụ thu trả phòng sớm theo chính sách gói giá trước khi xác nhận trả phòng và giải phóng các đêm còn lại.',
   backToBooking: 'Quay lại chi tiết đặt phòng',
   bookingInfo: 'Đặt phòng {code} · Trạng thái {status} · Kỳ ở {checkIn} → {checkOut}',
   bookingAmounts: 'Tổng tiền: {total} · Đã thu: {paid} · Còn phải thu: {due}',

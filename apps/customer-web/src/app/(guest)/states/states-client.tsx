@@ -15,7 +15,9 @@ export function StatesClient(): ReactElement {
       <form>
         <label htmlFor="adults">{t('guest.states.adults')}</label>
         <input id="adults" name="adults" type="number" defaultValue={2} />
-        <button type="button">{t('guest.states.continue')}</button>
+        <button className="ph-btn" type="button">
+          {t('guest.states.continue')}
+        </button>
       </form>
     </StateSurface>
   );

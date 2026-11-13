@@ -3,7 +3,8 @@
 /** Bảng danh sách khuyến mãi của SCR-29 (tách khỏi màn hình cho gọn). */
 import type { ReactElement } from 'react';
 import type { PromotionSummary } from '@pinehill/contracts';
-import { formatDateTimeVn } from '@pinehill/ui-web';
+import { formatDateTimeVn, space } from '@pinehill/ui-web';
+import { OPS_TABLE_WRAP_STYLE, OPS_TABULAR_STYLE } from '../../../components/editorial-styles';
 import { t } from '../../../lib/i18n';
 import { usageText } from '../../../lib/promotions';
 
@@ -19,19 +20,17 @@ export function PromotionTable({ rows }: { rows: readonly PromotionSummary[] }):
     t('promotions.col.status'),
   ];
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table data-testid="promotions-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
+    <div style={OPS_TABLE_WRAP_STYLE}>
+      <table data-testid="promotions-table" style={{ ...OPS_TABULAR_STYLE, width: '100%' }}>
+        <caption
+          style={{ textAlign: 'start', padding: `${space.s3}px ${space.s4}px`, fontWeight: 600 }}
+        >
           {t('promotions.list.title')}
         </caption>
         <thead>
           <tr>
             {headers.map((label) => (
-              <th
-                key={label}
-                scope="col"
-                style={{ textAlign: 'start', borderBottom: '1px solid var(--color-border)' }}
-              >
+              <th key={label} scope="col">
                 {label}
               </th>
             ))}

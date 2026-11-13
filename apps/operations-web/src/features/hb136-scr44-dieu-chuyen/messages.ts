@@ -2,7 +2,7 @@ import { makeTranslate } from '@pinehill/ui-web/messages';
 
 /** Câu chữ riêng của SCR-44 (HB-136); danh mục chung `lib/i18n.ts` không thuộc ticket nên không sửa. */
 export const text = makeTranslate({
-  title: 'Đề xuất và thực hiện điều chuyển (SCR-44)',
+  title: 'Đề xuất và thực hiện điều chuyển',
   intro:
     'Màn hình chỉ hiển thị phương án, thứ hạng và quyền do máy chủ trả; không tính keepScore, không sắp lại, không tự thử bậc sau.',
   loading: 'Đang tải…',
@@ -11,10 +11,10 @@ export const text = makeTranslate({
   serverError: 'Máy chủ gặp lỗi. Dữ liệu đang hiện có thể đã cũ.',
   expired: 'Phiên đã hết hạn. Đăng nhập lại để tiếp tục.',
   forbidden: 'Bạn không có quyền xem hoặc thao tác nội dung này.',
-  noCase: 'Thiếu mã ca (caseId) trên đường dẫn. Mở từ SCR-43 hoặc cảnh báo quá tải.',
+  noCase: 'Thiếu mã ca (caseId) trên đường dẫn. Mở từ bảng quá tải hoặc cảnh báo quá tải.',
   reload: 'Tải lại dữ liệu',
   reference: 'Mã tham chiếu: {reference}',
-  back: 'Về bảng quá tải (SCR-43)',
+  back: 'Về bảng quá tải',
   // Ca và thang
   caseTitle: 'Ca quá tải',
   caseLine: 'Ngày {date} · thiếu {count} · hạn {deadline} · {state}',
@@ -27,7 +27,7 @@ export const text = makeTranslate({
   // Ứng viên
   candidatesTitle: 'Bảng xếp hạng đầy đủ (thứ tự do máy chủ đặt)',
   candidatesNote:
-    'Nhóm ưu tiên cứng (BR-OVER-12) lọc trước, rồi keepScore tăng dần, createdAt giảm dần, seq tăng dần. Không lược bảng.',
+    'Nhóm ưu tiên cứng lọc trước, rồi keepScore tăng dần, createdAt giảm dần, seq tăng dần. Không lược bảng.',
   colRank: 'Hạng',
   colBooking: 'Booking',
   colGuest: 'Khách (đã che)',

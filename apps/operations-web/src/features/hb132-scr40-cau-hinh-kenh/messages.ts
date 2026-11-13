@@ -2,9 +2,8 @@ import { makeTranslate } from '@pinehill/ui-web/messages';
 
 /** Câu chữ riêng của SCR-40 (HB-132); danh mục chung `lib/i18n.ts` không thuộc ticket nên không sửa. */
 export const text = makeTranslate({
-  title: 'Cấu hình kênh bán (SCR-40)',
-  intro:
-    'Màn hình chỉ hiển thị và gửi lệnh; hạn mức, trần, đóng bán và quyền do máy chủ quyết định.',
+  title: 'Cấu hình kênh bán',
+  intro: 'Hạn mức, trần bán vượt, đóng bán theo kênh. Hệ thống kiểm quyền và giới hạn khi lưu.',
   property: 'Cơ sở',
   channel: 'Kênh',
   roomType: 'Loại phòng',
@@ -34,7 +33,7 @@ export const text = makeTranslate({
   mappingTitle: 'Ánh xạ mã phòng OTA',
   mappingOwnerOnly: 'Chỉ OWNER được cấu hình ánh xạ; quyền cuối cùng do máy chủ kiểm.',
   mappingUnreadable:
-    'Chưa có đường đọc ánh xạ hiện tại (chờ projection HB-120). Chỉ hiện ánh xạ máy chủ đã xác nhận trong phiên này.',
+    'Chưa có đường đọc ánh xạ hiện tại. Chỉ hiện ánh xạ máy chủ đã xác nhận trong phiên này.',
   providerCode: 'Mã phòng OTA',
   allotmentPct: 'Hạn mức (%)',
   ratePlanCode: 'Mã gói giá OTA (tuỳ chọn)',

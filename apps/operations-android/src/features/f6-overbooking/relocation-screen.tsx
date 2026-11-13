@@ -6,9 +6,10 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import type { UserMe } from '@pinehill/contracts';
-import { color, space, touchTargetDp, typography } from '@pinehill/ui-native';
+import { color, space } from '@pinehill/ui-native';
 import { ActionButton, CheckRow } from '../../arrivals/controls';
 import type { Session } from '../../session';
+import { theme } from '../../theme';
 import { RelocationFlow, type Command, type FlowState } from './flow';
 import { f6Text as text } from './messages';
 import {
@@ -190,13 +191,7 @@ function CreateForm({ state, flow }: { state: FlowState; flow: RelocationFlow })
         placeholder={text('reason')}
         value={state.draft.reason}
         onChangeText={(reason) => flow.edit({ ...state.draft, reason })}
-        style={{
-          minHeight: touchTargetDp,
-          borderWidth: 1,
-          borderColor: color.border,
-          borderRadius: 8,
-          paddingHorizontal: space.s3,
-        }}
+        style={theme.field}
       />
       <CheckRow
         testID="consent-check"
@@ -308,18 +303,19 @@ export function RelocationScreen(props: RelocationScreenProps): ReactElement {
   const role = props.profile.role;
   const missing = !canReadCases(role) && props.context.bookingId === '';
   return (
-    <ScrollView contentContainerStyle={{ padding: space.s4, gap: space.s3 }}>
-      <Text
-        accessibilityRole="header"
-        style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}
-      >
+    <ScrollView style={theme.scroll} contentContainerStyle={theme.scrollContent}>
+      <Text accessibilityRole="header" style={theme.title}>
         {text('moveTitle')}
       </Text>
-      <Text style={{ color: color.textMuted }}>{text('moveHint')}</Text>
-      {missing ? <Text testID="no-booking">{text('noBooking')}</Text> : null}
+      <Text style={theme.muted}>{text('moveHint')}</Text>
+      {missing ? (
+        <Text testID="no-booking" style={theme.alertDanger}>
+          {text('noBooking')}
+        </Text>
+      ) : null}
       <ReadNote read={read} />
       {read.stale ? (
-        <Text testID="relocation-stale" accessibilityLiveRegion="polite">
+        <Text testID="relocation-stale" accessibilityLiveRegion="polite" style={theme.alertWarning}>
           {text('staleError', { time: read.syncedAt ?? '—' })}
         </Text>
       ) : null}

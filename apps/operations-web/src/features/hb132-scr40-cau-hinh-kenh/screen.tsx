@@ -1,6 +1,19 @@
 'use client';
 import type { ReactElement } from 'react';
 import type { ChannelSummary } from '@pinehill/contracts';
+import { space } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FILTER_ROW_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_SUBTITLE_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../components/editorial-styles';
 import { ClosureForm, MappingForm } from './forms';
 import { text } from './messages';
 import { canClose, canMap, type FieldIssue } from './model';
@@ -31,7 +44,14 @@ function Selectors({
   const options = <T extends { id: string }>(rows: readonly T[], label: (row: T) => string) =>
     rows.map((row) => ({ id: row.id, label: label(row) }));
   return (
-    <div style={{ ...box, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))' }}>
+    <div
+      className="ph-card"
+      style={{
+        ...OPS_FILTER_ROW_STYLE,
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))',
+      }}
+    >
       <SelectInput
         name="propertyId"
         label={text('property')}
@@ -83,13 +103,13 @@ function RateWarnings({ channel }: { channel: ChannelSummary }): ReactElement | 
   const warnings = channel.rateWarnings ?? [];
   if (warnings.length === 0) return null;
   return (
-    <div data-testid="hb132-rate-warning">
+    <div data-testid="hb132-rate-warning" style={opsNoticeStyle('warning')}>
       {warnings.map((code) => (
-        <p key={code} role="status">
+        <p key={code} role="status" style={{ margin: 0 }}>
           {text(RATE_WARNING_TEXT[code])}
         </p>
       ))}
-      <p>{text('rateScope')}</p>
+      <p style={{ margin: 0 }}>{text('rateScope')}</p>
     </div>
   );
 }
@@ -104,30 +124,35 @@ export function Projection({ state }: { state: ControllerState }): ReactElement 
   const type = data.roomTypes.find((row) => row.id === selection.roomTypeId);
   if (property === undefined || channel === undefined || type === undefined) return null;
   return (
-    <section style={box} aria-labelledby="hb132-config-title" data-testid="hb132-config">
-      <h2 id="hb132-config-title">
+    <section
+      className="ph-card"
+      style={{ ...box, padding: space.s4 }}
+      aria-labelledby="hb132-config-title"
+      data-testid="hb132-config"
+    >
+      <h2 id="hb132-config-title" style={OPS_SUBTITLE_STYLE}>
         {text('scope', { name: property.name, channel: channel.name, roomType: type.code })}
       </h2>
-      <p>{text('ceiling', { pct: property.overbookLimitPct })}</p>
-      <p>
+      <p style={{ margin: 0 }}>{text('ceiling', { pct: property.overbookLimitPct })}</p>
+      <p style={{ margin: 0 }}>
         {type.sellingUnits === undefined
           ? text('sellingUnitsUnknown')
           : text('sellingUnits', { units: type.sellingUnits })}
       </p>
-      <p>
+      <p style={{ margin: 0 }}>
         {text('overbookAllowed', { value: channel.overbookAllowed ? text('yes') : text('no') })}
       </p>
       <RateWarnings channel={channel} />
       {data.rows.length === 0 ? (
-        <p>{text('noRows')}</p>
+        <p style={{ margin: 0 }}>{text('noRows')}</p>
       ) : (
         <div
           role="region"
           aria-label={text('tableLabel')}
           tabIndex={0}
-          style={{ overflowX: 'auto', maxWidth: '100%' }}
+          style={OPS_TABLE_WRAP_STYLE}
         >
-          <table data-testid="hb132-allotments">
+          <table data-testid="hb132-allotments" style={OPS_TABULAR_STYLE}>
             <thead>
               <tr>
                 <th scope="col">{text('colDate')}</th>
@@ -159,7 +184,7 @@ function Confirmed({ state }: { state: ControllerState }): ReactElement | null {
   const confirmed = state.confirmed[mappingKey(channelId, roomTypeId)];
   if (confirmed === undefined) return null;
   return (
-    <p role="status" data-testid="hb132-confirmed-mapping">
+    <p role="status" data-testid="hb132-confirmed-mapping" style={opsNoticeStyle('success')}>
       {text('confirmedMapping', {
         code: confirmed.mapping.providerRoomTypeCode,
         pct: confirmed.mapping.allotmentPct,
@@ -228,9 +253,10 @@ function Workspace({
     <>
       <button
         type="button"
+        className="ph-btn"
         disabled={state.command.kind === 'sending'}
         onClick={() => void controller.load()}
-        style={{ minHeight: 44, justifySelf: 'start' }}
+        style={{ ...OPS_COMPACT_BTN_STYLE, justifySelf: 'start' }}
       >
         {text('reload')}
       </button>
@@ -262,11 +288,15 @@ export function ChannelConfigurationScreen(): ReactElement {
   const { state, controller } = useConfig();
   const denied = state.phase === 'forbidden' || state.phase === 'expired';
   return (
-    <section style={{ padding: 'var(--space-s6, 24px)', ...box, gap: 'var(--space-s4, 16px)' }}>
-      <h1 style={{ margin: 0 }}>{text('title')}</h1>
-      <p>{text('intro')}</p>
+    <section style={OPS_PAGE_STYLE}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{text('title')}</h1>
+        <p style={OPS_INTRO_STYLE}>{text('intro')}</p>
+      </header>
       {denied ? (
-        <p role="alert">{text(state.phase === 'expired' ? 'expired' : 'forbidden')}</p>
+        <p role="alert" style={opsNoticeStyle('danger')}>
+          {text(state.phase === 'expired' ? 'expired' : 'forbidden')}
+        </p>
       ) : null}
       <ReadBanner state={state} />
       {!denied && controller !== null && state.data !== null ? (

@@ -3,7 +3,12 @@
 /** Bảng kênh và bảng ghi đè theo cơ sở của SCR-28 (tách khỏi màn hình cho gọn). */
 import type { ReactElement } from 'react';
 import type { ChannelDetail, ChannelSummary } from '@pinehill/contracts';
-import { formatMultiplier } from '@pinehill/ui-web';
+import { formatMultiplier, space } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+} from '../../../components/editorial-styles';
 import { t } from '../../../lib/i18n';
 import { channelWarnings, floorMultiplier, type ChannelWarning } from '../../../lib/channels';
 
@@ -41,19 +46,17 @@ export function ChannelTable({
     t('channels.col.actions'),
   ];
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table data-testid="channels-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
+    <div style={OPS_TABLE_WRAP_STYLE}>
+      <table data-testid="channels-table" style={{ ...OPS_TABULAR_STYLE, width: '100%' }}>
+        <caption
+          style={{ textAlign: 'start', padding: `${space.s3}px ${space.s4}px`, fontWeight: 600 }}
+        >
           {t('channels.title')}
         </caption>
         <thead>
           <tr>
             {headers.map((label) => (
-              <th
-                key={label}
-                scope="col"
-                style={{ textAlign: 'start', borderBottom: '1px solid var(--color-border)' }}
-              >
+              <th key={label} scope="col">
                 {label}
               </th>
             ))}
@@ -75,9 +78,10 @@ export function ChannelTable({
                 <td>
                   <button
                     type="button"
+                    className="ph-btn"
                     onClick={() => onEdit(channel)}
                     aria-pressed={selectedId === channel.id}
-                    style={{ minHeight: 44 }}
+                    style={OPS_COMPACT_BTN_STYLE}
                   >
                     {t('channels.edit')}
                   </button>
@@ -109,19 +113,17 @@ export function OverrideTable({ channel }: { channel: ChannelDetail }): ReactEle
     t('channels.override.effectiveFrom'),
   ];
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table data-testid="channel-overrides" style={{ borderCollapse: 'collapse' }}>
-        <caption style={{ textAlign: 'start' }}>
+    <div style={OPS_TABLE_WRAP_STYLE}>
+      <table data-testid="channel-overrides" style={OPS_TABULAR_STYLE}>
+        <caption
+          style={{ textAlign: 'start', padding: `${space.s3}px ${space.s4}px`, fontWeight: 600 }}
+        >
           {t('channels.override.title')} · {channel.code}
         </caption>
         <thead>
           <tr>
             {headers.map((label) => (
-              <th
-                key={label}
-                scope="col"
-                style={{ textAlign: 'start', borderBottom: '1px solid var(--color-border)' }}
-              >
+              <th key={label} scope="col">
                 {label}
               </th>
             ))}

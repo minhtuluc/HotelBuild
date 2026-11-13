@@ -4,7 +4,7 @@ export const CONTROL = {
   minHeight: touchTargetPx,
   border: `1px solid ${color.borderStrong}`,
   borderRadius: radius.sm,
-  padding: space.s2,
+  padding: `${space.s2}px 14px`,
   background: color.surface,
   color: color.text,
   maxWidth: '100%',
@@ -16,6 +16,9 @@ export const FIELD = {
   gap: 4,
   minWidth: 0,
   maxWidth: '100%',
+  fontSize: 13,
+  fontWeight: 500,
+  color: color.text,
 } as const;
 
 export const PANEL = {
@@ -23,6 +26,6 @@ export const PANEL = {
   gap: space.s3,
   padding: space.s4,
   border: `1px solid ${color.border}`,
-  borderRadius: radius.md,
+  borderRadius: radius.sm,
   background: color.surface,
 } as const;

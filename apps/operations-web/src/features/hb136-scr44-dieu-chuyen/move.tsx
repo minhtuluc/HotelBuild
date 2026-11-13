@@ -184,12 +184,18 @@ export function MovePanel(props: {
   const { view } = props.move;
   const close = () => setAsking(null);
   return (
-    <section style={box} aria-labelledby="hb136-move-title" data-testid="hb136-move">
+    <section
+      className="ph-card"
+      style={box}
+      aria-labelledby="hb136-move-title"
+      data-testid="hb136-move"
+    >
       <MoveSummary move={props.move} />
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div className="ph-actions">
         {actionAllowed(props.role, 'APPROVE', view) ? (
           <button
             type="button"
+            className="ph-btn-primary"
             disabled={props.busy}
             onClick={() => setAsking('approve')}
             style={{ minHeight: 44 }}
@@ -201,6 +207,7 @@ export function MovePanel(props: {
         {actionAllowed(props.role, 'EXECUTE', view) ? (
           <button
             type="button"
+            className="ph-btn-primary"
             disabled={props.busy}
             onClick={() => setAsking('execute')}
             style={{ minHeight: 44 }}

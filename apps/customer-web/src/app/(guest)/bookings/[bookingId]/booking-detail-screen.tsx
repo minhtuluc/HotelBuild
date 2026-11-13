@@ -2,11 +2,7 @@
 
 /**
  * SCR-10 — chi tiết booking của tôi (UC-BOOK-07): đọc lại booking **và** số dư từ máy chủ, hiện lối vào
- * các thao tác huỷ/đổi ngày (SCR-11/SCR-12 — ticket riêng).
- *
- * Phạm vi dữ liệu (HB-102, chủ dự án đã duyệt): hợp đồng hiện chỉ có `bookings/{id}` + `bookings/{id}/balance`,
- * **chưa** có PriceSnapshot từng đêm, danh sách Payment và RoomAssignment. Màn hình nói rõ phần chưa có
- * thay vì bịa số liệu.
+ * các thao tác huỷ/đổi ngày (SCR-11/SCR-12).
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { useParams } from 'next/navigation';
@@ -28,8 +24,6 @@ import { fetchBooking } from '../../booking/booking-api';
 import { STATUS_KEYS, balanceRows, stayText, type BalanceRow } from '../model';
 import { formatCountdown, holdView, type HoldView } from '../../booking/booking-model';
 
-const CELL = { padding: '4px 12px 4px 0', textAlign: 'left' } as const;
-
 const BALANCE_KEYS: Readonly<Record<BalanceRow['key'], Parameters<typeof t>[0]>> = {
   total: 'guest.bookings.balance.total',
   paid: 'guest.bookings.balance.paid',
@@ -40,28 +34,34 @@ const BALANCE_KEYS: Readonly<Record<BalanceRow['key'], Parameters<typeof t>[0]>>
 
 function BalancePanel({ balance }: { balance: BookingBalance }): ReactElement {
   return (
-    <table data-testid="booking-detail-balance">
-      <caption style={{ textAlign: 'left', paddingBottom: 4 }}>
-        {t('guest.bookings.balance.title')}
-      </caption>
-      <tbody>
-        {balanceRows(balance).map((row) => (
-          <tr key={row.key}>
-            <th scope="row" style={CELL}>
-              {t(BALANCE_KEYS[row.key])}
-            </th>
-            <td style={CELL}>{formatMoney(row.amount)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="ph-table-wrap">
+      <table data-testid="booking-detail-balance">
+        <caption
+          style={{
+            textAlign: 'start',
+            padding: '14px 16px',
+            fontFamily: 'var(--font-display)',
+            fontSize: 18,
+          }}
+        >
+          {t('guest.bookings.balance.title')}
+        </caption>
+        <tbody>
+          {balanceRows(balance).map((row) => (
+            <tr key={row.key}>
+              <th scope="row">{t(BALANCE_KEYS[row.key])}</th>
+              <td className="ph-tabular" style={{ fontWeight: row.key === 'due' ? 500 : 400 }}>
+                {formatMoney(row.amount)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
-/**
- * Bảng "Kỳ lưu trú" của SCR-10: ngày nhận/trả là **ngày lịch** nên hiển thị `dd/MM/yyyy` qua helper
- * dùng chung `stayText`; giờ tạo đơn vẫn là mốc thời điểm nên giữ `formatDateTimeVn`.
- */
+/** Bảng "Kỳ lưu trú" của SCR-10: ngày nhận/trả là ngày lịch `dd/MM/yyyy` qua helper `stayText`. */
 export function StayPanel({
   booking,
   hold,
@@ -70,50 +70,60 @@ export function StayPanel({
   hold: HoldView | null;
 }): ReactElement {
   return (
-    <table data-testid="booking-detail-stay">
-      <caption style={{ textAlign: 'left', paddingBottom: 4 }}>{t('guest.booking.stay')}</caption>
-      <tbody>
-        <tr>
-          <th scope="row" style={CELL}>
-            {t('guest.booking.stay.period')}
-          </th>
-          <td style={CELL}>{stayText(booking)}</td>
-        </tr>
-        <tr>
-          <th scope="row" style={CELL}>
-            {t('guest.booking.stay.rooms')}
-          </th>
-          <td style={CELL}>{booking.roomCount}</td>
-        </tr>
-        <tr>
-          <th scope="row" style={CELL}>
-            {t('guest.booking.created')}
-          </th>
-          <td style={CELL}>{formatDateTimeVn(booking.createdAt)}</td>
-        </tr>
-        {hold === null || hold.kind !== 'active' ? null : (
+    <div className="ph-table-wrap">
+      <table data-testid="booking-detail-stay">
+        <caption
+          style={{
+            textAlign: 'start',
+            padding: '14px 16px',
+            fontFamily: 'var(--font-display)',
+            fontSize: 18,
+          }}
+        >
+          {t('guest.booking.stay')}
+        </caption>
+        <tbody>
           <tr>
-            <th scope="row" style={CELL}>
-              {t('guest.bookings.col.hold')}
-            </th>
-            <td style={CELL} data-testid="booking-detail-hold">
-              {formatCountdown(hold.remainingMs)}
-            </td>
+            <th scope="row">{t('guest.booking.stay.period')}</th>
+            <td className="ph-tabular">{stayText(booking)}</td>
           </tr>
-        )}
-      </tbody>
-    </table>
+          <tr>
+            <th scope="row">{t('guest.booking.stay.rooms')}</th>
+            <td className="ph-tabular">{booking.roomCount}</td>
+          </tr>
+          <tr>
+            <th scope="row">{t('guest.booking.created')}</th>
+            <td className="ph-tabular">{formatDateTimeVn(booking.createdAt)}</td>
+          </tr>
+          {hold === null || hold.kind !== 'active' ? null : (
+            <tr>
+              <th scope="row">{t('guest.bookings.col.hold')}</th>
+              <td className="ph-tabular" data-testid="booking-detail-hold">
+                {formatCountdown(hold.remainingMs)}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 function DetailActions({ bookingId }: { bookingId: string }): ReactElement {
   return (
-    <div data-testid="booking-detail-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      <Link href={`/bookings/${bookingId}/cancel`}>{t('guest.bookings.action.cancel')}</Link>
-      <Link href={`/bookings/${bookingId}/reschedule`}>
+    <div
+      data-testid="booking-detail-actions"
+      style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}
+    >
+      <Link href={`/bookings/${bookingId}/cancel`} className="ph-btn">
+        {t('guest.bookings.action.cancel')}
+      </Link>
+      <Link href={`/bookings/${bookingId}/reschedule`} className="ph-btn">
         {t('guest.bookings.action.reschedule')}
       </Link>
-      <Link href={`/booking/${bookingId}`}>{t('guest.bookings.action.hold')}</Link>
+      <Link href={`/booking/${bookingId}`} className="ph-btn-primary">
+        {t('guest.bookings.action.hold')}
+      </Link>
     </div>
   );
 }
@@ -136,7 +146,6 @@ export function BookingDetailScreen(): ReactElement {
     setNotFound(false);
     setState({ kind: 'loading' });
     try {
-      // Booking và số dư đọc song song từ hai tuyến cần phiên khách (máy chủ vẫn là nơi giới hạn chủ thể).
       const [loaded, loadedBalance] = await Promise.all([
         fetchBooking(session, bookingId),
         fetchBookingBalance(session, bookingId),
@@ -149,9 +158,8 @@ export function BookingDetailScreen(): ReactElement {
       const status = isApiError(caught) ? caught.status : undefined;
       setBooking(null);
       setBalance(null);
-      if (status === 403) {
-        setState({ kind: 'forbidden' });
-      } else if (status === 404) {
+      if (status === 403) setState({ kind: 'forbidden' });
+      else if (status === 404) {
         setNotFound(true);
         setState({ kind: 'ready' });
       } else {
@@ -165,22 +173,25 @@ export function BookingDetailScreen(): ReactElement {
     void load();
   }, [load]);
 
-  if (state.kind === 'forbidden') return <AccessDeniedPanel backHref="/bookings" />;
+  if (state.kind === 'forbidden')
+    return (
+      <div className="ph-page-shell">
+        <AccessDeniedPanel backHref="/bookings" />
+      </div>
+    );
 
   if (notFound) {
     return (
-      <section
-        role="alert"
-        data-testid="booking-detail-not-found"
-        style={{
-          display: 'grid',
-          gap: 'var(--space-s3, 12px)',
-          padding: 'var(--space-s4, 16px) 0',
-        }}
-      >
-        <h1 style={{ margin: 0 }}>{t('guest.bookings.detail.title')}</h1>
-        <p style={{ margin: 0 }}>{t('guest.booking.notFound')}</p>
-        <Link href="/bookings">{t('guest.bookings.back')}</Link>
+      <section role="alert" data-testid="booking-detail-not-found" className="ph-page-shell">
+        <div className="ph-page-header">
+          <h1 className="ph-page-title">{t('guest.bookings.detail.title')}</h1>
+        </div>
+        <div className="ph-alert-box">
+          <p style={{ margin: 0 }}>{t('guest.booking.notFound')}</p>
+          <Link href="/bookings" className="ph-btn">
+            {t('guest.bookings.back')}
+          </Link>
+        </div>
       </section>
     );
   }
@@ -188,37 +199,67 @@ export function BookingDetailScreen(): ReactElement {
   const hold = booking === null ? null : holdView(booking, Date.now());
 
   return (
-    <section
-      data-testid="booking-detail"
-      style={{ display: 'grid', gap: 'var(--space-s3, 12px)', padding: 'var(--space-s4, 16px) 0' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('guest.bookings.detail.title')}</h1>
+    <section data-testid="booking-detail" className="ph-page-shell">
+      <div className="ph-page-header">
+        <h1 className="ph-page-title">{t('guest.bookings.detail.title')}</h1>
+      </div>
       <StateSurface state={state}>
         {readError ? (
-          <div role="alert" data-testid="booking-detail-alert" style={{ display: 'grid', gap: 8 }}>
+          <div role="alert" data-testid="booking-detail-alert" className="ph-alert-box">
             <p style={{ margin: 0 }}>{t('guest.bookings.error')}</p>
-            <button type="button" data-testid="booking-detail-retry" onClick={() => void load()}>
+            <button
+              type="button"
+              data-testid="booking-detail-retry"
+              className="ph-btn"
+              onClick={() => void load()}
+            >
               {t('guest.results.retry')}
             </button>
           </div>
         ) : null}
         {booking === null ? (
-          <Link href="/bookings">{t('guest.bookings.back')}</Link>
+          <div>
+            <Link href="/bookings" className="ph-btn">
+              {t('guest.bookings.back')}
+            </Link>
+          </div>
         ) : (
-          <>
-            <p data-testid="booking-detail-code" style={{ margin: 0 }}>
-              <code style={{ fontSize: 'var(--text-h2, 20px)' }}>{booking.code}</code>
-            </p>
-            <p data-testid="booking-detail-status" style={{ margin: 0 }}>
-              {formatStatusWithEnum(t(STATUS_KEYS[booking.status]), booking.status)}
-            </p>
-            <StayPanel booking={booking} hold={hold} />
-            {balance === null ? null : <BalancePanel balance={balance} />}
-            <p style={{ margin: 0 }} data-testid="booking-detail-pending">
+          <div style={{ display: 'grid', gap: 20 }}>
+            <div
+              className="ph-card"
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <p data-testid="booking-detail-code" style={{ margin: 0 }}>
+                <code
+                  className="ph-tabular"
+                  style={{ fontFamily: 'var(--font-display)', fontSize: 22 }}
+                >
+                  {booking.code}
+                </code>
+              </p>
+              <p data-testid="booking-detail-status" style={{ margin: 0, fontWeight: 500 }}>
+                {formatStatusWithEnum(t(STATUS_KEYS[booking.status]), booking.status)}
+              </p>
+            </div>
+            <div className="ph-two-col">
+              <StayPanel booking={booking} hold={hold} />
+              {balance === null ? null : <BalancePanel balance={balance} />}
+            </div>
+            <p
+              className="ph-muted-box"
+              style={{ margin: 0, fontSize: 14 }}
+              data-testid="booking-detail-pending"
+            >
               {t('guest.bookings.detail.pending')}
             </p>
             <DetailActions bookingId={bookingId} />
-          </>
+          </div>
         )}
       </StateSurface>
     </section>

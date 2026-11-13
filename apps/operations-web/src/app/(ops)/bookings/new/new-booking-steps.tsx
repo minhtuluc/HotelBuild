@@ -2,7 +2,7 @@
 
 /** Các bước của SCR-33/SCR-34 (HB-107): tách khỏi luồng dữ liệu để mỗi file gọn và dễ kiểm. */
 import type { ReactElement } from 'react';
-import { formatDateTimeVn, formatMoney } from '@pinehill/ui-web';
+import { formatDateTimeVn, formatMoney, space } from '@pinehill/ui-web';
 import type {
   Availability,
   BookingSummary,
@@ -11,19 +11,26 @@ import type {
   Quote,
   RatePlanPublic,
 } from '@pinehill/contracts';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_SUBTITLE_STYLE,
+  OPS_TABULAR_STYLE,
+  opsNoticeStyle,
+} from '../../../../components/editorial-styles';
 import { t } from '../../../../lib/i18n';
 import { COUNTER_CHANNELS, depositOf, planCodeOf, type NewBookingDraft } from './new-booking-model';
 
-const FIELD = { display: 'grid', gap: 4 } as const;
-
 function Field({ label, children }: { label: string; children: ReactElement }): ReactElement {
   return (
-    <label style={FIELD}>
+    <label style={OPS_FIELD_LABEL_STYLE}>
       {label}
       {children}
     </label>
   );
 }
+
+const STEP_CARD = { display: 'grid', gap: space.s3, padding: space.s4, margin: 0 } as const;
 
 export function ChannelStep({
   draft,
@@ -35,8 +42,10 @@ export function ChannelStep({
   onChange: (patch: Partial<NewBookingDraft>) => void;
 }): ReactElement {
   return (
-    <fieldset data-testid="step-channel" style={{ display: 'grid', gap: 8 }}>
-      <legend>{t('newBooking.step.channel')}</legend>
+    <fieldset data-testid="step-channel" className="ph-card" style={STEP_CARD}>
+      <legend style={{ fontWeight: 600, paddingInline: space.s2 }}>
+        {t('newBooking.step.channel')}
+      </legend>
       <Field label={t('newBooking.channel')}>
         <select
           name="channel"
@@ -124,8 +133,10 @@ export function RoomStep({
   onChange: (patch: Partial<NewBookingDraft>) => void;
 }): ReactElement {
   return (
-    <fieldset data-testid="step-room" style={{ display: 'grid', gap: 8 }}>
-      <legend>{t('newBooking.step.room')}</legend>
+    <fieldset data-testid="step-room" className="ph-card" style={STEP_CARD}>
+      <legend style={{ fontWeight: 600, paddingInline: space.s2 }}>
+        {t('newBooking.step.room')}
+      </legend>
       <Field label={t('newBooking.roomType')}>
         <select
           name="roomTypeId"
@@ -177,8 +188,10 @@ export function GuestStep({
   onLookup: () => void;
 }): ReactElement {
   return (
-    <fieldset data-testid="step-guest" style={{ display: 'grid', gap: 8 }}>
-      <legend>{t('newBooking.step.guest')}</legend>
+    <fieldset data-testid="step-guest" className="ph-card" style={STEP_CARD}>
+      <legend style={{ fontWeight: 600, paddingInline: space.s2 }}>
+        {t('newBooking.step.guest')}
+      </legend>
       <Field label={t('newBooking.guest.phone')}>
         <input
           name="guestPhone"
@@ -189,12 +202,20 @@ export function GuestStep({
         />
       </Field>
       {draft.channel !== 'PHONE' ? null : (
-        <button type="button" data-testid="guest-lookup" onClick={onLookup}>
-          {t('newBooking.guest.lookup')}
-        </button>
+        <div>
+          <button
+            type="button"
+            className="ph-btn"
+            style={OPS_COMPACT_BTN_STYLE}
+            data-testid="guest-lookup"
+            onClick={onLookup}
+          >
+            {t('newBooking.guest.lookup')}
+          </button>
+        </div>
       )}
       {found === null ? null : (
-        <p style={{ margin: 0 }} data-testid="guest-found">
+        <p style={opsNoticeStyle('info')} data-testid="guest-found">
           {t('newBooking.guest.found', { name: found.fullName, tier: found.loyaltyTier })}
         </p>
       )}
@@ -221,8 +242,14 @@ export function ConfirmStep({
   holdMinutes: number | null;
 }): ReactElement {
   return (
-    <fieldset data-testid="step-confirm" style={{ display: 'grid', gap: 8 }}>
-      <legend>{t('newBooking.step.confirm')}</legend>
+    <fieldset
+      data-testid="step-confirm"
+      className="ph-card"
+      style={{ ...STEP_CARD, ...OPS_TABULAR_STYLE }}
+    >
+      <legend style={{ fontWeight: 600, paddingInline: space.s2 }}>
+        {t('newBooking.step.confirm')}
+      </legend>
       <p style={{ margin: 0 }}>
         {t('newBooking.summary.stay', { from: draft.checkIn, to: draft.checkOut })}
       </p>
@@ -264,8 +291,8 @@ export function DoneStep({
   onPrint: () => void;
 }): ReactElement {
   return (
-    <section data-testid="step-done" style={{ display: 'grid', gap: 8 }}>
-      <h2 style={{ margin: 0 }}>{t('newBooking.done.title')}</h2>
+    <section data-testid="step-done" className="ph-card" style={STEP_CARD}>
+      <h2 style={OPS_SUBTITLE_STYLE}>{t('newBooking.done.title')}</h2>
       <p style={{ margin: 0 }} data-testid="done-code">
         {t('newBooking.done.code', { code: booking.code })}
       </p>
@@ -277,9 +304,17 @@ export function DoneStep({
       )}
       <p style={{ margin: 0 }}>{t('newBooking.done.collect')}</p>
       <p style={{ margin: 0 }}>{t('newBooking.done.notify')}</p>
-      <button type="button" data-testid="done-print" onClick={onPrint}>
-        {t('newBooking.done.print')}
-      </button>
+      <div>
+        <button
+          type="button"
+          className="ph-btn"
+          style={OPS_COMPACT_BTN_STYLE}
+          data-testid="done-print"
+          onClick={onPrint}
+        >
+          {t('newBooking.done.print')}
+        </button>
+      </div>
     </section>
   );
 }

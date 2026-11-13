@@ -1,6 +1,6 @@
 'use client';
 import { useState, type ReactElement } from 'react';
-import { formatDateTimeVn, formatMoney } from '@pinehill/ui-web';
+import { color, formatDateTimeVn, formatMoney, radius, space } from '@pinehill/ui-web';
 import type { BookingSummary, CheckInResponse, RoomSummary } from '@pinehill/contracts';
 import type { DeskApi } from './front-desk-api';
 import {
@@ -11,7 +11,7 @@ import {
   type ActionFailure,
   type RoomIssue,
 } from './front-desk-model';
-import { CONTROL, FailureNotice } from './desk-tables';
+import { FailureNotice } from './desk-tables';
 import { deskText } from './messages';
 
 /**
@@ -68,8 +68,20 @@ export function CheckInPanel({
   };
   if (result !== null)
     return (
-      <div role="status" data-testid="check-in-done" style={{ display: 'grid', gap: 4 }}>
-        <p style={{ margin: 0 }}>
+      <div
+        role="status"
+        data-testid="check-in-done"
+        style={{
+          display: 'grid',
+          gap: 6,
+          padding: `${space.s3}px ${space.s4}px`,
+          background: '#E7F3EE',
+          border: `1px solid ${color.border}`,
+          boxShadow: `inset 0 0 0 1px ${color.success}`,
+          borderRadius: radius.sm,
+        }}
+      >
+        <p style={{ margin: 0, color: color.success, fontWeight: 500 }}>
           {deskText('checkInDone', {
             code: booking.code,
             time: formatDateTimeVn(result.checkedInAt),
@@ -78,7 +90,7 @@ export function CheckInPanel({
         <p style={{ margin: 0 }}>
           {deskText('roomAssigned', { rooms: result.roomIds.join(', ') })}
         </p>
-        <p style={{ margin: 0 }}>
+        <p style={{ margin: 0, fontVariantNumeric: 'tabular-nums' }}>
           {deskText('checkInFee', { amount: formatMoney(result.earlyCheckInFee) })}
         </p>
       </div>
@@ -89,35 +101,54 @@ export function CheckInPanel({
         event.preventDefault();
         void submit();
       }}
-      style={{ display: 'grid', gap: 12 }}
+      style={{ display: 'grid', gap: space.s3, maxWidth: 560 }}
     >
-      <fieldset style={{ display: 'grid', gap: 4, border: 0, padding: 0, margin: 0 }}>
-        <legend style={{ padding: 0, marginBottom: 4 }}>
+      <fieldset style={{ display: 'grid', gap: 6, border: 0, padding: 0, margin: 0 }}>
+        <legend style={{ padding: 0, marginBottom: 4, fontSize: 13, fontWeight: 500 }}>
           {deskText('roomLabel', { count: booking.roomCount })}
         </legend>
         {choices.length === 0 ? <p style={{ margin: 0 }}>{deskText('roomEmpty')}</p> : null}
-        {choices.map((room) => (
-          <label key={room.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              type="checkbox"
-              name="actualRoomIds"
-              value={room.id}
-              checked={selected.includes(room.id)}
-              disabled={busy}
-              onChange={(event) => {
-                toggle(room.id, event.target.checked);
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: space.s2 }}>
+          {choices.map((room) => (
+            <label
+              key={room.id}
+              style={{
+                display: 'inline-flex',
+                gap: 8,
+                alignItems: 'center',
+                minHeight: 44,
+                padding: `0 ${space.s3}px`,
+                border: `1px solid ${selected.includes(room.id) ? color.primary : color.border}`,
+                borderRadius: radius.sm,
+                background: selected.includes(room.id) ? '#E7F3EE' : color.bg,
+                cursor: 'pointer',
               }}
-            />
-            {room.code}
-          </label>
-        ))}
+            >
+              <input
+                type="checkbox"
+                name="actualRoomIds"
+                value={room.id}
+                checked={selected.includes(room.id)}
+                disabled={busy}
+                onChange={(event) => {
+                  toggle(room.id, event.target.checked);
+                }}
+              />
+              <span>{room.code}</span>
+            </label>
+          ))}
+        </div>
       </fieldset>
       {issue === null ? null : (
-        <p role="alert" data-testid="room-issue" style={{ margin: 0 }}>
+        <p
+          role="alert"
+          data-testid="room-issue"
+          style={{ margin: 0, color: color.danger, fontSize: 13 }}
+        >
           {deskText('roomIssue', { count: booking.roomCount })}
         </p>
       )}
-      <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 44 }}>
         <input
           type="checkbox"
           name="earlyCheckIn"
@@ -129,11 +160,10 @@ export function CheckInPanel({
         />
         {deskText('earlyCheckIn')}
       </label>
-      <p style={{ margin: 0 }}>{deskText('earlyNote')}</p>
-      <label style={{ display: 'grid', gap: 4 }}>
+      <p style={{ margin: 0, fontSize: 13, color: color.textMuted }}>{deskText('earlyNote')}</p>
+      <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 500 }}>
         {deskText('idNumber')}
         <input
-          style={CONTROL}
           name="idNumber"
           maxLength={50}
           value={idNumber}
@@ -143,10 +173,9 @@ export function CheckInPanel({
           }}
         />
       </label>
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 500 }}>
         {deskText('note')}
         <input
-          style={CONTROL}
           name="note"
           maxLength={500}
           value={note}
@@ -157,7 +186,12 @@ export function CheckInPanel({
         />
       </label>
       {failure === null ? null : <FailureNotice failure={failure} onInspect={onInspect} />}
-      <button type="submit" style={CONTROL} disabled={busy || choices.length === 0}>
+      <button
+        type="submit"
+        className="ph-btn-primary"
+        style={{ justifySelf: 'start' }}
+        disabled={busy || choices.length === 0}
+      >
         {deskText('submitCheckIn')}
       </button>
     </form>

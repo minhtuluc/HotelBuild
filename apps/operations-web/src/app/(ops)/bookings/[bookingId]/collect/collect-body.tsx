@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactElement } from 'react';
+import { space } from '@pinehill/ui-web';
 import type { BookingBalance, BookingSummary, Payment } from '@pinehill/contracts';
 import { CollectForm, PinDialog, Receipt } from './collect-parts';
 import {
@@ -64,7 +65,7 @@ export function CollectBody({
   if (payment !== null) return <Receipt payment={payment} onPrint={onPrint} />;
   const due = booking === null || balance === null ? 0 : suggestedAmount(booking, balance, type);
   return (
-    <>
+    <div className="ph-card" style={{ display: 'grid', gap: space.s4 }}>
       <PinDialog
         step={step}
         pin={pin}
@@ -93,6 +94,6 @@ export function CollectBody({
           onSend={onSend}
         />
       )}
-    </>
+    </div>
   );
 }

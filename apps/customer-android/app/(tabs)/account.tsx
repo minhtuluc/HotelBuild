@@ -8,18 +8,12 @@
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import {
-  color,
-  radius,
-  space,
-  touchTargetDp,
-  typography,
-  formatDateTimeVn,
-} from '@pinehill/ui-native';
+import { color, space, formatDateTimeVn } from '@pinehill/ui-native';
 import type { GuestLoyalty, GuestSummary } from '@pinehill/contracts';
 import { createSession } from '../../src/session-factory';
 import { netInfoSource } from '../../src/netinfo.native';
 import { t, type MessageKey } from '../../src/strings';
+import { theme } from '../../src/theme';
 import {
   TIER_LABEL_KEYS,
   loadProfile,
@@ -56,8 +50,8 @@ function rowValue(row: ProfileRow): string {
 
 function ProfileCard({ guest }: { guest: GuestSummary }): ReactElement {
   return (
-    <View style={{ gap: space.s2 }}>
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+    <View style={theme.card}>
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {t('profile.heading')}
       </Text>
       {profileRows(guest, t('profile.dash')).map((row) => (
@@ -65,10 +59,13 @@ function ProfileCard({ guest }: { guest: GuestSummary }): ReactElement {
           key={row.key}
           accessible
           accessibilityLabel={`${t(PROFILE_KEYS[row.key])}: ${rowValue(row)}`}
-          style={{ flexDirection: 'row', gap: space.s2 }}
+          style={[
+            { flexDirection: 'row', gap: space.s2, paddingVertical: space.s1 },
+            theme.hairline,
+          ]}
         >
           <Text style={{ color: color.textMuted, flex: 1 }}>{t(PROFILE_KEYS[row.key])}</Text>
-          <Text style={CELL}>{rowValue(row)}</Text>
+          <Text style={[CELL, theme.tabular]}>{rowValue(row)}</Text>
         </View>
       ))}
     </View>
@@ -83,8 +80,8 @@ function LoyaltyPanel({
   loyalty: GuestLoyalty;
 }): ReactElement {
   return (
-    <View style={{ gap: space.s2 }}>
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+    <View style={theme.card}>
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {t('profile.loyalty.title')}
       </Text>
       <Text style={CELL} data-testid="profile-tier">
@@ -95,14 +92,17 @@ function LoyaltyPanel({
           key={row.key}
           accessible
           accessibilityLabel={`${t(LOYALTY_KEYS[row.key])}: ${row.value}`}
-          style={{ flexDirection: 'row', gap: space.s2 }}
+          style={[
+            { flexDirection: 'row', gap: space.s2, paddingVertical: space.s1 },
+            theme.hairline,
+          ]}
         >
           <Text style={{ color: color.textMuted, flex: 1 }}>{t(LOYALTY_KEYS[row.key])}</Text>
-          <Text style={CELL}>{row.value}</Text>
+          <Text style={[CELL, theme.tabular]}>{row.value}</Text>
         </View>
       ))}
       {!tierMismatch(guest, loyalty) ? null : (
-        <Text accessibilityRole="alert" style={{ color: color.warning }}>
+        <Text accessibilityRole="alert" style={theme.alertWarning}>
           {t('profile.mismatch')}
         </Text>
       )}
@@ -156,16 +156,9 @@ function ReloadButton({ busy, onReload }: { busy: boolean; onReload: () => void 
       accessibilityState={{ busy }}
       disabled={busy}
       onPress={onReload}
-      style={{
-        alignItems: 'center',
-        borderColor: color.border,
-        borderRadius: radius.sm,
-        borderWidth: 1,
-        justifyContent: 'center',
-        minHeight: touchTargetDp,
-      }}
+      style={theme.buttonSecondary}
     >
-      <Text style={{ color: color.primary }}>{t('profile.reload')}</Text>
+      <Text style={theme.buttonPlainText}>{t('profile.reload')}</Text>
     </Pressable>
   );
 }
@@ -234,14 +227,22 @@ export default function AccountScreen(): ReactElement {
   }, [load, ready]);
 
   if (!ready)
-    return <ActivityIndicator accessibilityLabel={t('state.loading')} color={color.primary} />;
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: color.bg,
+        }}
+      >
+        <ActivityIndicator accessibilityLabel={t('state.loading')} color={color.primary} />
+      </View>
+    );
 
   return (
-    <ScrollView contentContainerStyle={{ gap: space.s3, padding: space.s4 }}>
-      <Text
-        accessibilityRole="header"
-        style={{ color: color.text, fontSize: typography.h1.sp, fontWeight: '700' }}
-      >
+    <ScrollView style={theme.scroll} contentContainerStyle={theme.scrollContent}>
+      <Text accessibilityRole="header" style={theme.title}>
         {t('profile.title')}
       </Text>
       <ProfileBody

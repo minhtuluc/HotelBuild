@@ -2,7 +2,7 @@ import { makeTranslate } from '@pinehill/ui-web/messages';
 
 /** Câu chữ riêng của SCR-43 (HB-135); danh mục chung `lib/i18n.ts` không thuộc ticket nên không sửa. */
 export const text = makeTranslate({
-  title: 'Bảng điều khiển quá tải (SCR-43)',
+  title: 'Bảng điều khiển quá tải',
   intro:
     'Màn hình chỉ hiển thị ca, hạn và trạng thái do máy chủ trả; không tính lại thiếu phòng, hạn hay tự đóng ca.',
   reload: 'Tải lại dữ liệu',
@@ -55,7 +55,7 @@ export const text = makeTranslate({
   byUser: 'bởi người dùng {id}',
   bySystem: 'bởi hệ thống',
   none: '—',
-  open: 'Xử lý (SCR-44)',
+  open: 'Xử lý',
   resolve: 'Đóng ca',
   loadMore: 'Tải thêm',
   // Đóng ca

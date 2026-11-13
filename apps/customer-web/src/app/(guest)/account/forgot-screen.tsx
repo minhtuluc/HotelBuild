@@ -65,11 +65,23 @@ export function ForgotScreen({ contact }: { contact: string | null }): ReactElem
       )}
       {sent ? <Notice tone="success" testId="forgot-done" lines={[text('forgotDone')]} /> : null}
       <SubmitButton busy={busy} label={text('submitForgot')} testId="forgot-submit" />
-      <p data-testid="forgot-no-email" style={{ margin: 0 }}>
+      <p data-testid="forgot-no-email" style={{ margin: 0, color: 'var(--color-textMuted)' }}>
         {text('forgotNoEmail')}{' '}
         {contact === null ? text('contactGeneric') : text('contactLine', { contact })}
       </p>
-      <a href="/account/login">{text('toLogin')}</a>
+      <a
+        href="/account/login"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          minHeight: 44,
+          color: 'var(--color-primary)',
+          textDecoration: 'underline',
+          textUnderlineOffset: 3,
+        }}
+      >
+        {text('toLogin')}
+      </a>
     </FormShell>
   );
 }

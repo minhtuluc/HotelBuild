@@ -2,9 +2,9 @@ import { makeTranslate } from '@pinehill/ui-web/messages';
 
 /** Câu chữ riêng của SCR-45/46 (HB-137); danh mục chung `lib/i18n.ts` không thuộc ticket nên không sửa. */
 export const text = makeTranslate({
-  title: 'Ghép phòng và walk-out (SCR-45, SCR-46)',
+  title: 'Ghép phòng và walk-out',
   intro:
-    'Màn hình chỉ hiển thị và gửi lệnh; chiết khấu, tiền, quyền và điều kiện do máy chủ quyết định. Không tự đổi trạng thái ghép hay báo đã chi tiền.',
+    'Ghép phòng và walk-out cho ca quá tải. Chiết khấu, số tiền bồi thường và điều kiện do hệ thống tính khi xác nhận.',
   loading: 'Đang tải…',
   refreshing: 'Đang cập nhật; giữ dữ liệu cũ trên màn hình.',
   offline: 'Mất kết nối. Dữ liệu đang hiện có thể đã cũ.',
@@ -15,9 +15,9 @@ export const text = makeTranslate({
     'Chưa chọn ghép phòng hay walk-out: thêm mergeId hoặc moveId vào đường dẫn, hoặc lập ghép mới.',
   reload: 'Tải lại dữ liệu',
   reference: 'Mã tham chiếu: {reference}',
-  back: 'Về bảng quá tải (SCR-43)',
+  back: 'Về bảng quá tải',
   // Ghép phòng
-  mergeTitle: 'Ghép phòng {id} (SCR-45)',
+  mergeTitle: 'Ghép phòng {id}',
   mergeType: 'Loại: {type}',
   mergeShare: 'Ghép chung phòng (SHARE) — hai booking độc lập',
   mergeConnecting: 'Phòng thông nhau (CONNECTING) — một booking, hai phòng',
@@ -66,7 +66,7 @@ export const text = makeTranslate({
   executeGo: 'Thực hiện',
   executeTitle: 'Thực hiện',
   // Walk-out
-  walkTitle: 'Walk-out {id} (SCR-46)',
+  walkTitle: 'Walk-out {id}',
   walkStatus: 'Trạng thái: {status}',
   walkMoney: 'Bồi thường {comp} · đưa đón {transport} (VND, máy chủ trả)',
   walkDoc: 'Chứng từ: {doc} · chữ ký khách {guest} · chữ ký nhân viên {staff}',
@@ -78,7 +78,7 @@ export const text = makeTranslate({
   walkExecuted: 'Walk-out đã thực hiện (EXECUTED).',
   walkOther: 'Trạng thái do máy chủ quyết định.',
   previewBlocked:
-    'Chưa có preview hoàn tiền (gross/net/phí, bồi thường đêm đầu) trong hợp đồng HB-120; chỉ hiện số liệu máy chủ đã trả trên điều chuyển.',
+    'Chưa có preview hoàn tiền (gross/net/phí, bồi thường đêm đầu); chỉ hiện số liệu máy chủ đã trả trên điều chuyển.',
   approveComp: 'Bồi thường (VND)',
   approveTransport: 'Đưa đón (VND)',
   approveNote: 'Ghi chú duyệt (tuỳ chọn)',

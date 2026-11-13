@@ -196,6 +196,7 @@ export function MergePanel(props: {
     mergeActionAllowed(props.role, action, view) ? (
       <button
         type="button"
+        className="ph-btn-primary"
         disabled={props.busy}
         onClick={() => setAsking(target)}
         style={{ minHeight: 44 }}
@@ -205,7 +206,12 @@ export function MergePanel(props: {
       </button>
     ) : null;
   return (
-    <section style={box} aria-labelledby="hb137-merge-title" data-testid="hb137-merge">
+    <section
+      className="ph-card"
+      style={box}
+      aria-labelledby="hb137-merge-title"
+      data-testid="hb137-merge"
+    >
       <MergeSummary view={view} />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         {button('RECORD_CONSENT', 'consent', text('consentGo'), 'hb137-consent')}
@@ -280,6 +286,7 @@ export function CreateMergeForm(props: {
   const issues = [...local, ...props.serverIssues];
   return (
     <form
+      className="ph-card"
       style={box}
       aria-labelledby="hb137-create-title"
       onSubmit={(event) => {
@@ -289,8 +296,10 @@ export function CreateMergeForm(props: {
         if (found.length === 0) setAsking(true);
       }}
     >
-      <h2 id="hb137-create-title">{text('createTitle')}</h2>
-      <p>{text('createNote')}</p>
+      <h2 id="hb137-create-title" style={{ margin: 0 }}>
+        {text('createTitle')}
+      </h2>
+      <p style={{ margin: 0 }}>{text('createNote')}</p>
       <SelectInput
         name="moveType"
         label={text('createType')}
@@ -315,6 +324,7 @@ export function CreateMergeForm(props: {
       ))}
       <button
         type="submit"
+        className="ph-btn-primary"
         disabled={props.busy}
         style={{ minHeight: 44, justifySelf: 'start' }}
         data-testid="hb137-create-submit"

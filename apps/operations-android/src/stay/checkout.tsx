@@ -7,7 +7,7 @@
 import { useMemo, useState, type ReactElement } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import type { BookingSummary, CheckOutPreview, CheckOutResponse } from '@pinehill/contracts';
-import { color, space, touchTargetDp } from '@pinehill/ui-native';
+import { color, space } from '@pinehill/ui-native';
 import { ActionButton, CheckRow } from '../arrivals/controls';
 import { formatVnDateTime } from '../arrivals/format';
 import { formatVnd } from '../lookup/view';
@@ -18,6 +18,7 @@ import { checkOutPreviewPort } from '../preview/ports';
 import type { PreviewState } from '../preview/reader';
 import { PreviewStatus } from '../preview/status';
 import type { Session } from '../session';
+import { theme } from '../theme';
 import { PinPanel, ResultNotice, type Outcome } from './controls';
 import { useBalance, useStayWriter } from './hooks';
 import { stayText as text } from './messages';
@@ -47,20 +48,26 @@ function Done({
   onClose: () => void;
 }): ReactElement {
   return (
-    <View style={{ flex: 1, padding: space.s4, gap: space.s3, backgroundColor: color.surface }}>
-      <View testID="check-out-done" accessibilityLiveRegion="polite" style={{ gap: space.s2 }}>
-        <Text style={{ color: color.success, fontWeight: '700' }}>
+    <View style={theme.screen}>
+      <View testID="check-out-done" accessibilityLiveRegion="polite" style={theme.card}>
+        <Text style={[theme.alertSuccess, { fontWeight: '600' }]}>
           {text('checkOutDone', {
             code: booking.code,
             time: formatVnDateTime(response.checkedOutAt),
           })}
         </Text>
-        <Text testID="check-out-fee">
+        <Text testID="check-out-fee" style={[theme.body, theme.tabular]}>
           {text('feeLine', { amount: formatVnd(response.feeAmount) })}
         </Text>
-        <Text>{text('extrasLine', { amount: formatVnd(response.extrasAmount) })}</Text>
-        <Text>{text('balanceAfter', { amount: formatVnd(response.balanceDue) })}</Text>
-        <Text>{text('tasksLine', { count: response.housekeepingTaskIds.length })}</Text>
+        <Text style={[theme.body, theme.tabular]}>
+          {text('extrasLine', { amount: formatVnd(response.extrasAmount) })}
+        </Text>
+        <Text style={[theme.body, theme.tabular]}>
+          {text('balanceAfter', { amount: formatVnd(response.balanceDue) })}
+        </Text>
+        <Text style={theme.muted}>
+          {text('tasksLine', { count: response.housekeepingTaskIds.length })}
+        </Text>
       </View>
       <ActionButton testID="check-out-close" label={text('closeDetail')} onPress={onClose} />
     </View>
@@ -108,23 +115,23 @@ function PreviewBlock({
 }): ReactElement {
   const value = state.value;
   return (
-    <View testID="check-out-preview" style={{ gap: space.s1 }}>
-      <Text accessibilityRole="header" style={{ fontWeight: '700', color: color.text }}>
+    <View testID="check-out-preview" style={theme.card}>
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {previewText('title')}
       </Text>
       <PreviewStatus phase={state.phase} testID="check-out-preview-status" onRetry={onRetry} />
       {state.phase === 'ready' && value !== null ? (
         <>
-          <Text testID="check-out-preview-fee">
+          <Text testID="check-out-preview-fee" style={[theme.body, theme.tabular]}>
             {text('previewFee', { amount: formatVnd(value.feeAmount) })}
           </Text>
-          <Text testID="check-out-preview-extras">
+          <Text testID="check-out-preview-extras" style={[theme.body, theme.tabular]}>
             {text('previewExtras', { amount: formatVnd(value.extrasAmount) })}
           </Text>
-          <Text testID="check-out-preview-balance" style={{ fontWeight: '700' }}>
+          <Text testID="check-out-preview-balance" style={[theme.moneyInline, theme.tabular]}>
             {text('previewBalance', { amount: formatVnd(value.balanceDue) })}
           </Text>
-          <Text testID="check-out-preview-time" style={{ color: color.textMuted }}>
+          <Text testID="check-out-preview-time" style={theme.muted}>
             {previewText('computed', { time: formatVnDateTime(value.computedAt) })}
           </Text>
         </>
@@ -135,10 +142,12 @@ function PreviewBlock({
 
 function Unsettled({ balance }: { balance: BalanceState }): ReactElement {
   return (
-    <View accessibilityLiveRegion="polite" style={{ gap: space.s2 }}>
-      <Text testID="check-out-unsettled">{text('unsettled')}</Text>
+    <View accessibilityLiveRegion="polite" style={theme.card}>
+      <Text testID="check-out-unsettled" style={theme.alertWarning}>
+        {text('unsettled')}
+      </Text>
       {balance.balance === null ? null : (
-        <Text testID="check-out-unsettled-balance" style={{ fontWeight: '700' }}>
+        <Text testID="check-out-unsettled-balance" style={[theme.moneyInline, theme.tabular]}>
           {text('unsettledBalance', { balance: formatVnd(balance.balance.balanceDue) })}
         </Text>
       )}
@@ -227,23 +236,20 @@ export function CheckOutDetail(props: CheckOutDetailProps): ReactElement {
     return <Done booking={booking} response={result.response} onClose={onClose} />;
   const flags = flagsOf(result);
   return (
-    <View style={{ flex: 1, backgroundColor: color.surface }}>
-      <ScrollView contentContainerStyle={{ padding: space.s4, gap: space.s3 }}>
-        <Text
-          accessibilityRole="header"
-          style={{ fontSize: 24, fontWeight: '700', color: color.text }}
-        >
+    <View style={{ flex: 1, backgroundColor: color.bg }}>
+      <ScrollView contentContainerStyle={theme.scrollContent}>
+        <Text accessibilityRole="header" style={theme.title}>
           {text('checkOutTitle', { code: booking.code })}
         </Text>
-        <Text>
+        <Text style={theme.body}>
           {text('stayLine', {
             stay: stayPeriodText(booking.checkIn, booking.checkOut, booking.nights),
           })}
         </Text>
-        <Text testID="check-out-balance" style={{ fontWeight: '700' }}>
+        <Text testID="check-out-balance" style={[theme.moneyInline, theme.tabular]}>
           {text('balanceLine', { balance: formatVnd(booking.balanceDue) })}
         </Text>
-        <Text style={{ color: color.textMuted }}>{text('checkOutNote')}</Text>
+        <Text style={theme.muted}>{text('checkOutNote')}</Text>
         <CheckRow
           testID="check-out-early"
           label={text('early')}
@@ -251,14 +257,14 @@ export function CheckOutDetail(props: CheckOutDetailProps): ReactElement {
           disabled={busy}
           onToggle={form.toggleEarly}
         />
-        <Text style={{ color: color.textMuted }}>{text('earlyNote')}</Text>
+        <Text style={theme.muted}>{text('earlyNote')}</Text>
         <PreviewBlock
           state={preview.state}
           onRetry={() => {
             preview.load(previewFor(form.early));
           }}
         />
-        <Text>{text('note')}</Text>
+        <Text style={theme.body}>{text('note')}</Text>
         <TextInput
           testID="check-out-note"
           accessibilityLabel={text('note')}
@@ -266,13 +272,7 @@ export function CheckOutDetail(props: CheckOutDetailProps): ReactElement {
           maxLength={500}
           editable={!busy}
           onChangeText={form.setNote}
-          style={{
-            minHeight: touchTargetDp,
-            paddingHorizontal: space.s3,
-            borderWidth: 1,
-            borderRadius: 8,
-            color: color.text,
-          }}
+          style={theme.field}
         />
         <PinPanel
           bookingId={booking.id}

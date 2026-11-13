@@ -64,29 +64,37 @@ export function PaymentSummary({ offer }: { offer: Offer }) {
   const amount = approvedAmount(offer.booking, offer.balance);
   const expiry = offer.booking.holdExpiresAt;
   return (
-    <section aria-labelledby="payment-summary">
+    <section aria-labelledby="payment-summary" className={styles.card}>
       <h2 id="payment-summary">{text('summaryBooking', { code: offer.booking.code })}</h2>
-      <dl style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '8px 16px' }}>
-        <dt>{m.total}</dt>
-        <dd style={{ margin: 0 }}>{formatMoney(offer.balance.totalAmount)}</dd>
-        <dt>{m.paid}</dt>
-        <dd style={{ margin: 0 }}>{formatMoney(offer.balance.paidAmount)}</dd>
-        <dt>{m.balance}</dt>
-        <dd style={{ margin: 0 }}>{formatMoney(offer.balance.balanceDue)}</dd>
+      <dl className={styles.summaryList}>
+        <div className={styles.summaryRow}>
+          <dt>{m.total}</dt>
+          <dd>{formatMoney(offer.balance.totalAmount)}</dd>
+        </div>
+        <div className={styles.summaryRow}>
+          <dt>{m.paid}</dt>
+          <dd>{formatMoney(offer.balance.paidAmount)}</dd>
+        </div>
+        <div className={styles.summaryRow}>
+          <dt>{m.balance}</dt>
+          <dd>{formatMoney(offer.balance.balanceDue)}</dd>
+        </div>
         {amount !== null ? (
-          <>
+          <div className={styles.summaryRow}>
             <dt>{m.deposit}</dt>
-            <dd data-testid="approved-deposit" style={{ margin: 0, fontWeight: 700 }}>
+            <dd data-testid="approved-deposit" className={styles.depositValue}>
               {formatMoney(amount)}
             </dd>
-          </>
+          </div>
         ) : null}
-        <dt>{m.bookingStatus}</dt>
-        <dd data-testid="server-booking-status" style={{ margin: 0 }}>
-          {offer.booking.status}
-        </dd>
+        <div className={styles.summaryRow}>
+          <dt>{m.bookingStatus}</dt>
+          <dd data-testid="server-booking-status">{offer.booking.status}</dd>
+        </div>
       </dl>
-      {expiry ? <p>{text('holdExpiry', { time: formatDateTimeVn(expiry) })}</p> : null}
+      {expiry ? (
+        <p className={styles.note}>{text('holdExpiry', { time: formatDateTimeVn(expiry) })}</p>
+      ) : null}
     </section>
   );
 }
@@ -105,49 +113,56 @@ export function PaymentForm({
 }) {
   if (!['ready', 'confirm'].includes(view.phase) || view.changed) return null;
   return (
-    <>
-      <fieldset disabled={view.busy || view.phase === 'confirm'}>
+    <div className={styles.card}>
+      <fieldset disabled={view.busy || view.phase === 'confirm'} className={styles.fieldset}>
         <legend>{m.provider}</legend>
-        {(['VNPAY', 'MOMO'] as const).map((value) => (
-          <label
-            key={value}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              marginRight: 24,
-              padding: '8px 0',
-            }}
-          >
-            <input
-              type="radio"
-              name="method"
-              value={value}
-              checked={method === value}
-              onChange={() => onMethod(value)}
-            />
-            {value === 'VNPAY' ? m.providerVnpay : m.providerMomo}
-          </label>
-        ))}
+        <div className={styles.providers}>
+          {(['VNPAY', 'MOMO'] as const).map((value) => (
+            <label key={value} className={styles.providerOption}>
+              <input
+                type="radio"
+                name="method"
+                value={value}
+                checked={method === value}
+                onChange={() => onMethod(value)}
+              />
+              <span>{value === 'VNPAY' ? m.providerVnpay : m.providerMomo}</span>
+            </label>
+          ))}
+        </div>
       </fieldset>
       {view.phase === 'confirm' ? (
-        <>
-          <p>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <p className={styles.statusBox}>
             {m.confirmInfo}{' '}
             {text('selectedProvider', {
               provider: method === 'VNPAY' ? m.providerVnpay : m.providerMomo,
             })}
           </p>
-          <button className={styles.primary} type="button" disabled={view.busy} onClick={onConfirm}>
-            {m.confirm}
-          </button>
-        </>
+          <div className="ph-actions">
+            <button
+              className="ph-btn-accent ph-btn-lg"
+              type="button"
+              disabled={view.busy}
+              onClick={onConfirm}
+            >
+              {m.confirm}
+            </button>
+          </div>
+        </div>
       ) : (
-        <button className={styles.primary} type="button" disabled={view.busy} onClick={onPrepare}>
-          {m.prepare}
-        </button>
+        <div className="ph-actions">
+          <button
+            className="ph-btn-accent ph-btn-lg"
+            type="button"
+            disabled={view.busy}
+            onClick={onPrepare}
+          >
+            {m.prepare}
+          </button>
+        </div>
       )}
-    </>
+    </div>
   );
 }
 function portalUrl(view: PaymentView, fixtureOrigin?: string): string | null {
@@ -157,12 +172,12 @@ function portalUrl(view: PaymentView, fixtureOrigin?: string): string | null {
   return safePaymentUrl(view.fullPayment, fixtureOrigin);
 }
 function observedMessage(view: PaymentView): string {
-  const text: Partial<Record<PaymentView['phase'], string>> = {
+  const map: Partial<Record<PaymentView['phase'], string>> = {
     received: m.received,
     confirmed: m.confirmed,
     failed: m.failed,
   };
-  return text[view.phase] ?? m.pending;
+  return map[view.phase] ?? m.pending;
 }
 export function PaymentDetails({
   view,
@@ -175,26 +190,30 @@ export function PaymentDetails({
   if (!payment) return null;
   const portal = portalUrl(view, fixtureOrigin);
   return (
-    <section aria-labelledby="payment-observed">
+    <section aria-labelledby="payment-observed" className={styles.card}>
       <h2 id="payment-observed">{m.observed}</h2>
-      <p>
+      <p style={{ margin: 0 }} className="ph-tabular">
         {m.transaction} <span style={{ overflowWrap: 'anywhere' }}>{payment.paymentId}</span>
       </p>
-      <p>
+      <p style={{ margin: 0 }} className="ph-tabular">
         {text('paymentStatus', { amount: formatMoney(payment.amount), status: payment.status })}
       </p>
-      <p role="status" data-testid="payment-result">
+      <p role="status" data-testid="payment-result" className={styles.statusBox}>
         {observedMessage(view)}
       </p>
       {payment.expiresAt ? (
-        <p>{text('paymentExpiry', { time: formatDateTimeVn(payment.expiresAt) })}</p>
+        <p className={styles.note}>
+          {text('paymentExpiry', { time: formatDateTimeVn(payment.expiresAt) })}
+        </p>
       ) : null}
       {portal ? (
-        <a href={portal} rel="noreferrer">
-          {m.portal}
-        </a>
+        <div className="ph-actions">
+          <a href={portal} rel="noreferrer" className="ph-btn-accent ph-btn-lg">
+            {m.portal}
+          </a>
+        </div>
       ) : null}
-      <p>{m.poll}</p>
+      <p className={styles.note}>{m.poll}</p>
     </section>
   );
 }

@@ -27,7 +27,7 @@ export const bookingsCatalog = {
   'ops.bookings.delete.notAllowed': '—',
   'ops.bookings.delete.title': 'Xoá cứng booking {code}?',
   'ops.bookings.delete.note':
-    'Chỉ DRAFT/HELD chưa phát sinh thanh toán mới xoá được (BR-BOOK-17/14); máy chủ kiểm lại lần cuối.',
+    'Chỉ DRAFT/HELD chưa phát sinh thanh toán mới xoá được; máy chủ kiểm lại lần cuối.',
   'ops.bookings.delete.reason': 'Lý do xoá',
   'ops.bookings.delete.confirm': 'Xoá cứng',
   'ops.bookings.delete.cancel': 'Huỷ bỏ',
@@ -47,7 +47,7 @@ export const bookingsCatalog = {
   'ops.bookings.action.cancel': 'Huỷ & hoàn tiền',
   'ops.bookings.action.reschedule': 'Đổi ngày',
   'ops.bookings.detail.actionsPending':
-    'Thu tiền (SCR-37) và duyệt hoàn tiền (SCR-38) thuộc HB-109/HB-110; huỷ một phần theo phòng chờ tuyến danh sách phòng của hợp đồng.',
+    'Thu tiền và duyệt hoàn tiền làm ở màn riêng. Huỷ một phần theo từng phòng chưa hỗ trợ.',
   'ops.bookings.status.DRAFT': 'Bản nháp',
   'ops.bookings.status.HELD': 'Đang giữ chỗ',
   'ops.bookings.status.PENDING_PAYMENT': 'Chờ thanh toán',
@@ -93,7 +93,7 @@ export const bookingsCatalog = {
   'newBooking.summary.hold':
     'Giữ chỗ {minutes} phút theo cấu hình kênh (máy chủ chốt hạn khi tạo).',
   'newBooking.quote.loading': 'Đang lấy báo giá…',
-  'newBooking.collectNote': 'Thu cọc tại quầy thuộc màn thu tiền (SCR-37) — bấm Tạo booking trước.',
+  'newBooking.collectNote': 'Thu cọc tại quầy thuộc màn thu tiền — bấm Tạo booking trước.',
   'newBooking.issue.PROPERTY': 'Nhập mã cơ sở.',
   'newBooking.issue.DATES': 'Ngày trả phải sau ngày nhận, kỳ từ 1 đến 365 đêm.',
   'newBooking.issue.ROOM': 'Chọn loại phòng và gói giá.',
@@ -103,8 +103,8 @@ export const bookingsCatalog = {
   'newBooking.done.code': 'Mã đặt phòng: {code}',
   'newBooking.done.status': 'Trạng thái: {status}',
   'newBooking.done.hold': 'Giữ chỗ đến {time}',
-  'newBooking.done.collect': 'Thu cọc: dùng màn thu tiền (SCR-37) để ghi khoản thu.',
-  'newBooking.done.notify': 'Gửi xác nhận cho khách: thuộc luồng thông báo (SCR-51).',
+  'newBooking.done.collect': 'Thu cọc: dùng màn thu tiền để ghi khoản thu.',
+  'newBooking.done.notify': 'Gửi xác nhận cho khách: thuộc luồng thông báo.',
   'newBooking.done.print': 'In xác nhận',
   'ops.reschedule.title': 'Đổi ngày booking',
   'ops.reschedule.checkIn': 'Ngày nhận phòng mới',
@@ -119,7 +119,7 @@ export const bookingsCatalog = {
   'ops.reschedule.diff.less': 'Chênh lệch giảm {amount}',
   'ops.reschedule.diff.same': 'Không chênh lệch',
   'ops.reschedule.feePending':
-    'Phí đổi ngày: hợp đồng chưa có trường này (ghi nhận RESCHEDULE_FEE cho gói NONREF ở SCR-35) — chờ ticket hợp đồng.',
+    'Phí đổi ngày chưa hiện ở đây; với gói không hoàn tiền, ghi phí ở màn sửa booking.',
   'ops.reschedule.planUnresolved':
     'Không xác định được mã gói giá của booking để lấy giá kỳ mới — kiểm tra lại hồ sơ gói.',
   'ops.reschedule.result': 'Đã đổi sang {from} → {to} · trạng thái {status} · số lần đổi {count}',

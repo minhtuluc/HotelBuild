@@ -3,9 +3,6 @@
 /**
  * SCR-09 — "Đơn của tôi" (UC-BOOK-07): danh sách booking **của chính khách** (máy chủ giới hạn theo phiên),
  * lọc theo trạng thái và tra cứu theo mã/SĐT (`q`), cuộn tiếp theo con trỏ máy chủ trả.
- *
- * Ghi chú hợp đồng: `GET /bookings` chỉ trả `bookingSummarySchema` (không có PriceSnapshot từng đêm hay
- * danh sách Payment) — màn hình không bịa các số liệu đó; phần thiếu đã ghi ở PR HB-102.
  */
 import {
   useCallback,
@@ -43,8 +40,7 @@ import {
 } from './model';
 import { formatCountdown, holdView } from '../booking/booking-model';
 
-const FIELD_STYLE = { display: 'grid', gap: 4 } as const;
-const CELL = { padding: '4px 12px 4px 0', textAlign: 'left' } as const;
+type BookingStatusValue = BookingFilters['status'];
 
 function FilterForm({
   current,
@@ -65,9 +61,10 @@ function FilterForm({
     <form
       data-testid="bookings-filters"
       onSubmit={submit}
-      style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end' }}
+      className="ph-card"
+      style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'end' }}
     >
-      <label style={FIELD_STYLE}>
+      <label className="ph-field" style={{ flex: '1 1 180px' }}>
         {t('guest.bookings.filter.status')}
         <select
           name="status"
@@ -85,7 +82,7 @@ function FilterForm({
           ))}
         </select>
       </label>
-      <label style={FIELD_STYLE}>
+      <label className="ph-field" style={{ flex: '1 1 200px' }}>
         {t('guest.bookings.filter.q')}
         <input
           name="q"
@@ -96,9 +93,12 @@ function FilterForm({
           }}
         />
       </label>
-      <button type="submit">{t('guest.bookings.filter.submit')}</button>
+      <button type="submit" className="ph-btn-primary">
+        {t('guest.bookings.filter.submit')}
+      </button>
       <button
         type="button"
+        className="ph-btn"
         onClick={() => {
           setStatus('');
           setQ('');
@@ -115,19 +115,35 @@ function BookingRow({ booking }: { booking: BookingSummary }): ReactElement {
   const hold = holdView(booking, Date.now());
   return (
     <tr data-testid={`booking-row-${booking.code}`}>
-      <td style={CELL}>
-        <Link href={`/bookings/${booking.id}`}>{booking.code}</Link>
+      <td className="ph-tabular" style={{ fontWeight: 500 }}>
+        <Link
+          href={`/bookings/${booking.id}`}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            minHeight: 44,
+            color: 'var(--color-primary)',
+            textDecoration: 'underline',
+            textUnderlineOffset: 3,
+          }}
+        >
+          {booking.code}
+        </Link>
       </td>
-      <td style={CELL}>{formatStatusWithEnum(t(STATUS_KEYS[booking.status]), booking.status)}</td>
-      <td style={CELL}>{stayText(booking)}</td>
-      <td style={CELL}>{formatMoney(booking.totalAmount)}</td>
-      <td style={CELL}>{formatMoney(booking.balanceDue)}</td>
-      <td style={CELL}>
+      <td>{formatStatusWithEnum(t(STATUS_KEYS[booking.status]), booking.status)}</td>
+      <td className="ph-tabular">{stayText(booking)}</td>
+      <td className="ph-tabular">{formatMoney(booking.totalAmount)}</td>
+      <td className="ph-tabular" style={{ fontWeight: 500 }}>
+        {formatMoney(booking.balanceDue)}
+      </td>
+      <td className="ph-tabular">
         {hold.kind === 'active' ? formatCountdown(hold.remainingMs) : t('guest.bookings.noHold')}
       </td>
-      <td style={CELL}>
+      <td>
         {canPay(booking) ? (
-          <Link href={`/booking/${booking.id}/pay`}>{t('guest.booking.continue')}</Link>
+          <Link href={`/booking/${booking.id}/pay`} className="ph-btn">
+            {t('guest.booking.continue')}
+          </Link>
         ) : (
           t('guest.bookings.noAction')
         )}
@@ -138,47 +154,44 @@ function BookingRow({ booking }: { booking: BookingSummary }): ReactElement {
 
 function BookingsTable({ bookings }: { bookings: readonly BookingSummary[] }): ReactElement {
   return (
-    <table data-testid="bookings-list">
-      <caption style={{ textAlign: 'left', paddingBottom: 4 }}>{t('guest.bookings.table')}</caption>
-      <thead>
-        <tr>
-          <th scope="col" style={CELL}>
-            {t('guest.booking.code')}
-          </th>
-          <th scope="col" style={CELL}>
-            {t('guest.bookings.col.status')}
-          </th>
-          <th scope="col" style={CELL}>
-            {t('guest.bookings.col.stay')}
-          </th>
-          <th scope="col" style={CELL}>
-            {t('guest.bookings.col.total')}
-          </th>
-          <th scope="col" style={CELL}>
-            {t('guest.bookings.col.due')}
-          </th>
-          <th scope="col" style={CELL}>
-            {t('guest.bookings.col.hold')}
-          </th>
-          <th scope="col" style={CELL}>
-            {t('guest.bookings.col.action')}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {bookings.map((booking) => (
-          <BookingRow key={booking.id} booking={booking} />
-        ))}
-      </tbody>
-    </table>
+    <div className="ph-table-wrap">
+      <table data-testid="bookings-list">
+        <caption
+          style={{
+            textAlign: 'start',
+            padding: '14px 16px',
+            fontFamily: 'var(--font-display)',
+            fontSize: 18,
+          }}
+        >
+          {t('guest.bookings.table')}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">{t('guest.booking.code')}</th>
+            <th scope="col">{t('guest.bookings.col.status')}</th>
+            <th scope="col">{t('guest.bookings.col.stay')}</th>
+            <th scope="col">{t('guest.bookings.col.total')}</th>
+            <th scope="col">{t('guest.bookings.col.due')}</th>
+            <th scope="col">{t('guest.bookings.col.hold')}</th>
+            <th scope="col">{t('guest.bookings.col.action')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {bookings.map((booking) => (
+            <BookingRow key={booking.id} booking={booking} />
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 function ReadErrorBlock({ onRetry }: { onRetry: () => void }): ReactElement {
   return (
-    <div role="alert" data-testid="bookings-alert" style={{ display: 'grid', gap: 8 }}>
+    <div role="alert" data-testid="bookings-alert" className="ph-alert-box">
       <p style={{ margin: 0 }}>{t('guest.bookings.error')}</p>
-      <button type="button" data-testid="bookings-alert-retry" onClick={onRetry}>
+      <button type="button" data-testid="bookings-alert-retry" className="ph-btn" onClick={onRetry}>
         {t('guest.results.retry')}
       </button>
     </div>
@@ -220,12 +233,16 @@ export function BookingsScreen(): ReactElement {
     [filters.status, filters.q, session],
   );
 
-  // Đổi bộ lọc (hoặc mở lại trang) thì nạp lại từ trang đầu.
   useEffect(() => {
     void load(null);
   }, [load]);
 
-  if (state.kind === 'forbidden') return <AccessDeniedPanel backHref="/" />;
+  if (state.kind === 'forbidden')
+    return (
+      <div className="ph-page-shell">
+        <AccessDeniedPanel backHref="/" />
+      </div>
+    );
 
   const applyFilters = (next: BookingFilters): void => {
     const query = filtersToQuery(next);
@@ -235,11 +252,10 @@ export function BookingsScreen(): ReactElement {
   const empty = bookings.length === 0;
 
   return (
-    <section
-      data-testid="bookings-screen"
-      style={{ display: 'grid', gap: 'var(--space-s3, 12px)', padding: 'var(--space-s4, 16px) 0' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('guest.bookings.title')}</h1>
+    <section data-testid="bookings-screen" className="ph-page-shell">
+      <div className="ph-page-header">
+        <h1 className="ph-page-title">{t('guest.bookings.title')}</h1>
+      </div>
       <FilterForm current={filters} onApply={applyFilters} />
       <StateSurface
         state={
@@ -255,20 +271,20 @@ export function BookingsScreen(): ReactElement {
         {readError ? <ReadErrorBlock onRetry={() => void load(null)} /> : null}
         {empty ? null : <BookingsTable bookings={bookings} />}
         {cursor === null ? null : (
-          <button
-            type="button"
-            data-testid="bookings-more"
-            onClick={() => {
-              void load(cursor);
-            }}
-          >
-            {t('guest.bookings.more')}
-          </button>
+          <div>
+            <button
+              type="button"
+              data-testid="bookings-more"
+              className="ph-btn"
+              onClick={() => {
+                void load(cursor);
+              }}
+            >
+              {t('guest.bookings.more')}
+            </button>
+          </div>
         )}
       </StateSurface>
     </section>
   );
 }
-
-/** Trạng thái lọc: `''` = tất cả. */
-type BookingStatusValue = BookingFilters['status'];

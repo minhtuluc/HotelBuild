@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-13T12:00:00+07:00",
+  "title": "Design System: Pine Hill",
+  "extensions": {
+    "colorMeta": {
+      "print-blue": {
+        "role": "primary",
+        "displayName": "Mực in xanh",
+        "tonalRamp": [
+          "#0B1838",
+          "#122A5E",
+          "#1B3A82",
+          "#2D4E9C",
+          "#5873B5",
+          "#8A9FCD",
+          "#BCC8E4",
+          "#E6EBF5"
+        ]
+      },
+      "punch-red": {
+        "role": "secondary",
+        "displayName": "Đỏ dấu bấm",
+        "tonalRamp": [
+          "#43120A",
+          "#6E1E10",
+          "#962A16",
+          "#B8341C",
+          "#D0583D",
+          "#E08A74",
+          "#EFBBAD",
+          "#F9E6E0"
+        ]
+      },
+      "signal-amber": {
+        "role": "tertiary",
+        "displayName": "Hổ phách bảng ga",
+        "tonalRamp": [
+          "#4A3207",
+          "#7A540C",
+          "#B37E12",
+          "#F2B632",
+          "#F5C65E",
+          "#F8D78C",
+          "#FBE7BA",
+          "#FDF5E3"
+        ]
+      },
+      "ticket-pink": {
+        "role": "neutral",
+        "displayName": "Giấy vé hồng",
+        "tonalRamp": [
+          "#5A2C21",
+          "#8A4A3B",
+          "#B97563",
+          "#DDA492",
+          "#F0C2B3",
+          "#F6DCD3",
+          "#FAEBE6",
+          "#FDF6F3"
+        ]
+      },
+      "form-ground": {
+        "role": "neutral",
+        "displayName": "Giấy mẫu biểu nhà ga",
+        "tonalRamp": [
+          "#26303F",
+          "#3F4C61",
+          "#647289",
+          "#8E9AB0",
+          "#B9C2D3",
+          "#DFE5F0",
+          "#EDF1F7",
+          "#F7F9FC"
+        ]
+      },
+      "board-black": {
+        "role": "neutral",
+        "displayName": "Bảng ga",
+        "tonalRamp": [
+          "#0A0C0B",
+          "#121614",
+          "#1C221F",
+          "#2B322E",
+          "#46504A",
+          "#6B756F",
+          "#A9B3AC",
+          "#DCE1DD"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Biển ga lớn",
+        "purpose": "Tiêu đề màn đầu trang khách."
+      },
+      "headline": {
+        "displayName": "Biển ga",
+        "purpose": "Tiêu đề dải nội dung và trang trong phía khách."
+      },
+      "board": {
+        "displayName": "Chữ bảng giờ",
+        "purpose": "Bảng ga, mệnh giá chặng, số trên cuống vé."
+      },
+      "title": {
+        "displayName": "Tiêu đề màn làm việc",
+        "purpose": "Tiêu đề màn back-office."
+      },
+      "body": {
+        "displayName": "Chữ thân",
+        "purpose": "Đoạn văn, bảng dữ liệu, form."
+      },
+      "label": {
+        "displayName": "Nhãn in trên vé",
+        "purpose": "Nhãn trường vé, nhãn dữ liệu, chữ hoa giãn nhẹ."
+      }
+    },
+    "shadows": [
+      {
+        "name": "ticket-on-desk",
+        "value": "drop-shadow(0 1px 1px rgb(18 22 20 / .25)) drop-shadow(0 14px 26px rgb(18 22 20 / .2))",
+        "purpose": "Tấm vé tìm phòng (filter vì vé có mặt nạ khuyết)."
+      },
+      {
+        "name": "poster-hung",
+        "value": "0 18px 40px rgb(18 22 20 / .18)",
+        "purpose": "Áp phích ga."
+      },
+      {
+        "name": "snapshot",
+        "value": "0 10px 22px rgb(18 22 20 / .14)",
+        "purpose": "Ảnh chụp kẹp dưới mỗi ga."
+      }
+    ],
+    "motion": [
+      {
+        "name": "flap",
+        "value": "380ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Chữ lật trên bảng ga khi tải; chỉ transform."
+      },
+      {
+        "name": "punch",
+        "value": "240ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Chặng mới in lên vé khi đổi ngày."
+      },
+      {
+        "name": "state",
+        "value": "150ms ease",
+        "purpose": "Hover, đổi màu nút và trường."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow",
+        "value": "760px"
+      },
+      {
+        "name": "table-compact",
+        "value": "720px"
+      },
+      {
+        "name": "ops-drawer",
+        "value": "1024px"
+      },
+      {
+        "name": "stack",
+        "value": "1080px"
+      },
+      {
+        "name": "actions-stack",
+        "value": "560px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Nút dấu bấm",
+      "kind": "button",
+      "refersTo": "button-punch",
+      "description": "Bước cam kết phía khách. Cỡ mặc định 44px; thêm .ph-btn-lg (52px, 16px) khi là nút đứng riêng cuối một bước.",
+      "html": "<button class=\"ds-btn-punch\">Tiếp tục đặt phòng</button> <button class=\"ds-btn-punch ds-btn-lg\">Giữ chỗ &amp; thanh toán cọc</button> <button class=\"ds-btn-punch\" disabled>Đã hết giờ giữ chỗ</button>",
+      "css": ".ds-btn-punch{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 18px;border:1px solid #B8341C;border-radius:3px;background:#B8341C;color:#fff;font:600 14px/1.25 'Be Vietnam Pro',sans-serif;transition:background-color 150ms ease}.ds-btn-punch:hover:not(:disabled){background:#962A16;border-color:#962A16}.ds-btn-punch:focus-visible{outline:2px solid #1B3A82;outline-offset:2px}.ds-btn-lg{min-height:52px;padding:12px 26px;font-size:16px}.ds-btn-punch:disabled{background:#E9E5DF;border-color:#D9D2CC;color:#5A4640;cursor:not-allowed}"
+    },
+    {
+      "name": "Nút vé tìm phòng",
+      "kind": "button",
+      "refersTo": "button-ticket-submit",
+      "description": "Chỉ dùng cho nút Tìm phòng trên tấm vé: 56px, chữ cạnh hẹp hoa 24px.",
+      "html": "<button class=\"ds-btn-ticket\">Tìm phòng</button>",
+      "css": ".ds-btn-ticket{width:100%;min-height:56px;padding:0 28px;border:1px solid #B8341C;border-radius:3px;background:#B8341C;color:#fff;font:600 24px 'Barlow Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase}.ds-btn-ticket:hover{background:#962A16}"
+    },
+    {
+      "name": "Nút mực in",
+      "kind": "button",
+      "refersTo": "button-print",
+      "description": "Hành động chính back-office.",
+      "html": "<button class=\"ds-btn-print\">Lọc</button>",
+      "css": ".ds-btn-print{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 18px;border:1px solid #1B3A82;border-radius:3px;background:#1B3A82;color:#fff;font-family:'Be Vietnam Pro',sans-serif;font-size:14px;font-weight:600;transition:background-color 150ms ease}.ds-btn-print:hover{background:#142C63}.ds-btn-print:disabled{background:#E9E5DF;border-color:#D9D2CC;color:#5A4640}.ds-btn-print:focus-visible{outline:2px solid #1B3A82;outline-offset:2px}"
+    },
+    {
+      "name": "Trường in trên vé",
+      "kind": "input",
+      "refersTo": "ticket-field",
+      "description": "Ô nhập trên tấm vé tìm phòng.",
+      "html": "<label class=\"ds-tfield\"><span>Nhận phòng</span><input value=\"19/12/2026\"></label>",
+      "css": ".ds-tfield{display:grid;gap:2px;padding:7px 12px 4px;border:1.5px solid #1B3A82;border-radius:2px;background:rgba(255,255,255,.38)}.ds-tfield span{font:700 11px 'Be Vietnam Pro',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#1B3A82}.ds-tfield input{border:0;background:transparent;padding:0;min-height:36px;font:600 24px 'Barlow Condensed',sans-serif;color:#1A1716}.ds-tfield:focus-within{outline:2px solid #1B3A82;outline-offset:2px;background:rgba(255,255,255,.7)}.ds-tfield input:focus{outline:none}"
+    },
+    {
+      "name": "Hàng bảng ga",
+      "kind": "custom",
+      "refersTo": "board-row",
+      "description": "Một ga trên bảng ga đến.",
+      "html": "<div class=\"ds-board\"><div class=\"ds-row\"><span>PINE HILL ĐÀ LẠT</span><span>14:00</span><button>Chọn ga</button></div></div>",
+      "css": ".ds-board{background:#121614;padding:12px;border-radius:6px}.ds-row{display:flex;gap:16px;align-items:center;background:#1C221F;padding:8px 10px;font:600 26px 'Barlow Condensed',sans-serif;color:#F2B632}.ds-row button{margin-left:auto;min-height:40px;padding:0 14px;border:1.5px solid #F2B632;border-radius:3px;background:transparent;color:#F2B632;font:600 15px 'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase}.ds-row button:hover{background:rgba(242,182,50,.12)}"
+    },
+    {
+      "name": "Chặng giá",
+      "kind": "chip",
+      "description": "Một đêm của kỳ ở, in trên vé.",
+      "html": "<span class=\"ds-seg\"><small>CHẶNG 1</small><b>T6 19/12</b></span>",
+      "css": ".ds-seg{display:inline-grid;padding:6px 10px;border:1.5px dashed #1B3A82;border-radius:2px;color:#1B3A82;font-family:'Barlow Condensed',sans-serif}.ds-seg small{font:700 11px 'Be Vietnam Pro',sans-serif;letter-spacing:.06em}.ds-seg b{font-size:22px;font-weight:600}"
+    },
+    {
+      "name": "Mục thanh bên đang mở",
+      "kind": "nav",
+      "refersTo": "nav-rail-active",
+      "description": "Mục điều hướng hiện tại trên thanh bên back-office.",
+      "html": "<nav class=\"ds-rail\"><p>ĐƠN & TÀI CHÍNH</p><a aria-current=\"page\">Danh sách booking</a><a>Hồ sơ khách</a></nav>",
+      "css": ".ds-rail{background:#121614;padding:8px;width:240px}.ds-rail p{margin:8px 10px 4px;font:600 14px 'Barlow Condensed',sans-serif;letter-spacing:.1em;color:#F2B632}.ds-rail a{display:flex;align-items:center;min-height:38px;padding:0 10px;border-radius:3px;font:400 14px 'Be Vietnam Pro',sans-serif;color:#F4EFE6}.ds-rail a:hover{background:rgba(244,239,230,.08)}.ds-rail a[aria-current=page]{background:#F0C2B3;color:#1A1716;font-weight:600;-webkit-mask:radial-gradient(circle 6px at 100% 50%,#0000 98%,#000);mask:radial-gradient(circle 6px at 100% 50%,#0000 98%,#000)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Tuyến Pine Hill",
+    "overview": "Ba cơ sở là ba ga trên một tuyến; đặt phòng như mua vé, mỗi đêm một chặng có giá riêng, huỷ là trả vé theo giờ. Ba vật liệu: giấy vé hồng, bảng ga đen chữ hổ phách, giấy mẫu biểu xanh xám. Trang khách dùng thế giới đầy đủ; back-office chỉ mượn màu, chữ và một dấu ấn.",
+    "keyCharacteristics": [
+      "Mỗi đêm một chặng, giá theo từng đêm",
+      "Ba vật liệu, không thêm vật liệu thứ tư",
+      "Không ảnh hero; tấm vé là trung tâm",
+      "Số luôn tabular-nums",
+      "Mọi số liệu từ API hoặc tài liệu nghiệp vụ"
+    ],
+    "rules": [
+      {
+        "name": "The Ticket Ink Rule",
+        "body": "Trên giấy vé hồng, chữ phụ #6B2F22 và đỏ hành động #962A16.",
+        "section": "colors"
+      },
+      {
+        "name": "The No Cream Rule",
+        "body": "Nền trang không bao giờ là kem/be.",
+        "section": "colors"
+      },
+      {
+        "name": "The No Eyebrow Rule",
+        "body": "Không đặt nhãn nhỏ phía trên tiêu đề.",
+        "section": "typography"
+      },
+      {
+        "name": "The Paper Only Rule",
+        "body": "Chỉ vật thể bằng giấy mới có bóng.",
+        "section": "elevation"
+      },
+      {
+        "name": "The One Primary Rule",
+        "body": "Mỗi nhóm nút một nút chính; nút cùng hàng cùng cỡ; không cỡ nào dưới 44px.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do in giá theo từng đêm ở mọi chỗ có giá",
+      "Do giữ ba vật liệu: giấy vé, bảng ga, mẫu biểu",
+      "Do dùng tabular-nums cho số tiền ≥ 14px"
+    ],
+    "donts": [
+      "Don't đặt ảnh hero toàn màn hay thanh tìm kiếm nổi",
+      "Don't dùng nền kem/be hoặc xám trên nền màu",
+      "Don't dùng tài sản thương hiệu khác",
+      "Don't để lộ mã nội bộ trong câu chữ"
+    ]
+  }
+}

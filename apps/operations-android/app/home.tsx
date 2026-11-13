@@ -1,10 +1,12 @@
-/** Màn chính sau khi đăng nhập: demo mở khoá PIN và đăng xuất (SCR-56, §8.1/§8.3). */
+/** Màn chính sau khi đăng nhập: điều hướng tác vụ vận hành và đăng xuất (SCR-56, §8.1/§8.3). */
 import { useState, type ReactElement } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { color, space, touchTargetDp, typography, waitMessage } from '@pinehill/ui-native';
+import { color, radius, space, touchTargetDp, waitMessage } from '@pinehill/ui-native';
 import { isApiError } from '@pinehill/api-client';
+import { isDemoEnabled } from '../src/config/index';
 import { Session, PIN_LOCK_SECONDS } from '../src/session';
 import { t } from '../src/strings';
+import { theme } from '../src/theme';
 
 export interface HomeScreenProps {
   session: Session;
@@ -14,17 +16,20 @@ export interface HomeScreenProps {
   onArrivals?: () => void;
   onWalkIn?: () => void;
   onDepartures?: () => void;
+  demoMode?: boolean;
 }
 
-export default function HomeScreen({
-  session,
-  onLogout,
-  onTasks,
-  onLookup,
-  onArrivals,
-  onWalkIn,
-  onDepartures,
-}: HomeScreenProps): ReactElement {
+const navCardStyle = {
+  minHeight: touchTargetDp,
+  justifyContent: 'center' as const,
+  paddingHorizontal: space.s3,
+  backgroundColor: color.surface,
+  borderWidth: 1,
+  borderColor: color.border,
+  borderRadius: radius.md,
+};
+
+function PinDemoSection({ session }: { session: Session }): ReactElement {
   const [pinResult, setPinResult] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -53,116 +58,74 @@ export default function HomeScreen({
   }
 
   return (
-    <View style={{ padding: space.s4, gap: space.s3 }}>
-      <Text style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}>
-        {t('home.title')}
-      </Text>
-      {onArrivals ? (
-        <Pressable
-          testID="open-arrivals"
-          accessibilityRole="button"
-          accessibilityLabel={t('home.arrivals')}
-          onPress={onArrivals}
-          style={{
-            minHeight: touchTargetDp,
-            justifyContent: 'center',
-            paddingHorizontal: space.s3,
-          }}
-        >
-          <Text style={{ color: color.primary }}>{t('home.arrivals')}</Text>
-        </Pressable>
-      ) : null}
-      {onDepartures ? (
-        <Pressable
-          testID="open-departures"
-          accessibilityRole="button"
-          accessibilityLabel={t('home.departures')}
-          onPress={onDepartures}
-          style={{
-            minHeight: touchTargetDp,
-            justifyContent: 'center',
-            paddingHorizontal: space.s3,
-          }}
-        >
-          <Text style={{ color: color.primary }}>{t('home.departures')}</Text>
-        </Pressable>
-      ) : null}
-      {onTasks ? (
-        <Pressable
-          testID="open-housekeeping"
-          accessibilityRole="button"
-          accessibilityLabel={t('home.tasks')}
-          onPress={onTasks}
-          style={{
-            minHeight: touchTargetDp,
-            justifyContent: 'center',
-            paddingHorizontal: space.s3,
-          }}
-        >
-          <Text style={{ color: color.primary }}>{t('home.tasks')}</Text>
-        </Pressable>
-      ) : null}
-      {onLookup ? (
-        <Pressable
-          testID="open-lookup"
-          accessibilityRole="button"
-          accessibilityLabel={t('home.lookup')}
-          onPress={onLookup}
-          style={{
-            minHeight: touchTargetDp,
-            justifyContent: 'center',
-            paddingHorizontal: space.s3,
-          }}
-        >
-          <Text style={{ color: color.primary }}>{t('home.lookup')}</Text>
-        </Pressable>
-      ) : null}
-      {onWalkIn ? (
-        <Pressable
-          testID="open-walk-in"
-          accessibilityRole="button"
-          accessibilityLabel={t('home.walkIn')}
-          onPress={onWalkIn}
-          style={{
-            minHeight: touchTargetDp,
-            justifyContent: 'center',
-            paddingHorizontal: space.s3,
-          }}
-        >
-          <Text style={{ color: color.primary }}>{t('home.walkIn')}</Text>
-        </Pressable>
-      ) : null}
+    <>
       <Pressable
         testID="pin-demo"
         accessibilityRole="button"
         accessibilityLabel={t('home.pinDemo')}
         disabled={busy}
         onPress={() => void runPinDemo()}
-        style={{
-          minHeight: touchTargetDp,
-          justifyContent: 'center',
-          paddingHorizontal: space.s3,
-          backgroundColor: color.primary,
-          borderRadius: 8,
-        }}
+        style={theme.buttonPrimary}
       >
-        <Text style={{ color: color.surface, fontWeight: '600', textAlign: 'center' }}>
-          {busy ? t('state.loading') : t('home.pinDemo')}
-        </Text>
+        <Text style={theme.buttonPrimaryText}>{busy ? t('state.loading') : t('home.pinDemo')}</Text>
       </Pressable>
       {pinResult === null ? null : (
-        <Text accessibilityLiveRegion="polite" style={{ color: color.textMuted }}>
+        <Text accessibilityLiveRegion="polite" style={theme.muted}>
           {pinResult}
         </Text>
       )}
+    </>
+  );
+}
+
+export default function HomeScreen({
+  session,
+  onLogout,
+  onTasks,
+  onLookup,
+  onArrivals,
+  onWalkIn,
+  onDepartures,
+  demoMode = isDemoEnabled(),
+}: HomeScreenProps): ReactElement {
+  const navItems: ReadonlyArray<{
+    testID: string;
+    label: string;
+    onPress?: (() => void) | undefined;
+  }> = [
+    { testID: 'open-arrivals', label: t('home.arrivals'), onPress: onArrivals },
+    { testID: 'open-departures', label: t('home.departures'), onPress: onDepartures },
+    { testID: 'open-housekeeping', label: t('home.tasks'), onPress: onTasks },
+    { testID: 'open-lookup', label: t('home.lookup'), onPress: onLookup },
+    { testID: 'open-walk-in', label: t('home.walkIn'), onPress: onWalkIn },
+  ];
+
+  return (
+    <View style={theme.screen}>
+      <Text style={theme.title}>{t('home.title')}</Text>
+      {navItems.map((item) =>
+        item.onPress ? (
+          <Pressable
+            key={item.testID}
+            testID={item.testID}
+            accessibilityRole="button"
+            accessibilityLabel={item.label}
+            onPress={item.onPress}
+            style={navCardStyle}
+          >
+            <Text style={{ color: color.primary, fontWeight: '500' }}>{item.label}</Text>
+          </Pressable>
+        ) : null,
+      )}
+      {demoMode ? <PinDemoSection session={session} /> : null}
       <Pressable
         testID="logout"
         accessibilityRole="button"
         accessibilityLabel={t('home.logout')}
         onPress={() => void session.logout().then(onLogout)}
-        style={{ minHeight: touchTargetDp, justifyContent: 'center', paddingHorizontal: space.s3 }}
+        style={theme.buttonSecondary}
       >
-        <Text style={{ color: color.danger }}>{t('home.logout')}</Text>
+        <Text style={{ color: color.danger, fontWeight: '500' }}>{t('home.logout')}</Text>
       </Pressable>
     </View>
   );

@@ -5,12 +5,13 @@
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import { ActivityIndicator, FlatList, Text, TextInput, View } from 'react-native';
 import type { BookingSummary, CheckOutResponse, Payment } from '@pinehill/contracts';
-import { color, space, touchTargetDp, typography } from '@pinehill/ui-native';
+import { color, space } from '@pinehill/ui-native';
 import { ActionButton } from '../arrivals/controls';
 import { formatVnDateTime } from '../arrivals/format';
 import { filterArrivals } from '../arrivals/model';
 import { formatBusinessDate } from '../housekeeping/date';
 import type { Session } from '../session';
+import { theme } from '../theme';
 import { DepartureCard } from './card';
 import { CheckOutDetail } from './checkout';
 import { watchContext } from './context';
@@ -155,11 +156,8 @@ export function DeparturesScreen({
   const rows = filterArrivals(state.departures, term);
   const loading = state.phase === 'loading';
   return (
-    <View style={{ flex: 1, padding: space.s4, gap: space.s3, backgroundColor: color.surface }}>
-      <Text
-        accessibilityRole="header"
-        style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}
-      >
+    <View style={theme.screen}>
+      <Text accessibilityRole="header" style={theme.title}>
         {text('title')}
       </Text>
       <SyncInfo state={state} />
@@ -171,15 +169,11 @@ export function DeparturesScreen({
         autoCapitalize="characters"
         autoCorrect={false}
         onChangeText={setTerm}
-        style={{
-          minHeight: touchTargetDp,
-          paddingHorizontal: space.s3,
-          borderWidth: 1,
-          borderRadius: 8,
-          color: color.text,
-        }}
+        style={theme.field}
       />
-      {loading ? <ActivityIndicator accessibilityLabel={text('loading')} /> : null}
+      {loading ? (
+        <ActivityIndicator accessibilityLabel={text('loading')} color={color.primary} />
+      ) : null}
       <Notice id="departures-state" message={stateMessage(state)} />
       <Notice id="departures-truncated" message={state.truncated ? text('truncated') : null} />
       <Notice

@@ -1,10 +1,11 @@
 import type { ReactElement } from 'react';
 import { Pressable, Text } from 'react-native';
 import type { BookingSummary } from '@pinehill/contracts';
-import { color, space, touchTargetDp } from '@pinehill/ui-native';
+import { color } from '@pinehill/ui-native';
 import { formatBusinessDate } from '../housekeeping/date';
 import { formatVnd } from '../lookup/view';
 import { stayPeriodText } from '../lookup/messages';
+import { theme } from '../theme';
 import { stayText as text } from './messages';
 
 /** Thẻ khách đi: số tiền/ngày là số máy chủ trả; "quá hạn" chỉ là so sánh ngày hiển thị, không phải luật. */
@@ -27,21 +28,18 @@ export function DepartureCard({
       onPress={() => {
         onOpen(booking);
       }}
-      style={{
-        minHeight: touchTargetDp,
-        gap: space.s2,
-        padding: space.s3,
-        borderWidth: 1,
-        borderRadius: 8,
-        borderColor: overdue ? color.warning : color.border,
-      }}
+      style={[theme.card, overdue ? { borderColor: color.warning } : null]}
     >
-      <Text style={{ color: color.text, fontWeight: '700' }}>{booking.code}</Text>
-      <Text>{stayPeriodText(booking.checkIn, booking.checkOut, booking.nights)}</Text>
-      <Text style={overdue ? { color: color.warning } : undefined}>
+      <Text style={{ color: color.text, fontWeight: '600' }}>{booking.code}</Text>
+      <Text style={theme.body}>
+        {stayPeriodText(booking.checkIn, booking.checkOut, booking.nights)}
+      </Text>
+      <Text style={overdue ? theme.alertWarning : theme.muted}>
         {text(overdue ? 'overdueLine' : 'dueLine', { date: due })}
       </Text>
-      <Text>{text('balanceLine', { balance: formatVnd(booking.balanceDue) })}</Text>
+      <Text style={[theme.body, theme.tabular]}>
+        {text('balanceLine', { balance: formatVnd(booking.balanceDue) })}
+      </Text>
     </Pressable>
   );
 }

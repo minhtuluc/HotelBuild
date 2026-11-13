@@ -3,7 +3,15 @@
 /** Các khối giao diện của SCR-70: bảng gói giá/chính sách, form sửa, bảng khác biệt khi 412. */
 import type { FormEvent, ReactElement } from 'react';
 import type { CancellationPolicy, RatePlanAdmin } from '@pinehill/contracts';
-import { formatStatusWithEnum } from '@pinehill/ui-web';
+import { formatStatusWithEnum, space } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_FILTER_ROW_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+  opsNoticeStyle,
+} from '../../../components/editorial-styles';
 import { t } from '../../../lib/i18n';
 import { type DiffRow, type RatePlanDraft } from '../../../lib/rate-plans';
 
@@ -22,8 +30,6 @@ import { wireOffset } from '../../../lib/rate-policy-tiers';
 import { rateText as rs } from './messages-session';
 export { PolicyEditor } from './policy-editor';
 
-const FIELD_STYLE = { display: 'grid', gap: 4 } as const;
-
 export function ConflictPanel({
   conflict,
   onUseServer,
@@ -34,20 +40,16 @@ export function ConflictPanel({
   onKeep: () => void;
 }): ReactElement {
   return (
-    <div
-      role="alert"
-      data-testid="rate-plans-conflict"
-      style={{ border: '1px solid var(--color-border)' }}
-    >
-      <p style={{ margin: 0 }}>{t('ratePlans.conflict.title')}</p>
-      {conflict.kind === 'policy' ? <p>{rs('keepPolicy')}</p> : null}
+    <div role="alert" data-testid="rate-plans-conflict" style={opsNoticeStyle('warning')}>
+      <p style={{ margin: 0, fontWeight: 600 }}>{t('ratePlans.conflict.title')}</p>
+      {conflict.kind === 'policy' ? <p style={{ margin: 0 }}>{rs('keepPolicy')}</p> : null}
       <div
         role="region"
         tabIndex={0}
         aria-label={t('ratePlans.conflict.title')}
-        style={{ maxWidth: '100%', overflowX: 'auto' }}
+        style={OPS_TABLE_WRAP_STYLE}
       >
-        <table style={{ borderCollapse: 'collapse' }}>
+        <table style={OPS_TABULAR_STYLE}>
           <thead>
             <tr>
               <th scope="col">{rs('field')}</th>
@@ -72,12 +74,24 @@ export function ConflictPanel({
           </tbody>
         </table>
       </div>
-      <button type="button" onClick={onUseServer}>
-        {t('ratePlans.conflict.useServer')}
-      </button>
-      <button type="button" onClick={onKeep}>
-        {rs('adoptLocal')}
-      </button>
+      <div style={{ display: 'flex', gap: space.s2, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          className="ph-btn"
+          style={OPS_COMPACT_BTN_STYLE}
+          onClick={onUseServer}
+        >
+          {t('ratePlans.conflict.useServer')}
+        </button>
+        <button
+          type="button"
+          className="ph-btn-primary"
+          style={OPS_COMPACT_BTN_STYLE}
+          onClick={onKeep}
+        >
+          {rs('adoptLocal')}
+        </button>
+      </div>
     </div>
   );
 }
@@ -107,7 +121,7 @@ export function RatePlanTable({
     t('ratePlans.col.actions'),
   ];
   return (
-    <table data-testid="rate-plans-table" style={{ borderCollapse: 'collapse' }}>
+    <table data-testid="rate-plans-table" style={{ ...OPS_TABULAR_STYLE, width: '100%' }}>
       <thead>
         <tr>
           {headers.map((label) => (
@@ -130,7 +144,12 @@ export function RatePlanTable({
             <td>{plan.version}</td>
             <td>
               {canEdit ? (
-                <button type="button" onClick={() => onEdit(plan)}>
+                <button
+                  type="button"
+                  className="ph-btn"
+                  style={OPS_COMPACT_BTN_STYLE}
+                  onClick={() => onEdit(plan)}
+                >
                   {t('ratePlans.edit')}
                 </button>
               ) : null}
@@ -152,52 +171,72 @@ export function PolicyList({
   onEdit: (policy: CancellationPolicy) => void;
 }): ReactElement {
   return (
-    <div data-testid="policies-list" style={{ display: 'grid', gap: 'var(--space-s4, 16px)' }}>
+    <div data-testid="policies-list" style={{ display: 'grid', gap: space.s4 }}>
       {policies.map((policy) => (
         <section
           key={policy.id}
+          className="ph-card"
           data-testid={`policy-${policy.id}`}
-          style={{ borderTop: '1px solid var(--color-border)' }}
+          style={{ padding: space.s4, display: 'grid', gap: space.s3 }}
         >
-          <h3 style={{ margin: 0 }}>
-            {policy.name}{' '}
-            {formatStatusWithEnum(t(`ratePlans.status.${policy.status}`), policy.status)}
-          </h3>
-          <p style={{ margin: 0 }}>
-            {t('ratePlans.col.version')}: {policy.version}
-          </p>
-          <table data-testid={`policy-tiers-${policy.id}`} style={{ borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th scope="col" style={{ textAlign: 'start' }}>
-                  {t('ratePlans.col.hours')}
-                </th>
-                <th scope="col" style={{ textAlign: 'start' }}>
-                  {t('ratePlans.col.refund')}
-                </th>
-                <th scope="col">{rs('firstNight')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {policy.tiers.map((tier) => (
-                <tr key={wireOffset(tier)}>
-                  <td>{wireOffset(tier) === -1 ? rs('catchAll') : `${wireOffset(tier)}h`}</td>
-                  <td>{tier.refundPercent}%</td>
-                  <td>{tier.chargeFirstNight ? rs('yes') : rs('no')}</td>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: space.s2,
+            }}
+          >
+            <h3 style={{ margin: 0 }}>
+              {policy.name}{' '}
+              {formatStatusWithEnum(t(`ratePlans.status.${policy.status}`), policy.status)}
+            </h3>
+            <span style={{ color: 'var(--color-text-muted)', fontSize: 13 }}>
+              {t('ratePlans.col.version')}: {policy.version}
+            </span>
+          </div>
+          <div style={OPS_TABLE_WRAP_STYLE}>
+            <table data-testid={`policy-tiers-${policy.id}`} style={OPS_TABULAR_STYLE}>
+              <thead>
+                <tr>
+                  <th scope="col" style={{ textAlign: 'start' }}>
+                    {t('ratePlans.col.hours')}
+                  </th>
+                  <th scope="col" style={{ textAlign: 'start' }}>
+                    {t('ratePlans.col.refund')}
+                  </th>
+                  <th scope="col">{rs('firstNight')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <p style={{ margin: 0 }}>
+              </thead>
+              <tbody>
+                {policy.tiers.map((tier) => (
+                  <tr key={wireOffset(tier)}>
+                    <td>{wireOffset(tier) === -1 ? rs('catchAll') : `${wireOffset(tier)}h`}</td>
+                    <td>{tier.refundPercent}%</td>
+                    <td>{tier.chargeFirstNight ? rs('yes') : rs('no')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-muted)' }}>
             {t('ratePlans.col.early')}:{' '}
             {policy.earlyCheckoutFreeHours === 0 && policy.earlyCheckoutRefundPct === 0
               ? t('ratePlans.early.none')
               : `${policy.earlyCheckoutFreeHours}h · ${policy.earlyCheckoutRefundPct}%`}
           </p>
           {canEdit ? (
-            <button type="button" onClick={() => onEdit(policy)}>
-              {t('ratePlans.edit')}
-            </button>
+            <div style={{ display: 'flex' }}>
+              <button
+                type="button"
+                className="ph-btn"
+                style={OPS_COMPACT_BTN_STYLE}
+                onClick={() => onEdit(policy)}
+              >
+                {t('ratePlans.edit')}
+              </button>
+            </div>
           ) : null}
         </section>
       ))}
@@ -225,13 +264,14 @@ export function RatePlanEditor({
   return (
     <form
       data-testid="rate-plan-editor"
+      className="ph-card ph-filter-row"
       onSubmit={onSubmit}
-      style={{ display: 'flex', gap: 'var(--space-s2, 8px)', flexWrap: 'wrap', alignItems: 'end' }}
+      style={OPS_FILTER_ROW_STYLE}
     >
-      <legend>
+      <legend style={{ fontWeight: 600 }}>
         {t('ratePlans.form.legend.plan', { code: draft.code, version: draft.version })}
       </legend>
-      <label style={FIELD_STYLE}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('ratePlans.form.deposit')}
         <input
           name="depositPercent"
@@ -239,7 +279,7 @@ export function RatePlanEditor({
           onChange={(event) => onChange({ ...draft, depositPercent: event.target.value })}
         />
       </label>
-      <label style={FIELD_STYLE}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('ratePlans.form.minNights')}
         <input
           name="minNights"
@@ -247,7 +287,7 @@ export function RatePlanEditor({
           onChange={(event) => onChange({ ...draft, minNights: event.target.value })}
         />
       </label>
-      <label style={FIELD_STYLE}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('ratePlans.form.maxNights')}
         <input
           name="maxNights"
@@ -255,7 +295,7 @@ export function RatePlanEditor({
           onChange={(event) => onChange({ ...draft, maxNights: event.target.value })}
         />
       </label>
-      <label style={FIELD_STYLE}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('ratePlans.form.policy')}
         <select
           name="cancellationPolicyId"
@@ -269,7 +309,7 @@ export function RatePlanEditor({
           ))}
         </select>
       </label>
-      <label style={FIELD_STYLE}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('ratePlans.form.status')}
         <select
           name="status"
@@ -280,7 +320,7 @@ export function RatePlanEditor({
           <option value="INACTIVE">{t('ratePlans.status.INACTIVE')}</option>
         </select>
       </label>
-      <label style={FIELD_STYLE}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('ratePlans.form.reason')}
         <input
           name="reason"
@@ -288,11 +328,16 @@ export function RatePlanEditor({
           onChange={(event) => onChange({ ...draft, reason: event.target.value })}
         />
       </label>
-      <p role="note" style={{ margin: 0, flexBasis: '100%' }}>
+      <p
+        role="note"
+        style={{ margin: 0, flexBasis: '100%', color: 'var(--color-text-muted)', fontSize: 13 }}
+      >
         {t('ratePlans.snapshotNote')}
       </p>
-      <button type="submit">{t('ratePlans.save')}</button>
-      <button type="button" onClick={onCancel}>
+      <button type="submit" className="ph-btn-primary" style={OPS_COMPACT_BTN_STYLE}>
+        {t('ratePlans.save')}
+      </button>
+      <button type="button" className="ph-btn" style={OPS_COMPACT_BTN_STYLE} onClick={onCancel}>
         {t('ratePlans.cancel')}
       </button>
     </form>

@@ -1,5 +1,10 @@
 'use client';
 import { useEffect, useState, type ReactElement } from 'react';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_FILTER_ROW_STYLE,
+} from '../../../components/editorial-styles';
 import { t } from '../../../lib/i18n';
 import { defaultRange } from '../../../lib/inventory-grid';
 import { validateDrafts } from '../../../lib/allotments';
@@ -57,7 +62,8 @@ function ControlsForm({
   return (
     <form
       data-testid="allotment-controls"
-      style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end' }}
+      className="ph-card ph-filter-row"
+      style={OPS_FILTER_ROW_STYLE}
       onSubmit={(event) => {
         event.preventDefault();
         if (disabled) return;
@@ -70,7 +76,7 @@ function ControlsForm({
       }}
     >
       <Selectors data={data} current={current} disabled={disabled} change={change} />
-      <label>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('allotments.form.from')}
         <input
           type="date"
@@ -79,7 +85,7 @@ function ControlsForm({
           onChange={(event) => setPending({ ...pending, from: event.target.value })}
         />
       </label>
-      <label>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('allotments.form.to')}
         <input
           type="date"
@@ -88,7 +94,12 @@ function ControlsForm({
           onChange={(event) => setPending({ ...pending, to: event.target.value })}
         />
       </label>
-      <button type="submit" disabled={disabled} style={{ minHeight: 44 }}>
+      <button
+        type="submit"
+        disabled={disabled}
+        className="ph-btn-primary"
+        style={OPS_COMPACT_BTN_STYLE}
+      >
         {t('allotments.form.load')}
       </button>
     </form>
@@ -109,7 +120,7 @@ function Selectors({
   return (
     <>
       {' '}
-      <label>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('allotments.form.channel')}
         <select
           value={current.channelId ?? ''}
@@ -123,7 +134,7 @@ function Selectors({
           ))}
         </select>
       </label>
-      <label>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('allotments.form.property')}
         <select
           value={current.propertyId ?? ''}
@@ -143,7 +154,7 @@ function Selectors({
           ))}
         </select>
       </label>
-      <label>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('allotments.form.roomType')}
         <select
           value={current.roomTypeId ?? ''}

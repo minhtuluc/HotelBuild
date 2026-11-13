@@ -11,6 +11,18 @@ import type { NotificationChannel, NotificationSummary } from '@pinehill/contrac
 import { StateSurface, formatDateTimeVn, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_FILTER_ROW_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../../components/editorial-styles';
 import { useOpsSession } from '../../../../lib/ops-session';
 import { t } from '../../../../lib/i18n';
 import { readFailureState, writeFailureState } from '../../../../lib/screen-state';
@@ -27,14 +39,8 @@ import {
 const STATUSES: readonly NotificationStatus[] = ['PENDING', 'SENT', 'FAILED'];
 const CHANNELS: readonly NotificationChannel[] = ['EMAIL', 'SMS', 'ZALO_OA', 'PUSH'];
 
-const ROW_STYLE = {
-  display: 'flex',
-  gap: 'var(--space-s2, 8px)',
-  flexWrap: 'wrap',
-  alignItems: 'end',
-} as const;
-
-const FIELD_STYLE = { display: 'grid', gap: 4 } as const;
+const ROW_STYLE = OPS_FILTER_ROW_STYLE;
+const FIELD_STYLE = OPS_FIELD_LABEL_STYLE;
 const CELL = { textAlign: 'start', borderBottom: '1px solid var(--color-border)' } as const;
 
 function statusOf(value: string): NotificationStatus | '' {
@@ -139,12 +145,15 @@ export function NotificationsScreen(): ReactElement {
   const nowMs = Date.now();
 
   return (
-    <section
-      style={{ padding: 'var(--space-s6, 24px)', display: 'grid', gap: 'var(--space-s4, 16px)' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('noti.title')}</h1>
-      <p style={{ margin: 0 }}>{t('noti.intro')}</p>
+    <section style={OPS_PAGE_STYLE}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 className="ph-display" style={OPS_TITLE_STYLE}>
+          {t('noti.title')}
+        </h1>
+        <p style={OPS_INTRO_STYLE}>{t('noti.intro')}</p>
+      </header>
       <form
+        className="ph-card ph-filter-row"
         data-testid="noti-filters"
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
           event.preventDefault();
@@ -190,19 +199,21 @@ export function NotificationsScreen(): ReactElement {
             onChange={(event) => setDraft({ ...draft, template: event.target.value })}
           />
         </label>
-        <button type="submit">{t('noti.form.load')}</button>
+        <button type="submit" className="ph-btn-primary">
+          {t('noti.form.load')}
+        </button>
       </form>
       <StateSurface state={state}>
         {readError === null ? null : (
           <ScreenAlert error={readError} onRetry={() => void load(applied)} />
         )}
         {saved === null ? null : (
-          <p role="status" data-testid="noti-saved" style={{ margin: 0 }}>
+          <p role="status" data-testid="noti-saved" style={opsNoticeStyle('success')}>
             {saved}
           </p>
         )}
         {rows.length === 0 ? null : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="ph-card" style={OPS_TABLE_WRAP_STYLE}>
             <table data-testid="noti-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
@@ -237,7 +248,7 @@ export function NotificationsScreen(): ReactElement {
                           <span role="note"> · {t('noti.failed.warning')}</span>
                         ) : null}
                       </td>
-                      <td style={CELL}>{row.retryCount}</td>
+                      <td style={{ ...CELL, ...OPS_TABULAR_STYLE }}>{row.retryCount}</td>
                       <td style={CELL} data-testid={`noti-error-${row.id}`}>
                         {row.errorMessage ?? '—'}
                       </td>
@@ -247,9 +258,11 @@ export function NotificationsScreen(): ReactElement {
                       <td style={CELL}>{formatDateTimeVn(row.createdAt)}</td>
                       <td style={CELL}>
                         {canEdit ? (
-                          <div style={ROW_STYLE}>
+                          <div className="ph-filter-row" style={ROW_STYLE}>
                             <button
                               type="button"
+                              className="ph-btn"
+                              style={OPS_COMPACT_BTN_STYLE}
                               data-testid={`noti-resend-${row.id}`}
                               disabled={!resend.allowed}
                               onClick={() => {
@@ -277,6 +290,7 @@ export function NotificationsScreen(): ReactElement {
         )}
         {target === null ? null : (
           <form
+            className="ph-card"
             data-testid="noti-resend-form"
             onSubmit={(event) => void submitResend(event)}
             style={{ display: 'grid', gap: 'var(--space-s2, 8px)', maxWidth: 480 }}
@@ -292,8 +306,10 @@ export function NotificationsScreen(): ReactElement {
                 onChange={(event) => setReason(event.target.value)}
               />
             </label>
-            <button type="submit">{t('noti.resend.submit')}</button>
-            <button type="button" onClick={() => setTarget(null)}>
+            <button type="submit" className="ph-btn-primary">
+              {t('noti.resend.submit')}
+            </button>
+            <button type="button" className="ph-btn" onClick={() => setTarget(null)}>
               {t('noti.resend.cancel')}
             </button>
           </form>

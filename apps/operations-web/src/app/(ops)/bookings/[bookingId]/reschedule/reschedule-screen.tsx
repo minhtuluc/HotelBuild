@@ -12,7 +12,16 @@ import { useParams } from 'next/navigation';
 import { createBookingApi, createQuoteApi } from '@pinehill/api-client';
 import { ratePlanCodeSchema } from '@pinehill/contracts';
 import type { BookingSummary, Quote } from '@pinehill/contracts';
-import { StateSurface, formatMoney, type ScreenState } from '@pinehill/ui-web';
+import { StateSurface, formatMoney, space, type ScreenState } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_SUBTITLE_STYLE,
+  OPS_TABULAR_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../../../components/editorial-styles';
 import { ScreenAlert } from '../../../../../components/screen-alert';
 import { useForcedState } from '../../../../../components/forced-state';
 import { useOpsSession } from '../../../../../lib/ops-session';
@@ -30,18 +39,22 @@ function Difference({ booking, quote }: { booking: BookingSummary; quote: Quote 
         ? 'ops.reschedule.diff.less'
         : 'ops.reschedule.diff.same';
   return (
-    <section data-testid="reschedule-diff" style={{ display: 'grid', gap: 8 }}>
-      <h2 style={{ margin: 0 }}>{t('ops.reschedule.diff.title')}</h2>
+    <section
+      data-testid="reschedule-diff"
+      className="ph-card"
+      style={{ ...OPS_TABULAR_STYLE, display: 'grid', gap: space.s2, padding: space.s4 }}
+    >
+      <h2 style={OPS_SUBTITLE_STYLE}>{t('ops.reschedule.diff.title')}</h2>
       <p style={{ margin: 0 }} data-testid="reschedule-new-total">
         {t('ops.reschedule.diff.newTotal', { amount: formatMoney(quote.total) })}
       </p>
       <p style={{ margin: 0 }}>
         {t('ops.reschedule.diff.currentTotal', { amount: formatMoney(booking.totalAmount) })}
       </p>
-      <p style={{ margin: 0 }} data-testid="reschedule-difference">
+      <p style={{ margin: 0, fontWeight: 600 }} data-testid="reschedule-difference">
         {t(key, { amount: formatMoney(difference.amount) })}
       </p>
-      <p style={{ margin: 0 }} data-testid="reschedule-fee-gap">
+      <p style={opsNoticeStyle('neutral')} data-testid="reschedule-fee-gap">
         {t('ops.reschedule.feePending')}
       </p>
     </section>
@@ -143,21 +156,18 @@ export function RescheduleBookingScreen(): ReactElement {
 
   if (forced !== undefined) {
     return (
-      <section data-testid="reschedule-screen" style={{ display: 'grid', gap: 12 }}>
-        <h1 style={{ margin: 0 }}>{t('ops.reschedule.title')}</h1>
+      <section data-testid="reschedule-screen" style={OPS_PAGE_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{t('ops.reschedule.title')}</h1>
         <StateSurface state={forced} />
       </section>
     );
   }
 
   return (
-    <section
-      data-testid="reschedule-screen"
-      style={{ display: 'grid', gap: 12, padding: '16px 0' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('ops.reschedule.title')}</h1>
+    <section data-testid="reschedule-screen" style={OPS_PAGE_STYLE}>
+      <h1 style={OPS_TITLE_STYLE}>{t('ops.reschedule.title')}</h1>
       {booking === null ? null : (
-        <p data-testid="reschedule-current" style={{ margin: 0 }}>
+        <p data-testid="reschedule-current" style={opsNoticeStyle('neutral')}>
           <code>{booking.code}</code> · {booking.status} · {formatBusinessDate(booking.checkIn)} →{' '}
           {formatBusinessDate(booking.checkOut)} · rescheduleCount {booking.rescheduleCount}
         </p>
@@ -165,12 +175,12 @@ export function RescheduleBookingScreen(): ReactElement {
       <StateSurface state={state}>
         {error === null ? null : <ScreenAlert error={error} onRetry={() => void load()} />}
         {alert === null ? null : (
-          <p role="alert" data-testid="reschedule-alert" style={{ margin: 0 }}>
+          <p role="alert" data-testid="reschedule-alert" style={opsNoticeStyle('danger')}>
             {alert}
           </p>
         )}
         {updated !== null ? (
-          <p role="status" data-testid="reschedule-result" style={{ margin: 0 }}>
+          <p role="status" data-testid="reschedule-result" style={opsNoticeStyle('success')}>
             {t('ops.reschedule.result', {
               status: updated.status,
               count: updated.rescheduleCount,
@@ -179,8 +189,12 @@ export function RescheduleBookingScreen(): ReactElement {
             })}
           </p>
         ) : null}
-        <div data-testid="reschedule-form" style={{ display: 'grid', gap: 8, maxWidth: 420 }}>
-          <label style={{ display: 'grid', gap: 4 }}>
+        <div
+          data-testid="reschedule-form"
+          className="ph-card"
+          style={{ display: 'grid', gap: space.s3, maxWidth: 460, padding: space.s4 }}
+        >
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {t('ops.reschedule.checkIn')}
             <input
               name="checkIn"
@@ -192,7 +206,7 @@ export function RescheduleBookingScreen(): ReactElement {
               }}
             />
           </label>
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {t('ops.reschedule.checkOut')}
             <input
               name="checkOut"
@@ -204,7 +218,7 @@ export function RescheduleBookingScreen(): ReactElement {
               }}
             />
           </label>
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {t('ops.reschedule.reason')}
             <input
               name="reason"
@@ -216,9 +230,11 @@ export function RescheduleBookingScreen(): ReactElement {
             />
           </label>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: space.s2, flexWrap: 'wrap' }}>
           <button
             type="button"
+            className="ph-btn"
+            style={OPS_COMPACT_BTN_STYLE}
             data-testid="reschedule-check"
             disabled={busy}
             onClick={() => void checkPrice()}
@@ -227,6 +243,8 @@ export function RescheduleBookingScreen(): ReactElement {
           </button>
           <button
             type="button"
+            className="ph-btn-primary"
+            style={OPS_COMPACT_BTN_STYLE}
             data-testid="reschedule-confirm"
             disabled={busy || quote === null}
             onClick={() => void confirm()}

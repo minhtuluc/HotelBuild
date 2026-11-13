@@ -12,7 +12,21 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { createBookingApi, isApiError } from '@pinehill/api-client';
 import type { BookingSummary } from '@pinehill/contracts';
-import { StateSurface, formatDateTimeVn, formatMoney, type ScreenState } from '@pinehill/ui-web';
+import {
+  StateSurface,
+  formatDateTimeVn,
+  formatMoney,
+  space,
+  type ScreenState,
+} from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../../components/editorial-styles';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
 import { useOpsSession } from '../../../../lib/ops-session';
@@ -21,72 +35,58 @@ import { readFailureState } from '../../../../lib/screen-state';
 import { balanceRows, stayOf } from '../bookings-model';
 import { statusLabel } from '../bookings-parts';
 
-const CELL = { padding: '4px 12px 4px 0', textAlign: 'left' } as const;
-
 function Summary({ booking }: { booking: BookingSummary }): ReactElement {
   return (
-    <table data-testid="booking-detail">
-      <caption style={{ textAlign: 'left', paddingBottom: 4 }}>
-        {t('ops.bookings.detail.summary')}
-      </caption>
-      <tbody>
-        <tr>
-          <th scope="row" style={CELL}>
-            {t('ops.bookings.col.code')}
-          </th>
-          <td style={CELL}>
-            <code data-testid="booking-detail-code">{booking.code}</code>
-          </td>
-        </tr>
-        <tr>
-          <th scope="row" style={CELL}>
-            {t('ops.bookings.col.status')}
-          </th>
-          <td style={CELL} data-testid="booking-detail-status">
-            {statusLabel(booking.status)}
-          </td>
-        </tr>
-        <tr>
-          <th scope="row" style={CELL}>
-            {t('ops.bookings.col.stay')}
-          </th>
-          <td style={CELL}>{stayOf(booking)}</td>
-        </tr>
-        <tr>
-          <th scope="row" style={CELL}>
-            {t('ops.bookings.col.property')}
-          </th>
-          <td style={CELL}>{booking.propertyId}</td>
-        </tr>
-        <tr>
-          <th scope="row" style={CELL}>
-            {t('ops.bookings.col.channel')}
-          </th>
-          <td style={CELL}>{booking.channelId}</td>
-        </tr>
-        <tr>
-          <th scope="row" style={CELL}>
-            {t('ops.bookings.col.money')}
-          </th>
-          <td style={CELL} data-testid="booking-detail-money">
-            {balanceRows(booking).map((row) => (
-              <span key={row.key} style={{ marginRight: 8 }}>
-                {t(row.key === 'paid' ? 'ops.bookings.col.paid' : 'ops.bookings.col.balance')}:{' '}
-                {formatMoney(row.amount)}
-              </span>
-            ))}
-          </td>
-        </tr>
-        <tr>
-          <th scope="row" style={CELL}>
-            {t('ops.bookings.detail.created')}
-          </th>
-          <td style={CELL}>
-            {formatDateTimeVn(booking.createdAt)} · {booking.createdBy}
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div style={OPS_TABLE_WRAP_STYLE}>
+      <table data-testid="booking-detail" style={OPS_TABULAR_STYLE}>
+        <caption
+          style={{ textAlign: 'left', padding: `${space.s3}px ${space.s4}px`, fontWeight: 600 }}
+        >
+          {t('ops.bookings.detail.summary')}
+        </caption>
+        <tbody>
+          <tr>
+            <th scope="row">{t('ops.bookings.col.code')}</th>
+            <td>
+              <code data-testid="booking-detail-code">{booking.code}</code>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">{t('ops.bookings.col.status')}</th>
+            <td data-testid="booking-detail-status">{statusLabel(booking.status)}</td>
+          </tr>
+          <tr>
+            <th scope="row">{t('ops.bookings.col.stay')}</th>
+            <td>{stayOf(booking)}</td>
+          </tr>
+          <tr>
+            <th scope="row">{t('ops.bookings.col.property')}</th>
+            <td>{booking.propertyId}</td>
+          </tr>
+          <tr>
+            <th scope="row">{t('ops.bookings.col.channel')}</th>
+            <td>{booking.channelId}</td>
+          </tr>
+          <tr>
+            <th scope="row">{t('ops.bookings.col.money')}</th>
+            <td data-testid="booking-detail-money">
+              {balanceRows(booking).map((row) => (
+                <span key={row.key} style={{ marginRight: 8 }}>
+                  {t(row.key === 'paid' ? 'ops.bookings.col.paid' : 'ops.bookings.col.balance')}:{' '}
+                  {formatMoney(row.amount)}
+                </span>
+              ))}
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">{t('ops.bookings.detail.created')}</th>
+            <td>
+              {formatDateTimeVn(booking.createdAt)} · {booking.createdBy}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -140,26 +140,26 @@ export function BookingScreen(): ReactElement {
 
   if (forced !== undefined) {
     return (
-      <section data-testid="booking-screen" style={{ display: 'grid', gap: 12 }}>
-        <h1 style={{ margin: 0 }}>{t('ops.bookings.detail.title')}</h1>
+      <section data-testid="booking-screen" style={OPS_PAGE_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{t('ops.bookings.detail.title')}</h1>
         <StateSurface state={forced} />
       </section>
     );
   }
 
   return (
-    <section data-testid="booking-screen" style={{ display: 'grid', gap: 12, padding: '16px 0' }}>
-      <h1 style={{ margin: 0 }}>{t('ops.bookings.detail.title')}</h1>
+    <section data-testid="booking-screen" style={OPS_PAGE_STYLE}>
+      <h1 style={OPS_TITLE_STYLE}>{t('ops.bookings.detail.title')}</h1>
       <StateSurface state={state}>
         {error === null ? null : <ScreenAlert error={error} onRetry={() => void load()} />}
         {!notFound ? null : (
-          <div role="alert" data-testid="booking-not-found" style={{ display: 'grid', gap: 8 }}>
+          <div role="alert" data-testid="booking-not-found" style={opsNoticeStyle('danger')}>
             <p style={{ margin: 0 }}>{t('ops.bookings.detail.notFound')}</p>
             <Link href="/bookings">{t('ops.bookings.detail.lookup')}</Link>
           </div>
         )}
         {!outOfScope ? null : (
-          <div role="alert" data-testid="booking-out-of-scope" style={{ display: 'grid', gap: 8 }}>
+          <div role="alert" data-testid="booking-out-of-scope" style={opsNoticeStyle('warning')}>
             <p style={{ margin: 0 }}>{t('ops.bookings.detail.outOfScope')}</p>
             <Link href="/bookings">{t('ops.bookings.detail.back')}</Link>
           </div>
@@ -167,37 +167,65 @@ export function BookingScreen(): ReactElement {
         {booking === null ? null : (
           <>
             <Summary booking={booking} />
-            <p style={{ margin: 0 }} data-testid="booking-nights-pending">
+            <p style={opsNoticeStyle('neutral')} data-testid="booking-nights-pending">
               {t('ops.bookings.detail.nightsPending')}
             </p>
-            <p style={{ margin: 0 }} data-testid="booking-payments-pending">
+            <p style={opsNoticeStyle('neutral')} data-testid="booking-payments-pending">
               {t('ops.bookings.detail.paymentsPending')}
             </p>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <Link href={`/bookings/${bookingId}/cancel`} data-testid="booking-open-cancel">
+            <div style={{ display: 'flex', gap: space.s2, flexWrap: 'wrap' }}>
+              <Link
+                href={`/bookings/${bookingId}/cancel`}
+                className="ph-btn"
+                style={OPS_COMPACT_BTN_STYLE}
+                data-testid="booking-open-cancel"
+              >
                 {t('ops.bookings.action.cancel')}
               </Link>
               <Link
                 href={`/bookings/${bookingId}/reschedule`}
+                className="ph-btn"
+                style={OPS_COMPACT_BTN_STYLE}
                 data-testid="booking-open-reschedule"
               >
                 {t('ops.bookings.action.reschedule')}
               </Link>
-              <Link href={`/bookings/${bookingId}/collect`} data-testid="booking-open-collect">
+              <Link
+                href={`/bookings/${bookingId}/collect`}
+                className="ph-btn-primary"
+                style={OPS_COMPACT_BTN_STYLE}
+                data-testid="booking-open-collect"
+              >
                 {t('ops.bookings.action.collect')}
               </Link>
+              <Link
+                href={`/bookings/${bookingId}/refunds`}
+                className="ph-btn"
+                style={OPS_COMPACT_BTN_STYLE}
+                data-testid="booking-open-refunds"
+              >
+                {t('ops.refunds.title')}
+              </Link>
             </div>
-            <Link href={`/bookings/${bookingId}/refunds`} data-testid="booking-open-refunds">
-              {t('ops.refunds.title')}
-            </Link>
-            <p style={{ margin: 0 }} data-testid="booking-actions-pending">
+            <p
+              style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 13 }}
+              data-testid="booking-actions-pending"
+            >
               {t('ops.bookings.detail.actionsPending')}
             </p>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button type="button" data-testid="booking-reload" onClick={() => void load()}>
+            <div style={{ display: 'flex', gap: space.s2, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="ph-btn"
+                style={OPS_COMPACT_BTN_STYLE}
+                data-testid="booking-reload"
+                onClick={() => void load()}
+              >
                 {t('ops.bookings.detail.reload')}
               </button>
-              <Link href="/bookings">{t('ops.bookings.detail.back')}</Link>
+              <Link href="/bookings" className="ph-btn" style={OPS_COMPACT_BTN_STYLE}>
+                {t('ops.bookings.detail.back')}
+              </Link>
             </div>
           </>
         )}

@@ -6,13 +6,14 @@
 import { useMemo, useState, type ReactElement } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import type { BookingSummary, Payment } from '@pinehill/contracts';
-import { color, space, touchTargetDp } from '@pinehill/ui-native';
+import { color, space } from '@pinehill/ui-native';
 import { ActionButton } from '../arrivals/controls';
 import { formatVnd } from '../lookup/view';
 import type { Session } from '../session';
 import { ChoiceRow, PinPanel, ResultNotice, type Outcome } from './controls';
 import { useBalance, useStayWriter } from './hooks';
 import { stayText as text } from './messages';
+import { theme } from '../theme';
 import {
   COUNTER_METHODS,
   amountIssue,
@@ -67,18 +68,18 @@ function Done({
   onClose: () => void;
 }): ReactElement {
   return (
-    <View style={{ flex: 1, padding: space.s4, gap: space.s3, backgroundColor: color.surface }}>
-      <View testID="collect-done" accessibilityLiveRegion="polite" style={{ gap: space.s2 }}>
-        <Text style={{ color: color.success, fontWeight: '700' }}>
+    <View style={theme.screen}>
+      <View testID="collect-done" accessibilityLiveRegion="polite" style={theme.card}>
+        <Text style={[theme.alertSuccess, { fontWeight: '600' }]}>
           {text('collectDone', {
             amount: formatVnd(payment.amount),
             method: text(payment.method === 'CASH' ? 'method_CASH' : 'method_BANK_TRANSFER'),
             status: text(`status_${payment.status}`),
           })}
         </Text>
-        <Text>{text('paymentRef', { id: payment.paymentId })}</Text>
+        <Text style={theme.body}>{text('paymentRef', { id: payment.paymentId })}</Text>
         {balance.balance === null ? null : (
-          <Text testID="collect-due-after">
+          <Text testID="collect-due-after" style={[theme.body, theme.tabular]}>
             {text('dueAfter', { balance: formatVnd(balance.balance.balanceDue) })}
           </Text>
         )}
@@ -131,31 +132,29 @@ function useCollectForm(
   };
 }
 
-const FIELD = {
-  minHeight: touchTargetDp,
-  paddingHorizontal: space.s3,
-  borderWidth: 1,
-  borderRadius: 8,
-  color: color.text,
-} as const;
+const FIELD = theme.field;
 
 function DueBlock({ state, penalty }: { state: BalanceState; penalty: number }): ReactElement {
   const pending = balanceMessage(state);
   const due = state.balance?.balanceDue ?? 0;
   return (
-    <>
+    <View style={theme.card}>
       {pending === null ? (
-        <Text testID="collect-due" style={{ fontWeight: '700' }}>
+        <Text testID="collect-due" style={[theme.moneyInline, theme.tabular]}>
           {text('dueNow', { balance: formatVnd(due) })}
         </Text>
       ) : (
-        <Text testID="collect-balance-state" accessibilityLiveRegion="polite">
+        <Text testID="collect-balance-state" accessibilityLiveRegion="polite" style={theme.muted}>
           {pending}
         </Text>
       )}
-      {penalty > 0 ? <Text>{text('penaltyLine', { penalty: formatVnd(penalty) })}</Text> : null}
-      {pending === null && due === 0 ? <Text>{text('noDue')}</Text> : null}
-    </>
+      {penalty > 0 ? (
+        <Text style={[theme.body, theme.tabular]}>
+          {text('penaltyLine', { penalty: formatVnd(penalty) })}
+        </Text>
+      ) : null}
+      {pending === null && due === 0 ? <Text style={theme.muted}>{text('noDue')}</Text> : null}
+    </View>
   );
 }
 
@@ -246,17 +245,14 @@ export function CollectScreen({
   if (result?.kind === 'done')
     return <Done payment={result.response} balance={balance.state} onClose={onClose} />;
   return (
-    <View style={{ flex: 1, backgroundColor: color.surface }}>
-      <ScrollView contentContainerStyle={{ padding: space.s4, gap: space.s3 }}>
-        <Text
-          accessibilityRole="header"
-          style={{ fontSize: 24, fontWeight: '700', color: color.text }}
-        >
+    <View style={{ flex: 1, backgroundColor: color.bg }}>
+      <ScrollView contentContainerStyle={theme.scrollContent}>
+        <Text accessibilityRole="header" style={theme.title}>
           {text('collectTitle', { code: booking.code })}
         </Text>
         <DueBlock state={balance.state} penalty={booking.penaltyAmount} />
         <MethodPicker method={form.method} disabled={form.busy} onSelect={form.setMethod} />
-        <Text>{text('amount')}</Text>
+        <Text style={theme.body}>{text('amount')}</Text>
         <TextInput
           testID="collect-amount"
           accessibilityLabel={text('amount')}
@@ -264,7 +260,7 @@ export function CollectScreen({
           keyboardType="number-pad"
           editable={!form.busy}
           onChangeText={form.setEdited}
-          style={FIELD}
+          style={[FIELD, theme.tabular]}
         />
         {form.issue === null ? null : (
           <Text

@@ -1,6 +1,14 @@
 'use client';
 import { useEffect, useState, type ReactElement } from 'react';
-import { StateSurface, formatDateTimeVn, type ScreenState } from '@pinehill/ui-web';
+import {
+  StateSurface,
+  color,
+  fontFamily,
+  formatDateTimeVn,
+  radius,
+  space,
+  type ScreenState,
+} from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { useForcedState } from '../../../components/forced-state';
 import { t } from '../../../lib/i18n';
@@ -16,6 +24,7 @@ import { GridLegend, GridTable } from './grid-table';
 import { useGrid } from './use-grid';
 import type { GridState, GridData } from './controller';
 import { gridText } from './messages-session';
+
 function surface(state: GridState): ScreenState {
   switch (state.phase) {
     case 'loading':
@@ -31,96 +40,139 @@ function surface(state: GridState): ScreenState {
       return { kind: 'ready' };
   }
 }
+
 export function InventoryGridScreen(): ReactElement {
   const forced = useForcedState();
   const { controller, state } = useGrid(forced === undefined);
   const [propertyId, setPropertyId] = useState('');
   const [pending, setPending] = useState<GridRange>(() => defaultRange(new Date()));
   const [focus, setFocus] = useState<CellPosition>({ row: 0, col: 0 });
+
   useEffect(() => {
     setPropertyId(state.propertyId);
   }, [state.propertyId]);
+
   useEffect(() => {
     setFocus({ row: 0, col: 0 });
   }, [state.data]);
+
   if (forced !== undefined)
     return (
       <StateSurface state={forced}>
         <p>{t('screen.demo')}</p>
       </StateSurface>
     );
-  const pendingDays = dayCount(pending.from, pending.to),
-    data = state.data;
+
+  const pendingDays = dayCount(pending.from, pending.to);
+  const data = state.data;
+
   return (
     <section
       style={{
-        padding: 'var(--space-s6, 24px)',
+        maxWidth: 1440,
+        marginInline: 'auto',
+        padding: `clamp(${space.s4}px, 3vw, ${space.s6}px)`,
         display: 'grid',
-        gap: 'var(--space-s4, 16px)',
+        gap: space.s4,
         minWidth: 0,
       }}
     >
-      <h1 style={{ margin: 0 }}>{t('grid.title')}</h1>
-      <p style={{ margin: 0 }}>{t('grid.intro')}</p>
+      <div style={{ display: 'grid', gap: space.s1 }}>
+        <h1 style={{ margin: 0, fontFamily: fontFamily.sans, fontSize: 24, fontWeight: 500 }}>
+          {t('grid.title')}
+        </h1>
+        <p style={{ margin: 0, color: color.textMuted, maxWidth: '58rem' }}>{t('grid.intro')}</p>
+      </div>
+
       <form
         data-testid="grid-controls"
-        onSubmit={(e) => {
-          e.preventDefault();
+        onSubmit={(event) => {
+          event.preventDefault();
           void controller?.load(propertyId, pending);
         }}
+        className="ph-card"
         style={{
           display: 'flex',
-          gap: 'var(--space-s2, 8px)',
+          gap: space.s3,
           flexWrap: 'wrap',
           alignItems: 'end',
+          padding: space.s4,
           minWidth: 0,
         }}
       >
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 500 }}>
           {t('grid.form.property')}
           <select
             value={propertyId}
-            onChange={(e) => {
-              setPropertyId(e.target.value);
-              void controller?.load(e.target.value, pending);
+            onChange={(event) => {
+              setPropertyId(event.target.value);
+              void controller?.load(event.target.value, pending);
             }}
           >
-            {state.properties.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
+            {state.properties.map((property) => (
+              <option key={property.id} value={property.id}>
+                {property.name}
               </option>
             ))}
           </select>
         </label>
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 500 }}>
           {t('grid.form.from')}
           <input
             type="date"
             value={pending.from}
-            onChange={(e) => setPending({ ...pending, from: e.target.value })}
+            onChange={(event) => setPending({ ...pending, from: event.target.value })}
           />
         </label>
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 500 }}>
           {t('grid.form.to')}
           <input
             type="date"
             value={pending.to}
-            onChange={(e) => setPending({ ...pending, to: e.target.value })}
+            onChange={(event) => setPending({ ...pending, to: event.target.value })}
           />
         </label>
-        <button type="submit" style={{ minHeight: 44 }}>
+        <button type="submit" className="ph-btn-primary">
           {t('grid.form.load')}
         </button>
       </form>
+
       {pendingDays > MAX_GRID_DAYS ? (
-        <p role="alert">{t('grid.rangeTooLong', { max: MAX_GRID_DAYS })}</p>
+        <p
+          role="alert"
+          style={{
+            margin: 0,
+            padding: `${space.s2}px ${space.s3}px`,
+            background: '#FDF3F3',
+            border: `1px solid ${color.border}`,
+            boxShadow: `inset 0 0 0 1px ${color.danger}`,
+            borderRadius: radius.sm,
+            color: color.danger,
+          }}
+        >
+          {t('grid.rangeTooLong', { max: MAX_GRID_DAYS })}
+        </p>
       ) : null}
+
       <GridLegend />
+
       {state.phase === 'expired' ? (
-        <p role="alert">
+        <p
+          role="alert"
+          style={{
+            margin: 0,
+            padding: `${space.s3}px ${space.s4}px`,
+            background: '#FDF3F3',
+            border: `1px solid ${color.border}`,
+            boxShadow: `inset 0 0 0 1px ${color.danger}`,
+            borderRadius: radius.sm,
+            color: color.danger,
+          }}
+        >
           {gridText('expired')} <a href="/login">{gridText('login')}</a>
         </p>
       ) : null}
+
       <StateSurface state={surface(state)}>
         {state.busy && data ? <p role="status">{gridText('loading')}</p> : null}
         {state.phase === 'error' ? (
@@ -148,18 +200,31 @@ function GridResult({
   const dates = gridDates(data.range.from, data.range.to);
   return (
     <>
-      <p role="status" data-testid="grid-updated" style={{ margin: 0 }}>
-        {t('grid.updated', {
-          from: data.range.from,
-          to: data.range.to,
-          roomTypes: data.rows.length,
-        })}
-      </p>
-      {data.capturedAt ? (
-        <p role="status" data-testid="grid-captured">
-          {gridText('captured', { time: formatDateTimeVn(data.capturedAt) })}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: space.s3,
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: 13,
+          color: color.textMuted,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        <p role="status" data-testid="grid-updated" style={{ margin: 0, color: color.text }}>
+          {t('grid.updated', {
+            from: data.range.from,
+            to: data.range.to,
+            roomTypes: data.rows.length,
+          })}
         </p>
-      ) : null}
+        {data.capturedAt ? (
+          <p role="status" data-testid="grid-captured" style={{ margin: 0 }}>
+            {gridText('captured', { time: formatDateTimeVn(data.capturedAt) })}
+          </p>
+        ) : null}
+      </div>
       <GridTable dates={dates} rows={data.rows} focus={focus} onFocusChange={onFocusChange} />
     </>
   );

@@ -1,7 +1,13 @@
 'use client';
 import { useState, type ReactElement } from 'react';
-import { formatDateTimeVn } from '@pinehill/ui-web';
+import { formatDateTimeVn, space } from '@pinehill/ui-web';
 import type { OutboxDelivery } from '@pinehill/contracts';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_SUBTITLE_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+} from '../../components/editorial-styles';
 import type { Deliveries, StatusFilter } from './controller';
 import { text } from './messages';
 import { ConfirmDialog, SelectInput, box } from './parts';
@@ -51,9 +57,10 @@ function DeliveryRow({
           {replayable(row) ? (
             <button
               type="button"
+              className="ph-btn"
               disabled={busy}
               onClick={() => onAsk(row.id)}
-              style={{ minHeight: 44 }}
+              style={OPS_COMPACT_BTN_STYLE}
               data-testid={`hb133-replay-${row.id}`}
             >
               {text('replay')}
@@ -77,13 +84,8 @@ function DeliveryTable({
   onAsk: (id: string) => void;
 }): ReactElement {
   return (
-    <div
-      role="region"
-      aria-label={text('outboxLabel')}
-      tabIndex={0}
-      style={{ overflowX: 'auto', maxWidth: '100%' }}
-    >
-      <table data-testid="hb133-deliveries">
+    <div role="region" aria-label={text('outboxLabel')} tabIndex={0} style={OPS_TABLE_WRAP_STYLE}>
+      <table data-testid="hb133-deliveries" style={OPS_TABULAR_STYLE}>
         <thead>
           <tr>
             <th scope="col">{text('colEvent')}</th>
@@ -123,8 +125,15 @@ export function OutboxSection(props: {
     ...FILTERS.map((status) => ({ id: status, label: text(STATUS_TEXT[status]) })),
   ];
   return (
-    <section style={box} aria-labelledby="hb133-outbox-title" data-testid="hb133-outbox">
-      <h2 id="hb133-outbox-title">{text('outboxTitle')}</h2>
+    <section
+      className="ph-card"
+      style={{ ...box, padding: space.s4 }}
+      aria-labelledby="hb133-outbox-title"
+      data-testid="hb133-outbox"
+    >
+      <h2 id="hb133-outbox-title" style={OPS_SUBTITLE_STYLE}>
+        {text('outboxTitle')}
+      </h2>
       <SelectInput
         name="statusFilter"
         label={text('statusFilter')}
@@ -132,10 +141,12 @@ export function OutboxSection(props: {
         options={options}
         onChange={(value) => props.onFilter(FILTERS.find((status) => status === value) ?? null)}
       />
-      {props.deliveries === null ? null : <p>{text('total', { total: props.deliveries.total })}</p>}
+      {props.deliveries === null ? null : (
+        <p style={{ margin: 0 }}>{text('total', { total: props.deliveries.total })}</p>
+      )}
       {rows.length === 0 ? (
         props.deliveries === null ? null : (
-          <p>{text('noDeliveries')}</p>
+          <p style={{ margin: 0 }}>{text('noDeliveries')}</p>
         )
       ) : (
         <DeliveryTable
@@ -148,8 +159,9 @@ export function OutboxSection(props: {
       {props.deliveries?.nextCursor === null || props.deliveries === null ? null : (
         <button
           type="button"
+          className="ph-btn"
           onClick={props.onMore}
-          style={{ minHeight: 44, justifySelf: 'start' }}
+          style={{ ...OPS_COMPACT_BTN_STYLE, justifySelf: 'start' }}
         >
           {text('loadMore')}
         </button>

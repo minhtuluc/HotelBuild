@@ -26,6 +26,7 @@ export function CreateForm(props: {
   };
   return (
     <form
+      className="ph-card"
       style={box}
       aria-labelledby="hb138-create-title"
       onSubmit={(event) => {
@@ -35,8 +36,10 @@ export function CreateForm(props: {
         if (found.length === 0) setAsking(true);
       }}
     >
-      <h2 id="hb138-create-title">{text('createTitle')}</h2>
-      <p>{text('createNote')}</p>
+      <h2 id="hb138-create-title" style={{ margin: 0 }}>
+        {text('createTitle')}
+      </h2>
+      <p style={{ margin: 0 }}>{text('createNote')}</p>
       <TextInput
         name="bookingId"
         label={text('bookingId')}
@@ -77,6 +80,7 @@ export function CreateForm(props: {
       />
       <button
         type="submit"
+        className="ph-btn-primary"
         disabled={props.busy}
         style={{ minHeight: 44, justifySelf: 'start' }}
         data-testid="hb138-create-submit"

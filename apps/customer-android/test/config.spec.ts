@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readMobileEnv } from '../src/config/index';
+import { readDemoEnabled, readMobileEnv } from '../src/config/index';
 
 describe('cấu hình Android (kiến trúc §7.5, NFR-MAIN-05)', () => {
   it('nhận cấu hình hợp lệ cho cả ba biến thể build', () => {
@@ -26,5 +26,22 @@ describe('cấu hình Android (kiến trúc §7.5, NFR-MAIN-05)', () => {
         EXPO_PUBLIC_APP_VARIANT: 'staging',
       }),
     ).toThrow(/EXPO_PUBLIC_APP_VARIANT/);
+  });
+
+  it('mặc định tắt demo; chỉ bật khi EXPO_PUBLIC_DEMO_MODE=true và không phải production (TD-44)', () => {
+    expect(readDemoEnabled({})).toBe(false);
+    expect(readDemoEnabled({ EXPO_PUBLIC_APP_VARIANT: 'development' })).toBe(false);
+    expect(
+      readDemoEnabled({
+        EXPO_PUBLIC_APP_VARIANT: 'development',
+        EXPO_PUBLIC_DEMO_MODE: 'true',
+      }),
+    ).toBe(true);
+    expect(
+      readDemoEnabled({
+        EXPO_PUBLIC_APP_VARIANT: 'production',
+        EXPO_PUBLIC_DEMO_MODE: 'true',
+      }),
+    ).toBe(false);
   });
 });

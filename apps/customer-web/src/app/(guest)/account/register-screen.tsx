@@ -145,7 +145,19 @@ export function RegisterScreen({ contact }: { contact: string | null }): ReactEl
         </Notice>
       ) : null}
       <SubmitButton busy={busy} label={text('submitRegister')} testId="register-submit" />
-      <a href="/account/login">{text('toLogin')}</a>
+      <a
+        href="/account/login"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          minHeight: 44,
+          color: 'var(--color-primary)',
+          textDecoration: 'underline',
+          textUnderlineOffset: 3,
+        }}
+      >
+        {text('toLogin')}
+      </a>
     </FormShell>
   );
 }

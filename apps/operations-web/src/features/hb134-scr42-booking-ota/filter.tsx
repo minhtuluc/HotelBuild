@@ -1,6 +1,8 @@
 'use client';
 import { useState, type ReactElement } from 'react';
 import type { OtaBooking } from '@pinehill/contracts';
+import { space } from '@pinehill/ui-web';
+import { OPS_COMPACT_BTN_STYLE, OPS_SUBTITLE_STYLE } from '../../components/editorial-styles';
 import { text } from './messages';
 import { filterIssues, type FieldIssue, type Filter } from './model';
 import { SelectInput, TextInput, box } from './parts';
@@ -26,7 +28,13 @@ export function FilterForm(props: {
   return (
     <form
       aria-labelledby="hb134-filter-title"
-      style={{ ...box, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))' }}
+      className="ph-card"
+      style={{
+        ...box,
+        padding: space.s4,
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))',
+        alignItems: 'end',
+      }}
       onSubmit={(event) => {
         event.preventDefault();
         const found = filterIssues(draft);
@@ -34,7 +42,7 @@ export function FilterForm(props: {
         if (found.length === 0) props.onApply(draft);
       }}
     >
-      <h2 id="hb134-filter-title" style={{ gridColumn: '1 / -1' }}>
+      <h2 id="hb134-filter-title" style={{ ...OPS_SUBTITLE_STYLE, gridColumn: '1 / -1' }}>
         {text('filterTitle')}
       </h2>
       <SelectInput
@@ -69,8 +77,9 @@ export function FilterForm(props: {
       />
       <button
         type="submit"
+        className="ph-btn-primary"
         disabled={props.busy}
-        style={{ minHeight: 44, justifySelf: 'start' }}
+        style={{ ...OPS_COMPACT_BTN_STYLE, justifySelf: 'start' }}
         data-testid="hb134-apply"
       >
         {text('apply')}

@@ -1,7 +1,8 @@
 /** Điều khiển dùng chung của SCR-65: vùng chạm ≥ 48 dp, nhãn trợ năng và trạng thái đầy đủ. */
 import type { ReactElement } from 'react';
 import { Pressable, Text, TextInput } from 'react-native';
-import { color, space, touchTargetDp } from '@pinehill/ui-native';
+import { color, radius, space, touchTargetDp } from '@pinehill/ui-native';
+import { theme } from '../theme';
 
 export function ActionButton({
   testID,
@@ -29,10 +30,10 @@ export function ActionButton({
         minHeight: touchTargetDp,
         justifyContent: 'center',
         paddingHorizontal: space.s3,
-        borderRadius: 8,
+        borderRadius: radius.md,
         ...(filled
           ? { backgroundColor: color.primary }
-          : { borderWidth: 1, borderColor: color.border }),
+          : { borderWidth: 1, borderColor: color.border, backgroundColor: color.surface }),
         ...(disabled ? { opacity: 0.5 } : {}),
       }}
     >
@@ -40,7 +41,7 @@ export function ActionButton({
         style={{
           textAlign: 'center',
           fontWeight: '600',
-          color: filled ? color.surface : color.primary,
+          color: filled ? color.primaryContrast : color.primary,
         }}
       >
         {label}
@@ -74,8 +75,9 @@ export function Choice({
         minHeight: touchTargetDp,
         justifyContent: 'center',
         paddingHorizontal: space.s3,
-        borderWidth: 1,
-        borderRadius: 8,
+        backgroundColor: color.surface,
+        borderWidth: selected ? 2 : 1,
+        borderRadius: radius.md,
         borderColor: selected ? color.primary : color.border,
       }}
     >
@@ -120,13 +122,7 @@ export function Field({
         autoCorrect={false}
         {...(maxLength === undefined ? {} : { maxLength })}
         onChangeText={onChange}
-        style={{
-          minHeight: touchTargetDp,
-          paddingHorizontal: space.s3,
-          borderWidth: 1,
-          borderRadius: 8,
-          color: color.text,
-        }}
+        style={theme.field}
       />
     </>
   );

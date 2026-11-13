@@ -33,24 +33,34 @@ function QuoteDiff({
     <section
       data-testid="reschedule-diff"
       aria-labelledby="reschedule-diff-title"
-      style={{ display: 'grid', gap: 'var(--space-s2, 8px)' }}
+      className="ph-card"
+      style={{ display: 'grid', gap: 12 }}
     >
-      <h2 id="reschedule-diff-title" style={{ margin: 0 }}>
+      <h2 id="reschedule-diff-title" style={{ margin: 0, fontSize: 'var(--text-h2, 18px)' }}>
         {t('guest.reschedule.diff.title')}
       </h2>
-      <p style={{ margin: 0 }} data-testid="reschedule-new-stay">
-        {formatStayNights(checkIn, checkOut, nights)}
-      </p>
-      <p style={{ margin: 0 }} data-testid="reschedule-new-total">
-        {t('guest.reschedule.diff.newTotal', { amount: formatMoney(quote.total) })}
-      </p>
-      <p style={{ margin: 0 }}>
-        {t('guest.reschedule.diff.currentTotal', { amount: formatMoney(booking.totalAmount) })}
-      </p>
-      <p style={{ margin: 0 }} data-testid="reschedule-difference">
-        {t(DIFF_KEYS[difference.kind], { amount: formatMoney(difference.amount) })}
-      </p>
-      <p style={{ margin: 0 }} data-testid="reschedule-fee">
+      <ul className="ph-list-lines ph-tabular">
+        <li data-testid="reschedule-new-stay">
+          <span>{formatStayNights(checkIn, checkOut, nights)}</span>
+        </li>
+        <li data-testid="reschedule-new-total">
+          <span>{t('guest.reschedule.diff.newTotal', { amount: formatMoney(quote.total) })}</span>
+        </li>
+        <li>
+          <span>
+            {t('guest.reschedule.diff.currentTotal', { amount: formatMoney(booking.totalAmount) })}
+          </span>
+        </li>
+        <li data-testid="reschedule-difference">
+          <strong>
+            {t(DIFF_KEYS[difference.kind], { amount: formatMoney(difference.amount) })}
+          </strong>
+        </li>
+      </ul>
+      <p
+        style={{ margin: 0, fontSize: 13, color: 'var(--color-textMuted)' }}
+        data-testid="reschedule-fee"
+      >
         {t('guest.reschedule.feeUnknown')}
       </p>
     </section>
@@ -68,35 +78,48 @@ function RescheduleResult({
     <section
       data-testid="reschedule-result"
       aria-labelledby="reschedule-result-title"
-      style={{ display: 'grid', gap: 'var(--space-s2, 8px)' }}
+      className="ph-card"
+      style={{ display: 'grid', gap: 12 }}
     >
-      <h2 id="reschedule-result-title" style={{ margin: 0 }}>
+      <h2 id="reschedule-result-title" style={{ margin: 0, fontSize: 'var(--text-h2, 18px)' }}>
         {t('guest.reschedule.result.title')}
       </h2>
-      <p style={{ margin: 0 }} data-testid="reschedule-result-status">
-        {t(
-          booking.status === previousStatus
-            ? 'guest.reschedule.result.statusSame'
-            : 'guest.reschedule.result.statusChanged',
-          {
-            status: formatStatusWithEnum(t(STATUS_KEYS[booking.status]), booking.status),
-          },
-        )}
-      </p>
-      <p style={{ margin: 0 }} data-testid="reschedule-result-stay">
-        {formatStaySpan(
-          booking.checkIn,
-          booking.checkOut,
-          formatStayPeriod(booking.nights, booking.adults, booking.children),
-        )}
-      </p>
-      <p style={{ margin: 0 }}>
-        {t('guest.reschedule.result.total', { amount: formatMoney(booking.totalAmount) })}
-      </p>
-      <p style={{ margin: 0 }} data-testid="reschedule-result-count">
-        {t('guest.reschedule.result.count', { count: booking.rescheduleCount })}
-      </p>
-      <Link href={`/bookings/${booking.id}`}>{t('guest.reschedule.result.back')}</Link>
+      <ul className="ph-list-lines ph-tabular">
+        <li data-testid="reschedule-result-status">
+          <span>
+            {t(
+              booking.status === previousStatus
+                ? 'guest.reschedule.result.statusSame'
+                : 'guest.reschedule.result.statusChanged',
+              {
+                status: formatStatusWithEnum(t(STATUS_KEYS[booking.status]), booking.status),
+              },
+            )}
+          </span>
+        </li>
+        <li data-testid="reschedule-result-stay">
+          <span>
+            {formatStaySpan(
+              booking.checkIn,
+              booking.checkOut,
+              formatStayPeriod(booking.nights, booking.adults, booking.children),
+            )}
+          </span>
+        </li>
+        <li>
+          <span>
+            {t('guest.reschedule.result.total', { amount: formatMoney(booking.totalAmount) })}
+          </span>
+        </li>
+        <li data-testid="reschedule-result-count">
+          <span>{t('guest.reschedule.result.count', { count: booking.rescheduleCount })}</span>
+        </li>
+      </ul>
+      <div>
+        <Link href={`/bookings/${booking.id}`} className="ph-btn">
+          {t('guest.reschedule.result.back')}
+        </Link>
+      </div>
     </section>
   );
 }
@@ -129,32 +152,34 @@ export function RescheduleForm({
   onConfirm: () => void;
 }): ReactElement {
   return (
-    <div style={{ display: 'grid', gap: 'var(--space-s2, 8px)' }}>
-      <label style={{ display: 'grid', gap: 4 }}>
-        {t('guest.reschedule.checkIn')}
-        <input
-          name="checkIn"
-          type="date"
-          value={checkIn}
-          disabled={busy}
-          onChange={(event) => {
-            onCheckIn(event.target.value);
-          }}
-        />
-      </label>
-      <label style={{ display: 'grid', gap: 4 }}>
-        {t('guest.reschedule.checkOut')}
-        <input
-          name="checkOut"
-          type="date"
-          value={checkOut}
-          disabled={busy}
-          onChange={(event) => {
-            onCheckOut(event.target.value);
-          }}
-        />
-      </label>
-      <label style={{ display: 'grid', gap: 4 }}>
+    <div className="ph-card" style={{ display: 'grid', gap: 16 }}>
+      <div className="ph-search-grid">
+        <label className="ph-field">
+          {t('guest.reschedule.checkIn')}
+          <input
+            name="checkIn"
+            type="date"
+            value={checkIn}
+            disabled={busy}
+            onChange={(event) => {
+              onCheckIn(event.target.value);
+            }}
+          />
+        </label>
+        <label className="ph-field">
+          {t('guest.reschedule.checkOut')}
+          <input
+            name="checkOut"
+            type="date"
+            value={checkOut}
+            disabled={busy}
+            onChange={(event) => {
+              onCheckOut(event.target.value);
+            }}
+          />
+        </label>
+      </div>
+      <label className="ph-field">
         {t('guest.reschedule.note')}
         <input
           name="reason"
@@ -168,21 +193,34 @@ export function RescheduleForm({
       </label>
 
       {issueKey === null ? null : (
-        <p role="alert" data-testid="reschedule-issue" style={{ margin: 0 }}>
+        <p
+          role="alert"
+          data-testid="reschedule-issue"
+          className="ph-alert-box"
+          style={{ margin: 0 }}
+        >
           {t(issueKey)}
         </p>
       )}
       {!same ? null : (
-        <p role="status" data-testid="reschedule-same" style={{ margin: 0 }}>
+        <p
+          role="status"
+          data-testid="reschedule-same"
+          className="ph-muted-box"
+          style={{ margin: 0 }}
+        >
           {t('guest.reschedule.issue.same')}
         </p>
       )}
 
-      <p style={{ margin: 0 }}>{t('guest.reschedule.checkRequired')}</p>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <p style={{ margin: 0, fontSize: 14, color: 'var(--color-textMuted)' }}>
+        {t('guest.reschedule.checkRequired')}
+      </p>
+      <div className="ph-actions">
         <button
           type="button"
           data-testid="reschedule-check"
+          className="ph-btn"
           disabled={busy || issueKey !== null || same}
           onClick={onCheck}
         >
@@ -191,6 +229,7 @@ export function RescheduleForm({
         <button
           type="button"
           data-testid="reschedule-confirm"
+          className="ph-btn-accent"
           disabled={busy || !confirmEnabled}
           onClick={onConfirm}
         >

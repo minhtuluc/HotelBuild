@@ -24,7 +24,13 @@ import type {
   Quote,
   RatePlanPublic,
 } from '@pinehill/contracts';
-import { StateSurface, type ScreenState } from '@pinehill/ui-web';
+import { StateSurface, space, type ScreenState } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../../components/editorial-styles';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
 import { useOpsSession } from '../../../../lib/ops-session';
@@ -245,20 +251,20 @@ export function NewBookingScreen(): ReactElement {
 
   if (forced !== undefined) {
     return (
-      <section data-testid="new-booking-screen" style={{ display: 'grid', gap: 12 }}>
-        <h1 style={{ margin: 0 }}>{t('newBooking.title')}</h1>
+      <section data-testid="new-booking-screen" style={OPS_PAGE_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{t('newBooking.title')}</h1>
         <StateSurface state={forced} />
       </section>
     );
   }
 
   return (
-    <section
-      data-testid="new-booking-screen"
-      style={{ display: 'grid', gap: 12, padding: '16px 0' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('newBooking.title')}</h1>
-      <p style={{ margin: 0 }} data-testid="new-booking-step">
+    <section data-testid="new-booking-screen" style={OPS_PAGE_STYLE}>
+      <h1 style={OPS_TITLE_STYLE}>{t('newBooking.title')}</h1>
+      <p
+        style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 13 }}
+        data-testid="new-booking-step"
+      >
         {t('newBooking.stepCounter', {
           current: ['channel', 'room', 'guest', 'confirm', 'done'].indexOf(step) + 1,
         })}
@@ -287,13 +293,15 @@ export function NewBookingScreen(): ReactElement {
           onPrint={() => window.print()}
         />
         {issue === null ? null : (
-          <p role="alert" data-testid="new-booking-issue" style={{ margin: 0 }}>
+          <p role="alert" data-testid="new-booking-issue" style={opsNoticeStyle('danger')}>
             {t(ISSUE_KEYS[issue])}
           </p>
         )}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: space.s2, flexWrap: 'wrap' }}>
           <button
             type="button"
+            className="ph-btn"
+            style={OPS_COMPACT_BTN_STYLE}
             data-testid="new-booking-back"
             disabled={step === 'channel' || step === 'done' || busy}
             onClick={() => {
@@ -306,6 +314,8 @@ export function NewBookingScreen(): ReactElement {
           {step === 'done' ? null : (
             <button
               type="button"
+              className="ph-btn-primary"
+              style={OPS_COMPACT_BTN_STYLE}
               data-testid="new-booking-next"
               disabled={busy}
               onClick={() => void advance()}

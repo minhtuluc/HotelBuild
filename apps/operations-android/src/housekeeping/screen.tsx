@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
-import { color, space, touchTargetDp, typography } from '@pinehill/ui-native';
+import { color } from '@pinehill/ui-native';
 import type { Session } from '../session';
+import { theme } from '../theme';
 import { TaskReader, todayVN, type TaskState } from './reader';
 import { taskPorts } from './ports';
 import { taskText as text } from './messages';
@@ -34,14 +35,11 @@ export function HousekeepingReadScreen({
   }, [session]);
   const loading = state.phase === 'loading' || reader === null;
   return (
-    <View style={{ flex: 1, padding: space.s4, gap: space.s3, backgroundColor: color.surface }}>
-      <Text
-        accessibilityRole="header"
-        style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}
-      >
+    <View style={theme.screen}>
+      <Text accessibilityRole="header" style={theme.title}>
         {text('title')}
       </Text>
-      <Text>{text('date')}</Text>
+      <Text style={theme.body}>{text('date')}</Text>
       <TextInput
         testID="task-business-date"
         accessibilityLabel={text('date')}
@@ -53,13 +51,7 @@ export function HousekeepingReadScreen({
           reader?.invalidate();
           setDate(value);
         }}
-        style={{
-          minHeight: touchTargetDp,
-          paddingHorizontal: space.s3,
-          borderWidth: 1,
-          borderRadius: 8,
-          color: color.text,
-        }}
+        style={theme.field}
       />
       <Pressable
         testID="task-load"
@@ -68,25 +60,15 @@ export function HousekeepingReadScreen({
         accessibilityState={{ disabled: loading }}
         disabled={loading}
         onPress={() => void reader?.load(date, session.selectedProperty() ?? undefined)}
-        style={{
-          minHeight: touchTargetDp,
-          justifyContent: 'center',
-          paddingHorizontal: space.s3,
-          backgroundColor: color.primary,
-          borderRadius: 8,
-        }}
+        style={theme.buttonPrimary}
       >
-        <Text style={{ color: color.surface, textAlign: 'center', fontWeight: '600' }}>
-          {text('load')}
-        </Text>
+        <Text style={theme.buttonPrimaryText}>{text('load')}</Text>
       </Pressable>
-      {loading ? <ActivityIndicator accessibilityLabel={text('loading')} /> : null}
+      {loading ? (
+        <ActivityIndicator accessibilityLabel={text('loading')} color={color.primary} />
+      ) : null}
       {state.phase === 'ready' ? null : (
-        <Text
-          accessibilityLiveRegion="polite"
-          testID="task-state"
-          style={{ color: color.textMuted }}
-        >
+        <Text accessibilityLiveRegion="polite" testID="task-state" style={theme.muted}>
           {text(state.phase)}
         </Text>
       )}
@@ -101,9 +83,9 @@ export function HousekeepingReadScreen({
         accessibilityRole="button"
         accessibilityLabel={text('back')}
         onPress={onBack}
-        style={{ minHeight: touchTargetDp, justifyContent: 'center', paddingHorizontal: space.s3 }}
+        style={theme.buttonPlain}
       >
-        <Text style={{ color: color.primary }}>{text('back')}</Text>
+        <Text style={theme.buttonPlainText}>{text('back')}</Text>
       </Pressable>
     </View>
   );

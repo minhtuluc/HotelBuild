@@ -5,9 +5,10 @@
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import { ActivityIndicator, FlatList, Text, TextInput, View } from 'react-native';
 import type { BookingSummary } from '@pinehill/contracts';
-import { color, space, touchTargetDp, typography } from '@pinehill/ui-native';
+import { color, space } from '@pinehill/ui-native';
 import { formatBusinessDate } from '../housekeeping/date';
 import type { Session } from '../session';
+import { theme } from '../theme';
 import { ArrivalCard } from './card';
 import { ActionButton } from './controls';
 import { CheckInDetail } from './detail';
@@ -218,11 +219,8 @@ export function ArrivalsScreen({
   const rows = filterArrivals(state.arrivals, term);
   const loading = state.phase === 'loading';
   return (
-    <View style={{ flex: 1, padding: space.s4, gap: space.s3, backgroundColor: color.surface }}>
-      <Text
-        accessibilityRole="header"
-        style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}
-      >
+    <View style={theme.screen}>
+      <Text accessibilityRole="header" style={theme.title}>
         {text('title')}
       </Text>
       <SyncInfo state={state} />
@@ -234,13 +232,7 @@ export function ArrivalsScreen({
         autoCapitalize="characters"
         autoCorrect={false}
         onChangeText={setTerm}
-        style={{
-          minHeight: touchTargetDp,
-          paddingHorizontal: space.s3,
-          borderWidth: 1,
-          borderRadius: 8,
-          color: color.text,
-        }}
+        style={theme.field}
       />
       {loading ? <ActivityIndicator accessibilityLabel={text('loading')} /> : null}
       <Notice id="arrivals-state" message={stateMessage(state)} />

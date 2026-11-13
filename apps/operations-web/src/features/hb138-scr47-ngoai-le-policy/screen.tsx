@@ -1,10 +1,16 @@
 'use client';
 import type { ReactElement } from 'react';
+import {
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../components/editorial-styles';
 import { CreateForm } from './create';
 import { FilterForm } from './filter';
 import { text } from './messages';
 import type { FieldIssue } from './model';
-import { box } from './parts';
 import { CommandStatus, ReadBanner } from './status';
 import { ExceptionTable } from './table';
 import type { ControllerState, ExceptionController } from './controller';
@@ -33,6 +39,7 @@ function Workspace({
     <>
       <button
         type="button"
+        className="ph-btn"
         disabled={busy}
         onClick={() => void controller.load()}
         style={{ minHeight: 44, justifySelf: 'start' }}
@@ -83,14 +90,24 @@ export function PolicyExceptionsScreen(): ReactElement {
   const { state, controller } = useExceptions();
   const denied = state.phase === 'forbidden' || state.phase === 'expired';
   return (
-    <section style={{ padding: 'var(--space-s6, 24px)', ...box, gap: 'var(--space-s4, 16px)' }}>
-      <h1 style={{ margin: 0 }}>{text('title')}</h1>
-      <p>{text('intro')}</p>
-      <a href="/overbooking/cases">{text('back')}</a>
+    <section style={OPS_PAGE_STYLE}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 className="ph-display" style={OPS_TITLE_STYLE}>
+          {text('title')}
+        </h1>
+        <p style={OPS_INTRO_STYLE}>{text('intro')}</p>
+        <a href="/overbooking/cases" className="ph-btn" style={{ justifySelf: 'start' }}>
+          {text('back')}
+        </a>
+      </header>
       {denied ? (
-        <p role="alert">{text(state.phase === 'expired' ? 'expired' : 'forbidden')}</p>
+        <p role="alert" style={opsNoticeStyle('danger')}>
+          {text(state.phase === 'expired' ? 'expired' : 'forbidden')}
+        </p>
       ) : null}
-      {state.phase === 'forbidden' ? <p>{text('roleBlocked')}</p> : null}
+      {state.phase === 'forbidden' ? (
+        <p style={opsNoticeStyle('warning')}>{text('roleBlocked')}</p>
+      ) : null}
       <ReadBanner state={state} />
       {!denied && controller !== null && state.actor !== null ? (
         <Workspace state={state} controller={controller} actor={state.actor} />
