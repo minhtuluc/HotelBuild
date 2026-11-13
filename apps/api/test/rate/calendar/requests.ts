@@ -45,3 +45,13 @@ export const overrideAuditCount = async () =>
       )
     )[0]!.n,
   );
+
+/** HB-241: `PUT /seasons/{seasonId}` — `version` vắng ⇒ không gửi `If-Match`. */
+export const updateSeasonRequest = (token: string, id: string, body: object, version?: number) => {
+  const request = http()
+    .put(`/api/v1/seasons/${id}`)
+    .set('Authorization', `Bearer ${token}`)
+    .set('Idempotency-Key', randomUUID());
+  if (version !== undefined) request.set('If-Match', `"${version}"`);
+  return request.send(body);
+};

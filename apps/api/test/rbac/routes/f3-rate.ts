@@ -62,6 +62,12 @@ export function f3Rate(keyed: Oracle): void {
     status: 400,
     method: RequestMethod.POST,
   };
+  // HB-241 (TD-06): chỉ OWNER sửa/ngừng mùa; oracle không gửi If-Match → 428.
+  keyed[`${RequestMethod.PUT}:seasons/:seasonId`] = {
+    roles: ['OWNER'],
+    status: 428,
+    method: RequestMethod.PUT,
+  };
   // HB-240 (TD-08): chỉ OWNER sửa/ngừng; oracle không gửi If-Match → 428 như gói giá.
   keyed[`${RequestMethod.PUT}:promotions/:promotionId`] = {
     roles: ['OWNER'],
