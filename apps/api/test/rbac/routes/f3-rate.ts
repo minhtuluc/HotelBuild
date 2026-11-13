@@ -62,4 +62,10 @@ export function f3Rate(keyed: Oracle): void {
     status: 400,
     method: RequestMethod.POST,
   };
+  // HB-240 (TD-08): chỉ OWNER sửa/ngừng; oracle không gửi If-Match → 428 như gói giá.
+  keyed[`${RequestMethod.PUT}:promotions/:promotionId`] = {
+    roles: ['OWNER'],
+    status: 428,
+    method: RequestMethod.PUT,
+  };
 }

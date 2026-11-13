@@ -194,6 +194,28 @@ export const promotionCreateRequestSchema = z.strictObject({
   stackable: z.boolean(),
 });
 
+/**
+ * HB-240 (TD-08): sửa hoặc ngừng khuyến mãi. Gửi **chỉ** trường đổi, kèm `reason` cho audit. `code` và
+ * `type` không đổi được: khách và báo giá cũ tham chiếu theo mã. Ngừng sớm = `status: 'INACTIVE'`.
+ */
+export const promotionUpdateRequestSchema = z
+  .strictObject({
+    value: z.number().int().positive().optional(),
+    minNights: z.number().int().min(1).optional(),
+    channelScope: z.array(channelCodeSchema).optional(),
+    roomTypeScope: z.array(z.string().min(1)).optional(),
+    validFrom: isoUtcTimestampSchema.optional(),
+    validTo: isoUtcTimestampSchema.optional(),
+    /** `null` = bỏ giới hạn lượt dùng. */
+    maxUses: z.number().int().min(1).nullable().optional(),
+    stackable: z.boolean().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+    reason: z.string().min(1).max(500),
+  })
+  .refine((body) => Object.keys(body).some((key) => key !== 'reason'), {
+    message: 'Cần ít nhất một trường để sửa',
+  });
+
 export const multiChannelQuoteRequestSchema = z.strictObject({
   roomTypeId: z.string().min(1),
   checkIn: businessDateSchema,
@@ -271,6 +293,7 @@ export type ChannelSummary = z.infer<typeof channelSummarySchema>;
 export type ChannelDetail = z.infer<typeof channelDetailSchema>;
 export type ChannelPropertyOverride = z.infer<typeof channelPropertyOverrideSchema>;
 export type PromotionCreateRequest = z.infer<typeof promotionCreateRequestSchema>;
+export type PromotionUpdateRequest = z.infer<typeof promotionUpdateRequestSchema>;
 export type PromotionSummary = z.infer<typeof promotionSummarySchema>;
 export type PromotionQuery = z.infer<typeof promotionQuerySchema>;
 export type MultiChannelQuote = z.infer<typeof multiChannelQuoteSchema>;

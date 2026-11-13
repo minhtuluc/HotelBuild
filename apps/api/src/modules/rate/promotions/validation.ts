@@ -8,7 +8,9 @@
 import {
   promotionCreateRequestSchema,
   promotionQuerySchema,
+  promotionUpdateRequestSchema,
   type PromotionQuery,
+  type PromotionUpdateRequest,
 } from '@pinehill/contracts';
 import { AppError } from '../../../common/app-error.js';
 import { invalid, uuid } from '../calendar/support.js';
@@ -69,6 +71,12 @@ export function listQuery(value: unknown): PromotionQuery {
 function issuesOf(input: PromotionCreateInput): Issue[] {
   const issues: Issue[] = [];
   if (!CODE.test(input.code)) issues.push({ field: 'code', issue: 'FORMAT' });
+  return [...issues, ...ruleIssues(input)];
+}
+
+/** Luật chung của tạo và sửa (không gồm định dạng `code`, vì sửa không đổi mã). */
+export function ruleIssues(input: Omit<PromotionCreateInput, 'code'>): Issue[] {
+  const issues: Issue[] = [];
   // BR-RATE-10: PERCENT là phần trăm (CHECK ≤ 100); AMOUNT là VND nguyên.
   if (input.type === 'PERCENT' && input.value > 100)
     issues.push({ field: 'value', issue: 'MAX_100' });
@@ -104,4 +112,48 @@ export function createInput(value: unknown): PromotionCreateInput {
   const issues = issuesOf(input);
   if (issues.length > 0) promotionInvalid(issues);
   return input;
+}
+
+/** Trường sửa được (HB-240, TD-08); ngày đã đổi về ngày nghiệp vụ VN như lệnh tạo. */
+export type PromotionChanges = Partial<
+  Omit<PromotionCreateInput, 'code' | 'type'> & { readonly status: 'ACTIVE' | 'INACTIVE' }
+>;
+
+export interface PromotionUpdateInput {
+  readonly changes: PromotionChanges;
+  readonly reason: string;
+}
+
+export function updateInput(value: unknown): PromotionUpdateInput {
+  const parsed = promotionUpdateRequestSchema.safeParse(value);
+  if (!parsed.success) throw invalid();
+  const body = parsed.data;
+  const reason = body.reason.trim();
+  if (reason.length === 0) throw invalid();
+  return { changes: { ...termChanges(body), ...scopeChanges(body) }, reason };
+}
+
+type UpdateBody = PromotionUpdateRequest;
+
+/** Giá trị, lượt, xếp chồng, trạng thái. */
+function termChanges(body: UpdateBody): PromotionChanges {
+  return {
+    ...(body.value === undefined ? {} : { value: body.value }),
+    ...(body.minNights === undefined ? {} : { minNights: body.minNights }),
+    ...(body.maxUses === undefined ? {} : { maxUses: body.maxUses }),
+    ...(body.stackable === undefined ? {} : { stackable: body.stackable }),
+    ...(body.status === undefined ? {} : { status: body.status }),
+  };
+}
+
+/** Phạm vi kênh/loại phòng và cửa sổ (đổi về ngày nghiệp vụ VN như lệnh tạo). */
+function scopeChanges(body: UpdateBody): PromotionChanges {
+  return {
+    ...(body.channelScope === undefined ? {} : { channelScope: body.channelScope }),
+    ...(body.roomTypeScope === undefined
+      ? {}
+      : { roomTypeScope: body.roomTypeScope.map((code) => code.trim().toUpperCase()) }),
+    ...(body.validFrom === undefined ? {} : { validFrom: vnBusinessDate(body.validFrom) }),
+    ...(body.validTo === undefined ? {} : { validTo: vnBusinessDate(body.validTo) }),
+  };
 }

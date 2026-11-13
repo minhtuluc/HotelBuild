@@ -14,6 +14,7 @@ import {
   multiChannelQuoteRequestSchema,
   multiChannelQuoteSchema,
   promotionCreateRequestSchema,
+  promotionUpdateRequestSchema,
   rateCalendarOverrideRequestSchema,
   rateCalendarSchema,
   ratePlanPublicSchema,
@@ -29,6 +30,7 @@ import {
   type MultiChannelQuote,
   type MultiChannelQuoteRequest,
   type PromotionCreateRequest,
+  type PromotionUpdateRequest,
   type PromotionSummary,
   type RateCalendar,
   type RateCalendarOverrideRequest,
@@ -74,6 +76,12 @@ export interface RateApi {
     cursor?: string;
   }): Promise<ApiResponse<ListPage<PromotionSummary>>>;
   createPromotion(input: PromotionCreateRequest): Promise<ApiResponse<undefined>>;
+  /** HB-240: sửa/ngừng (`status: 'INACTIVE'`) — 204, `ifMatch` = `"<version>"` của bản đang xem. */
+  updatePromotion(
+    promotionId: string,
+    input: PromotionUpdateRequest,
+    ifMatch: string,
+  ): Promise<ApiResponse<undefined>>;
   /** Đầu vào lấy **nguyên** từ hợp đồng để không lệch enum (trước đây chép tay và sai `WALK_IN`). */
   quoteMultiChannel(input: MultiChannelQuoteRequest): Promise<ApiResponse<MultiChannelQuote>>;
   listRatePlans(query?: {
@@ -158,6 +166,13 @@ export function createRateApi(client: ApiClient): RateApi {
         method: 'POST',
         path: '/promotions',
         body: promotionCreateRequestSchema.parse(input),
+      }),
+    updatePromotion: (promotionId, input, ifMatch) =>
+      client.requestVoid({
+        method: 'PUT',
+        path: `/promotions/${encodeURIComponent(promotionId)}`,
+        body: promotionUpdateRequestSchema.parse(input),
+        ifMatch,
       }),
     quoteMultiChannel: (input) =>
       client.request({

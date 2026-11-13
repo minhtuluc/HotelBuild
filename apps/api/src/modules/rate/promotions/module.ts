@@ -6,13 +6,14 @@ import { CLOCK, ID_GENERATOR } from '../../../infrastructure/ports.js';
 import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import { PromotionsController } from './controller.js';
 import { PromotionsService } from './service.js';
-import { PromotionAccess } from './access.js';
+import { PromotionAccess, PromotionUpdateAccess } from './access.js';
 import { promotionPermissions } from './permissions.js';
 
 @Module({
   controllers: [PromotionsController],
   providers: [
     PromotionAccess,
+    PromotionUpdateAccess,
     promotionPermissions,
     {
       provide: PromotionsService,
