@@ -1512,6 +1512,40 @@ CREATE INDEX idx_overbooking_scan_runs_success
   ON overbooking_scan_runs (property_id, finished_at DESC) WHERE status = 'SUCCEEDED';
 ```
 
+#### 3.2.10. PROP — Ảnh công khai của cơ sở và loại phòng (migration `0014_public_photos`, HB-244)
+
+Hợp đồng công khai (`PropertyPublicSummary`, mục loại phòng của `Availability`, `GET /public/room-types/{id}`)
+trả `photos[]`. Hệ thống chưa có kho tệp (HB-138) nên chỉ lưu **tham chiếu**: URL `https://` tuyệt đối hoặc
+đường dẫn tĩnh `/images/…` của web khách. Mỗi dòng **bất biến**; sửa = thay cả danh sách trong một transaction
+(`PUT /properties/{id}/photos`, `PUT /room-types/{id}/photos`), nên không có `version`/`updated_at` và hai vòng
+lặp trigger của §3.3 không chạm hai bảng này. Khoá lạc quan dùng ETag băm danh sách (api.md §2.2).
+
+```sql
+CREATE TABLE property_photos (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  property_id uuid NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+  position    smallint NOT NULL CHECK (position >= 0 AND position < 20),
+  url         text NOT NULL CHECK (url ~ '^(https://[^[:space:]]+|/images/([A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*)$' AND length(url) <= 2048),
+  alt         text NOT NULL CHECK (length(btrim(alt)) BETWEEN 1 AND 300),
+  width       integer NOT NULL CHECK (width BETWEEN 1 AND 10000),
+  height      integer NOT NULL CHECK (height BETWEEN 1 AND 10000),
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_property_photos_position UNIQUE (property_id, position)
+);
+
+CREATE TABLE room_type_photos (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_type_id uuid NOT NULL REFERENCES room_types(id) ON DELETE CASCADE,
+  position     smallint NOT NULL CHECK (position >= 0 AND position < 20),
+  url          text NOT NULL CHECK (url ~ '^(https://[^[:space:]]+|/images/([A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*)$' AND length(url) <= 2048),
+  alt          text NOT NULL CHECK (length(btrim(alt)) BETWEEN 1 AND 300),
+  width        integer NOT NULL CHECK (width BETWEEN 1 AND 10000),
+  height       integer NOT NULL CHECK (height BETWEEN 1 AND 10000),
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_room_type_photos_position UNIQUE (room_type_id, position)
+);
+```
+
 ### 3.3. Ràng buộc loại trừ, trigger bảo vệ bất biến
 
 ```sql
@@ -2561,6 +2595,7 @@ Lưu trữ: nhật ký giữ **5 năm**, booking/thanh toán **10 năm** (BR-SYS
 | 0003 | `0003_f6_chan_over` | Cột `version` + trigger cho `channel_mappings`, `overbooking_cases` (§3.3) | HB-121 AC7 |
 | 0009 | `0009_f6_chan_over` | Gap F6: D01 connecting, D04 duyệt có điều kiện, D06 `payments.room_move_id`, D07 `resolution_source`; cờ nghi trùng, watermark/tombstone OTA, provenance đóng bán, metadata lượt quét (§3.2.9, §10.5) | HB-121, D01/D04/D06/D07 |
 | 0013 | `0013_property_slug` | `properties.slug` (kebab-case, UNIQUE, CHECK) + trigger điền từ `code` khi chèn không ghi slug; `GET /public/properties` trả `slug` | HB-319, TD-82 |
+| 0014 | `0014_public_photos` | Bảng `property_photos`, `room_type_photos`; `GET /public/room-types/{id}`, `GET/PUT .../photos` (`If-Match`) | HB-244 |
 | Sau baseline | Migration tiến mới | Mỗi thay đổi schema có file migration mới **và** cập nhật §3 trong cùng PR; Prisma Migrate áp SQL và ghi lịch sử, `schema.prisma` sinh bằng `prisma db pull` | QĐ-02 mục 2–3 |
 
 Seed dữ liệu tham chiếu thuộc HB-018; phân mảnh `audit_logs` là công việc tương lai, không nằm trong baseline.
