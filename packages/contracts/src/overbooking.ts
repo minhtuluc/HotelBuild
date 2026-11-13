@@ -172,6 +172,8 @@ export const overbookingCaseSummarySchema = z.object({
   resolutionSource: overbookingResolutionSourceSchema.nullable(),
   delayReason: z.string().nullable(),
   affectedBookingIds: z.array(z.string().min(1)),
+  /** HB-243: mã booking (`PH-…`) theo **đúng thứ tự** của `affectedBookingIds`, để hiển thị cho người. */
+  affectedBookingCodes: z.array(z.string().min(1)).optional(),
   ladderPreview: relocationLadderSchema,
   version: z.number().int().min(0),
 });

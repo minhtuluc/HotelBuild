@@ -173,6 +173,25 @@
                     },
                     "mustChangePassword": {
                       "type": "boolean"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "OWNER",
+                        "MANAGER",
+                        "FRONT_DESK",
+                        "RESERVATION_AGENT",
+                        "ACCOUNTANT",
+                        "HOUSEKEEPING",
+                        "SYSADMIN"
+                      ]
+                    },
+                    "propertyScope": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
                     }
                   },
                   "required": [
@@ -308,6 +327,25 @@
                     },
                     "mustChangePassword": {
                       "type": "boolean"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "OWNER",
+                        "MANAGER",
+                        "FRONT_DESK",
+                        "RESERVATION_AGENT",
+                        "ACCOUNTANT",
+                        "HOUSEKEEPING",
+                        "SYSADMIN"
+                      ]
+                    },
+                    "propertyScope": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
                     }
                   },
                   "required": [
@@ -685,6 +723,25 @@
                     },
                     "mustChangePassword": {
                       "type": "boolean"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "OWNER",
+                        "MANAGER",
+                        "FRONT_DESK",
+                        "RESERVATION_AGENT",
+                        "ACCOUNTANT",
+                        "HOUSEKEEPING",
+                        "SYSADMIN"
+                      ]
+                    },
+                    "propertyScope": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
                     }
                   },
                   "required": [
@@ -813,6 +870,25 @@
                     },
                     "mustChangePassword": {
                       "type": "boolean"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "OWNER",
+                        "MANAGER",
+                        "FRONT_DESK",
+                        "RESERVATION_AGENT",
+                        "ACCOUNTANT",
+                        "HOUSEKEEPING",
+                        "SYSADMIN"
+                      ]
+                    },
+                    "propertyScope": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
                     }
                   },
                   "required": [
@@ -978,6 +1054,25 @@
                     },
                     "mustChangePassword": {
                       "type": "boolean"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "OWNER",
+                        "MANAGER",
+                        "FRONT_DESK",
+                        "RESERVATION_AGENT",
+                        "ACCOUNTANT",
+                        "HOUSEKEEPING",
+                        "SYSADMIN"
+                      ]
+                    },
+                    "propertyScope": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
                     }
                   },
                   "required": [
@@ -10081,6 +10176,15 @@
             },
             "required": false,
             "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^(DRAFT|HELD|PENDING_PAYMENT|CONFIRMED|CHECKED_IN|CHECKED_OUT|CANCELLED|NO_SHOW|EXPIRED)(,(DRAFT|HELD|PENDING_PAYMENT|CONFIRMED|CHECKED_IN|CHECKED_OUT|CANCELLED|NO_SHOW|EXPIRED))*$"
+            },
+            "required": false,
+            "name": "statuses",
             "in": "query"
           },
           {
@@ -19538,6 +19642,13 @@
                               "minLength": 1
                             }
                           },
+                          "affectedBookingCodes": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
                           "ladderPreview": {
                             "type": "array",
                             "items": {
@@ -19835,6 +19946,13 @@
                       ]
                     },
                     "affectedBookingIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "affectedBookingCodes": {
                       "type": "array",
                       "items": {
                         "type": "string",
