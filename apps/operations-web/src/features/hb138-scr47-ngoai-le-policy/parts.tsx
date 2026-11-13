@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useRef, type ReactElement, type ReactNode } from 'react';
+import { color } from '@pinehill/ui-web';
+import { OPS_DIALOG_STYLE, OPS_FIELD_LABEL_STYLE } from '../../components/editorial-styles';
 import type { FieldIssue } from './model';
 import { text } from './messages';
 
@@ -45,10 +47,12 @@ export function Field({
   const errorId = `${id}-error`;
   return (
     <div style={box}>
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id} style={OPS_FIELD_LABEL_STYLE}>
+        {label}
+      </label>
       {children({ id, invalid: own.length > 0, describedBy: own.length > 0 ? errorId : undefined })}
       {own.length > 0 ? (
-        <span id={errorId} role="alert">
+        <span id={errorId} role="alert" style={{ color: color.danger, fontSize: 13 }}>
           {own.map((item) => issueText(item.issue)).join('; ')}
         </span>
       ) : null}
@@ -142,20 +146,24 @@ export function ConfirmDialog(props: {
       ref={ref}
       aria-labelledby={`${props.id}-title`}
       onCancel={onCancel}
+      style={OPS_DIALOG_STYLE}
       data-testid={props.id}
     >
-      <h2 id={`${props.id}-title`}>{props.title}</h2>
+      <h2 id={`${props.id}-title`} style={{ margin: 0 }}>
+        {props.title}
+      </h2>
       {props.children}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div className="ph-actions">
         <button
           type="button"
+          className="ph-btn-primary"
           onClick={props.onConfirm}
           style={control}
           data-testid={`${props.id}-confirm`}
         >
           {props.confirmLabel}
         </button>
-        <button type="button" onClick={props.onCancel} style={control}>
+        <button type="button" className="ph-btn" onClick={props.onCancel} style={control}>
           {props.cancelLabel}
         </button>
       </div>

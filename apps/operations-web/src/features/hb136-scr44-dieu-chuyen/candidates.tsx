@@ -2,6 +2,7 @@
 import type { ReactElement } from 'react';
 import { formatDateTimeVn } from '@pinehill/ui-web';
 import type { OverbookingCaseDetail, RelocationPlan } from '@pinehill/contracts';
+import { OPS_TABULAR_STYLE, OPS_TABLE_WRAP_STYLE } from '../../components/editorial-styles';
 import { text } from './messages';
 import { box } from './parts';
 
@@ -64,17 +65,24 @@ export function CandidatesTable({
 }): ReactElement {
   const rows = source.map(candidateRow);
   return (
-    <section style={box} aria-labelledby="hb136-cand-title" data-testid="hb136-candidates">
-      <h2 id="hb136-cand-title">{text('candidatesTitle')}</h2>
-      <p>{text('candidatesNote')}</p>
+    <section
+      className="ph-card"
+      style={box}
+      aria-labelledby="hb136-cand-title"
+      data-testid="hb136-candidates"
+    >
+      <h2 id="hb136-cand-title" style={{ margin: 0 }}>
+        {text('candidatesTitle')}
+      </h2>
+      <p style={{ margin: 0 }}>{text('candidatesNote')}</p>
       {rows.length === 0 ? (
-        <p>{text('noCandidates')}</p>
+        <p style={{ margin: 0 }}>{text('noCandidates')}</p>
       ) : (
         <div
           role="region"
           aria-label={text('candidatesTitle')}
           tabIndex={0}
-          style={{ overflowX: 'auto', maxWidth: '100%' }}
+          style={OPS_TABLE_WRAP_STYLE}
         >
           <table>
             <thead>
@@ -102,11 +110,13 @@ export function CandidatesTable({
                   <td>{row.guestNameMasked}</td>
                   <td>{row.priorityGroup}</td>
                   {row.score.map((value, index) => (
-                    <td key={index}>{value}</td>
+                    <td key={index} style={OPS_TABULAR_STYLE}>
+                      {value}
+                    </td>
                   ))}
                   <td>{formatDateTimeVn(row.createdAt)}</td>
-                  <td>{row.bookingSeq}</td>
-                  <td>{row.paidAmount}</td>
+                  <td style={OPS_TABULAR_STYLE}>{row.bookingSeq}</td>
+                  <td style={OPS_TABULAR_STYLE}>{row.paidAmount}</td>
                 </tr>
               ))}
             </tbody>
@@ -123,7 +133,9 @@ type Step = OverbookingCaseDetail['ladderPreview'][number];
 export function Ladder({ steps }: { steps: readonly Step[] }): ReactElement {
   return (
     <section style={box} aria-labelledby="hb136-ladder-title" data-testid="hb136-ladder">
-      <h2 id="hb136-ladder-title">{text('ladderTitle')}</h2>
+      <h2 id="hb136-ladder-title" style={{ margin: 0 }}>
+        {text('ladderTitle')}
+      </h2>
       <ol style={{ margin: 0, paddingLeft: 20 }}>
         {steps.map((step) => (
           <li key={step.step} data-testid={`hb136-step-${step.step}`}>

@@ -62,9 +62,9 @@ export const viCatalog = {
   'access.denied.body':
     'Tài khoản của bạn không có quyền cho khu vực này. Liên hệ quản lý cơ sở nếu cần.',
   'access.denied.back': 'Về trang chính',
-  'api.probe.title': 'Kết nối API',
-  'api.probe.ok': 'Máy chủ trả lời bình thường',
-  'api.probe.failed': 'Không gọi được API: {code}',
+  'api.probe.title': 'Trạng thái hệ thống',
+  'api.probe.ok': 'Hệ thống đặt phòng đang hoạt động',
+  'api.probe.failed': 'Hệ thống đặt phòng đang gián đoạn ({code})',
   'format.stayPeriod': '{nights} đêm · {adults} người lớn · {children} trẻ em',
   'format.remaining.hours': 'còn {hours} giờ {minutes} phút',
   'format.remaining.minutes': 'còn {minutes} phút',

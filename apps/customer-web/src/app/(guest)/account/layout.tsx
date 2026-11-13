@@ -9,13 +9,12 @@ import { SessionStatus } from './session-status';
 export default function AccountLayout({ children }: { children: ReactNode }): ReactElement {
   return (
     <div
+      className="ph-page-shell"
       style={{
-        boxSizing: 'border-box',
-        maxWidth: 480,
+        maxWidth: 560,
         margin: '0 auto',
-        padding: 'var(--space-s4, 16px)',
         display: 'grid',
-        gap: 'var(--space-s4, 16px)',
+        gap: 'var(--space-s6, 24px)',
       }}
     >
       <SessionStatus />

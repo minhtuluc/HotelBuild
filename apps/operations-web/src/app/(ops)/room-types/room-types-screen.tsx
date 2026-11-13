@@ -7,7 +7,18 @@
  */
 import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import type { RoomTypeSummary } from '@pinehill/contracts';
-import { StateSurface, formatMoney } from '@pinehill/ui-web';
+import { StateSurface, color, formatMoney, space } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_HEADER_ROW_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../components/editorial-styles';
 import { useForcedState } from '../../../components/forced-state';
 import { t } from '../../../lib/i18n';
 import { roomTypePriceWarnings, type RoomTypePriceWarning } from '../../../lib/room-type-warnings';
@@ -34,19 +45,17 @@ function RoomTypeTable({ rows }: { rows: readonly RoomTypeSummary[] }): ReactEle
     t('roomTypes.col.version'),
   ];
   return (
-    <div role="region" aria-label={t('roomTypes.title')} tabIndex={0} style={{ overflowX: 'auto' }}>
-      <table data-testid="room-types-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
+    <div role="region" aria-label={t('roomTypes.title')} tabIndex={0} style={OPS_TABLE_WRAP_STYLE}>
+      <table data-testid="room-types-table" style={OPS_TABULAR_STYLE}>
+        <caption
+          style={{ textAlign: 'start', padding: space.s3, fontWeight: 500, color: color.text }}
+        >
           {t('roomTypes.title')}
         </caption>
         <thead>
           <tr>
             {headers.map((label) => (
-              <th
-                key={label}
-                scope="col"
-                style={{ textAlign: 'start', borderBottom: '1px solid var(--color-border)' }}
-              >
+              <th key={label} scope="col">
                 {label}
               </th>
             ))}
@@ -57,7 +66,7 @@ function RoomTypeTable({ rows }: { rows: readonly RoomTypeSummary[] }): ReactEle
             const warnings = roomTypePriceWarnings(row);
             return (
               <tr key={row.id} data-testid={`room-type-${row.code}`}>
-                <td>{row.code}</td>
+                <td style={{ fontWeight: 500 }}>{row.code}</td>
                 <td>
                   {row.capacityAdults} / {row.capacityChildren}
                 </td>
@@ -66,7 +75,12 @@ function RoomTypeTable({ rows }: { rows: readonly RoomTypeSummary[] }): ReactEle
                 <td>{formatMoney(row.maxPrice)}</td>
                 <td>{row.allowShared ? '✓' : '—'}</td>
                 <td>{row.version}</td>
-                <td data-testid={`room-type-warning-${row.code}`}>
+                <td
+                  data-testid={`room-type-warning-${row.code}`}
+                  style={
+                    warnings.length > 0 ? { color: color.warning, fontWeight: 500 } : undefined
+                  }
+                >
                   {warnings.map((warning) => WARNING_LABELS[warning]).join(' ')}
                 </td>
               </tr>
@@ -112,7 +126,11 @@ function RoomTypeBody({ model }: { model: RoomTypeModel }): ReactElement {
   return (
     <>
       {created ? (
-        <p role="status" data-testid="create-success" style={{ margin: 0 }}>
+        <p
+          role="status"
+          data-testid="create-success"
+          style={{ ...opsNoticeStyle('success'), color: color.success, fontWeight: 500 }}
+        >
           {t('roomTypes.created', { code: created })}
         </p>
       ) : null}
@@ -147,38 +165,37 @@ export function RoomTypesScreen(): ReactElement {
       </StateSurface>
     );
   return (
-    <section
-      style={{
-        padding: 'var(--space-s6, 24px)',
-        display: 'grid',
-        gap: 'var(--space-s4, 16px)',
-        minWidth: 0,
-      }}
-    >
-      <h1 style={{ margin: 0 }}>{t('roomTypes.title')}</h1>
-      <p style={{ margin: 0 }}>{t('roomTypes.intro')}</p>
-      <div style={{ display: 'flex', gap: 'var(--space-s2, 8px)' }}>
-        <button
-          type="button"
-          disabled={state.busy}
-          onClick={() => void controller?.load()}
-          style={{ minHeight: 44 }}
-        >
-          {t('roomTypes.reload')}
-        </button>
-        {state.canWrite ? (
+    <section style={OPS_PAGE_STYLE}>
+      <div style={OPS_HEADER_ROW_STYLE}>
+        <div style={OPS_HEADER_STYLE}>
+          <h1 style={OPS_TITLE_STYLE}>{t('roomTypes.title')}</h1>
+          <p style={OPS_INTRO_STYLE}>{t('roomTypes.intro')}</p>
+        </div>
+        <div style={{ display: 'flex', gap: space.s2, flexWrap: 'wrap' }}>
           <button
             type="button"
-            disabled={!controller?.canStart()}
-            onClick={() => {
-              controller?.clearValidation();
-              setDraft(EMPTY_ROOM_TYPE_DRAFT);
-            }}
-            style={{ minHeight: 44 }}
+            disabled={state.busy}
+            onClick={() => void controller?.load()}
+            className="ph-btn"
+            style={OPS_COMPACT_BTN_STYLE}
           >
-            {t('roomTypes.create')}
+            {t('roomTypes.reload')}
           </button>
-        ) : null}
+          {state.canWrite ? (
+            <button
+              type="button"
+              disabled={!controller?.canStart()}
+              onClick={() => {
+                controller?.clearValidation();
+                setDraft(EMPTY_ROOM_TYPE_DRAFT);
+              }}
+              className="ph-btn-primary"
+              style={OPS_COMPACT_BTN_STYLE}
+            >
+              {t('roomTypes.create')}
+            </button>
+          ) : null}
+        </div>
       </div>
       <AdminPanels state={state} controller={controller} />
       <RoomTypeBody model={model} />

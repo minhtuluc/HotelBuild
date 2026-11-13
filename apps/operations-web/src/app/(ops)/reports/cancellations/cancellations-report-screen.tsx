@@ -22,6 +22,16 @@ import type {
 import { StateSurface, formatMoney, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
+import {
+  OPS_FIELD_LABEL_STYLE,
+  OPS_FILTER_ROW_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TABULAR_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../../components/editorial-styles';
 import { t } from '../../../../lib/i18n';
 import { defaultRange } from '../../../../lib/inventory-grid';
 import { useOpsSession } from '../../../../lib/ops-session';
@@ -40,14 +50,8 @@ const POLL_INTERVAL_MS = 1_000;
 const POLL_MAX_ATTEMPTS = 30;
 const RATE_PLANS: readonly RatePlanCode[] = ['FLEX7', 'SAVER3', 'NONREF', 'LONGSTAY14'];
 
-const ROW_STYLE = {
-  display: 'flex',
-  gap: 'var(--space-s2, 8px)',
-  flexWrap: 'wrap',
-  alignItems: 'end',
-} as const;
-
-const FIELD_STYLE = { display: 'grid', gap: 4 } as const;
+const ROW_STYLE = OPS_FILTER_ROW_STYLE;
+const FIELD_STYLE = OPS_FIELD_LABEL_STYLE;
 
 function initialFilters(): ReportFilters {
   return { propertyId: '', ...defaultRange(new Date(), 7), groupBy: 'DAY' };
@@ -169,12 +173,15 @@ export function CancellationsReportScreen(): ReactElement {
   const totals = report === null ? null : cancellationsTotals(report.rows);
 
   return (
-    <section
-      style={{ padding: 'var(--space-s6, 24px)', display: 'grid', gap: 'var(--space-s4, 16px)' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('reports.cancel.title')}</h1>
-      <p style={{ margin: 0 }}>{t('reports.cancel.intro')}</p>
+    <section style={OPS_PAGE_STYLE}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 className="ph-display" style={OPS_TITLE_STYLE}>
+          {t('reports.cancel.title')}
+        </h1>
+        <p style={OPS_INTRO_STYLE}>{t('reports.cancel.intro')}</p>
+      </header>
       <form
+        className="ph-card ph-filter-row"
         data-testid="cancel-filters"
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
           event.preventDefault();
@@ -231,7 +238,9 @@ export function CancellationsReportScreen(): ReactElement {
             ))}
           </select>
         </label>
-        <button type="submit">{t('reports.filters.load')}</button>
+        <button type="submit" className="ph-btn-primary">
+          {t('reports.filters.load')}
+        </button>
       </form>
       <StateSurface state={state}>
         {readError === null ? null : (
@@ -240,18 +249,22 @@ export function CancellationsReportScreen(): ReactElement {
         {operation === null ? null : <OperationPanel view={operation} />}
         {report === null || totals === null ? null : (
           <>
-            <p role="status" data-testid="cancel-summary" style={{ margin: 0 }}>
+            <p
+              role="status"
+              data-testid="cancel-summary"
+              style={{ ...opsNoticeStyle('info'), ...OPS_TABULAR_STYLE }}
+            >
               {t('reports.cancel.rate', { rate: report.cancellationRate })} ·{' '}
               {t('reports.cancel.cases', { count: totals.cancellations })} ·{' '}
               {t('reports.cancel.refundTotal', { amount: formatMoney(totals.refundAmount) })}
             </p>
             <CancellationsTable report={report} />
             {canExport ? (
-              <div style={ROW_STYLE}>
-                <button type="button" onClick={() => void runExport('CSV')}>
+              <div className="ph-filter-row" style={ROW_STYLE}>
+                <button type="button" className="ph-btn" onClick={() => void runExport('CSV')}>
                   {t('reports.export.csv')}
                 </button>
-                <button type="button" onClick={() => void runExport('XLSX')}>
+                <button type="button" className="ph-btn" onClick={() => void runExport('XLSX')}>
                   {t('reports.export.xlsx')}
                 </button>
               </div>

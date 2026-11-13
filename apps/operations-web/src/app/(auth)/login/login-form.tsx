@@ -1,9 +1,15 @@
 'use client';
 import { useRef, type FormEvent, type ReactElement } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { color, space } from '@pinehill/ui-web';
+import { space } from '@pinehill/ui-web';
 import { FIELD_IDS, useLoginFlow } from './use-login-flow';
-import { PAGE, PRIMARY, TextField } from '../../../session/form-parts';
+import {
+  ALERT_BANNER,
+  AuthCard,
+  PRIMARY,
+  TextField,
+  WARN_BANNER,
+} from '../../../session/form-parts';
 import { authText as text } from '../../../session/messages';
 import { issueMessage, loginFailureMessage } from '../../../session/view-text';
 
@@ -24,13 +30,9 @@ export function LoginForm(): ReactElement {
     else if (found.password !== undefined) passwordRef.current?.focus();
   };
   return (
-    <section style={PAGE} aria-labelledby="login-title">
-      <h1 id="login-title" style={{ margin: 0, fontSize: 24 }}>
-        {text('loginTitle')}
-      </h1>
-      <p style={{ margin: 0, color: color.textMuted }}>{text('loginIntro')}</p>
+    <AuthCard titleId="login-title" title={text('loginTitle')} intro={text('loginIntro')}>
       {params.get('reason') === 'expired' ? (
-        <p role="status" data-testid="login-expired" style={{ margin: 0, color: color.warning }}>
+        <p role="status" data-testid="login-expired" style={WARN_BANNER}>
           {text('expired')}
         </p>
       ) : null}
@@ -41,7 +43,7 @@ export function LoginForm(): ReactElement {
         style={{ display: 'grid', gap: space.s4 }}
       >
         {issueCount === 0 ? null : (
-          <p role="alert" data-testid="login-summary" style={{ margin: 0, color: color.danger }}>
+          <p role="alert" data-testid="login-summary" style={ALERT_BANNER}>
             {text('formInvalid', { count: issueCount })}
           </p>
         )}
@@ -69,14 +71,20 @@ export function LoginForm(): ReactElement {
           onChange={flow.setPassword}
         />
         {flow.failure === null ? null : (
-          <p role="alert" data-testid="login-failure" style={{ margin: 0, color: color.danger }}>
+          <p role="alert" data-testid="login-failure" style={ALERT_BANNER}>
             {loginFailureMessage(flow.failure)}
           </p>
         )}
-        <button type="submit" data-testid="login-submit" disabled={flow.busy} style={PRIMARY}>
+        <button
+          type="submit"
+          data-testid="login-submit"
+          disabled={flow.busy}
+          className="ph-btn-primary"
+          style={PRIMARY}
+        >
           {flow.busy ? text('signingIn') : text('signIn')}
         </button>
       </form>
-    </section>
+    </AuthCard>
   );
 }

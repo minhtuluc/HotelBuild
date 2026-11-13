@@ -1,8 +1,15 @@
 'use client';
 import { useState, type ReactElement } from 'react';
 import Link from 'next/link';
-import { StateSurface, type ScreenState } from '@pinehill/ui-web';
+import { StateSurface, space, type ScreenState } from '@pinehill/ui-web';
 import type { RefundRequest } from '@pinehill/contracts';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_SUBTITLE_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../../../components/editorial-styles';
 import { ScreenAlert } from '../../../../../components/screen-alert';
 import { useForcedState } from '../../../../../components/forced-state';
 import { t } from '../../../../../lib/i18n';
@@ -23,15 +30,16 @@ function RefundList({
   return (
     <ul style={{ margin: 0, paddingInlineStart: 20 }}>
       {refunds.map((value) => (
-        <li key={value.id}>
+        <li key={value.id} style={{ marginBottom: space.s2 }}>
           <button
             type="button"
+            className="ph-btn"
             disabled={controls.busy || controls.intent !== null}
             onClick={() => {
               controls.reset();
               onSelect(value.id);
             }}
-            style={{ overflowWrap: 'anywhere' }}
+            style={{ ...OPS_COMPACT_BTN_STYLE, overflowWrap: 'anywhere' }}
           >
             {t('ops.refunds.select', { id: value.id })}
           </button>
@@ -56,10 +64,12 @@ function RefundContent({
   );
   return (
     <>
-      <p style={{ margin: 0 }}>{data.booking.code}</p>
-      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+      <p style={{ margin: 0, fontWeight: 600 }}>{data.booking.code}</p>
+      <div className="ph-actions">
         <button
           type="button"
+          className="ph-btn"
+          style={OPS_COMPACT_BTN_STYLE}
           data-testid="refund-reload"
           disabled={controls.busy || workspace.readingNow}
           onClick={() => void workspace.reload()}
@@ -69,6 +79,8 @@ function RefundContent({
         {canCreate ? (
           <button
             type="button"
+            className="ph-btn-primary"
+            style={OPS_COMPACT_BTN_STYLE}
             data-testid="refund-create"
             disabled={controls.blocked}
             onClick={() => controls.begin({ action: 'create', target: null })}
@@ -77,7 +89,7 @@ function RefundContent({
           </button>
         ) : null}
       </div>
-      <h2 style={{ margin: 0 }}>{t('ops.refunds.list')}</h2>
+      <h2 style={OPS_SUBTITLE_STYLE}>{t('ops.refunds.list')}</h2>
       <RefundList refunds={data.refunds} controls={controls} onSelect={setSelected} />
       {refund ? (
         <RefundDetail refund={refund} balance={data.balance} user={data.user} controls={controls} />
@@ -98,7 +110,11 @@ function RefundState({
   const successful = state.kind === 'success';
   return (
     <>
-      {successful ? <p role="status">{t('ops.refunds.confirmed')}</p> : null}
+      {successful ? (
+        <p role="status" style={opsNoticeStyle('success')}>
+          {t('ops.refunds.confirmed')}
+        </p>
+      ) : null}
       <StateSurface state={successful ? { kind: 'ready' } : state}>
         <RefundContent workspace={workspace} controls={controls} />
       </StateSurface>
@@ -118,12 +134,17 @@ export function RefundScreen({
   const state =
     workspace.state.kind === 'forbidden' ? workspace.state : (controls.state ?? workspace.state);
   return (
-    <section
-      data-testid="refund-screen"
-      style={{ display: 'grid', gap: 16, padding: '16px 0', maxWidth: 800, minWidth: 0 }}
-    >
-      <h1 style={{ margin: 0 }}>{t('ops.refunds.title')}</h1>
-      <Link href={`/bookings/${encodeURIComponent(bookingId)}`}>{t('ops.refunds.back')}</Link>
+    <section data-testid="refund-screen" style={{ ...OPS_PAGE_STYLE, maxWidth: 880 }}>
+      <h1 style={OPS_TITLE_STYLE}>{t('ops.refunds.title')}</h1>
+      <div>
+        <Link
+          href={`/bookings/${encodeURIComponent(bookingId)}`}
+          className="ph-btn"
+          style={OPS_COMPACT_BTN_STYLE}
+        >
+          {t('ops.refunds.back')}
+        </Link>
+      </div>
       {forced === undefined ? (
         <RefundState state={state} workspace={workspace} controls={controls} />
       ) : (

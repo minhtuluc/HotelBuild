@@ -1,7 +1,13 @@
 'use client';
 import type { ReactElement } from 'react';
 import type { RefundRequest, BookingBalance, UserMe } from '@pinehill/contracts';
-import { formatMoney, formatDateTimeVn } from '@pinehill/ui-web';
+import { formatMoney, formatDateTimeVn, space } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_SUBTITLE_STYLE,
+  OPS_TABULAR_STYLE,
+  opsNoticeStyle,
+} from '../../../../../components/editorial-styles';
 import { t } from '../../../../../lib/i18n';
 import { paidEvidence, refundActions, refundDecisionReady, payoutMethod } from './refund-model';
 import type { RefundControls } from './refund-actions';
@@ -85,15 +91,15 @@ export function RefundDetail({
   return (
     <section
       data-testid="refund-detail"
+      className="ph-card"
       style={{
         display: 'grid',
-        gap: 12,
-        borderTop: '1px solid var(--color-border)',
-        paddingTop: 16,
+        gap: space.s3,
+        padding: space.s4,
         minWidth: 0,
       }}
     >
-      <h2 style={{ overflowWrap: 'anywhere', margin: 0 }}>
+      <h2 style={{ ...OPS_SUBTITLE_STYLE, overflowWrap: 'anywhere' }}>
         {t('ops.refunds.detail', { id: refund.id })}
       </h2>
       <p data-testid="refund-status" role="status" style={VALUE}>
@@ -102,19 +108,27 @@ export function RefundDetail({
           : t(`ops.refunds.status.${refund.status}`)}
       </p>
       <RefundNumbers refund={refund} balance={balance} />
-      {factsReady ? null : <p role="alert">{t('ops.refunds.missing')}</p>}
+      {factsReady ? null : (
+        <p role="alert" style={opsNoticeStyle('danger')}>
+          {t('ops.refunds.missing')}
+        </p>
+      )}
       {refund.requiresThresholdControl === true ? (
-        <p data-testid="refund-threshold" role="note" style={{ color: 'var(--color-warning)' }}>
+        <p data-testid="refund-threshold" role="note" style={opsNoticeStyle('warning')}>
           {t('ops.refunds.threshold')}
         </p>
       ) : null}
       <h3 style={{ margin: 0 }}>{t('ops.refunds.sources')}</h3>
       <ul
         data-testid={confirmed ? 'refund-paid-evidence' : 'refund-sources'}
-        style={{ margin: 0, paddingInlineStart: 20, overflowWrap: 'anywhere' }}
+        className="ph-list-lines"
+        style={{ ...OPS_TABULAR_STYLE, margin: 0, overflowWrap: 'anywhere' }}
       >
         {(refund.refundAllocations ?? []).map((value, index) => (
-          <li key={`${value.originalPayment.paymentId}-${index}`} style={{ marginBottom: 12 }}>
+          <li
+            key={`${value.originalPayment.paymentId}-${index}`}
+            style={{ display: 'grid', gap: 4, minWidth: 0 }}
+          >
             <p style={{ margin: 0 }}>
               {t('ops.refunds.original', {
                 id: value.originalPayment.paymentId,
@@ -142,13 +156,17 @@ export function RefundDetail({
         ))}
       </ul>
       {refund.status === 'APPROVED' && payoutMethod(refund) === null ? (
-        <p role="note">{t('ops.refunds.reconcile')}</p>
+        <p role="note" style={opsNoticeStyle('info')}>
+          {t('ops.refunds.reconcile')}
+        </p>
       ) : null}
-      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+      <div className="ph-actions">
         {refundActions(refund, user).map((action) => (
           <button
             key={action}
             type="button"
+            className={action === 'approve' || action === 'pay' ? 'ph-btn-primary' : 'ph-btn'}
+            style={OPS_COMPACT_BTN_STYLE}
             data-testid={`refund-action-${action}`}
             disabled={controls.blocked}
             onClick={() => controls.begin({ action, target: refund })}

@@ -26,7 +26,7 @@ export function PreviewStatus({
   if (phase === 'loading')
     return (
       <View style={{ gap: space.s1 }}>
-        <ActivityIndicator accessibilityLabel={text('loading')} />
+        <ActivityIndicator accessibilityLabel={text('loading')} color={color.primary} />
         <Text testID={testID} accessibilityLiveRegion="polite" style={{ color: color.textMuted }}>
           {text('loading')}
         </Text>

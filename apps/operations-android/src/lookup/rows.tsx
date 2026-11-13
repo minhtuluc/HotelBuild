@@ -1,8 +1,9 @@
 import type { ReactElement } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { color, space, touchTargetDp, typography } from '@pinehill/ui-native';
+import { color } from '@pinehill/ui-native';
 import { lookupText as text, statusText, stayPeriodText, tierText } from './messages';
 import { formatVnd, type GuestView, type BookingView } from './view';
+import { theme } from '../theme';
 
 function BlacklistFlag({ flagged }: { flagged: boolean }): ReactElement | null {
   if (!flagged) return null;
@@ -19,27 +20,29 @@ export function BookingCard({ booking }: { booking: BookingView }): ReactElement
       testID={'lookup-booking-' + booking.id}
       accessible
       accessibilityLabel={`${text('bookingGroup')} ${booking.code}, ${statusText(booking.status)}`}
-      style={{ gap: space.s2, padding: space.s3, borderWidth: 1, borderRadius: 8 }}
+      style={theme.card}
     >
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '600' }}>
         {booking.code} · {statusText(booking.status)}
       </Text>
-      <Text>{stayPeriodText(booking.checkIn, booking.checkOut, booking.nights)}</Text>
-      <Text>{text('rooms', { count: booking.roomCount })}</Text>
-      <Text>
+      <Text style={theme.body}>
+        {stayPeriodText(booking.checkIn, booking.checkOut, booking.nights)}
+      </Text>
+      <Text style={theme.muted}>{text('rooms', { count: booking.roomCount })}</Text>
+      <Text style={[theme.body, theme.tabular]}>
         {text('amount', {
           total: formatVnd(booking.totalAmount),
           balance: formatVnd(booking.balanceDue),
         })}
       </Text>
-      <Text style={{ color: color.textMuted }}>
+      <Text style={theme.muted}>
         {booking.guestName === null
           ? text('guestUnknown')
           : text('guestOfBooking', { name: booking.guestName })}
       </Text>
       <BlacklistFlag flagged={booking.blacklisted === true} />
       {booking.blacklisted === null ? (
-        <Text style={{ color: color.textMuted }}>{text('blacklistUnknown')}</Text>
+        <Text style={theme.muted}>{text('blacklistUnknown')}</Text>
       ) : null}
     </View>
   );
@@ -57,19 +60,25 @@ export function GuestCard({
       testID={'lookup-guest-' + guest.id}
       accessible
       accessibilityLabel={`${text('guestGroup')} ${guest.fullName}, ${text('phone', { phone: guest.phone })}`}
-      style={{ gap: space.s2, padding: space.s3, borderWidth: 1, borderRadius: 8 }}
+      style={theme.card}
     >
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '600' }}>
         {guest.fullName}
       </Text>
       <BlacklistFlag flagged={guest.blacklisted} />
-      <Text>{text('phone', { phone: guest.phone })}</Text>
-      {guest.email === null ? null : <Text>{text('email', { email: guest.email })}</Text>}
+      <Text style={[theme.body, theme.tabular]}>{text('phone', { phone: guest.phone })}</Text>
+      {guest.email === null ? null : (
+        <Text style={theme.muted}>{text('email', { email: guest.email })}</Text>
+      )}
       {guest.history === null ? null : (
         <>
-          <Text>{text('tier', { tier: tierText(guest.history.tier) })}</Text>
-          <Text>{text('points', { points: guest.history.points })}</Text>
-          <Text>{text('stays', { stays: guest.history.totalStays })}</Text>
+          <Text style={theme.muted}>{text('tier', { tier: tierText(guest.history.tier) })}</Text>
+          <Text style={[theme.muted, theme.tabular]}>
+            {text('points', { points: guest.history.points })}
+          </Text>
+          <Text style={[theme.muted, theme.tabular]}>
+            {text('stays', { stays: guest.history.totalStays })}
+          </Text>
         </>
       )}
       <Pressable
@@ -79,9 +88,9 @@ export function GuestCard({
         onPress={() => {
           onCall(guest.phone);
         }}
-        style={{ minHeight: touchTargetDp, justifyContent: 'center', padding: space.s2 }}
+        style={theme.buttonPlain}
       >
-        <Text style={{ color: color.primary, fontSize: typography.body.sp }}>{text('call')}</Text>
+        <Text style={theme.buttonPlainText}>{text('call')}</Text>
       </Pressable>
     </View>
   );

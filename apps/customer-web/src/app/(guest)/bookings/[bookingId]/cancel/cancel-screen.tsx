@@ -2,13 +2,6 @@
 
 /**
  * SCR-11 — huỷ đặt phòng & số tiền hoàn theo bậc (UC-BOOK-08, TC-SYS-10).
- *
- * Trình tự bắt buộc (HB-103 AC1):
- * 1. **Luôn** xem trước số tiền hoàn (`POST .../cancel-preview`) trước khi có nút xác nhận.
- * 2. Đang tính thì khoá cả nút xem trước lẫn nút xác nhận.
- * 3. Ngay trước khi huỷ, màn hình **đối chiếu lại** với máy chủ: số liệu đổi (qua mốc/version) thì không
- *    huỷ, mà hiện lại số mới và buộc khách xác nhận lần nữa.
- *
  * Giao diện không tính tiền, không suy luật chính sách (ADR-018): mọi con số là nguyên văn máy chủ trả.
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
@@ -46,8 +39,6 @@ import {
   type CancellationBreakdown,
 } from '../../cancel-model';
 
-const CELL = { padding: '4px 12px 4px 0', textAlign: 'left' } as const;
-
 const REFUND_KEYS: Readonly<Record<'paid' | 'requested' | 'penalty' | 'fee', CustomerMessageKey>> =
   {
     paid: 'guest.cancel.refund.paid',
@@ -60,31 +51,37 @@ function BreakdownPanel({ breakdown }: { breakdown: CancellationBreakdown }): Re
   return (
     <section
       data-testid="cancel-preview"
-      style={{ display: 'grid', gap: 'var(--space-s2, 8px)' }}
+      className="ph-card"
+      style={{ display: 'grid', gap: 12 }}
       aria-labelledby="cancel-preview-title"
     >
-      <h2 id="cancel-preview-title" style={{ margin: 0 }}>
+      <h2 id="cancel-preview-title" style={{ margin: 0, fontSize: 'var(--text-h2, 18px)' }}>
         {t('guest.cancel.preview.title')}
       </h2>
-      <p style={{ margin: 0 }} data-testid="cancel-tier">
+      <p style={{ margin: 0, color: 'var(--color-textMuted)' }} data-testid="cancel-tier">
         {t('guest.cancel.preview.tier', {
           tier: breakdown.appliedTierId,
           hours: formatHoursBeforeCheckIn(breakdown.hoursBeforeCheckIn),
           percent: breakdown.refundPercent,
         })}
       </p>
-      <table data-testid="cancel-refund">
-        <tbody>
-          {refundRows(breakdown).map((row) => (
-            <tr key={row.key}>
-              <th scope="row" style={CELL}>
-                {t(REFUND_KEYS[row.key])}
-              </th>
-              <td style={CELL}>{formatMoney(row.amount)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="ph-table-wrap">
+        <table data-testid="cancel-refund">
+          <tbody>
+            {refundRows(breakdown).map((row) => (
+              <tr key={row.key}>
+                <th scope="row">{t(REFUND_KEYS[row.key])}</th>
+                <td
+                  className="ph-tabular"
+                  style={{ fontWeight: row.key === 'requested' ? 500 : 400 }}
+                >
+                  {formatMoney(row.amount)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
@@ -94,20 +91,26 @@ function CancelResult({ result }: { result: CancelResponse }): ReactElement {
     <section
       data-testid="cancel-result"
       aria-labelledby="cancel-result-title"
-      style={{ display: 'grid', gap: 'var(--space-s2, 8px)' }}
+      className="ph-card"
+      style={{ display: 'grid', gap: 12 }}
     >
-      <h2 id="cancel-result-title" style={{ margin: 0 }}>
+      <h2 id="cancel-result-title" style={{ margin: 0, fontSize: 'var(--text-h2, 18px)' }}>
         {t('guest.cancel.result.title')}
       </h2>
-      <p style={{ margin: 0 }} data-testid="cancel-result-status">
-        {formatStatusWithEnum(t(STATUS_KEYS[result.status]), result.status)}
-      </p>
-      <p style={{ margin: 0 }}>
-        {t('guest.cancel.result.at', { time: formatDateTimeVn(result.cancelledAt) })}
-      </p>
-      <p style={{ margin: 0 }}>
-        {t('guest.cancel.result.released', { count: result.releasedAssignmentCount })}
-      </p>
+      <ul className="ph-list-lines ph-tabular">
+        <li>
+          <span>{t('guest.bookings.col.status')}</span>
+          <strong data-testid="cancel-result-status">
+            {formatStatusWithEnum(t(STATUS_KEYS[result.status]), result.status)}
+          </strong>
+        </li>
+        <li>
+          <span>{t('guest.cancel.result.at', { time: formatDateTimeVn(result.cancelledAt) })}</span>
+          <span>
+            {t('guest.cancel.result.released', { count: result.releasedAssignmentCount })}
+          </span>
+        </li>
+      </ul>
       <p style={{ margin: 0 }} data-testid="cancel-result-refund">
         {result.refundRequest === null
           ? t('guest.cancel.result.noRefund')
@@ -120,7 +123,11 @@ function CancelResult({ result }: { result: CancelResponse }): ReactElement {
                   : formatMoney(result.refundRequest.approvedAmount),
             })}
       </p>
-      <Link href={`/bookings/${result.bookingId}`}>{t('guest.cancel.result.back')}</Link>
+      <div>
+        <Link href={`/bookings/${result.bookingId}`} className="ph-btn">
+          {t('guest.cancel.result.back')}
+        </Link>
+      </div>
     </section>
   );
 }
@@ -145,8 +152,8 @@ function CancelForm({
   onConfirm: () => void;
 }): ReactElement {
   return (
-    <div style={{ display: 'grid', gap: 'var(--space-s2, 8px)' }}>
-      <label style={{ display: 'grid', gap: 4 }}>
+    <div className="ph-card" style={{ display: 'grid', gap: 16 }}>
+      <label className="ph-field">
         {t('guest.cancel.reason')}
         <select
           name="reason"
@@ -163,7 +170,7 @@ function CancelForm({
           ))}
         </select>
       </label>
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label className="ph-field">
         {t('guest.cancel.note')}
         <textarea
           name="note"
@@ -175,11 +182,14 @@ function CancelForm({
           }}
         />
       </label>
-      <p style={{ margin: 0 }}>{t('guest.cancel.previewRequired')}</p>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <p style={{ margin: 0, fontSize: 14, color: 'var(--color-textMuted)' }}>
+        {t('guest.cancel.previewRequired')}
+      </p>
+      <div className="ph-actions">
         <button
           type="button"
           data-testid="cancel-preview-button"
+          className="ph-btn"
           disabled={busy}
           onClick={onPreview}
         >
@@ -188,6 +198,7 @@ function CancelForm({
         <button
           type="button"
           data-testid="cancel-confirm"
+          className="ph-btn-danger"
           disabled={!confirmEnabled}
           onClick={onConfirm}
         >
@@ -211,7 +222,11 @@ function CancelOutcome({
     <>
       <BreakdownPanel breakdown={preview.cancellation} />
       {preview.warnings === undefined ? null : (
-        <ul data-testid="cancel-warnings" style={{ margin: 0 }}>
+        <ul
+          data-testid="cancel-warnings"
+          className="ph-muted-box"
+          style={{ margin: 0, paddingLeft: 32 }}
+        >
           {preview.warnings.map((warning) => (
             <li key={warning}>{warning}</li>
           ))}
@@ -225,12 +240,12 @@ function CancelMessages({ alert, stale }: { alert: string | null; stale: boolean
   return (
     <>
       {alert === null ? null : (
-        <p role="alert" data-testid="cancel-alert" style={{ margin: 0 }}>
+        <p role="alert" data-testid="cancel-alert" className="ph-alert-box" style={{ margin: 0 }}>
           {alert}
         </p>
       )}
       {!stale ? null : (
-        <p role="status" data-testid="cancel-stale" style={{ margin: 0 }}>
+        <p role="status" data-testid="cancel-stale" className="ph-alert-box" style={{ margin: 0 }}>
           {t('guest.cancel.stale')}
         </p>
       )}
@@ -311,7 +326,6 @@ export function CancelScreen(): ReactElement {
     setAlert(null);
     setStep('submitting');
     try {
-      // AC1: đối chiếu lại ngay trước khi huỷ — số liệu đổi thì dừng, buộc xem trước lại.
       const fresh = await fetchCancelPreview(session, bookingId, request());
       if (!samePreview(fresh, preview)) {
         setPreview(fresh);
@@ -325,7 +339,6 @@ export function CancelScreen(): ReactElement {
         ...(trimmed === '' ? {} : { note: trimmed }),
       });
       setResult(cancelled);
-      // Trạng thái trên dòng ngữ cảnh lấy từ chính kết quả máy chủ vừa trả, không đoán tại chỗ.
       setBooking((previous) =>
         previous === null ? previous : { ...previous, status: cancelled.status },
       );
@@ -336,21 +349,24 @@ export function CancelScreen(): ReactElement {
     }
   }, [bookingId, note, preview, request, session, failure]);
 
-  if (forbidden) return <AccessDeniedPanel backHref="/bookings" />;
+  if (forbidden)
+    return (
+      <div className="ph-page-shell">
+        <AccessDeniedPanel backHref="/bookings" />
+      </div>
+    );
   if (notFound) {
     return (
-      <section
-        role="alert"
-        data-testid="cancel-not-found"
-        style={{
-          display: 'grid',
-          gap: 'var(--space-s3, 12px)',
-          padding: 'var(--space-s4, 16px) 0',
-        }}
-      >
-        <h1 style={{ margin: 0 }}>{t('guest.cancel.title')}</h1>
-        <p style={{ margin: 0 }}>{t('guest.booking.notFound')}</p>
-        <Link href="/bookings">{t('guest.bookings.back')}</Link>
+      <section role="alert" data-testid="cancel-not-found" className="ph-page-shell">
+        <div className="ph-page-header">
+          <h1 className="ph-page-title">{t('guest.cancel.title')}</h1>
+        </div>
+        <div className="ph-alert-box">
+          <p style={{ margin: 0 }}>{t('guest.booking.notFound')}</p>
+          <Link href="/bookings" className="ph-btn">
+            {t('guest.bookings.back')}
+          </Link>
+        </div>
       </section>
     );
   }
@@ -358,24 +374,24 @@ export function CancelScreen(): ReactElement {
   const busy = step === 'computing' || step === 'submitting';
 
   return (
-    <section
-      data-testid="cancel-screen"
-      style={{ display: 'grid', gap: 'var(--space-s3, 12px)', padding: 'var(--space-s4, 16px) 0' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('guest.cancel.title')}</h1>
+    <section data-testid="cancel-screen" className="ph-page-shell">
+      <div className="ph-page-header">
+        <h1 className="ph-page-title">{t('guest.cancel.title')}</h1>
+      </div>
       <StateSurface state={state}>
         {booking === null ? null : (
-          <p data-testid="cancel-booking" style={{ margin: 0 }}>
-            <code>{booking.code}</code> ·{' '}
-            {formatStatusWithEnum(t(STATUS_KEYS[booking.status]), booking.status)} ·{' '}
-            {formatStaySpan(
-              booking.checkIn,
-              booking.checkOut,
-              formatStayPeriod(booking.nights, booking.adults, booking.children),
-            )}
+          <p data-testid="cancel-booking" className="ph-muted-box ph-tabular" style={{ margin: 0 }}>
+            <span>
+              <code>{booking.code}</code> ·{' '}
+              {formatStatusWithEnum(t(STATUS_KEYS[booking.status]), booking.status)} ·{' '}
+              {formatStaySpan(
+                booking.checkIn,
+                booking.checkOut,
+                formatStayPeriod(booking.nights, booking.adults, booking.children),
+              )}
+            </span>
           </p>
         )}
-
         {result === null ? (
           <CancelForm
             reason={reason}
@@ -392,9 +408,7 @@ export function CancelScreen(): ReactElement {
             }}
           />
         ) : null}
-
         <CancelMessages alert={alert} stale={stale} />
-
         <CancelOutcome preview={preview} result={result} />
       </StateSurface>
     </section>

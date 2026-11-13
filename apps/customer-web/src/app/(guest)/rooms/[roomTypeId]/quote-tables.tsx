@@ -6,44 +6,92 @@ import { formatDateTimeVn, formatMoney } from '@pinehill/ui-web';
 import type { Quote } from '@pinehill/contracts';
 import { t } from '../../../../lib/i18n';
 import { nightRows } from './quote-model';
+import { calendarDay, Denomination } from '../../../../components/stamps';
+import { formatCalendarDate } from '../../bookings/stay-format';
 
-const CELL = { textAlign: 'start', borderBottom: '1px solid var(--color-border)' } as const;
+/** Tem vẽ tối đa trên dải; kỳ dài hơn vẫn đầy đủ trong bảng giá từng đêm ngay dưới. */
+const MAX_PRICE_STAMPS = 7;
+
+/**
+ * Dải tem giá: mỗi đêm một con tem, mệnh giá là `nightlyPrice` máy chủ trả; đêm bị kẹp sàn/trần có
+ * khung đứt (hình thức, không chỉ màu). Bảng `nights-table` bên dưới vẫn là nguồn đọc đầy đủ.
+ */
+export function PriceStrip({ quote }: { quote: Quote }): ReactElement {
+  const rows = nightRows(quote);
+  const shown = rows.slice(0, MAX_PRICE_STAMPS);
+  const hasClamped = rows.some((row) => row.clamped);
+  return (
+    <figure data-testid="price-strip" style={{ margin: 0, display: 'grid', gap: 8 }}>
+      <div className="ph-price-strip" aria-hidden="true">
+        <div className="ph-stamp-lift" style={{ display: 'flex', flexWrap: 'wrap' }}>
+          {shown.map((row, index) => {
+            const day = calendarDay(row.date);
+            return (
+              <div
+                key={row.date}
+                className="ph-stamp ph-price-stamp"
+                data-tone={index % 3}
+                data-clamped={row.clamped ? 'true' : 'false'}
+              >
+                <div className="ph-stamp-face">
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>
+                    {day?.weekday} {day?.dayMonth}
+                  </span>
+                  <Denomination amount={row.nightlyPrice} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="ph-price-total">
+          <small>{t('guest.rooms.strip.total', { nights: rows.length })}</small>
+          <Denomination amount={quote.subtotal} />
+        </div>
+      </div>
+      {hasClamped ? (
+        <figcaption style={{ fontSize: 13, color: 'var(--color-textMuted)' }}>
+          {t('guest.rooms.strip.clamped')}
+        </figcaption>
+      ) : null}
+    </figure>
+  );
+}
 
 export function NightsTable({ quote }: { quote: Quote }): ReactElement {
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table data-testid="nights-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
-          {t('guest.rooms.nights.title')}
-        </caption>
-        <thead>
-          <tr>
-            {[
-              t('guest.rooms.col.date'),
-              t('guest.rooms.col.basePrice'),
-              t('guest.rooms.col.nightlyPrice'),
-              t('guest.rooms.col.flags'),
-            ].map((label) => (
-              <th key={label} scope="col" style={CELL}>
-                {label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {nightRows(quote).map((row) => (
-            <tr key={row.date} data-testid={`night-row-${row.date}`}>
-              <td style={CELL}>{row.date}</td>
-              <td style={CELL}>{formatMoney(row.basePrice)}</td>
-              <td style={CELL}>{formatMoney(row.nightlyPrice)}</td>
-              <td style={CELL}>
-                {row.clamped ? t('guest.rooms.flag.clamped') : t('guest.rooms.flag.none')}
-              </td>
+    <div style={{ display: 'grid', gap: 10 }}>
+      <div className="ph-table-wrap">
+        <table data-testid="nights-table">
+          <caption>{t('guest.rooms.nights.title')}</caption>
+          <thead>
+            <tr>
+              {[
+                t('guest.rooms.col.date'),
+                t('guest.rooms.col.basePrice'),
+                t('guest.rooms.col.nightlyPrice'),
+                t('guest.rooms.col.flags'),
+              ].map((label) => (
+                <th key={label} scope="col">
+                  {label}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <p role="note" style={{ margin: 0 }}>
+          </thead>
+          <tbody>
+            {nightRows(quote).map((row) => (
+              <tr key={row.date} data-testid={`night-row-${row.date}`}>
+                <td className="ph-tabular">{formatCalendarDate(row.date)}</td>
+                <td className="ph-tabular">{formatMoney(row.basePrice)}</td>
+                <td className="ph-tabular" style={{ fontWeight: 600 }}>
+                  {formatMoney(row.nightlyPrice)}
+                </td>
+                <td>{row.clamped ? t('guest.rooms.flag.clamped') : t('guest.rooms.flag.none')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p role="note" style={{ margin: 0, fontSize: 13, color: 'var(--color-textMuted)' }}>
         {t('guest.rooms.nights.note')}
       </p>
     </div>
@@ -63,25 +111,28 @@ export function QuoteSummary({ quote }: { quote: Quote }): ReactElement {
     [t('guest.rooms.summary.expiresAt'), formatDateTimeVn(quote.expiresAt)],
   ];
   return (
-    <table data-testid="quote-summary" style={{ borderCollapse: 'collapse' }}>
-      <tbody>
+    <div className="ph-card">
+      <h2 style={{ margin: '0 0 12px', fontSize: 18 }}>{t('guest.rooms.summaryHeading')}</h2>
+      <ul data-testid="quote-summary" className="ph-list-lines ph-tabular">
         {rows.map(([label, value]) => (
-          <tr key={label}>
-            <th scope="row" style={{ textAlign: 'start', paddingInlineEnd: 12 }}>
-              {label}
-            </th>
-            <td>{value}</td>
-          </tr>
+          <li key={label}>
+            <span style={{ color: 'var(--color-textMuted)', fontSize: 14 }}>{label}</span>
+            <strong style={{ fontWeight: 600, textAlign: 'right' }}>{value}</strong>
+          </li>
         ))}
-      </tbody>
-    </table>
+      </ul>
+    </div>
   );
 }
 
 export function QuoteWarnings({ quote }: { quote: Quote }): ReactElement | null {
   if (quote.warnings.length === 0) return null;
   return (
-    <ul data-testid="quote-warnings" style={{ margin: 0 }}>
+    <ul
+      data-testid="quote-warnings"
+      className="ph-muted-box"
+      style={{ margin: 0, paddingLeft: 32 }}
+    >
       {quote.warnings.map((warning) => (
         <li key={warning}>{warning}</li>
       ))}

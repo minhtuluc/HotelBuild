@@ -9,15 +9,20 @@
  * HB-201); máy chủ là nơi quyết mùa thắng nên giao diện chỉ hiển thị.
  */
 import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
-import { createPropertyApi, createRateApi, isApiError, type ApiClient } from '@pinehill/api-client';
+import { createRateApi, isApiError } from '@pinehill/api-client';
 import type { PropertySummary, RoomTypeSummary, SeasonSummary } from '@pinehill/contracts';
+import { StateSurface, color, type ScreenState } from '@pinehill/ui-web';
 import {
-  StateSurface,
-  formatMoney,
-  formatMultiplier,
-  formatStatusWithEnum,
-  type ScreenState,
-} from '@pinehill/ui-web';
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_FILTER_ROW_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TABULAR_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../components/editorial-styles';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { useForcedState } from '../../../components/forced-state';
 import { useOpsSession } from '../../../lib/ops-session';
@@ -30,152 +35,10 @@ import {
   overlappingSeasonNames,
   toCreateRequest,
   validateSeasonDraft,
-  type CalendarRow,
   type RateCalendarEntry,
   type SeasonDraft,
 } from '../../../lib/seasons';
-
-interface Loaded {
-  properties: readonly PropertySummary[];
-  roomTypes: readonly RoomTypeSummary[];
-  entries: readonly RateCalendarEntry[];
-  seasons: readonly SeasonSummary[];
-}
-
-type SeasonTarget = Pick<SeasonDraft, 'propertyId' | 'roomTypeId'>;
-
-/** Chọn giá trị đang dùng: giữ lựa chọn cũ nếu còn hợp lệ, ngược lại lấy mục đầu tiên. */
-function pickId(preferred: string, options: readonly { id: string }[]): string {
-  return preferred === '' ? (options[0]?.id ?? '') : preferred;
-}
-
-async function fetchCalendar(
-  client: ApiClient,
-  draft: SeasonTarget,
-  range: GridRange,
-): Promise<Loaded> {
-  const propertyApi = createPropertyApi(client);
-  const properties = (await propertyApi.list()).data.data;
-  const propertyId = pickId(draft.propertyId, properties);
-  const roomTypes =
-    propertyId === '' ? [] : (await propertyApi.listRoomTypes({ propertyId })).data.data;
-  const roomTypeId = pickId(draft.roomTypeId, roomTypes);
-  const rateApi = createRateApi(client);
-  const entries =
-    roomTypeId === ''
-      ? []
-      : (await rateApi.rateCalendar(roomTypeId, { from: range.from, to: range.to })).data.entries;
-  const seasons = propertyId === '' ? [] : (await rateApi.listSeasons({ propertyId })).data.data;
-  return { properties, roomTypes, entries, seasons };
-}
-
-/** Nhãn Việt + mã enum nguồn giá (BR-RATE-02) — không viết cứng chuỗi trong component (NFR-LOC-01). */
-const SOURCE_LABEL: Readonly<
-  Record<
-    NonNullable<RateCalendarEntry['source']>,
-    | 'enum.rateSource.BASE'
-    | 'enum.rateSource.SEASON'
-    | 'enum.rateSource.OVERRIDE'
-    | 'enum.rateSource.RATE_PLAN'
-  >
-> = {
-  BASE: 'enum.rateSource.BASE',
-  SEASON: 'enum.rateSource.SEASON',
-  OVERRIDE: 'enum.rateSource.OVERRIDE',
-  RATE_PLAN: 'enum.rateSource.RATE_PLAN',
-};
-
-function WinnerTable({ rows }: { rows: readonly CalendarRow[] }): ReactElement {
-  return (
-    <div style={{ overflowX: 'auto' }}>
-      <table data-testid="seasons-calendar" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
-          {t('seasons.calendar.title')}
-        </caption>
-        <thead>
-          <tr>
-            {[
-              t('seasons.col.date'),
-              t('seasons.col.price'),
-              t('seasons.col.source'),
-              t('seasons.col.season'),
-            ].map((label) => (
-              <th
-                key={label}
-                scope="col"
-                style={{ textAlign: 'start', borderBottom: '1px solid var(--color-border)' }}
-              >
-                {label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.date}>
-              <td>{row.date}</td>
-              <td>{formatMoney(row.nightlyPrice)}</td>
-              <td>
-                {row.source === undefined
-                  ? '—'
-                  : formatStatusWithEnum(t(SOURCE_LABEL[row.source]), row.source)}
-              </td>
-              <td data-testid={`season-of-${row.date}`}>{row.seasonName ?? t('seasons.none')}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-/** Danh sách mùa hiện có của cơ sở — đọc thẳng từ `GET /seasons` (AC1). */
-function SeasonListTable({ seasons }: { seasons: readonly SeasonSummary[] }): ReactElement {
-  const headers = [
-    t('seasons.col.name'),
-    t('seasons.col.range'),
-    t('seasons.col.multiplier'),
-    t('seasons.col.priority'),
-    t('seasons.col.weekend'),
-    t('seasons.col.version'),
-  ];
-  return (
-    <div style={{ overflowX: 'auto' }}>
-      <table data-testid="seasons-list" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
-          {t('seasons.list.title')}
-        </caption>
-        <thead>
-          <tr>
-            {headers.map((label) => (
-              <th
-                key={label}
-                scope="col"
-                style={{ textAlign: 'start', borderBottom: '1px solid var(--color-border)' }}
-              >
-                {label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {seasons.map((season) => (
-            <tr key={season.id} data-testid={`season-${season.name}`}>
-              <td>{season.name}</td>
-              <td>
-                {season.startDate} → {season.endDate}
-              </td>
-              <td>{formatMultiplier(season.multiplier)}</td>
-              <td>{season.priority}</td>
-              <td>{season.weekendSurchargeEnabled ? t('seasons.yes') : t('seasons.no')}</td>
-              <td>{season.version}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+import { SeasonListTable, WinnerTable, fetchCalendar, type SeasonTarget } from './seasons-parts';
 
 export function SeasonsScreen(): ReactElement {
   const forced = useForcedState();
@@ -267,13 +130,13 @@ export function SeasonsScreen(): ReactElement {
   const overlaps = overlappingSeasonNames(entries, draft.name);
 
   return (
-    <section
-      style={{ padding: 'var(--space-s6, 24px)', display: 'grid', gap: 'var(--space-s4, 16px)' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('seasons.title')}</h1>
-      <p style={{ margin: 0 }}>{t('seasons.intro')}</p>
+    <section style={OPS_PAGE_STYLE}>
+      <div style={OPS_HEADER_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{t('seasons.title')}</h1>
+        <p style={OPS_INTRO_STYLE}>{t('seasons.intro')}</p>
+      </div>
       {seasons.length === 0 ? (
-        <p data-testid="seasons-list-empty" style={{ margin: 0 }}>
+        <p data-testid="seasons-list-empty" style={{ margin: 0, color: color.textMuted }}>
           {t('seasons.list.empty')}
         </p>
       ) : (
@@ -285,14 +148,10 @@ export function SeasonsScreen(): ReactElement {
           event.preventDefault();
           setRange(pendingRange);
         }}
-        style={{
-          display: 'flex',
-          gap: 'var(--space-s2, 8px)',
-          flexWrap: 'wrap',
-          alignItems: 'end',
-        }}
+        className="ph-card ph-filter-row"
+        style={OPS_FILTER_ROW_STYLE}
       >
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('seasons.form.property')}
           <select
             value={draft.propertyId}
@@ -305,7 +164,7 @@ export function SeasonsScreen(): ReactElement {
             ))}
           </select>
         </label>
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('seasons.form.roomType')}
           <select
             value={draft.roomTypeId}
@@ -318,7 +177,7 @@ export function SeasonsScreen(): ReactElement {
             ))}
           </select>
         </label>
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('seasons.form.from')}
           <input
             type="date"
@@ -326,7 +185,7 @@ export function SeasonsScreen(): ReactElement {
             onChange={(event) => setPendingRange({ ...pendingRange, from: event.target.value })}
           />
         </label>
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('seasons.form.to')}
           <input
             type="date"
@@ -334,7 +193,7 @@ export function SeasonsScreen(): ReactElement {
             onChange={(event) => setPendingRange({ ...pendingRange, to: event.target.value })}
           />
         </label>
-        <button type="submit" style={{ minHeight: 44 }}>
+        <button type="submit" className="ph-btn-primary" style={OPS_COMPACT_BTN_STYLE}>
           {t('seasons.form.load')}
         </button>
       </form>
@@ -343,42 +202,52 @@ export function SeasonsScreen(): ReactElement {
           <ScreenAlert error={readError} onRetry={() => void load(draft, range)} />
         )}
         {savedName === null ? null : (
-          <p role="status" data-testid="seasons-saved" style={{ margin: 0 }}>
+          <p
+            role="status"
+            data-testid="seasons-saved"
+            style={{ ...opsNoticeStyle('success'), color: color.success, fontWeight: 500 }}
+          >
             {t('seasons.saved', { name: savedName })}
           </p>
         )}
         <form
           data-testid="seasons-create"
           onSubmit={(event) => void submit(event)}
-          style={{
-            display: 'flex',
-            gap: 'var(--space-s2, 8px)',
-            flexWrap: 'wrap',
-            alignItems: 'end',
-          }}
+          className="ph-card ph-filter-row"
+          style={OPS_FILTER_ROW_STYLE}
         >
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {t('seasons.form.name')}
             <input
               value={draft.name}
               onChange={(event) => setDraft({ ...draft, name: event.target.value })}
             />
           </label>
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {t('seasons.form.multiplier')}
             <input
               value={draft.multiplier}
+              style={OPS_TABULAR_STYLE}
               onChange={(event) => setDraft({ ...draft, multiplier: event.target.value })}
             />
           </label>
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {t('seasons.form.priority')}
             <input
               value={draft.priority}
+              style={OPS_TABULAR_STYLE}
               onChange={(event) => setDraft({ ...draft, priority: event.target.value })}
             />
           </label>
-          <label style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <label
+            style={{
+              display: 'flex',
+              gap: 8,
+              alignItems: 'center',
+              minHeight: 44,
+              cursor: 'pointer',
+            }}
+          >
             <input
               type="checkbox"
               checked={draft.weekendSurchargeEnabled}
@@ -388,20 +257,28 @@ export function SeasonsScreen(): ReactElement {
             />
             {t('seasons.form.weekend')}
           </label>
-          <button type="submit" style={{ minHeight: 44 }}>
+          <button type="submit" className="ph-btn-primary" style={OPS_COMPACT_BTN_STYLE}>
             {t('seasons.create')}
           </button>
         </form>
         {overlaps.length === 0 ? null : (
-          <p role="alert" data-testid="seasons-overlap" style={{ margin: 0 }}>
+          <p
+            role="alert"
+            data-testid="seasons-overlap"
+            style={{ ...opsNoticeStyle('warning'), color: color.warning, fontWeight: 500 }}
+          >
             {t('seasons.overlap', { names: overlaps.join(', ') })}
           </p>
         )}
         {rows.length === 0 ? (
-          <p>{t('state.empty.noData')}</p>
+          <p style={{ margin: 0, color: color.textMuted }}>{t('state.empty.noData')}</p>
         ) : (
           <>
-            <p role="status" data-testid="seasons-winner-note" style={{ margin: 0 }}>
+            <p
+              role="status"
+              data-testid="seasons-winner-note"
+              style={{ margin: 0, fontSize: 13, color: color.textMuted }}
+            >
               {t('seasons.winnerNote')}
             </p>
             <WinnerTable rows={rows} />

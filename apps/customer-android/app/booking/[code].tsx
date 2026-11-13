@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
-import { color, radius, space, touchTargetDp, typography } from '@pinehill/ui-native';
+import { color, space, touchTargetDp } from '@pinehill/ui-native';
 import { createBookingApi } from '@pinehill/api-client';
 import type { BookingSummary } from '@pinehill/contracts';
 import { createSession } from '../../src/session-factory';
@@ -16,6 +16,7 @@ import { secureStorage } from '../../src/storage.native';
 import { netInfoSource } from '../../src/netinfo.native';
 import { t } from '../../src/strings';
 import { formatVnd } from '../../src/search';
+import { theme } from '../../src/theme';
 import {
   ORDER_STATUS_KEYS,
   balanceRows,
@@ -34,24 +35,24 @@ function DetailBody({ booking }: { booking: BookingSummary }): ReactElement {
   const status = t(ORDER_STATUS_KEYS[booking.status]);
   const stay = stayOf(booking);
   return (
-    <>
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+    <View style={theme.card}>
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {t('orders.detail.code', { code: booking.code })}
       </Text>
-      <Text style={{ color: color.text }} data-testid="order-status">
+      <Text style={theme.body} data-testid="order-status">
         {t('orders.detail.status', { status })}
       </Text>
-      <Text style={{ color: color.text }} data-testid="order-stay">
+      <Text style={theme.body} data-testid="order-stay">
         {t('orders.detail.stay', { stay })}
       </Text>
-      <Text style={{ color: color.text }} data-testid="order-total">
+      <Text style={[theme.body, theme.tabular]} data-testid="order-total">
         {t('orders.detail.total', { amount: money(booking.totalAmount) })}
       </Text>
       {balanceRows(booking).map((row) => (
         <Text
           key={row.key}
           accessible
-          style={{ color: color.textMuted }}
+          style={[theme.muted, theme.tabular]}
           accessibilityLabel={t(row.key === 'paid' ? 'orders.paid' : 'orders.balance', {
             amount: money(row.amount),
           })}
@@ -59,10 +60,11 @@ function DetailBody({ booking }: { booking: BookingSummary }): ReactElement {
           {t(row.key === 'paid' ? 'orders.paid' : 'orders.balance', { amount: money(row.amount) })}
         </Text>
       ))}
-      <Text style={{ color: color.textMuted }} data-testid="order-snapshot-pending">
+      <View style={theme.divider} />
+      <Text style={theme.muted} data-testid="order-snapshot-pending">
         {t('orders.detail.snapshotPending')}
       </Text>
-      <Text style={{ color: color.textMuted }} data-testid="order-payments-pending">
+      <Text style={theme.muted} data-testid="order-payments-pending">
         {t('orders.detail.paymentsPending')}
       </Text>
       <View style={{ flexDirection: 'row', gap: space.s2 }}>
@@ -81,7 +83,7 @@ function DetailBody({ booking }: { booking: BookingSummary }): ReactElement {
           {t('booking.reschedule.open')}
         </Link>
       </View>
-    </>
+    </View>
   );
 }
 
@@ -127,20 +129,28 @@ export default function BookingDetailScreen(): ReactElement {
   }, [load, ready]);
 
   if (!ready || busy)
-    return <ActivityIndicator accessibilityLabel={t('state.loading')} color={color.primary} />;
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: color.bg,
+        }}
+      >
+        <ActivityIndicator accessibilityLabel={t('state.loading')} color={color.primary} />
+      </View>
+    );
 
   const booking = bookingOf(outcome);
 
   return (
-    <ScrollView contentContainerStyle={{ gap: space.s3, padding: space.s4 }}>
-      <Text
-        accessibilityRole="header"
-        style={{ color: color.text, fontSize: typography.h1.sp, fontWeight: '700' }}
-      >
+    <ScrollView style={theme.scroll} contentContainerStyle={theme.scrollContent}>
+      <Text accessibilityRole="header" style={theme.title}>
         {t('orders.detail.title')}
       </Text>
       {code === '' ? (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {t('orders.detail.notFound')}
         </Text>
       ) : null}
@@ -166,32 +176,18 @@ export default function BookingDetailScreen(): ReactElement {
               })}`,
             });
           }}
-          style={{
-            alignItems: 'center',
-            borderColor: color.border,
-            borderRadius: radius.sm,
-            borderWidth: 1,
-            justifyContent: 'center',
-            minHeight: touchTargetDp,
-          }}
+          style={theme.buttonSecondary}
         >
-          <Text style={{ color: color.primary }}>{t('orders.detail.share')}</Text>
+          <Text style={theme.buttonPlainText}>{t('orders.detail.share')}</Text>
         </Pressable>
       )}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t('orders.reload')}
         onPress={() => void load()}
-        style={{
-          alignItems: 'center',
-          borderColor: color.border,
-          borderRadius: radius.sm,
-          borderWidth: 1,
-          justifyContent: 'center',
-          minHeight: touchTargetDp,
-        }}
+        style={theme.buttonSecondary}
       >
-        <Text style={{ color: color.primary }}>{t('orders.reload')}</Text>
+        <Text style={theme.buttonPlainText}>{t('orders.reload')}</Text>
       </Pressable>
     </ScrollView>
   );

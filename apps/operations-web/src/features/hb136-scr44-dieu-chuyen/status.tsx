@@ -1,5 +1,6 @@
 'use client';
 import type { ReactElement } from 'react';
+import { opsNoticeStyle } from '../../components/editorial-styles';
 import type { Command, ControllerState, Phase } from './controller';
 import { text } from './messages';
 import type { Failure } from './model';
@@ -47,31 +48,42 @@ export function CommandStatus({
   actions: StatusActions;
 }): ReactElement | null {
   if (command.kind === 'idle') return null;
-  if (command.kind === 'sending') return <p role="status">{text('sending')}</p>;
-  if (command.kind === 'done')
+  if (command.kind === 'sending') {
     return (
-      <p role="status" data-testid="hb136-done">
+      <p role="status" style={opsNoticeStyle('info')}>
+        {text('sending')}
+      </p>
+    );
+  }
+  if (command.kind === 'done') {
+    return (
+      <p role="status" data-testid="hb136-done" style={opsNoticeStyle('success')}>
         {text('done')}
       </p>
     );
+  }
   const { failure, evidence } = command;
   const reference = evidence.traceId ?? evidence.code;
   return (
-    <div role="alert" data-testid="hb136-failure" style={{ display: 'grid', gap: 8 }}>
-      <p>{failureText(failure)}</p>
-      {reference === undefined ? null : <p>{text('reference', { reference })}</p>}
-      {intentState === null ? null : <p>{text('intentState', { state: intentState })}</p>}
+    <div role="alert" data-testid="hb136-failure" style={opsNoticeStyle('danger')}>
+      <p style={{ margin: 0 }}>{failureText(failure)}</p>
+      {reference === undefined ? null : (
+        <p style={{ margin: 0 }}>{text('reference', { reference })}</p>
+      )}
+      {intentState === null ? null : (
+        <p style={{ margin: 0 }}>{text('intentState', { state: intentState })}</p>
+      )}
       {pending ? (
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <div className="ph-actions">
           {failure.kind === 'ttl' ? null : (
-            <button type="button" onClick={actions.retry} style={BUTTON}>
+            <button type="button" className="ph-btn" onClick={actions.retry} style={BUTTON}>
               {text('retry')}
             </button>
           )}
-          <button type="button" onClick={actions.lookup} style={BUTTON}>
+          <button type="button" className="ph-btn" onClick={actions.lookup} style={BUTTON}>
             {text('lookup')}
           </button>
-          <button type="button" onClick={actions.discard} style={BUTTON}>
+          <button type="button" className="ph-btn" onClick={actions.discard} style={BUTTON}>
             {text('newIntent')}
           </button>
         </div>
@@ -99,7 +111,12 @@ export function ReadBanner({ state }: { state: ControllerState }): ReactElement 
   if (banner === undefined) return null;
   const reference = state.evidence?.traceId ?? state.evidence?.code;
   return (
-    <div role={banner.alert ? 'alert' : 'status'} aria-live="polite" aria-busy={banner.busy}>
+    <div
+      role={banner.alert ? 'alert' : 'status'}
+      aria-live="polite"
+      aria-busy={banner.busy}
+      style={opsNoticeStyle(banner.alert ? 'danger' : 'info')}
+    >
       {text(banner.key)}
       {reference === undefined ? null : ` ${text('reference', { reference })}`}
     </div>

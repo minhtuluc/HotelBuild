@@ -1,6 +1,6 @@
 'use client';
-import type { ReactElement } from 'react';
-import { space } from '@pinehill/ui-web';
+import type { CSSProperties, ReactElement } from 'react';
+import { color, radius, space } from '@pinehill/ui-web';
 import type { RoomTypeSummary } from '@pinehill/contracts';
 import {
   WALK_IN_STEPS,
@@ -12,10 +12,16 @@ import {
   type WalkInStay,
   type WalkInStep,
 } from './front-desk-model';
-import { CONTROL, FailureNotice } from './desk-tables';
+import { FailureNotice } from './desk-tables';
 import { deskText } from './messages';
 
-const FIELD = { display: 'grid', gap: 4, maxWidth: 560 } as const;
+const FIELD: CSSProperties = {
+  display: 'grid',
+  gap: 4,
+  maxWidth: 560,
+  fontSize: 13,
+  fontWeight: 500,
+};
 
 const RATE_PLAN_CODES = ['FLEX7', 'SAVER3', 'NONREF', 'LONGSTAY14'] as const;
 
@@ -36,37 +42,51 @@ const STEP_KEYS = {
 
 export function StepIndicator({ step }: { step: WalkInStep }): ReactElement {
   return (
-    <>
+    <div style={{ display: 'grid', gap: space.s2 }}>
       <ol
         aria-label={deskText('walkInTitle')}
         style={{
           display: 'flex',
           flexWrap: 'wrap',
-          gap: 12,
+          gap: space.s2,
           margin: 0,
           padding: 0,
           listStyle: 'none',
         }}
       >
-        {WALK_IN_STEPS.map((item) => (
-          <li
-            key={item}
-            aria-current={item === step ? 'step' : undefined}
-            data-testid={`walk-in-step-${item}`}
-            style={{ fontWeight: item === step ? 700 : 400 }}
-          >
-            {walkInStepNumber(item)}. {deskText(STEP_KEYS[item])}
-          </li>
-        ))}
+        {WALK_IN_STEPS.map((item) => {
+          const active = item === step;
+          return (
+            <li
+              key={item}
+              aria-current={active ? 'step' : undefined}
+              data-testid={`walk-in-step-${item}`}
+              style={{
+                padding: `4px ${space.s3}px`,
+                borderRadius: radius.sm,
+                border: `1px solid ${active ? color.primary : color.border}`,
+                background: active ? '#E7F3EE' : color.bg,
+                color: active ? color.primary : color.textMuted,
+                fontSize: 13,
+                fontWeight: active ? 600 : 400,
+              }}
+            >
+              {walkInStepNumber(item)}. {deskText(STEP_KEYS[item])}
+            </li>
+          );
+        })}
       </ol>
-      <p style={{ margin: 0 }} data-testid="walk-in-step-label">
+      <p
+        style={{ margin: 0, fontSize: 13, color: color.textMuted }}
+        data-testid="walk-in-step-label"
+      >
         {deskText('walkInStep', {
           current: walkInStepNumber(step),
           total: WALK_IN_STEPS.length,
           name: deskText(STEP_KEYS[step]),
         })}
       </p>
-    </>
+    </div>
   );
 }
 
@@ -85,13 +105,12 @@ export function StayStep({
 }): ReactElement {
   return (
     <div style={{ display: 'grid', gap: space.s3 }}>
-      <p style={{ margin: 0 }}>
-        {deskText('property')}: {propertyName}
+      <p style={{ margin: 0, fontSize: 14, color: color.textMuted }}>
+        {deskText('property')}: <strong style={{ color: color.text }}>{propertyName}</strong>
       </p>
       <label style={FIELD}>
         {deskText('roomType')}
         <select
-          style={CONTROL}
           name="roomTypeId"
           value={stay.roomTypeId}
           onChange={(event) => {
@@ -106,11 +125,12 @@ export function StayStep({
           ))}
         </select>
       </label>
-      {roomTypes.length === 0 ? <p style={{ margin: 0 }}>{deskText('walkInEmpty')}</p> : null}
+      {roomTypes.length === 0 ? (
+        <p style={{ margin: 0, color: color.warning, fontSize: 14 }}>{deskText('walkInEmpty')}</p>
+      ) : null}
       <label style={FIELD}>
         {deskText('ratePlan')}
         <select
-          style={CONTROL}
           name="ratePlanCode"
           value={stay.ratePlanCode}
           onChange={(event) => {
@@ -128,7 +148,6 @@ export function StayStep({
       <label style={FIELD}>
         {deskText('checkInDate')}
         <input
-          style={CONTROL}
           type="date"
           name="walkInCheckIn"
           value={stay.checkIn}
@@ -140,7 +159,6 @@ export function StayStep({
       <label style={FIELD}>
         {deskText('checkOutDate')}
         <input
-          style={CONTROL}
           type="date"
           name="walkInCheckOut"
           value={stay.checkOut}
@@ -152,7 +170,6 @@ export function StayStep({
       <label style={FIELD}>
         {deskText('adults')}
         <input
-          style={CONTROL}
           type="number"
           name="adults"
           min={1}
@@ -166,7 +183,6 @@ export function StayStep({
       <label style={FIELD}>
         {deskText('children')}
         <input
-          style={CONTROL}
           type="number"
           name="children"
           min={0}
@@ -180,7 +196,6 @@ export function StayStep({
       <label style={FIELD}>
         {deskText('roomCount')}
         <input
-          style={CONTROL}
           type="number"
           name="roomCount"
           min={1}
@@ -192,7 +207,11 @@ export function StayStep({
         />
       </label>
       {problem === null ? null : (
-        <p role="alert" data-testid="stay-issue" style={{ margin: 0 }}>
+        <p
+          role="alert"
+          data-testid="stay-issue"
+          style={{ margin: 0, color: color.danger, fontSize: 13 }}
+        >
           {deskText(
             problem === 'DATES'
               ? 'invalidDates'
@@ -224,7 +243,6 @@ export function GuestStep({
       <label style={FIELD}>
         {deskText('fullName')}
         <input
-          style={CONTROL}
           name="fullName"
           maxLength={120}
           value={guest.fullName}
@@ -236,7 +254,6 @@ export function GuestStep({
       <label style={FIELD}>
         {deskText('phone')}
         <input
-          style={CONTROL}
           name="phone"
           inputMode="tel"
           maxLength={12}
@@ -249,7 +266,6 @@ export function GuestStep({
       <label style={FIELD}>
         {deskText('note')}
         <input
-          style={CONTROL}
           name="walkInNote"
           maxLength={500}
           value={note}
@@ -259,7 +275,11 @@ export function GuestStep({
         />
       </label>
       {problem === null ? null : (
-        <p role="alert" data-testid="guest-issue" style={{ margin: 0 }}>
+        <p
+          role="alert"
+          data-testid="guest-issue"
+          style={{ margin: 0, color: color.danger, fontSize: 13 }}
+        >
           {deskText(problem === 'NAME' ? 'required' : 'invalidPhone')}
         </p>
       )}
@@ -288,27 +308,42 @@ export function ReviewStep({
 }): ReactElement {
   return (
     <div style={{ display: 'grid', gap: space.s3 }}>
-      <p style={{ margin: 0 }} data-testid="walk-in-review">
-        {deskText('reviewSummary', {
-          property: propertyName,
-          roomType: roomTypes.find((type) => type.id === stay.roomTypeId)?.code ?? stay.roomTypeId,
-          ratePlan: stay.ratePlanCode,
-          checkIn: stay.checkIn,
-          checkOut: stay.checkOut,
-        })}
-      </p>
-      <p style={{ margin: 0 }}>
-        {deskText('reviewGuests', {
-          adults: stay.adults,
-          children: stay.children,
-          rooms: stay.roomCount,
-        })}
-      </p>
-      <p style={{ margin: 0 }}>
-        {deskText('fullName')}: {guest.fullName} · {deskText('phone')}: {guest.phone}
-      </p>
+      <ul className="ph-list-lines" style={{ fontVariantNumeric: 'tabular-nums' }}>
+        <li>
+          <span data-testid="walk-in-review">
+            {deskText('reviewSummary', {
+              property: propertyName,
+              roomType:
+                roomTypes.find((type) => type.id === stay.roomTypeId)?.code ?? stay.roomTypeId,
+              ratePlan: stay.ratePlanCode,
+              checkIn: stay.checkIn,
+              checkOut: stay.checkOut,
+            })}
+          </span>
+        </li>
+        <li>
+          <span>
+            {deskText('reviewGuests', {
+              adults: stay.adults,
+              children: stay.children,
+              rooms: stay.roomCount,
+            })}
+          </span>
+        </li>
+        <li>
+          <span>
+            {deskText('fullName')}: {guest.fullName} · {deskText('phone')}: {guest.phone}
+          </span>
+        </li>
+      </ul>
       {failure === null ? null : <FailureNotice failure={failure} onInspect={onInspect} />}
-      <button type="button" style={CONTROL} disabled={creating} onClick={onCreate}>
+      <button
+        type="button"
+        className="ph-btn-primary"
+        style={{ justifySelf: 'start' }}
+        disabled={creating}
+        onClick={onCreate}
+      >
         {deskText('createWalkIn')}
       </button>
     </div>
@@ -329,18 +364,26 @@ export function WalkInNav({
   onClose: () => void;
 }): ReactElement {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: space.s2,
+        paddingTop: space.s2,
+        borderTop: `1px solid ${color.border}`,
+      }}
+    >
       {step === 'guest' || step === 'review' ? (
-        <button type="button" style={CONTROL} disabled={creating} onClick={onBack}>
+        <button type="button" className="ph-btn" disabled={creating} onClick={onBack}>
           {deskText('back')}
         </button>
       ) : null}
       {step === 'stay' || step === 'guest' ? (
-        <button type="button" style={CONTROL} onClick={onNext}>
+        <button type="button" className="ph-btn-primary" onClick={onNext}>
           {deskText('next')}
         </button>
       ) : null}
-      <button type="button" style={CONTROL} onClick={onClose}>
+      <button type="button" className="ph-btn" onClick={onClose}>
         {deskText('panelClose')}
       </button>
     </div>

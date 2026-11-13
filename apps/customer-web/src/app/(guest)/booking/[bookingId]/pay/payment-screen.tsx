@@ -107,12 +107,14 @@ export function PaymentScreen({ fixtureOrigin }: { fixtureOrigin?: string | unde
       aria-labelledby="pay-title"
       data-phase={view.phase}
       data-testid="payment-screen"
-      className={styles.screen}
+      className={`ph-page-shell ${styles.screen}`}
     >
-      <h1 id="pay-title" style={{ margin: 0 }}>
-        {m.title}
-      </h1>
-      <p style={{ margin: 0 }}>{m.intro}</p>
+      <div className="ph-page-header">
+        <h1 id="pay-title" className="ph-page-title">
+          {m.title}
+        </h1>
+        <p className={styles.intro}>{m.intro}</p>
+      </div>
       <StateSurface state={paymentSurface(view, flow.invalid, flow.reload, flow.reference)} />
       {view.offer ? <PaymentSummary offer={view.offer} /> : null}
       <PaymentForm
@@ -123,15 +125,21 @@ export function PaymentScreen({ fixtureOrigin }: { fixtureOrigin?: string | unde
         onConfirm={() => void flow.confirm()}
       />
       <PaymentDetails view={view} fixtureOrigin={fixtureOrigin} />
-      {view.phase === 'error' ? <p role="alert">{m.error}</p> : null}
-      {view.phase === 'blocked' ? <p>{m.unavailable}</p> : null}
-      {view.phase === 'unknown' ? <p>{m.unknown}</p> : null}
-      {['pending', 'failed', 'received', 'confirmed', 'error', 'blocked'].includes(view.phase) ? (
-        <button type="button" disabled={view.busy} onClick={flow.reload}>
-          {m.check}
-        </button>
+      {view.phase === 'error' ? (
+        <p role="alert" className={styles.statusBox}>
+          {m.error}
+        </p>
       ) : null}
-      <Link href={`/bookings/${encodeURIComponent(bookingId)}`}>{m.back}</Link>
+      {view.phase === 'blocked' ? <p className={styles.statusBox}>{m.unavailable}</p> : null}
+      {view.phase === 'unknown' ? <p className={styles.statusBox}>{m.unknown}</p> : null}
+      <div className="ph-actions">
+        {['pending', 'failed', 'received', 'confirmed', 'error', 'blocked'].includes(view.phase) ? (
+          <button className="ph-btn" type="button" disabled={view.busy} onClick={flow.reload}>
+            {m.check}
+          </button>
+        ) : null}
+        <Link href={`/bookings/${encodeURIComponent(bookingId)}`}>{m.back}</Link>
+      </div>
     </section>
   );
 }

@@ -12,7 +12,7 @@ export const crmCatalog = {
   'enum.loyaltyTier.PLATINUM': 'Bạch kim',
   'crm.guests.title': 'Hồ sơ khách & danh sách đen',
   'crm.guests.intro':
-    'Tra cứu hồ sơ khách, thêm/gỡ danh sách đen và ẩn danh hoá theo yêu cầu khách. Hệ thống không có thao tác xoá cứng hồ sơ (BR-CRM-05); PII do máy chủ che theo vai trò trước khi trả về.',
+    'Tra cứu hồ sơ khách, thêm/gỡ danh sách đen và ẩn danh hoá theo yêu cầu khách. Hệ thống không có thao tác xoá cứng hồ sơ; PII do máy chủ che theo vai trò trước khi trả về.',
   'crm.search.q': 'Tìm theo tên hoặc SĐT',
   'crm.search.tier': 'Hạng khách',
   'crm.search.allTiers': 'Mọi hạng',
@@ -54,7 +54,7 @@ export const crmCatalog = {
   'crm.issue.NOT_CONFIRMED': 'Cần xác nhận trước khi ẩn danh hoá.',
   'crm.loyalty.title': 'Hạng & điểm khách hàng',
   'crm.loyalty.intro':
-    'Hạng, điểm tích luỹ và số lần ở do máy chủ trả (BR-CRM-02, BR-CRM-03); giao diện không tự tính hạng hay điểm.',
+    'Hạng, điểm tích luỹ và số lần ở do máy chủ trả; giao diện không tự tính hạng hay điểm.',
   'crm.loyalty.pick': 'Khách',
   'crm.loyalty.tier': 'Hạng hiện tại',
   'crm.loyalty.points': 'Điểm tích luỹ',

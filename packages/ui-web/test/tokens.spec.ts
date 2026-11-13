@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { tokensToCssVariables } from '../src/css.js';
-import { color, gridStatus, radius, space, touchTargetPx, typography } from '../src/tokens.js';
+import {
+  color,
+  fontFamily,
+  gridStatus,
+  radius,
+  space,
+  touchTargetPx,
+  typography,
+} from '../src/tokens.js';
 
 /** Độ chói tương đối theo WCAG 2.1. */
 function relativeLuminance(hex: string): number {
@@ -31,6 +39,12 @@ describe('token thiết kế (§7)', () => {
     expect(contrastRatio(color.text, color.surface)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(color.textMuted, color.surface)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(color.primary, color.surface)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(color.primaryContrast, color.primary)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(color.accent, color.bg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(color.accent, color.surface)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(color.accentContrast, color.accent)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(color.darkText, color.dark)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(color.darkTextMuted, color.dark)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(color.danger, color.surface)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(color.warning, color.surface)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(color.success, color.surface)).toBeGreaterThanOrEqual(4.5);
@@ -72,8 +86,14 @@ describe('biến CSS sinh từ token', () => {
     const css = tokensToCssVariables();
     expect(css).toContain(`--color-bg: ${color.bg};`);
     expect(css).toContain(`--color-focus: ${color.focus};`);
-    expect(css).toContain(`--space-s4: ${space.s4};`);
-    expect(css).toContain(`--radius-full: ${radius.full};`);
+    expect(css).toContain(`--font-display: ${fontFamily.display};`);
+    expect(css).toContain(`--font-logo: ${fontFamily.logo};`);
+    expect(css).toContain(`--paper: ${color.bg};`);
+    expect(css).toContain(`--board: ${color.dark};`);
+    expect(css).toContain(`--print: ${color.primary};`);
+    expect(css).toContain(`--punch: ${color.accent};`);
+    expect(css).toContain(`--space-s4: ${space.s4}px;`);
+    expect(css).toContain(`--radius-full: ${radius.full}px;`);
     expect(css).toContain(`--touch-target: ${touchTargetPx}px;`);
     for (const key of Object.keys(typography)) expect(css).toContain(`--text-${key}:`);
   });

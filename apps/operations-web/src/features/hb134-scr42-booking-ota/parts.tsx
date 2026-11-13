@@ -1,5 +1,7 @@
 'use client';
-import { useEffect, useRef, type ReactElement, type ReactNode } from 'react';
+import { useEffect, useRef, type CSSProperties, type ReactElement, type ReactNode } from 'react';
+import { color, fontFamily, space, typography } from '@pinehill/ui-web';
+import { OPS_DIALOG_STYLE } from '../../components/editorial-styles';
 import type { FieldIssue } from './model';
 import { text } from './messages';
 
@@ -11,8 +13,14 @@ export function issueText(issue: string): string {
   return known === undefined ? issue : text(known);
 }
 
-export const box = { display: 'grid', gap: 'var(--space-s3, 12px)', minWidth: 0 } as const;
-const control = { minHeight: 44, minWidth: 0, maxWidth: '100%' } as const;
+export const box: CSSProperties = { display: 'grid', gap: space.s3, minWidth: 0 };
+const control: CSSProperties = {
+  minHeight: 44,
+  minWidth: 0,
+  width: '100%',
+  maxWidth: '100%',
+  boxSizing: 'border-box',
+};
 
 export function Field({
   name,
@@ -29,11 +37,13 @@ export function Field({
   const own = issues.filter((item) => item.field === name);
   const errorId = `${id}-error`;
   return (
-    <div style={box}>
-      <label htmlFor={id}>{label}</label>
+    <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
+      <label htmlFor={id} style={{ fontSize: 13, fontWeight: 500, color: color.text }}>
+        {label}
+      </label>
       {children({ id, invalid: own.length > 0, describedBy: own.length > 0 ? errorId : undefined })}
       {own.length > 0 ? (
-        <span id={errorId} role="alert">
+        <span id={errorId} role="alert" style={{ color: color.danger, fontSize: 13 }}>
           {own.map((item) => issueText(item.issue)).join('; ')}
         </span>
       ) : null}
@@ -128,21 +138,29 @@ export function ConfirmDialog(props: {
       aria-labelledby={`${props.id}-title`}
       onCancel={onCancel}
       data-testid={props.id}
+      style={OPS_DIALOG_STYLE}
     >
-      <h2 id={`${props.id}-title`}>{props.title}</h2>
-      {props.children}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        <button
-          type="button"
-          onClick={props.onConfirm}
-          style={control}
-          data-testid={`${props.id}-confirm`}
+      <div style={{ display: 'grid', gap: space.s3 }}>
+        <h2
+          id={`${props.id}-title`}
+          style={{ margin: 0, fontFamily: fontFamily.sans, fontSize: typography.h2.web }}
         >
-          {props.confirmLabel}
-        </button>
-        <button type="button" onClick={props.onCancel} style={control}>
-          {props.cancelLabel}
-        </button>
+          {props.title}
+        </h2>
+        {props.children}
+        <div style={{ display: 'flex', gap: space.s2, flexWrap: 'wrap', marginTop: space.s1 }}>
+          <button
+            type="button"
+            onClick={props.onConfirm}
+            className="ph-btn-primary"
+            data-testid={`${props.id}-confirm`}
+          >
+            {props.confirmLabel}
+          </button>
+          <button type="button" onClick={props.onCancel} className="ph-btn">
+            {props.cancelLabel}
+          </button>
+        </div>
       </div>
     </dialog>
   );

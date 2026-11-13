@@ -12,6 +12,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { createBookingApi, isApiError } from '@pinehill/api-client';
 import type { BookingSummary } from '@pinehill/contracts';
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TITLE_STYLE,
+} from '../../../components/editorial-styles';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { useForcedState } from '../../../components/forced-state';
 import { useOpsSession } from '../../../lib/ops-session';
@@ -87,8 +92,8 @@ export function BookingsScreen(): ReactElement {
 
   if (forced !== undefined) {
     return (
-      <section data-testid="bookings-screen" style={{ display: 'grid', gap: 12 }}>
-        <h1 style={{ margin: 0 }}>{t('ops.bookings.title')}</h1>
+      <section data-testid="bookings-screen" style={OPS_PAGE_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{t('ops.bookings.title')}</h1>
         <StateSurface state={forced} />
       </section>
     );
@@ -124,8 +129,8 @@ export function BookingsScreen(): ReactElement {
   const empty = state.kind === 'ready' && bookings.length === 0;
 
   return (
-    <section data-testid="bookings-screen" style={{ display: 'grid', gap: 12, padding: '16px 0' }}>
-      <h1 style={{ margin: 0 }}>{t('ops.bookings.title')}</h1>
+    <section data-testid="bookings-screen" style={OPS_PAGE_STYLE}>
+      <h1 style={OPS_TITLE_STYLE}>{t('ops.bookings.title')}</h1>
       <FilterForm current={filters} onApply={applyFilters} />
       {writeState === null ? null : <StateSurface state={writeState} />}
       <StateSurface
@@ -147,15 +152,19 @@ export function BookingsScreen(): ReactElement {
           <BookingsTable bookings={bookings} onDelete={setPendingDelete} />
         )}
         {cursor === null ? null : (
-          <button
-            type="button"
-            data-testid="bookings-more"
-            onClick={() => {
-              void load(cursor);
-            }}
-          >
-            {t('ops.bookings.more')}
-          </button>
+          <div>
+            <button
+              type="button"
+              className="ph-btn"
+              style={OPS_COMPACT_BTN_STYLE}
+              data-testid="bookings-more"
+              onClick={() => {
+                void load(cursor);
+              }}
+            >
+              {t('ops.bookings.more')}
+            </button>
+          </div>
         )}
         {pendingDelete === null ? null : (
           <DeletePanel

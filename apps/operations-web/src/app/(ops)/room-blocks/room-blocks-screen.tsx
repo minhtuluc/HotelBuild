@@ -1,7 +1,18 @@
 'use client';
 /** SCR22: authoritative scoped catalogues and staff commands; inventory and override remain server owned. */
 import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
-import { StateSurface } from '@pinehill/ui-web';
+import { StateSurface, color } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_FILTER_ROW_STYLE,
+  OPS_HEADER_ROW_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../components/editorial-styles';
 import { useForcedState } from '../../../components/forced-state';
 import { t } from '../../../lib/i18n';
 import { businessDate } from '../../../lib/inventory-grid';
@@ -126,9 +137,13 @@ function Body({ model }: { model: Model }): ReactElement {
             onChange={onChange}
             onSubmit={(event) => void submit(event)}
           />
-          <p>{blockText('dateHelp')}</p>
+          <p style={{ margin: 0, fontSize: 13, color: color.textMuted }}>{blockText('dateHelp')}</p>
           {conflicts.length ? (
-            <p role="alert" data-testid="room-block-overlap">
+            <p
+              role="alert"
+              data-testid="room-block-overlap"
+              style={{ ...opsNoticeStyle('warning'), color: color.warning, fontWeight: 500 }}
+            >
               {t('roomBlocks.overlap', { count: conflicts.length })}
             </p>
           ) : null}
@@ -155,7 +170,11 @@ function Receipt({ model }: { model: Model }): ReactElement {
     <>
       {state.receipt?.kind === 'room-block-create' ||
       state.receipt?.kind === 'room-block-delete' ? (
-        <p role="status" data-testid="room-block-success">
+        <p
+          role="status"
+          data-testid="room-block-success"
+          style={{ ...opsNoticeStyle('success'), color: color.success, fontWeight: 500 }}
+        >
           {state.receipt.kind === 'room-block-create' ? blockText('created') : blockText('removed')}
         </p>
       ) : null}
@@ -167,7 +186,7 @@ function PropertyPicker({ model }: { model: Model }): ReactElement {
   return (
     <>
       {properties.length ? (
-        <label style={{ display: 'grid', gap: 4, maxWidth: 320 }}>
+        <label style={{ ...OPS_FIELD_LABEL_STYLE, maxWidth: 320 }}>
           {t('roomBlocks.form.property')}
           <select
             value={propertyId}
@@ -194,9 +213,10 @@ function RemovalForm({ model }: { model: Model }): ReactElement {
         <form
           data-testid="room-block-remove"
           onSubmit={(event) => void remove(event)}
-          style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'end' }}
+          className="ph-card ph-filter-row"
+          style={OPS_FILTER_ROW_STYLE}
         >
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {t('roomBlocks.form.removeReason')}
             <input
               maxLength={500}
@@ -208,13 +228,19 @@ function RemovalForm({ model }: { model: Model }): ReactElement {
               }}
             />
           </label>
-          <button type="submit" disabled={disabled} style={{ minHeight: 44 }}>
+          <button
+            type="submit"
+            disabled={disabled}
+            className="ph-btn-primary"
+            style={OPS_COMPACT_BTN_STYLE}
+          >
             {t('roomBlocks.removeConfirm')}
           </button>
           <button
             type="button"
             disabled={state.busy}
-            style={{ minHeight: 44 }}
+            className="ph-btn"
+            style={OPS_COMPACT_BTN_STYLE}
             onClick={() => {
               setRemoval(null);
               controller?.clearValidation();
@@ -237,24 +263,22 @@ export function RoomBlocksScreen(): ReactElement {
       </StateSurface>
     );
   return (
-    <section
-      style={{
-        padding: 'var(--space-s6, 24px)',
-        display: 'grid',
-        gap: 'var(--space-s4, 16px)',
-        minWidth: 0,
-      }}
-    >
-      <h1 style={{ margin: 0 }}>{t('roomBlocks.title')}</h1>
-      <p style={{ margin: 0 }}>{t('roomBlocks.intro')}</p>
-      <button
-        type="button"
-        disabled={model.state.busy}
-        onClick={() => void model.controller?.load()}
-        style={{ minHeight: 44, justifySelf: 'start' }}
-      >
-        {blockText('reload')}
-      </button>
+    <section style={OPS_PAGE_STYLE}>
+      <div style={OPS_HEADER_ROW_STYLE}>
+        <div style={OPS_HEADER_STYLE}>
+          <h1 style={OPS_TITLE_STYLE}>{t('roomBlocks.title')}</h1>
+          <p style={OPS_INTRO_STYLE}>{t('roomBlocks.intro')}</p>
+        </div>
+        <button
+          type="button"
+          disabled={model.state.busy}
+          onClick={() => void model.controller?.load()}
+          className="ph-btn"
+          style={OPS_COMPACT_BTN_STYLE}
+        >
+          {blockText('reload')}
+        </button>
+      </div>
       <AdminPanels state={model.state} controller={model.controller} />
       <Body model={model} />
     </section>

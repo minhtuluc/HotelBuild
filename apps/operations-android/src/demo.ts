@@ -3,6 +3,7 @@
  * Không chứa luật nghiệp vụ; mọi giá trị hiển thị thật sẽ đến từ API (ADR-018).
  */
 import { makeTranslate, stateMessages, type ScreenState } from '@pinehill/ui-native';
+export { isDemoEnabled } from './config/index';
 
 export const catalog = {
   ...stateMessages,

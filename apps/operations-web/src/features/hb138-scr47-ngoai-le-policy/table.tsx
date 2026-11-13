@@ -2,6 +2,7 @@
 import { useState, type ReactElement } from 'react';
 import { formatDateTimeVn } from '@pinehill/ui-web';
 import type { RefundRequest, UserMe } from '@pinehill/contracts';
+import { OPS_TABULAR_STYLE, OPS_TABLE_WRAP_STYLE } from '../../components/editorial-styles';
 import type { Rows } from './controller';
 import { text } from './messages';
 import {
@@ -54,7 +55,7 @@ function RowView({
           hours: row.hoursBeforeCheckIn,
         })}
       </td>
-      <td>
+      <td style={OPS_TABULAR_STYLE}>
         {text('amounts', {
           requested: row.requestedAmount,
           approved: row.approvedAmount ?? text('none'),
@@ -70,18 +71,20 @@ function RowView({
       </td>
       <td>
         {allowed ? (
-          <>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
               type="button"
+              className="ph-btn-primary"
               disabled={busy}
               onClick={() => onAsk(row, 'approve')}
               style={{ minHeight: 44 }}
               data-testid={`hb138-approve-${row.id}`}
             >
               {text('approve')}
-            </button>{' '}
+            </button>
             <button
               type="button"
+              className="ph-btn"
               disabled={busy}
               onClick={() => onAsk(row, 'reject')}
               style={{ minHeight: 44 }}
@@ -89,7 +92,7 @@ function RowView({
             >
               {text('reject')}
             </button>
-          </>
+          </div>
         ) : null}
       </td>
     </tr>
@@ -103,12 +106,7 @@ function Table(props: {
   onAsk: (row: RefundRequest, kind: 'approve' | 'reject') => void;
 }): ReactElement {
   return (
-    <div
-      role="region"
-      aria-label={text('listLabel')}
-      tabIndex={0}
-      style={{ overflowX: 'auto', maxWidth: '100%' }}
-    >
+    <div role="region" aria-label={text('listLabel')} tabIndex={0} style={OPS_TABLE_WRAP_STYLE}>
       <table data-testid="hb138-table">
         <thead>
           <tr>
@@ -211,10 +209,17 @@ export function ExceptionTable(props: {
   );
   const rows = visibleRows(props.list?.rows ?? [], props.filter);
   return (
-    <section style={box} aria-labelledby="hb138-list-title" data-testid="hb138-list">
-      <h2 id="hb138-list-title">{text('listLabel')}</h2>
+    <section
+      className="ph-card"
+      style={box}
+      aria-labelledby="hb138-list-title"
+      data-testid="hb138-list"
+    >
+      <h2 id="hb138-list-title" style={{ margin: 0 }}>
+        {text('listLabel')}
+      </h2>
       {props.list === null ? null : (
-        <p>
+        <p style={{ margin: 0 }}>
           {text('total', {
             shown: rows.length,
             loaded: props.list.rows.length,
@@ -224,7 +229,7 @@ export function ExceptionTable(props: {
       )}
       {rows.length === 0 ? (
         props.list === null ? null : (
-          <p>{text('noRows')}</p>
+          <p style={{ margin: 0 }}>{text('noRows')}</p>
         )
       ) : (
         <Table
@@ -234,10 +239,11 @@ export function ExceptionTable(props: {
           onAsk={(row, kind) => setTarget({ row, kind })}
         />
       )}
-      <p>{text('evidenceNoOpen')}</p>
+      <p style={{ margin: 0 }}>{text('evidenceNoOpen')}</p>
       {props.list?.nextCursor === null || props.list === null ? null : (
         <button
           type="button"
+          className="ph-btn"
           onClick={props.onMore}
           style={{ minHeight: 44, justifySelf: 'start' }}
         >

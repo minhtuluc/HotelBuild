@@ -2,7 +2,7 @@ import { makeTranslate } from '@pinehill/ui-web/messages';
 
 /** Câu chữ riêng của SCR-42 (HB-134); danh mục chung `lib/i18n.ts` không thuộc ticket nên không sửa. */
 export const text = makeTranslate({
-  title: 'Booking OTA nhận vào (SCR-42)',
+  title: 'Booking OTA nhận vào',
   intro:
     'Màn hình chỉ hiển thị kết quả tiếp nhận do máy chủ trả; việc gắn cờ nghi trùng không huỷ, gộp hay đổi tiền của booking.',
   channel: 'Kênh',

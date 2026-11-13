@@ -54,10 +54,24 @@ export function ResetScreen({ contact }: { contact: string | null }): ReactEleme
 
   if (done)
     return (
-      <section data-testid="reset-done" style={{ display: 'grid', gap: 12 }}>
-        <h1 style={{ margin: 0 }}>{text('resetTitle')}</h1>
+      <section data-testid="reset-done" className="ph-card" style={{ display: 'grid', gap: 12 }}>
+        <h1 className="ph-page-title" style={{ margin: 0 }}>
+          {text('resetTitle')}
+        </h1>
         <Notice tone="success" testId="reset-done-notice" lines={[text('resetDone')]} />
-        <a href="/account/login?reset=1">{text('toLoginAfterReset')}</a>
+        <a
+          href="/account/login?reset=1"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            minHeight: 44,
+            color: 'var(--color-primary)',
+            textDecoration: 'underline',
+            textUnderlineOffset: 3,
+          }}
+        >
+          {text('toLoginAfterReset')}
+        </a>
       </section>
     );
 
@@ -103,7 +117,18 @@ export function ResetScreen({ contact }: { contact: string | null }): ReactEleme
         />
       )}
       <SubmitButton busy={busy} label={text('submitReset')} testId="reset-submit" />
-      <a href="/account/forgot-password" data-testid="reset-new-link">
+      <a
+        href="/account/forgot-password"
+        data-testid="reset-new-link"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          minHeight: 44,
+          color: 'var(--color-primary)',
+          textDecoration: 'underline',
+          textUnderlineOffset: 3,
+        }}
+      >
         {text('toNewLink')}
       </a>
     </FormShell>

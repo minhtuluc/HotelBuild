@@ -18,8 +18,19 @@ import type {
   ReconciliationCloseResponse,
   RevenueByChannelReport,
 } from '@pinehill/contracts';
-import { StateSurface, formatMoney, type ScreenState } from '@pinehill/ui-web';
+import { StateSurface, formatMoney, space, type ScreenState } from '@pinehill/ui-web';
 import { createSessionClient } from '@pinehill/web-session/client';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_SUBTITLE_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../components/editorial-styles';
 import { useForcedState } from '../../../components/forced-state';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { t } from '../../../lib/i18n';
@@ -51,10 +62,10 @@ function ChannelSummarySection({
 }): ReactElement | null {
   if (report === null) return null;
   return (
-    <section style={{ display: 'grid', gap: 8 }}>
-      <h2 style={{ margin: 0 }}>{opsReconcileText('channelSection')}</h2>
-      <div style={{ overflowX: 'auto' }}>
-        <table data-testid="reconciliation-channel-table">
+    <section style={{ display: 'grid', gap: space.s3 }}>
+      <h2 style={OPS_SUBTITLE_STYLE}>{opsReconcileText('channelSection')}</h2>
+      <div style={OPS_TABLE_WRAP_STYLE}>
+        <table data-testid="reconciliation-channel-table" style={OPS_TABULAR_STYLE}>
           <thead>
             <tr>
               <th scope="col">{opsReconcileText('channelCode')}</th>
@@ -78,12 +89,18 @@ function ChannelSummarySection({
         </table>
       </div>
       <div>
-        <button type="button" data-testid="reconciliation-export-csv" onClick={onExport}>
+        <button
+          type="button"
+          className="ph-btn"
+          style={OPS_COMPACT_BTN_STYLE}
+          data-testid="reconciliation-export-csv"
+          onClick={onExport}
+        >
           {opsReconcileText('exportCsv')}
         </button>
       </div>
       {operationId === null ? null : (
-        <p role="status" data-testid="reconciliation-export-status" style={{ margin: 0 }}>
+        <p role="status" data-testid="reconciliation-export-status" style={opsNoticeStyle('info')}>
           {opsReconcileText('exportAccepted', { id: operationId })}
         </p>
       )}
@@ -100,21 +117,26 @@ function ReconciliationResultCard({
   return (
     <section
       data-testid="reconciliation-result"
-      style={{ display: 'grid', gap: 6, border: '1px solid var(--color-border)', padding: 12 }}
+      className="ph-card"
+      style={{ ...OPS_TABULAR_STYLE, display: 'grid', gap: space.s2, padding: space.s4 }}
     >
-      <h2 style={{ margin: 0 }}>{opsReconcileText('resultTitle')}</h2>
+      <h2 style={OPS_SUBTITLE_STYLE}>{opsReconcileText('resultTitle')}</h2>
       <p style={{ margin: 0 }}>
         {opsReconcileText('expectedCash', { amount: formatMoney(result.expectedCash) })}
       </p>
       <p style={{ margin: 0 }}>
         {opsReconcileText('countedCashResult', { amount: formatMoney(result.countedCash) })}
       </p>
-      <p data-testid="reconciliation-difference" style={{ margin: 0 }}>
+      <p data-testid="reconciliation-difference" style={{ margin: 0, fontWeight: 600 }}>
         {opsReconcileText('difference', { amount: formatMoney(result.difference) })}
       </p>
       <p style={{ margin: 0 }}>{opsReconcileText('auditRef', { id: result.auditLogId })}</p>
       {hasDiscrepancyWarning(result) ? (
-        <p role="alert" data-testid="reconciliation-discrepancy-warning" style={{ margin: 0 }}>
+        <p
+          role="alert"
+          data-testid="reconciliation-discrepancy-warning"
+          style={opsNoticeStyle('warning')}
+        >
           {opsReconcileText('discrepancyAlert')}
         </p>
       ) : null}
@@ -276,18 +298,18 @@ export function ReconciliationScreen({ baseUrl }: { baseUrl: string }): ReactEle
   const canSubmit = canCloseReconciliation(step, issue, propertyId, businessDate);
 
   return (
-    <section
-      data-testid="reconciliation-screen"
-      style={{ display: 'grid', gap: 16, padding: '16px 0' }}
-    >
-      <h1 style={{ margin: 0 }}>{opsReconcileText('reconcileTitle')}</h1>
-      <p style={{ margin: 0 }}>{opsReconcileText('reconcileIntro')}</p>
+    <section data-testid="reconciliation-screen" style={OPS_PAGE_STYLE}>
+      <h1 style={OPS_TITLE_STYLE}>{opsReconcileText('reconcileTitle')}</h1>
+      <p style={OPS_INTRO_STYLE}>{opsReconcileText('reconcileIntro')}</p>
       <StateSurface state={state}>
         {error === null ? null : (
           <ScreenAlert error={error} onRetry={() => void load(propertyId, businessDate)} />
         )}
-        <div style={{ display: 'grid', gap: 8, maxWidth: 480 }}>
-          <label style={{ display: 'grid', gap: 4 }}>
+        <div
+          className="ph-card"
+          style={{ display: 'grid', gap: space.s3, maxWidth: 480, padding: space.s4 }}
+        >
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {opsReconcileText('property')}
             <select
               name="propertyId"
@@ -301,7 +323,7 @@ export function ReconciliationScreen({ baseUrl }: { baseUrl: string }): ReactEle
               ))}
             </select>
           </label>
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {opsReconcileText('businessDate')}
             <input
               name="businessDate"
@@ -312,6 +334,8 @@ export function ReconciliationScreen({ baseUrl }: { baseUrl: string }): ReactEle
           </label>
           <button
             type="button"
+            className="ph-btn"
+            style={OPS_COMPACT_BTN_STYLE}
             data-testid="reconciliation-reload"
             onClick={() => void load(propertyId, businessDate)}
           >
@@ -323,8 +347,11 @@ export function ReconciliationScreen({ baseUrl }: { baseUrl: string }): ReactEle
           operationId={operationId}
           onExport={() => void exportCsv()}
         />
-        <section style={{ display: 'grid', gap: 8, maxWidth: 480 }}>
-          <h2 style={{ margin: 0 }}>{opsReconcileText('closeSection')}</h2>
+        <section
+          className="ph-card"
+          style={{ display: 'grid', gap: space.s3, maxWidth: 480, padding: space.s4 }}
+        >
+          <h2 style={OPS_SUBTITLE_STYLE}>{opsReconcileText('closeSection')}</h2>
           <PinDialog
             autoOpen={false}
             step={step}
@@ -337,7 +364,7 @@ export function ReconciliationScreen({ baseUrl }: { baseUrl: string }): ReactEle
             onPin={setPin}
             onSubmit={() => void verifyPin()}
           />
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {opsReconcileText('countedCash')}
             <input
               name="countedCash"
@@ -348,11 +375,15 @@ export function ReconciliationScreen({ baseUrl }: { baseUrl: string }): ReactEle
             />
           </label>
           {issue === null ? null : (
-            <p role="alert" data-testid="reconciliation-cash-issue" style={{ margin: 0 }}>
+            <p
+              role="alert"
+              data-testid="reconciliation-cash-issue"
+              style={opsNoticeStyle('danger')}
+            >
               {opsReconcileText('cashIssue')}
             </p>
           )}
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {opsReconcileText('note')}
             <input
               name="note"
@@ -364,6 +395,8 @@ export function ReconciliationScreen({ baseUrl }: { baseUrl: string }): ReactEle
           </label>
           <button
             type="button"
+            className="ph-btn-primary"
+            style={OPS_COMPACT_BTN_STYLE}
             data-testid="reconciliation-submit"
             disabled={busy || !canSubmit}
             onClick={() => void submitClose()}

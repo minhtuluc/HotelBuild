@@ -21,17 +21,35 @@ export const operationsCatalog = {
   ...reportsCatalog,
   ...crmCatalog,
   ...notiCatalog,
-  'ops.home.title': 'Pine Hill — Bảng điều khiển vận hành',
+  'ops.home.title': 'Bắt đầu ca làm việc',
   'ops.home.intro':
-    'Khung back-office F0: dùng chung hợp đồng trạng thái, token và định dạng vi-VN với web khách.',
+    'Các việc thường làm trong ca. Mọi phân hệ khác nằm ở thanh bên trái; dữ liệu theo cơ sở đang chọn ở thanh trên.',
   'ops.home.states': 'Bộ trạng thái UI dùng chung',
   'ops.home.openState': 'Mở trạng thái',
-  'ops.demo.only': 'Khung F0 — chưa nối API nghiệp vụ; phân quyền theo vai trò thuộc F1.',
+  'ops.demo.only': 'Phân quyền chi tiết và phạm vi dữ liệu do máy chủ kiểm soát theo phiên.',
+  'ops.home.group.frontDesk': 'Tiền sảnh & Tồn phòng',
+  'ops.home.group.ratesOta': 'Giá & Kênh OTA',
+  'ops.home.group.bookingsFinance': 'Đơn & Tài chính',
+  'ops.home.group.reportsSystem': 'Báo cáo & Hệ thống',
+  'ops.nav.frontDesk': 'Bàn tiền sảnh',
+  'ops.nav.bookings': 'Danh sách booking',
+  'ops.nav.overbooking': 'Quá tải & điều chuyển',
   'ops.nav.dayBoard': 'Bảng điều khiển ngày',
   'ops.nav.properties': 'Cơ sở',
   'ops.nav.roomTypes': 'Loại phòng',
-  'ops.home.screens': 'Màn hình F2',
-  'screen.alert.failed': 'Không gọi được API: {code}',
+  'ops.home.screens': 'Việc trong ca',
+  'ops.home.task.frontDesk':
+    'Khách đến, đang ở và sắp đi hôm nay; check-in, check-out, khách vãng lai.',
+  'ops.home.task.dayBoard': 'Tổng quan trong ngày: phòng trống, phòng bẩn, ca quá tải cần xử lý.',
+  'ops.home.task.grid': 'Tồn phòng theo ngày cho tối đa 31 ngày, kèm trạng thái từng ô.',
+  'ops.home.task.bookings': 'Tra cứu, tạo, sửa, huỷ booking và thu tiền.',
+  'ops.home.task.overbooking': 'Ca bán vượt phải xử lý trước hạn T−24h.',
+  'ops.home.status': 'Trạng thái hệ thống',
+  'screen.alert.failed': 'Không tải được dữ liệu ({code})',
+  'screen.alert.overloaded':
+    'Hệ thống đang tạm quá tải (503). Dữ liệu trước đó vẫn được giữ nguyên; vui lòng thử lại sau ít phút.',
+  'screen.alert.retryAfterSeconds': 'Gợi ý thử lại sau khoảng {seconds} giây.',
+  'screen.alert.retryAfterMinutes': 'Gợi ý thử lại sau khoảng {minutes} phút.',
   'screen.alert.retry': 'Thử lại',
   'screen.demo': 'Chế độ minh hoạ trạng thái — không gọi API.',
   // Nhãn dựng trong `lib/screen-state.ts` (thuần, không React) — nguồn câu chữ vẫn là danh mục này.
@@ -47,7 +65,7 @@ export const operationsCatalog = {
   'enum.propertyStatus.INACTIVE': 'Ngừng hoạt động',
   'properties.title': 'Cơ sở',
   'properties.intro':
-    'Giờ nhận/trả phòng và trần bán vượt theo từng cơ sở (BR-OVER-01, BR-GEN-04). Chỉ chủ chuỗi sửa được.',
+    'Giờ nhận/trả phòng và trần bán vượt theo từng cơ sở. Chỉ chủ chuỗi sửa được.',
   'properties.reload': 'Tải lại',
   'properties.empty': 'Chưa có cơ sở nào.',
   'properties.col.name': 'Tên',
@@ -70,7 +88,7 @@ export const operationsCatalog = {
   'properties.saved': 'Đã lưu {name} · phiên bản {version}',
   'roomTypes.title': 'Loại phòng',
   'roomTypes.intro':
-    'Sức chứa và sàn–trần giá theo loại phòng (BR-PROP-03, BR-RATE-03, BR-RATE-04). Cảnh báo ở đây chỉ để nhắc; server vẫn là nơi chặn.',
+    'Sức chứa và sàn–trần giá theo loại phòng. Cảnh báo ở đây chỉ để nhắc; server vẫn là nơi chặn.',
   'roomTypes.reload': 'Tải lại',
   'roomTypes.empty': 'Chưa có loại phòng nào.',
   'roomTypes.col.code': 'Mã',
@@ -104,7 +122,7 @@ export const operationsCatalog = {
   'enum.roomStatus.INACTIVE': 'Ngừng dùng',
   'rooms.title': 'Sơ đồ buồng & phòng vật lý',
   'rooms.intro':
-    'Buồng theo tầng và liên kết phòng thông nhau hai chiều (BR-OVER-15). Chỉ quản lý cơ sở gán được.',
+    'Buồng theo tầng và liên kết phòng thông nhau hai chiều. Chỉ quản lý cơ sở gán được.',
   'rooms.reload': 'Tải lại',
   'rooms.col.code': 'Mã phòng',
   'rooms.col.floor': 'Tầng',
@@ -120,12 +138,12 @@ export const operationsCatalog = {
   'rooms.form.save': 'Lưu',
   'rooms.form.cancel': 'Huỷ',
   'rooms.symmetricNote':
-    'Liên kết hai chiều: máy chủ tự cập nhật cả hai phòng (BR-OVER-15). Danh sách hiện đúng dữ liệu máy chủ trả về.',
+    'Liên kết hai chiều: máy chủ tự cập nhật cả hai phòng. Danh sách hiện đúng dữ liệu máy chủ trả về.',
   'rooms.saved': 'Đã cập nhật {code}',
   'ops.nav.grid': 'Lưới tồn',
   'grid.title': 'Lưới tồn phòng theo ngày',
   'grid.intro':
-    'Tồn công bố theo BR-INV-01: max(0, pool); pool nội bộ có thể âm. Đổi khoảng ngày chỉ tải lại dữ liệu, không nạp lại trang. Khoảng tối đa 31 ngày (NFR-PERF-05).',
+    'Tồn công bố không bao giờ âm; tồn nội bộ có thể âm khi bán vượt. Đổi khoảng ngày chỉ tải lại dữ liệu, không nạp lại trang. Khoảng tối đa 31 ngày.',
   'grid.tableLabel': 'Lưới tồn phòng theo ngày và loại phòng',
   'grid.col.roomType': 'Loại phòng',
   'grid.form.property': 'Cơ sở',
@@ -142,7 +160,7 @@ export const operationsCatalog = {
   'ops.nav.promotions': 'Khuyến mãi',
   'promotions.title': 'Khuyến mãi',
   'promotions.intro':
-    'Tạo mã khuyến mãi (BR-RATE-10,11,13). Mã làm giá chạm sàn bị máy chủ chặn khi cấu hình; báo giá trực tuyến chỉ cảnh báo, không chặn.',
+    'Tạo mã khuyến mãi. Mã làm giá chạm sàn bị máy chủ chặn khi cấu hình; báo giá trực tuyến chỉ cảnh báo, không chặn.',
   'promotions.list.title': 'Khuyến mãi đang cấu hình',
   'promotions.col.code': 'Mã',
   'promotions.col.type': 'Loại giảm',
@@ -182,7 +200,7 @@ export const operationsCatalog = {
   'ops.nav.seasons': 'Mùa & hệ số',
   'seasons.title': 'Mùa & hệ số',
   'seasons.intro':
-    'Tạo mùa cho một cơ sở và xem mùa đang thắng từng ngày do máy chủ quyết (BR-RATE-05). Mùa chồng nhau được phép — giao diện không tự chọn mùa thắng.',
+    'Tạo mùa cho một cơ sở và xem mùa đang thắng từng ngày do máy chủ quyết. Mùa chồng nhau được phép — giao diện không tự chọn mùa thắng.',
   'seasons.list.title': 'Mùa đang cấu hình',
   'seasons.list.empty': 'Cơ sở này chưa có mùa nào.',
   'seasons.col.name': 'Tên mùa',
@@ -216,7 +234,7 @@ export const operationsCatalog = {
   'ops.nav.channels': 'Kênh bán',
   'channels.title': 'Kênh bán — hệ số & hoa hồng',
   'channels.intro':
-    'Hệ số, hoa hồng, thời gian giữ chỗ và cờ bán vượt của từng kênh (BR-RATE-07,09,18). Ngưỡng sàn 1/(1 − hoa hồng) chỉ để nhắc; máy chủ là nơi chặn.',
+    'Hệ số, hoa hồng, thời gian giữ chỗ và cờ bán vượt của từng kênh. Ngưỡng sàn 1/(1 − hoa hồng) chỉ để nhắc; máy chủ là nơi chặn.',
   'channels.col.code': 'Kênh',
   'channels.col.name': 'Tên',
   'channels.col.multiplier': 'Hệ số',
@@ -252,7 +270,7 @@ export const operationsCatalog = {
   'ops.nav.multiChannelQuote': 'Báo giá đa kênh',
   'mcq.title': 'Xem trước báo giá đa kênh',
   'mcq.intro':
-    'So sánh giá của nhiều kênh cho cùng một loại phòng và kỳ lưu trú (BR-RATE-07,08). Mọi con số lấy nguyên từ máy chủ; cảnh báo lấy từ warnings[] của máy chủ (BR-RATE-09).',
+    'So sánh giá của nhiều kênh cho cùng một loại phòng và kỳ lưu trú. Mọi con số lấy nguyên từ máy chủ; cảnh báo lấy từ warnings[] của máy chủ.',
   'mcq.readonly':
     'Đây là kết quả tính theo yêu cầu, không phải báo giá đã chốt: giá có thể đổi và không phải cam kết với khách.',
   'mcq.preview': 'Báo giá cho {from} → {to} (chưa chốt)',
@@ -274,7 +292,7 @@ export const operationsCatalog = {
   'ops.nav.rateCalendar': 'Lịch giá',
   'rate.title': 'Lịch giá & giá cơ bản',
   'rate.intro':
-    'Giá từng đêm kèm nguồn và mùa đang thắng do máy chủ trả (BR-RATE-02). Sửa giá lệch quá ±20% so với giá đang áp dụng phải có xác nhận của chủ chuỗi (BR-RBAC-04).',
+    'Giá từng đêm kèm nguồn và mùa đang thắng do máy chủ trả. Sửa giá lệch quá ±20% so với giá đang áp dụng phải có xác nhận của chủ chuỗi.',
   'rate.reload': 'Tải lại',
   'rate.form.property': 'Cơ sở',
   'rate.form.roomType': 'Loại phòng',
@@ -303,7 +321,7 @@ export const operationsCatalog = {
   'ops.nav.roomBlocks': 'Khoá phòng',
   'roomBlocks.title': 'Khoá phòng bảo trì / ngừng bán',
   'roomBlocks.intro':
-    'Khoá phòng theo khoảng ngày (BR-INV-06). Cảnh báo chồng lấn ở đây chỉ để nhắc; máy chủ vẫn là nơi chặn và mở ca quá tải khi khoá đè booking (BR-PROP-06).',
+    'Khoá phòng theo khoảng ngày. Cảnh báo chồng lấn ở đây chỉ để nhắc; máy chủ vẫn là nơi chặn và mở ca quá tải khi khoá đè booking.',
   'roomBlocks.form.property': 'Cơ sở',
   'roomBlocks.form.room': 'Phòng',
   'roomBlocks.form.roomPlaceholder': '— chọn phòng —',
@@ -328,7 +346,7 @@ export const operationsCatalog = {
   'ops.nav.settings': 'Tham số hệ thống',
   'settings.title': 'Tham số hệ thống',
   'settings.intro':
-    'Tham số vận hành toàn hệ thống (BR-SYS-02). Mỗi lần sửa phải có lý do; hệ thống ghi nhật ký kiểm toán cùng transaction.',
+    'Tham số vận hành toàn hệ thống. Mỗi lần sửa phải có lý do; hệ thống ghi nhật ký kiểm toán cùng transaction.',
   'settings.col.key': 'Khoá',
   'settings.col.value': 'Giá trị',
   'settings.col.type': 'Kiểu giá trị',
@@ -348,7 +366,7 @@ export const operationsCatalog = {
   'ops.nav.auditLogs': 'Nhật ký kiểm toán',
   'audit.title': 'Nhật ký kiểm toán',
   'audit.intro':
-    'Nhật ký chỉ ghi thêm, chỉ đọc (BR-SYS-01). Lọc theo người thao tác, đối tượng, hành động và khoảng thời gian; xuất CSV đúng các dòng đang xem.',
+    'Nhật ký chỉ ghi thêm, chỉ đọc. Lọc theo người thao tác, đối tượng, hành động và khoảng thời gian; xuất CSV đúng các dòng đang xem.',
   'audit.reload': 'Tải lại',
   'audit.empty': 'Chưa có bản ghi kiểm toán nào.',
   'audit.updated': 'Hiện {count} bản ghi',

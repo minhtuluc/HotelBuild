@@ -1,4 +1,6 @@
 import type { ReactElement } from 'react';
+import { space } from '@pinehill/ui-web';
+import { OPS_COMPACT_BTN_STYLE, OPS_FIELD_LABEL_STYLE } from '../../../components/editorial-styles';
 import type { SettingsController, SettingsState } from './controller';
 import { t } from '../../../lib/i18n';
 export function SettingEditor({
@@ -15,24 +17,34 @@ export function SettingEditor({
   return (
     <form
       data-testid="setting-editor"
+      className="ph-card"
       onSubmit={(e) => {
         e.preventDefault();
         void controller?.save();
       }}
-      style={{ display: 'grid', gap: 'var(--space-s2, 8px)', minWidth: 0 }}
+      style={{ display: 'grid', gap: space.s2, minWidth: 0, padding: space.s4 }}
     >
       <fieldset
         disabled={locked}
-        style={{ display: 'flex', gap: 8, flexWrap: 'wrap', minWidth: 0 }}
+        style={{
+          display: 'flex',
+          gap: space.s3,
+          flexWrap: 'wrap',
+          alignItems: 'end',
+          minWidth: 0,
+          border: 0,
+          padding: 0,
+          margin: 0,
+        }}
       >
-        <legend>
+        <legend style={{ fontWeight: 600, marginBottom: space.s2 }}>
           {t('settings.form.legend', {
             key: draft.key,
             type: row?.valueType ?? '',
             version: draft.version,
           })}
         </legend>
-        <label style={{ display: 'grid', gap: 4, minWidth: 0 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('settings.form.value')}
           <input
             value={draft.value}
@@ -40,7 +52,7 @@ export function SettingEditor({
             style={{ maxWidth: '100%' }}
           />
         </label>
-        <label style={{ display: 'grid', gap: 4, minWidth: 0 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('settings.form.reason')}
           <input
             value={draft.reason}
@@ -49,10 +61,15 @@ export function SettingEditor({
             style={{ maxWidth: '100%' }}
           />
         </label>
-        <button type="submit" style={{ minHeight: 44 }}>
+        <button type="submit" className="ph-btn-primary" style={OPS_COMPACT_BTN_STYLE}>
           {t('settings.form.save')}
         </button>
-        <button type="button" onClick={() => controller?.cancel()} style={{ minHeight: 44 }}>
+        <button
+          type="button"
+          className="ph-btn"
+          onClick={() => controller?.cancel()}
+          style={OPS_COMPACT_BTN_STYLE}
+        >
           {t('settings.form.cancel')}
         </button>
       </fieldset>

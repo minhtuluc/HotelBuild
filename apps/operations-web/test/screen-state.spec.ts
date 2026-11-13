@@ -1,11 +1,16 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '@pinehill/api-client';
 import {
   FORM_WIDE_FIELD,
   VERSION_UNKNOWN,
+  isServiceUnavailable,
   readFailureState,
   writeFailureState,
 } from '../src/lib/screen-state';
+import { ScreenAlert } from '../src/components/screen-alert';
+import { t } from '../src/lib/i18n';
 import { roomTypePriceWarnings } from '../src/lib/room-type-warnings';
 import { toMoney } from '../src/lib/money';
 import {
@@ -171,5 +176,57 @@ describe('dựng thân yêu cầu tạo loại phòng', () => {
     expect(toMoney('1.5')).toBeNull();
     expect(toMoney('abc')).toBeNull();
     expect(toMoney(' 120000 ')).toBe(120_000);
+  });
+});
+
+describe('TD-41: nhận diện và hiển thị trạng thái quá tải 503 / E_GEN_SERVICE_UNAVAILABLE', () => {
+  it('nhận diện HTTP 503 hoặc mã E_GEN_SERVICE_UNAVAILABLE', () => {
+    expect(isServiceUnavailable(error({ status: 503 }))).toBe(true);
+    expect(isServiceUnavailable(error({ status: 500, code: 'E_GEN_SERVICE_UNAVAILABLE' }))).toBe(
+      true,
+    );
+    expect(isServiceUnavailable(error({ status: 500 }))).toBe(false);
+    expect(isServiceUnavailable(new Error('other'))).toBe(false);
+  });
+
+  it('ScreenAlert hiển thị thông điệp tạm quá tải, mã tra cứu và nút thử lại cho 503', () => {
+    const html = renderToStaticMarkup(
+      createElement(ScreenAlert, {
+        error: new ApiError({
+          kind: 'http',
+          message: 'raw server message should not appear',
+          status: 503,
+          code: 'E_GEN_SERVICE_UNAVAILABLE',
+          traceId: 'trace-503',
+          retryAfterSeconds: 30,
+        }),
+        onRetry: () => undefined,
+      }),
+    );
+    expect(html).toContain('data-testid="screen-alert"');
+    expect(html).toContain('role="alert"');
+    expect(html).toContain(t('screen.alert.overloaded'));
+    expect(html).toContain(t('screen.alert.retryAfterSeconds', { seconds: 30 }));
+    expect(html).toContain(t('screen.alert.retry'));
+    expect(html).toContain('trace-503');
+    expect(html).not.toContain('raw server message should not appear');
+  });
+
+  it('ScreenAlert hiển thị thông điệp quá tải ngay cả khi server chỉ trả status 503 không kèm code', () => {
+    const html = renderToStaticMarkup(
+      createElement(ScreenAlert, {
+        error: new ApiError({
+          kind: 'http',
+          message: 'Service Unavailable',
+          status: 503,
+          retryAfterSeconds: 120,
+        }),
+        onRetry: () => undefined,
+      }),
+    );
+    expect(html).toContain('E_GEN_SERVICE_UNAVAILABLE');
+    expect(html).toContain(t('screen.alert.overloaded'));
+    expect(html).toContain(t('screen.alert.retryAfterMinutes', { minutes: 2 }));
+    expect(html).toContain(t('screen.alert.retry'));
   });
 });

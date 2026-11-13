@@ -26,7 +26,12 @@ export interface FrontDeskSession {
  * Phiên + dữ liệu bàn tiền sảnh. Màn hình đọc qua `GET /bookings` của máy chủ (không có endpoint bảng
  * riêng); mọi thao tác ghi vẫn gọi thẳng hợp đồng F7 và máy chủ kiểm quyền/trạng thái lần cuối.
  */
-export function useFrontDesk(baseUrl: string, enabled: boolean): FrontDeskSession {
+export function useFrontDesk(
+  baseUrl: string,
+  enabled: boolean,
+  /** Cơ sở đang làm việc của phiên (thanh trên); rỗng thì để máy chủ chọn cơ sở đầu tiên trong phạm vi. */
+  workingPropertyId: string | null = null,
+): FrontDeskSession {
   const params = useSearchParams();
   const date = deskDate(params.get('date'), new Date());
   const session = useRef<ReturnType<typeof createSessionClient> | null>(null);
@@ -81,7 +86,7 @@ export function useFrontDesk(baseUrl: string, enabled: boolean): FrontDeskSessio
 
   useEffect(() => {
     active.current = true;
-    if (enabled) void load('');
+    if (enabled) void load(workingPropertyId ?? '');
     return () => {
       active.current = false;
       epoch.current += 1;
@@ -89,7 +94,7 @@ export function useFrontDesk(baseUrl: string, enabled: boolean): FrontDeskSessio
       session.current = null;
       pinToken.current = null;
     };
-  }, [enabled, load]);
+  }, [enabled, load, workingPropertyId]);
 
   const reload = useCallback(() => {
     void load(state.data?.propertyId ?? '');

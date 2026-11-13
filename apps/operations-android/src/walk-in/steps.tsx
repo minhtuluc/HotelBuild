@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { Text, View } from 'react-native';
 import type { RoomTypeSummary } from '@pinehill/contracts';
 import { color, space } from '@pinehill/ui-native';
+import { theme } from '../theme';
 import { ActionButton, Choice, Field } from './controls';
 import { walkInText as text } from './messages';
 import {
@@ -276,8 +277,8 @@ export function ReviewStep({
   roomType: RoomTypeSummary | undefined;
 }): ReactElement {
   return (
-    <View style={{ gap: space.s2 }} testID="walk-in-review">
-      <Text>
+    <View style={theme.card} testID="walk-in-review">
+      <Text style={theme.body}>
         {text('reviewStay', {
           roomType: roomType?.code ?? stay.roomTypeId,
           ratePlan: ratePlanName(stay.ratePlanCode),
@@ -285,15 +286,17 @@ export function ReviewStep({
           checkOut: stay.checkOut,
         })}
       </Text>
-      <Text>
+      <Text style={theme.body}>
         {text('reviewParty', {
           adults: stay.adults,
           children: stay.children,
           rooms: stay.roomCount,
         })}
       </Text>
-      <Text>{text('reviewGuest', { name: guest.fullName.trim(), phone: guest.phone.trim() })}</Text>
-      <Text style={{ color: color.textMuted }}>{text('reviewNote')}</Text>
+      <Text style={theme.body}>
+        {text('reviewGuest', { name: guest.fullName.trim(), phone: guest.phone.trim() })}
+      </Text>
+      <Text style={theme.muted}>{text('reviewNote')}</Text>
     </View>
   );
 }

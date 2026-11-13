@@ -1,6 +1,7 @@
 'use client';
 import { useState, type ReactElement } from 'react';
 import type { BookingRelocationOptions } from '@pinehill/contracts';
+import { OPS_TABULAR_STYLE, OPS_TABLE_WRAP_STYLE } from '../../components/editorial-styles';
 import { text } from './messages';
 import { emptyMoveDraft, moveIssues, type FieldIssue, type MoveDraft } from './model';
 import { ConfirmDialog, SelectInput, TextInput, box } from './parts';
@@ -15,8 +16,8 @@ function OptionRow({ option, index }: { option: Option; index: number }): ReactE
         {option.feasible ? text('optFeasible') : text('unavailable', { note: option.note ?? '' })}
       </td>
       <td>{option.targetRoomId ?? option.targetPropertyId ?? text('noTarget')}</td>
-      <td>{option.compensationAmount}</td>
-      <td>{option.transportCost}</td>
+      <td style={OPS_TABULAR_STYLE}>{option.compensationAmount}</td>
+      <td style={OPS_TABULAR_STYLE}>{option.transportCost}</td>
       <td>{[text('priceLocked'), option.note].filter((item) => item !== undefined).join(' · ')}</td>
     </tr>
   );
@@ -25,12 +26,7 @@ function OptionRow({ option, index }: { option: Option; index: number }): ReactE
 /** Phương án chỉ của chính booking đang xử lý, số tiền nguyên từ máy chủ; không bảng xếp hạng. */
 function OptionsTable({ options }: { options: BookingRelocationOptions }): ReactElement {
   return (
-    <div
-      role="region"
-      aria-label={text('optionsTitle')}
-      tabIndex={0}
-      style={{ overflowX: 'auto', maxWidth: '100%' }}
-    >
+    <div role="region" aria-label={text('optionsTitle')} tabIndex={0} style={OPS_TABLE_WRAP_STYLE}>
       <table data-testid="hb136-options">
         <thead>
           <tr>
@@ -168,10 +164,17 @@ export function OptionsPanel(props: {
     setDraft({ ...draft, ...next });
   };
   return (
-    <section style={box} aria-labelledby="hb136-options-title" data-testid="hb136-options-panel">
-      <h2 id="hb136-options-title">{text('optionsTitle')}</h2>
-      <p>{text('optionsNote')}</p>
-      <p>{text('impactBlocked')}</p>
+    <section
+      className="ph-card"
+      style={box}
+      aria-labelledby="hb136-options-title"
+      data-testid="hb136-options-panel"
+    >
+      <h2 id="hb136-options-title" style={{ margin: 0 }}>
+        {text('optionsTitle')}
+      </h2>
+      <p style={{ margin: 0 }}>{text('optionsNote')}</p>
+      <p style={{ margin: 0 }}>{text('impactBlocked')}</p>
       <OptionsTable options={props.options} />
       <RoomNotice bookingRoomId={props.bookingRoomId} />
       <form
@@ -210,6 +213,7 @@ export function OptionsPanel(props: {
         />
         <button
           type="submit"
+          className="ph-btn-primary"
           disabled={submitBlocked(props.busy, props.bookingRoomId, feasible.length)}
           style={{ minHeight: 44, justifySelf: 'start' }}
           data-testid="hb136-create-submit"

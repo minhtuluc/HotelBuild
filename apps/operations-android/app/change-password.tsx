@@ -1,10 +1,10 @@
 /** Đổi mật khẩu tạm ở lần đăng nhập đầu (SCR-56, QĐ-03 quyết định 8). */
 import { useState, type ReactElement } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import { color, space, touchTargetDp, typography } from '@pinehill/ui-native';
 import { isApiError } from '@pinehill/api-client';
 import { Session } from '../src/session';
 import { t } from '../src/strings';
+import { theme } from '../src/theme';
 
 export interface ChangePasswordScreenProps {
   session: Session;
@@ -36,23 +36,16 @@ export default function ChangePasswordScreen({
   }
 
   return (
-    <View style={{ padding: space.s4, gap: space.s3 }}>
-      <Text style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}>
-        {t('changePassword.title')}
-      </Text>
-      <Text style={{ color: color.textMuted }}>{t('changePassword.required')}</Text>
+    <View style={theme.screen}>
+      <Text style={theme.title}>{t('changePassword.title')}</Text>
+      <Text style={theme.muted}>{t('changePassword.required')}</Text>
       <TextInput
         testID="current-password"
         accessibilityLabel={t('changePassword.current')}
         value={current}
         onChangeText={setCurrent}
         secureTextEntry
-        style={{
-          minHeight: touchTargetDp,
-          borderWidth: 1,
-          borderColor: color.border,
-          paddingHorizontal: space.s3,
-        }}
+        style={theme.field}
       />
       <TextInput
         testID="new-password"
@@ -60,15 +53,10 @@ export default function ChangePasswordScreen({
         value={next}
         onChangeText={setNext}
         secureTextEntry
-        style={{
-          minHeight: touchTargetDp,
-          borderWidth: 1,
-          borderColor: color.border,
-          paddingHorizontal: space.s3,
-        }}
+        style={theme.field}
       />
       {error === null ? null : (
-        <Text accessibilityLiveRegion="polite" style={{ color: color.danger }}>
+        <Text accessibilityLiveRegion="polite" style={theme.alertDanger}>
           {error}
         </Text>
       )}
@@ -78,15 +66,9 @@ export default function ChangePasswordScreen({
         accessibilityLabel={t('changePassword.submit')}
         disabled={busy}
         onPress={() => void submit()}
-        style={{
-          minHeight: touchTargetDp,
-          justifyContent: 'center',
-          paddingHorizontal: space.s3,
-          backgroundColor: color.primary,
-          borderRadius: 8,
-        }}
+        style={theme.buttonPrimary}
       >
-        <Text style={{ color: color.surface, fontWeight: '600', textAlign: 'center' }}>
+        <Text style={theme.buttonPrimaryText}>
           {busy ? t('state.loading') : t('changePassword.submit')}
         </Text>
       </Pressable>

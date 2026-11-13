@@ -13,14 +13,16 @@ import { issueMessage } from './account-copy';
 import type { FieldIssue } from './account-model';
 import { accountText as text } from './messages';
 
-const GAP = 'var(--space-s3, 12px)';
+const GAP = '16px';
 const CONTROL = {
   boxSizing: 'border-box',
   width: '100%',
   minHeight: 44,
-  padding: '8px 12px',
-  border: '1px solid var(--color-border-strong, #6B7280)',
-  borderRadius: 8,
+  padding: '10px 12px',
+  background: 'var(--color-surface, #FBFAF7)',
+  color: 'var(--color-text, #1A1716)',
+  border: '1px solid var(--color-borderStrong, #6F625C)',
+  borderRadius: 'var(--radius-sm, 4px)',
   font: 'inherit',
 } as const;
 
@@ -38,9 +40,13 @@ export function FormShell({
   children: ReactNode;
 }): ReactElement {
   return (
-    <section data-testid={testId} style={{ display: 'grid', gap: GAP }}>
-      <h1 style={{ margin: 0 }}>{title}</h1>
-      <p style={{ margin: 0 }}>{intro}</p>
+    <section data-testid={testId} className="ph-card" style={{ display: 'grid', gap: GAP }}>
+      <div className="ph-page-header" style={{ paddingBottom: 12 }}>
+        <h1 className="ph-page-title" style={{ margin: 0 }}>
+          {title}
+        </h1>
+        <p style={{ margin: 0, color: 'var(--color-textMuted, #5A4640)' }}>{intro}</p>
+      </div>
       <form noValidate onSubmit={onSubmit} style={{ display: 'grid', gap: GAP }}>
         {children}
       </form>
@@ -94,15 +100,15 @@ export function TextField({
         onChange={(event: ChangeEvent<HTMLInputElement>) => {
           onChange(event.target.value);
         }}
-        style={{ ...CONTROL, ...(issue ? { borderColor: 'var(--color-danger, #B91C1C)' } : {}) }}
+        style={{ ...CONTROL, ...(issue ? { borderColor: 'var(--color-danger, #9E1B32)' } : {}) }}
       />
       {hint ? (
-        <span id={hintId} style={{ color: 'var(--color-text-muted, #4B5563)', fontSize: 14 }}>
+        <span id={hintId} style={{ color: 'var(--color-textMuted, #5A4640)', fontSize: 13 }}>
           {hint}
         </span>
       ) : null}
       {issue ? (
-        <span id={errorId} role="alert" style={{ color: 'var(--color-danger, #B91C1C)' }}>
+        <span id={errorId} role="alert" style={{ color: 'var(--color-danger, #9E1B32)' }}>
           {issueMessage(issue)}
         </span>
       ) : null}
@@ -130,7 +136,7 @@ export function CheckField({
     <div style={{ display: 'grid', gap: 4 }}>
       <label
         htmlFor={id}
-        style={{ display: 'flex', gap: 8, alignItems: 'flex-start', minHeight: 44 }}
+        style={{ display: 'flex', gap: 10, alignItems: 'flex-start', minHeight: 44 }}
       >
         <input
           id={id}
@@ -142,11 +148,11 @@ export function CheckField({
           onChange={(event) => {
             onChange(event.target.checked);
           }}
-          style={{ width: 24, height: 24, marginTop: 2 }}
+          style={{ width: 22, height: 22, marginTop: 2 }}
         />
         <span>{label}</span>
       </label>
-      <span id={`${id}-note`} style={{ color: 'var(--color-text-muted, #4B5563)', fontSize: 14 }}>
+      <span id={`${id}-note`} style={{ color: 'var(--color-textMuted, #5A4640)', fontSize: 13 }}>
         {note}
       </span>
     </div>
@@ -166,14 +172,11 @@ export function SubmitButton({
     <button
       type="submit"
       data-testid={testId}
+      className="ph-btn-primary"
       disabled={busy}
       aria-busy={busy}
       style={{
-        ...CONTROL,
-        background: 'var(--color-primary, #0F766E)',
-        borderColor: 'var(--color-primary, #0F766E)',
-        color: '#FFFFFF',
-        fontWeight: 600,
+        width: '100%',
         cursor: busy ? 'progress' : 'pointer',
       }}
     >
@@ -195,15 +198,23 @@ export function Notice({
 }): ReactElement {
   const color =
     tone === 'error'
-      ? 'var(--color-danger, #B91C1C)'
+      ? 'var(--color-danger, #9E1B32)'
       : tone === 'success'
-        ? 'var(--color-success, #15803D)'
-        : 'var(--color-text, #111827)';
+        ? 'var(--color-success, #17663A)'
+        : 'var(--color-text, #1A1716)';
   return (
     <div
       role={tone === 'error' ? 'alert' : 'status'}
       data-testid={testId}
-      style={{ display: 'grid', gap: 4, color }}
+      style={{
+        display: 'grid',
+        gap: 6,
+        padding: '12px 14px',
+        border: '1px solid var(--color-border, #D9D2CC)',
+        borderLeft: `3px solid ${color}`,
+        background: 'var(--color-bg, #F3F2EE)',
+        color,
+      }}
     >
       {lines?.map((line) => (
         <p key={line} style={{ margin: 0 }}>

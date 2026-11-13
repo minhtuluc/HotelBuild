@@ -15,14 +15,14 @@ export const reportsCatalog = {
   'reports.groupBy.PROPERTY': 'Cơ sở',
   'reports.occupancy.title': 'Báo cáo công suất',
   'reports.occupancy.intro':
-    'Số đơn vị bán và công suất theo kỳ đã chọn. Chỉ số lấy nguyên từ máy chủ (BR-REP-01); giao diện không tự định nghĩa lại.',
+    'Số đơn vị bán và công suất theo kỳ đã chọn. Chỉ số lấy nguyên từ máy chủ; giao diện không tự định nghĩa lại.',
   'reports.occupancy.table': 'Công suất theo kỳ',
   'reports.occupancy.formula':
-    'Công suất = phòng-đêm đã bán ÷ phòng-đêm khả dụng. Loại phòng DOR đếm theo đơn vị bán (giường), không theo phòng (BR-PROP-03).',
+    'Công suất = phòng-đêm đã bán ÷ phòng-đêm khả dụng. Loại phòng DOR đếm theo đơn vị bán (giường), không theo phòng.',
   'reports.adr.title': 'ADR & RevPAR',
   'reports.adr.table': 'ADR và RevPAR theo kỳ',
   'reports.adr.formula':
-    'ADR = doanh thu thuần ÷ phòng-đêm đã bán. RevPAR = doanh thu thuần ÷ phòng-đêm khả dụng. Doanh thu thuần đã trừ hoa hồng (BR-RATE-08).',
+    'ADR = doanh thu thuần ÷ phòng-đêm đã bán. RevPAR = doanh thu thuần ÷ phòng-đêm khả dụng. Doanh thu thuần đã trừ hoa hồng.',
   'reports.revenue.title': 'Doanh thu theo kênh',
   'reports.revenue.intro':
     'Doanh thu gộp, hoa hồng và doanh thu thuần theo từng kênh bán. Số đọc từ snapshot giá/hoa hồng lúc bán, không đọc cấu hình kênh hiện tại.',
@@ -57,20 +57,20 @@ export const reportsCatalog = {
   'ops.nav.reportsOverbooking': 'Quá tải & điều chuyển',
   'reports.cancel.title': 'Báo cáo huỷ phòng & hoàn cọc',
   'reports.cancel.intro':
-    'Số ca huỷ và tiền hoàn theo gói giá cùng bậc chính sách đã áp. Tỷ lệ huỷ do máy chủ trả (CANCELLED ÷ tổng booking tạo trong kỳ — BR-REP-01); giao diện không tính lại.',
+    'Số ca huỷ và tiền hoàn theo gói giá cùng bậc chính sách đã áp. Tỷ lệ huỷ do máy chủ trả (CANCELLED ÷ tổng booking tạo trong kỳ); giao diện không tính lại.',
   'reports.cancel.table': 'Huỷ phòng theo gói giá và bậc chính sách',
   'reports.cancel.formula':
-    'Tỷ lệ huỷ = số booking CANCELLED ÷ tổng booking tạo trong kỳ. Tiền hoàn là tổng theo bậc chính sách đã áp (bậc −1 là bậc bắt tất, BR-CANCEL-01).',
+    'Tỷ lệ huỷ = số booking CANCELLED ÷ tổng booking tạo trong kỳ. Tiền hoàn là tổng theo bậc chính sách đã áp (bậc −1 là bậc áp cho mọi trường hợp còn lại).',
   'reports.cancel.rate': 'Tỷ lệ huỷ: {rate}%',
   'reports.cancel.refundTotal': 'Tổng hoàn: {amount}',
   'reports.cancel.cases': 'Số ca huỷ: {count}',
   'reports.cancel.catchAll': 'bậc bắt tất',
   'reports.over.title': 'Báo cáo quá tải & điều chuyển',
   'reports.over.intro':
-    'Các ca quá tải trong kỳ kèm thời điểm phát hiện/xử lý và chi phí xử lý: chiết khấu ghép phòng, bồi thường walk-out, hỗ trợ đưa đón (BR-OVER-15, BR-OVER-16).',
+    'Các ca quá tải trong kỳ kèm thời điểm phát hiện/xử lý và chi phí xử lý: chiết khấu ghép phòng, bồi thường walk-out, hỗ trợ đưa đón.',
   'reports.over.table': 'Ca quá tải trong kỳ',
   'reports.over.formula':
-    'Chi phí xử lý = Σ chiết khấu ghép phòng + Σ bồi thường walk-out + Σ hỗ trợ đưa đón (BR-REP-01). Mọi con số đọc nguyên từ máy chủ.',
+    'Chi phí xử lý = Σ chiết khấu ghép phòng + Σ bồi thường walk-out + Σ hỗ trợ đưa đón. Mọi con số đọc nguyên từ máy chủ.',
   'reports.over.total': 'Tổng chi phí xử lý: {amount}',
   'reports.over.cases': 'Số ca quá tải: {count}',
   'reports.over.status': 'Trạng thái ca',

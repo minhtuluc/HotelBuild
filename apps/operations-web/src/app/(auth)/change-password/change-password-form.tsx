@@ -1,8 +1,8 @@
 'use client';
 import type { FormEvent, ReactElement } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { color, space } from '@pinehill/ui-web';
-import { PAGE, PRIMARY, TextField } from '../../../session/form-parts';
+import { space } from '@pinehill/ui-web';
+import { ALERT_BANNER, AuthCard, PRIMARY, SECONDARY, TextField } from '../../../session/form-parts';
 import { authText as text } from '../../../session/messages';
 import { safeNextPath } from '../../../session/next-path';
 import { useStaffSession } from '../../../session/staff-session';
@@ -70,13 +70,12 @@ export function ChangePasswordForm(): ReactElement {
   const count = Object.keys(form.issues).length;
   const failure = form.failure;
   return (
-    <section style={PAGE} aria-labelledby="change-title">
-      <h1 id="change-title" style={{ margin: 0, fontSize: 24 }}>
-        {text('changeTitle')}
-      </h1>
-      <p data-testid="change-intro" style={{ margin: 0, color: color.textMuted }}>
-        {me.mustChangePassword ? text('changeRequired') : text('changeIntro')}
-      </p>
+    <AuthCard
+      titleId="change-title"
+      title={text('changeTitle')}
+      intro={me.mustChangePassword ? text('changeRequired') : text('changeIntro')}
+      introTestId="change-intro"
+    >
       <form
         noValidate
         aria-busy={form.busy}
@@ -87,17 +86,23 @@ export function ChangePasswordForm(): ReactElement {
         style={{ display: 'grid', gap: space.s4 }}
       >
         {count === 0 ? null : (
-          <p role="alert" data-testid="change-summary" style={{ margin: 0, color: color.danger }}>
+          <p role="alert" data-testid="change-summary" style={ALERT_BANNER}>
             {text('formInvalid', { count })}
           </p>
         )}
         <Fields form={form} />
         {failure === null || failure.kind === 'wrongCurrent' ? null : (
-          <p role="alert" data-testid="change-failure" style={{ margin: 0, color: color.danger }}>
+          <p role="alert" data-testid="change-failure" style={ALERT_BANNER}>
             {passwordFailureMessage(failure)}
           </p>
         )}
-        <button type="submit" data-testid="change-submit" disabled={form.busy} style={PRIMARY}>
+        <button
+          type="submit"
+          data-testid="change-submit"
+          disabled={form.busy}
+          className="ph-btn-primary"
+          style={PRIMARY}
+        >
           {form.busy ? text('changeSubmitting') : text('changeSubmit')}
         </button>
       </form>
@@ -107,10 +112,11 @@ export function ChangePasswordForm(): ReactElement {
         onClick={() => {
           void logout();
         }}
-        style={{ justifySelf: 'start', minHeight: 44 }}
+        className="ph-btn"
+        style={SECONDARY}
       >
         {text('signOut')}
       </button>
-    </section>
+    </AuthCard>
   );
 }

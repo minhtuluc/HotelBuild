@@ -2,6 +2,13 @@
 import type { ReactElement } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { formatDateTimeVn } from '@pinehill/ui-web';
+import {
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../components/editorial-styles';
 import { CandidatesTable, Ladder } from './candidates';
 import { MovePanel } from './move';
 import { OptionsPanel } from './options';
@@ -24,9 +31,16 @@ function CaseHeader({ state }: { state: ControllerState }): ReactElement | null 
   const detail = state.detail;
   if (detail === null) return null;
   return (
-    <section style={box} aria-labelledby="hb136-case-title" data-testid="hb136-case">
-      <h2 id="hb136-case-title">{text('caseTitle')}</h2>
-      <p>
+    <section
+      className="ph-card"
+      style={box}
+      aria-labelledby="hb136-case-title"
+      data-testid="hb136-case"
+    >
+      <h2 id="hb136-case-title" style={{ margin: 0 }}>
+        {text('caseTitle')}
+      </h2>
+      <p style={{ margin: 0 }}>
         {text('caseLine', {
           date: detail.date,
           count: detail.shortageCount,
@@ -95,6 +109,7 @@ function Workspace({
     <>
       <button
         type="button"
+        className="ph-btn"
         disabled={state.command.kind === 'sending'}
         onClick={() => void controller.load()}
         style={{ minHeight: 44, justifySelf: 'start' }}
@@ -146,9 +161,15 @@ function Notices({ state, params }: { state: ControllerState; params: Params }):
   const denied = state.phase === 'forbidden' || state.phase === 'expired';
   return (
     <>
-      {params.caseId === '' ? <p role="alert">{text('noCase')}</p> : null}
+      {params.caseId === '' ? (
+        <p role="alert" style={opsNoticeStyle('danger')}>
+          {text('noCase')}
+        </p>
+      ) : null}
       {denied ? (
-        <p role="alert">{text(state.phase === 'expired' ? 'expired' : 'forbidden')}</p>
+        <p role="alert" style={opsNoticeStyle('danger')}>
+          {text(state.phase === 'expired' ? 'expired' : 'forbidden')}
+        </p>
       ) : null}
       <ReadBanner state={state} />
     </>
@@ -164,10 +185,16 @@ export function RelocationScreen(): ReactElement {
     params.caseId !== '' &&
     state.actor !== null;
   return (
-    <section style={{ padding: 'var(--space-s6, 24px)', ...box, gap: 'var(--space-s4, 16px)' }}>
-      <h1 style={{ margin: 0 }}>{text('title')}</h1>
-      <p>{text('intro')}</p>
-      <a href="/overbooking/cases">{text('back')}</a>
+    <section style={OPS_PAGE_STYLE}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 className="ph-display" style={OPS_TITLE_STYLE}>
+          {text('title')}
+        </h1>
+        <p style={OPS_INTRO_STYLE}>{text('intro')}</p>
+        <a href="/overbooking/cases" className="ph-btn" style={{ justifySelf: 'start' }}>
+          {text('back')}
+        </a>
+      </header>
       <Notices state={state} params={params} />
       {ready && controller !== null ? (
         <Workspace state={state} controller={controller} params={params} />

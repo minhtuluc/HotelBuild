@@ -1,70 +1,65 @@
 import type { ReactElement } from 'react';
+import Link from 'next/link';
 import { webEnv } from '../../config';
-import { t } from '../../lib/i18n';
+import { t, type OperationsMessageKey } from '../../lib/i18n';
+import {
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TITLE_STYLE,
+} from '../../components/editorial-styles';
 import { ApiProbe } from './api-probe';
-import { STATE_SLUGS } from './states/fixtures';
 
 /** Trang chủ là tuyến động vì đọc cấu hình API ở thời điểm gọi (kiến trúc §7.5). */
 export const dynamic = 'force-dynamic';
 
+interface ShiftTask {
+  readonly href: string;
+  readonly labelKey: OperationsMessageKey;
+  readonly descKey: OperationsMessageKey;
+}
+
+/** Việc lặp lại nhiều nhất trong một ca quầy; phần còn lại nằm ở thanh bên, không lặp lại ở đây. */
+const SHIFT_TASKS: readonly ShiftTask[] = [
+  { href: '/front-desk', labelKey: 'ops.nav.frontDesk', descKey: 'ops.home.task.frontDesk' },
+  { href: '/day-board', labelKey: 'ops.nav.dayBoard', descKey: 'ops.home.task.dayBoard' },
+  { href: '/inventory-grid', labelKey: 'ops.nav.grid', descKey: 'ops.home.task.grid' },
+  { href: '/bookings', labelKey: 'ops.nav.bookings', descKey: 'ops.home.task.bookings' },
+  {
+    href: '/overbooking/cases',
+    labelKey: 'ops.nav.overbooking',
+    descKey: 'ops.home.task.overbooking',
+  },
+] as const;
+
 export default function OperationsHomePage(): ReactElement {
   return (
-    <section style={{ padding: 'var(--space-s6, 24px)' }}>
-      <h1>t('ops.home.title')</h1>
-      <p>t('ops.home.intro')</p>
-      <section style={{ display: 'grid', gap: 'var(--space-s2, 8px)' }}>
-        <h2 style={{ fontSize: 'var(--text-h2, 18px)', margin: 0 }}>{t('api.probe.title')}</h2>
+    <section style={{ ...OPS_PAGE_STYLE, maxWidth: 960 }}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{t('ops.home.title')}</h1>
+        <p style={OPS_INTRO_STYLE}>{t('ops.home.intro')}</p>
+      </header>
+
+      <nav aria-label={t('ops.home.screens')}>
+        <ul className="ph-list-lines">
+          {SHIFT_TASKS.map((task) => (
+            <li key={task.href} style={{ padding: 0 }}>
+              <Link href={task.href} className="ph-task-link">
+                <strong>{t(task.labelKey)}</strong>
+                <span>{t(task.descKey)}</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <section
+        aria-label={t('ops.home.status')}
+        style={{ fontSize: 14, color: 'var(--color-textMuted)' }}
+      >
         <ApiProbe baseUrl={webEnv().NEXT_PUBLIC_API_BASE_URL} />
       </section>
-      <h2>t('ops.home.screens')</h2>
-      <ul>
-        <li>
-          <a href="/day-board">{t('ops.nav.dayBoard')}</a>
-        </li>
-        <li>
-          <a href="/properties">{t('ops.nav.properties')}</a>
-        </li>
-        <li>
-          <a href="/room-types">{t('ops.nav.roomTypes')}</a>
-        </li>
-        <li>
-          <a href="/rooms">{t('ops.nav.rooms')}</a>
-          <a href="/inventory-grid">{t('ops.nav.grid')}</a>
-          <a href="/channel-allotments">{t('ops.nav.allotments')}</a>
-        </li>
-        <li>
-          <a href="/rate-calendar">{t('ops.nav.rateCalendar')}</a>
-          <a href="/multi-channel-quote">{t('ops.nav.multiChannelQuote')}</a>
-          <a href="/promotions">{t('ops.nav.promotions')}</a>
-          <a href="/seasons">{t('ops.nav.seasons')}</a>
-          <a href="/channels">{t('ops.nav.channels')}</a>
-          <a href="/rate-plans">{t('ops.nav.ratePlans')}</a>
-          <a href="/reports/occupancy">{t('ops.nav.reportsOccupancy')}</a>
-          <a href="/reports/revenue-by-channel">{t('ops.nav.reportsRevenue')}</a>
-          <a href="/reports/cancellations">{t('ops.nav.reportsCancellations')}</a>
-          <a href="/reports/overbooking">{t('ops.nav.reportsOverbooking')}</a>
-          <a href="/crm/guests">{t('ops.nav.crmGuests')}</a>
-          <a href="/crm/loyalty">{t('ops.nav.crmLoyalty')}</a>
-          <a href="/noti/notifications">{t('ops.nav.notifications')}</a>
-          <a href="/audit-logs">{t('ops.nav.auditLogs')}</a>
-          <a href="/room-blocks">{t('ops.nav.roomBlocks')}</a>
-          <a href="/system-settings">{t('ops.nav.settings')}</a>
-        </li>
-      </ul>
-      <h2>t('ops.home.states')</h2>
-      <ul>
-        {STATE_SLUGS.map((slug) => (
-          <li key={slug}>
-            <a href={`/states?state=${slug}`}>
-              {t('ops.home.openState')} · {slug}
-            </a>
-          </li>
-        ))}
-      </ul>
-      <p>
-        <a href="/access-denied">{t('access.denied.title')}</a>
-      </p>
-      <p>t('ops.demo.only')</p>
     </section>
   );
 }

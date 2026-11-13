@@ -2,7 +2,7 @@ import { makeTranslate } from '@pinehill/ui-web/messages';
 
 /** Câu chữ riêng của SCR-47 (HB-138); danh mục chung `lib/i18n.ts` không thuộc ticket nên không sửa. */
 export const text = makeTranslate({
-  title: 'Duyệt ngoại lệ chính sách (SCR-47)',
+  title: 'Duyệt ngoại lệ chính sách',
   intro:
     'Ngoại lệ bất khả kháng dùng hồ sơ hoàn tiền F5. Màn hình chỉ hiển thị số tiền, chính sách và quyền do máy chủ trả; duyệt không đồng nghĩa đã chi.',
   loading: 'Đang tải…',
@@ -15,7 +15,7 @@ export const text = makeTranslate({
     'Chỉ MANAGER/OWNER lập, duyệt hoặc từ chối ngoại lệ. Vai hiện tại không được tải hồ sơ ở màn này.',
   reload: 'Tải lại dữ liệu',
   reference: 'Mã tham chiếu: {reference}',
-  back: 'Về bảng quá tải (SCR-43)',
+  back: 'Về bảng quá tải',
   // Bộ lọc
   filterTitle: 'Bộ lọc',
   property: 'Cơ sở',

@@ -33,7 +33,6 @@ import {
   type PlanTerms,
 } from './book-model';
 
-const FIELD_STYLE = { display: 'grid', gap: 4 } as const;
 const EMPTY_GUEST: GuestDraft = { fullName: '', phone: '', note: '' };
 
 function planCodeOf(value: string): RatePlanCode | null {
@@ -43,7 +42,7 @@ function planCodeOf(value: string): RatePlanCode | null {
 
 function TermsPanel({ terms }: { terms: PlanTerms }): ReactElement {
   return (
-    <div data-testid="plan-terms" style={{ display: 'grid', gap: 4 }}>
+    <div data-testid="plan-terms" className="ph-muted-box">
       <h2 style={{ margin: 0, fontSize: 'var(--text-h2, 18px)' }}>{t('guest.book.terms.title')}</h2>
       <p style={{ margin: 0 }}>
         {t('guest.book.terms.deposit', { percent: terms.depositPercent })}
@@ -68,21 +67,25 @@ function DuplicatePanel({
   onKeepEditing: () => void;
 }): ReactElement {
   return (
-    <div role="alert" data-testid="duplicate-prompt" style={{ display: 'grid', gap: 8 }}>
+    <div role="alert" data-testid="duplicate-prompt" className="ph-alert-box">
       <p style={{ margin: 0 }}>{t('guest.book.duplicate', { code: booking.code })}</p>
-      <Link href={duplicateChoices(booking.id).openHref}>{t('guest.book.duplicate.open')}</Link>
-      <button type="button" onClick={onKeepEditing} style={{ minHeight: 44 }}>
-        {t('guest.book.duplicate.keepEditing')}
-      </button>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+        <Link href={duplicateChoices(booking.id).openHref} className="ph-btn-primary">
+          {t('guest.book.duplicate.open')}
+        </Link>
+        <button type="button" className="ph-btn" onClick={onKeepEditing}>
+          {t('guest.book.duplicate.keepEditing')}
+        </button>
+      </div>
     </div>
   );
 }
 
 function ErrorPanel({ onRetry }: { onRetry: () => void }): ReactElement {
   return (
-    <div role="alert" style={{ display: 'grid', gap: 'var(--space-s2, 8px)' }}>
+    <div role="alert" className="ph-alert-box">
       <p style={{ margin: 0 }}>{t('guest.book.error')}</p>
-      <button type="button" onClick={onRetry} style={{ minHeight: 44 }}>
+      <button type="button" className="ph-btn" onClick={onRetry}>
         {t('guest.results.retry')}
       </button>
     </div>
@@ -104,9 +107,10 @@ function GuestForm({
     <form
       data-testid="guest-form"
       onSubmit={onSubmit}
-      style={{ display: 'grid', gap: 'var(--space-s2, 8px)', maxWidth: 480 }}
+      className="ph-card"
+      style={{ display: 'grid', gap: 16 }}
     >
-      <label style={FIELD_STYLE}>
+      <label className="ph-field">
         {t('guest.book.fullName')}
         <input
           name="fullName"
@@ -114,7 +118,7 @@ function GuestForm({
           onChange={(event) => onChange({ ...guest, fullName: event.target.value })}
         />
       </label>
-      <label style={FIELD_STYLE}>
+      <label className="ph-field">
         {t('guest.book.phone')}
         <input
           name="phone"
@@ -122,7 +126,7 @@ function GuestForm({
           onChange={(event) => onChange({ ...guest, phone: event.target.value })}
         />
       </label>
-      <label style={FIELD_STYLE}>
+      <label className="ph-field">
         {t('guest.book.note')}
         <input
           name="note"
@@ -130,10 +134,10 @@ function GuestForm({
           onChange={(event) => onChange({ ...guest, note: event.target.value })}
         />
       </label>
-      <p role="note" style={{ margin: 0 }}>
+      <p role="note" style={{ margin: 0, fontSize: 14, color: 'var(--color-textMuted)' }}>
         {t('guest.book.payNote', { amount: formatMoney(quote.depositAmount) })}
       </p>
-      <button type="submit" style={{ minHeight: 44 }}>
+      <button type="submit" className="ph-btn-accent ph-btn-lg">
         {t('guest.book.submit')}
       </button>
     </form>
@@ -158,7 +162,6 @@ function BookFlow({
   const [guest, setGuest] = useState<GuestDraft>(EMPTY_GUEST);
   const [duplicate, setDuplicate] = useState<BookingSummary | null>(null);
   const [readError, setReadError] = useState<unknown>(null);
-  // Phiên khách dùng cho lệnh ghi (đặt phòng): BFF lấy access token từ session client này.
   const session = useMemo(() => createSessionClient({ kind: 'guest' }), []);
 
   const runQuote = useCallback(
@@ -259,49 +262,54 @@ function BookFlow({
   const selected = plans.find((plan) => plan.code === planCode) ?? null;
 
   return (
-    <section
-      data-testid="book-screen"
-      style={{ display: 'grid', gap: 'var(--space-s3, 12px)', padding: 'var(--space-s4, 16px) 0' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('guest.book.title')}</h1>
-      <p role="note" style={{ margin: 0 }} data-testid="book-step">
-        {t('guest.book.step', { current: JOURNEY_STEPS.length, total: JOURNEY_STEPS.length })}
-      </p>
-      <label style={FIELD_STYLE}>
-        {t('guest.rooms.plan')}
-        <select
-          name="ratePlanCode"
-          value={planCode}
-          disabled={plans.length === 0}
-          onChange={(event) => {
-            const next = planCodeOf(event.target.value);
-            if (next === null) return;
-            setPlanCode(next);
-            void runQuote(next);
-          }}
-        >
-          {plans.map((plan) => (
-            <option key={plan.code} value={plan.code}>
-              {plan.name}
-            </option>
-          ))}
-        </select>
-      </label>
+    <section data-testid="book-screen" className="ph-page-shell">
+      <div className="ph-page-header">
+        <p role="note" data-testid="book-step" className="ph-step">
+          {t('guest.book.step', { current: JOURNEY_STEPS.length, total: JOURNEY_STEPS.length })}
+        </p>
+        <h1 className="ph-page-title">{t('guest.book.title')}</h1>
+      </div>
+      <div className="ph-card" style={{ maxWidth: 480 }}>
+        <label className="ph-field">
+          {t('guest.rooms.plan')}
+          <select
+            name="ratePlanCode"
+            value={planCode}
+            disabled={plans.length === 0}
+            onChange={(event) => {
+              const next = planCodeOf(event.target.value);
+              if (next === null) return;
+              setPlanCode(next);
+              void runQuote(next);
+            }}
+          >
+            {plans.map((plan) => (
+              <option key={plan.code} value={plan.code}>
+                {plan.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <StateSurface state={state}>
         {readError === null ? null : <ErrorPanel onRetry={() => void load()} />}
-        {selected === null ? null : <TermsPanel terms={planTerms(selected)} />}
-        {duplicate === null ? null : (
-          <DuplicatePanel booking={duplicate} onKeepEditing={() => setDuplicate(null)} />
-        )}
-        {quote === null ? null : (
-          <GuestForm
-            quote={quote}
-            guest={guest}
-            onChange={setGuest}
-            onSubmit={(event) => void submit(event)}
-          />
-        )}
-        {quote === null ? null : <QuoteSummary quote={quote} />}
+        <div className="ph-two-col">
+          <div style={{ display: 'grid', gap: 20 }}>
+            {selected === null ? null : <TermsPanel terms={planTerms(selected)} />}
+            {duplicate === null ? null : (
+              <DuplicatePanel booking={duplicate} onKeepEditing={() => setDuplicate(null)} />
+            )}
+            {quote === null ? null : (
+              <GuestForm
+                quote={quote}
+                guest={guest}
+                onChange={setGuest}
+                onSubmit={(event) => void submit(event)}
+              />
+            )}
+          </div>
+          <div>{quote === null ? null : <QuoteSummary quote={quote} />}</div>
+        </div>
       </StateSurface>
     </section>
   );
@@ -310,12 +318,18 @@ function BookFlow({
 function InvalidPanel({ query }: { query: string }): ReactElement {
   const issue = criteriaIssue(new URLSearchParams(query));
   return (
-    <section data-testid="book-screen" style={{ display: 'grid', gap: 'var(--space-s3, 12px)' }}>
-      <h1 style={{ margin: 0 }}>{t('guest.book.title')}</h1>
-      <p role="alert" style={{ margin: 0 }}>
-        {t('guest.results.invalid', { field: issue.field })}
-      </p>
-      <Link href="/">{t('guest.results.backHome')}</Link>
+    <section data-testid="book-screen" className="ph-page-shell">
+      <div className="ph-page-header">
+        <h1 className="ph-page-title">{t('guest.book.title')}</h1>
+      </div>
+      <div className="ph-alert-box">
+        <p role="alert" style={{ margin: 0 }}>
+          {t('guest.results.invalid', { field: issue.field })}
+        </p>
+        <Link href="/" className="ph-btn">
+          {t('guest.results.backHome')}
+        </Link>
+      </div>
     </section>
   );
 }

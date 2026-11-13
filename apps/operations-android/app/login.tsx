@@ -1,11 +1,11 @@
 /** Màn hình đăng nhập nội bộ Operations Android (SCR-56). */
 import { useState, type ReactElement } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import { color, space, touchTargetDp, typography } from '@pinehill/ui-native';
+import { waitMessage } from '@pinehill/ui-native';
 import { isApiError } from '@pinehill/api-client';
 import { Session, PIN_LOCK_SECONDS } from '../src/session';
-import { waitMessage } from '@pinehill/ui-native';
 import { t } from '../src/strings';
+import { theme } from '../src/theme';
 
 export interface LoginScreenProps {
   session: Session;
@@ -42,10 +42,8 @@ export default function LoginScreen({ session, onAuthenticated }: LoginScreenPro
   }
 
   return (
-    <View style={{ padding: space.s4, gap: space.s3 }}>
-      <Text style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}>
-        {t('login.title')}
-      </Text>
+    <View style={theme.screen}>
+      <Text style={theme.title}>{t('login.title')}</Text>
       <TextInput
         testID="username"
         accessibilityLabel={t('login.username')}
@@ -53,12 +51,7 @@ export default function LoginScreen({ session, onAuthenticated }: LoginScreenPro
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
-        style={{
-          minHeight: touchTargetDp,
-          borderWidth: 1,
-          borderColor: color.border,
-          paddingHorizontal: space.s3,
-        }}
+        style={theme.field}
       />
       <TextInput
         testID="password"
@@ -67,15 +60,10 @@ export default function LoginScreen({ session, onAuthenticated }: LoginScreenPro
         value={password}
         onChangeText={setPassword}
         secureTextEntry
-        style={{
-          minHeight: touchTargetDp,
-          borderWidth: 1,
-          borderColor: color.border,
-          paddingHorizontal: space.s3,
-        }}
+        style={theme.field}
       />
       {error === null ? null : (
-        <Text accessibilityLiveRegion="polite" style={{ color: color.danger }}>
+        <Text accessibilityLiveRegion="polite" style={theme.alertDanger}>
           {error}
         </Text>
       )}
@@ -85,17 +73,9 @@ export default function LoginScreen({ session, onAuthenticated }: LoginScreenPro
         accessibilityLabel={t('login.submit')}
         disabled={busy}
         onPress={() => void submit()}
-        style={{
-          minHeight: touchTargetDp,
-          justifyContent: 'center',
-          paddingHorizontal: space.s3,
-          backgroundColor: color.primary,
-          borderRadius: 8,
-        }}
+        style={theme.buttonPrimary}
       >
-        <Text style={{ color: color.surface, fontWeight: '600', textAlign: 'center' }}>
-          {busy ? t('state.loading') : t('login.submit')}
-        </Text>
+        <Text style={theme.buttonPrimaryText}>{busy ? t('state.loading') : t('login.submit')}</Text>
       </Pressable>
     </View>
   );

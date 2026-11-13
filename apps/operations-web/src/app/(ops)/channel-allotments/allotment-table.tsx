@@ -2,6 +2,8 @@
 
 /** Bảng allotment của SCR-25: mỗi dòng là một ngày kèm ô nhập hạn mức, mức đã dùng và cảnh báo. */
 import type { ReactElement } from 'react';
+import { color, space } from '@pinehill/ui-web';
+import { OPS_TABLE_WRAP_STYLE, OPS_TABULAR_STYLE } from '../../../components/editorial-styles';
 import { t, type OperationsMessageKey } from '../../../lib/i18n';
 import { allotmentText } from './messages';
 import { rowIssue, type AllotmentDraftRow, type FieldIssue } from '../../../lib/allotments';
@@ -45,28 +47,22 @@ export function AllotmentTable({
       role="region"
       aria-label={allotmentText('scroll')}
       tabIndex={0}
-      style={{ maxWidth: '100%', overflowX: 'auto' }}
+      style={OPS_TABLE_WRAP_STYLE}
     >
-      <table data-testid="allotments-table" style={{ borderCollapse: 'collapse' }}>
-        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
+      <table data-testid="allotments-table" style={OPS_TABULAR_STYLE}>
+        <caption
+          style={{ textAlign: 'start', padding: space.s3, fontWeight: 500, color: color.text }}
+        >
           {sellingUnits === undefined
             ? t('allotments.captionNoUnits')
             : t('allotments.caption', { units: sellingUnits })}
         </caption>
         <thead>
           <tr>
-            <th scope="col" style={{ textAlign: 'start' }}>
-              {t('allotments.col.date')}
-            </th>
-            <th scope="col" style={{ textAlign: 'start' }}>
-              {t('allotments.col.allotment')}
-            </th>
-            <th scope="col" style={{ textAlign: 'start' }}>
-              {t('allotments.col.used')}
-            </th>
-            <th scope="col" style={{ textAlign: 'start' }}>
-              {t('allotments.col.warnings')}
-            </th>
+            <th scope="col">{t('allotments.col.date')}</th>
+            <th scope="col">{t('allotments.col.allotment')}</th>
+            <th scope="col">{t('allotments.col.used')}</th>
+            <th scope="col">{t('allotments.col.warnings')}</th>
           </tr>
         </thead>
         <tbody>
@@ -78,7 +74,9 @@ export function AllotmentTable({
                 data-testid={`allotment-row-${row.date}`}
                 data-issue={issue?.issue ?? ''}
               >
-                <td>{row.date}</td>
+                <th scope="row" style={{ fontWeight: 500 }}>
+                  {row.date}
+                </th>
                 <td>
                   {editable ? (
                     <input
@@ -86,6 +84,7 @@ export function AllotmentTable({
                       name={`allotment-${row.date}`}
                       aria-label={t('allotments.inputLabel', { date: row.date })}
                       value={row.value}
+                      style={{ ...OPS_TABULAR_STYLE, width: '8rem' }}
                       onChange={(event) => onChange(index, event.target.value)}
                     />
                   ) : (
@@ -93,7 +92,10 @@ export function AllotmentTable({
                   )}
                 </td>
                 <td data-testid={`allotment-used-${row.date}`}>{row.used ?? '—'}</td>
-                <td data-testid={`allotment-issue-${row.date}`}>
+                <td
+                  data-testid={`allotment-issue-${row.date}`}
+                  style={issue === null ? undefined : { color: color.warning, fontWeight: 500 }}
+                >
                   {issue === null ? '' : issueLabel(issue)}
                 </td>
               </tr>

@@ -7,7 +7,7 @@ import { makeTranslate } from '@pinehill/ui-web/messages';
 const messages = {
   title: 'Bàn tiền sảnh',
   intro:
-    'Đến – đi – ở trong ngày. Mọi điều kiện check-in, phụ thu và bậc no-show do máy chủ quyết; màn hình chỉ hiển thị kết quả máy chủ trả.',
+    'Khách đến, đang ở và sắp đi trong ngày nghiệp vụ. Điều kiện check-in, phụ thu và mức no-show do hệ thống tính khi bạn xác nhận.',
   businessDate: 'Ngày nghiệp vụ',
   property: 'Cơ sở',
   reload: 'Tải lại',
@@ -37,8 +37,7 @@ const messages = {
   roomEmpty: 'Chưa tải được phòng ACTIVE của loại phòng này.',
   roomIssue: 'Chọn đúng {count} phòng trước khi gửi.',
   earlyCheckIn: 'Nhận phòng sớm',
-  earlyNote:
-    'Phụ thu nhận sớm (nếu có) do máy chủ tính theo BR-FO-04 và hiện sau khi nhận phòng; màn hình không tự tính.',
+  earlyNote: 'Phụ thu nhận sớm (nếu có) do hệ thống tính và hiện sau khi nhận phòng.',
   idNumber: 'Số giấy tờ tuỳ thân (tuỳ chọn)',
   note: 'Ghi chú (tuỳ chọn)',
   submitCheckIn: 'Xác nhận nhận phòng',
@@ -49,7 +48,7 @@ const messages = {
   earlyCheckout: 'Khách trả phòng sớm',
   lateCheckout: 'Khách trả phòng muộn',
   checkoutNote:
-    'Phụ thu trả muộn/trả sớm do máy chủ tính theo chính sách của gói giá (BR-FO-05, BR-CANCEL-09). Hệ thống chưa có nguồn số tiền trước khi ghi, nên số phụ thu chỉ hiện sau khi máy chủ xác nhận.',
+    'Phụ thu trả muộn/trả sớm do máy chủ tính theo chính sách của gói giá. Hệ thống chưa có nguồn số tiền trước khi ghi, nên số phụ thu chỉ hiện sau khi máy chủ xác nhận.',
   pinRequired: 'Cần xác thực PIN trước khi trả phòng.',
   submitCheckout: 'Xác nhận trả phòng',
   checkoutDone: 'Máy chủ đã xác nhận trả phòng {code} lúc {time}.',
@@ -60,7 +59,7 @@ const messages = {
   noShowTitle: 'Ghi no-show {code}',
   reason: 'Lý do ghi no-show',
   noShowPolicy:
-    'Theo BR-CANCEL-10/BR-FO-02, no-show bị tính theo bậc cuối của chính sách + phụ thu đêm đầu. Hệ thống chưa có nguồn số tiền trước khi ghi; số cụ thể do máy chủ trả sau khi xác nhận.',
+    'No-show bị tính theo bậc cuối của chính sách huỷ cộng phụ thu đêm đầu. Hệ thống chưa có nguồn số tiền trước khi ghi; số cụ thể do máy chủ trả sau khi xác nhận.',
   submitNoShow: 'Xác nhận no-show',
   noShowDone: 'Máy chủ đã ghi no-show {code} lúc {time}.',
   penalty: 'Số tiền máy chủ tính: {amount}',

@@ -1,4 +1,6 @@
 import type { ReactElement } from 'react';
+import { space } from '@pinehill/ui-web';
+import { OPS_COMPACT_BTN_STYLE, opsNoticeStyle } from '../../../components/editorial-styles';
 import type { SettingsController, SettingsState } from './controller';
 import { auditLogHref } from '../../../lib/system-settings';
 import { settingsText as text } from './messages-session';
@@ -11,31 +13,36 @@ function ConflictStatus({
 }): ReactElement | null {
   const row = state.rows.find((r) => r.key === state.draft?.key);
   return (
-    <div role="alert" data-testid="setting-conflict" style={{ display: 'grid', gap: 8 }}>
-      <p>{text('conflict', { version: state.draft?.version ?? '' })}</p>
-      <button
-        type="button"
-        disabled={state.busy}
-        onClick={() => void controller?.load()}
-        style={{ minHeight: 44 }}
-      >
-        {text('compare')}
-      </button>
-      {state.canCompare && row ? (
-        <>
-          <p>{text('current', { value: row.value, version: row.version })}</p>
-          <button
-            type="button"
-            onClick={() => controller?.acceptVersion()}
-            style={{ minHeight: 44 }}
-          >
-            {text('adopt')}
-          </button>
-        </>
-      ) : null}
+    <div role="alert" data-testid="setting-conflict" style={opsNoticeStyle('warning')}>
+      <p style={{ margin: 0 }}>{text('conflict', { version: state.draft?.version ?? '' })}</p>
+      <div style={{ display: 'flex', gap: space.s2, flexWrap: 'wrap', alignItems: 'center' }}>
+        <button
+          type="button"
+          className="ph-btn"
+          disabled={state.busy}
+          onClick={() => void controller?.load()}
+          style={OPS_COMPACT_BTN_STYLE}
+        >
+          {text('compare')}
+        </button>
+        {state.canCompare && row ? (
+          <>
+            <p style={{ margin: 0 }}>
+              {text('current', { value: row.value, version: row.version })}
+            </p>
+            <button
+              type="button"
+              className="ph-btn-primary"
+              onClick={() => controller?.acceptVersion()}
+              style={OPS_COMPACT_BTN_STYLE}
+            >
+              {text('adopt')}
+            </button>
+          </>
+        ) : null}
+      </div>
     </div>
   );
-  return null;
 }
 
 export function SettingStatus({
@@ -52,27 +59,33 @@ export function SettingStatus({
     <div
       role="alert"
       data-testid="setting-unknown"
-      style={{ display: 'grid', gap: 8, overflowWrap: 'anywhere' }}
+      style={{ ...opsNoticeStyle('warning'), overflowWrap: 'anywhere' }}
     >
-      <p>{state.referenceId ? text('unknown', { id: state.referenceId }) : text('missing')}</p>
-      <p>{text('unknownHelp')}</p>
-      <button
-        type="button"
-        disabled={state.busy}
-        onClick={() => void controller?.load()}
-        style={{ minHeight: 44 }}
-      >
-        {text('lookup')}
-      </button>
-      <button
-        type="button"
-        disabled={state.busy || !controller?.canRetry()}
-        onClick={() => void controller?.retry()}
-        style={{ minHeight: 44 }}
-      >
-        {text('replay')}
-      </button>
-      <a href={state.draft ? auditLogHref(state.draft.key) : '/audit-logs'}>{text('audit')}</a>
+      <p style={{ margin: 0 }}>
+        {state.referenceId ? text('unknown', { id: state.referenceId }) : text('missing')}
+      </p>
+      <p style={{ margin: 0 }}>{text('unknownHelp')}</p>
+      <div style={{ display: 'flex', gap: space.s2, flexWrap: 'wrap', alignItems: 'center' }}>
+        <button
+          type="button"
+          className="ph-btn"
+          disabled={state.busy}
+          onClick={() => void controller?.load()}
+          style={OPS_COMPACT_BTN_STYLE}
+        >
+          {text('lookup')}
+        </button>
+        <button
+          type="button"
+          className="ph-btn-primary"
+          disabled={state.busy || !controller?.canRetry()}
+          onClick={() => void controller?.retry()}
+          style={OPS_COMPACT_BTN_STYLE}
+        >
+          {text('replay')}
+        </button>
+        <a href={state.draft ? auditLogHref(state.draft.key) : '/audit-logs'}>{text('audit')}</a>
+      </div>
     </div>
   );
 }

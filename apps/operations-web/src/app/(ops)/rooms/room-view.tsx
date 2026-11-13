@@ -1,8 +1,16 @@
 import type { FormEvent, ReactElement } from 'react';
 import type { RoomSummary, RoomTypeSummary } from '@pinehill/contracts';
-import { formatStatusWithEnum } from '@pinehill/ui-web';
+import { color, formatStatusWithEnum, space } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_SUBTITLE_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+} from '../../../components/editorial-styles';
 import { t } from '../../../lib/i18n';
 import { connectingCode, isSymmetrical, sortByFloorThenCode } from '../../../lib/room-pairing';
+
 const ROOM_STATUS_LABEL: Readonly<
   Record<
     RoomSummary['status'],
@@ -38,19 +46,17 @@ export function RoomTable({
     t('rooms.col.actions'),
   ];
   return (
-    <div role="region" aria-label={t('rooms.title')} tabIndex={0} style={{ overflowX: 'auto' }}>
-      <table data-testid="rooms-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
+    <div role="region" aria-label={t('rooms.title')} tabIndex={0} style={OPS_TABLE_WRAP_STYLE}>
+      <table data-testid="rooms-table" style={OPS_TABULAR_STYLE}>
+        <caption
+          style={{ textAlign: 'start', padding: space.s3, fontWeight: 500, color: color.text }}
+        >
           {t('rooms.title')}
         </caption>
         <thead>
           <tr>
             {headers.map((label) => (
-              <th
-                key={label}
-                scope="col"
-                style={{ textAlign: 'start', borderBottom: '1px solid var(--color-border)' }}
-              >
+              <th key={label} scope="col">
                 {label}
               </th>
             ))}
@@ -61,14 +67,17 @@ export function RoomTable({
             const connected = connectingCode(rooms, room.id);
             return (
               <tr key={room.id} data-testid={`room-${room.code}`}>
-                <td>{room.code}</td>
+                <td style={{ fontWeight: 500 }}>{room.code}</td>
                 <td>{room.floor}</td>
                 <td>{typeCode(room.roomTypeId)}</td>
                 <td>{formatStatusWithEnum(t(ROOM_STATUS_LABEL[room.status]), room.status)}</td>
                 <td data-testid={`room-connecting-${room.code}`}>
                   {connected ?? '—'}
                   {isSymmetrical(rooms, room.id) ? null : (
-                    <span data-testid={`room-asymmetric-${room.code}`}>
+                    <span
+                      data-testid={`room-asymmetric-${room.code}`}
+                      style={{ color: color.warning, fontWeight: 500 }}
+                    >
                       {' '}
                       {t('rooms.asymmetric')}
                     </span>
@@ -76,12 +85,12 @@ export function RoomTable({
                 </td>
                 <td>
                   {canEdit ? (
-                    <>
-                      {' '}
+                    <div style={{ display: 'flex', gap: space.s2, flexWrap: 'wrap' }}>
                       <button
                         type="button"
                         onClick={() => onAssign(room)}
-                        style={{ minHeight: 44 }}
+                        className="ph-btn"
+                        style={OPS_COMPACT_BTN_STYLE}
                       >
                         {t('rooms.assign')}
                       </button>
@@ -89,12 +98,13 @@ export function RoomTable({
                         <button
                           type="button"
                           onClick={() => onUnassign(room)}
-                          style={{ minHeight: 44 }}
+                          className="ph-btn"
+                          style={OPS_COMPACT_BTN_STYLE}
                         >
                           {t('rooms.unassign')}
                         </button>
                       )}
-                    </>
+                    </div>
                   ) : null}
                 </td>
               </tr>
@@ -127,14 +137,17 @@ export function AssignForm({
     <form
       data-testid="assign-form"
       onSubmit={onSubmit}
-      style={{ display: 'grid', gap: 'var(--space-s2, 8px)', maxWidth: 420 }}
+      className="ph-card"
+      style={{ display: 'grid', gap: space.s4, maxWidth: 480, minWidth: 0 }}
     >
       <fieldset
         disabled={disabled}
-        style={{ display: 'grid', gap: 'var(--space-s2, 8px)', border: 0, padding: 0 }}
+        style={{ display: 'grid', gap: space.s3, border: 0, padding: 0, margin: 0 }}
       >
-        <legend>{t('rooms.form.legend', { code: room.code, version: room.version })}</legend>
-        <label style={{ display: 'grid', gap: 4 }}>
+        <legend style={{ ...OPS_SUBTITLE_STYLE, marginBottom: space.s1 }}>
+          {t('rooms.form.legend', { code: room.code, version: room.version })}
+        </legend>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('rooms.form.target')}
           <select value={targetId} onChange={(event) => onChange(event.target.value)}>
             <option value="">—</option>
@@ -146,12 +159,23 @@ export function AssignForm({
           </select>
         </label>
       </fieldset>
-      <p style={{ margin: 0 }}>{t('rooms.symmetricNote')}</p>
-      <div style={{ display: 'flex', gap: 'var(--space-s2, 8px)' }}>
-        <button disabled={disabled} type="submit" style={{ minHeight: 44 }}>
+      <p style={{ margin: 0, fontSize: 13, color: color.textMuted }}>{t('rooms.symmetricNote')}</p>
+      <div style={{ display: 'flex', gap: space.s2, flexWrap: 'wrap' }}>
+        <button
+          disabled={disabled}
+          type="submit"
+          className="ph-btn-primary"
+          style={OPS_COMPACT_BTN_STYLE}
+        >
           {t('rooms.form.save')}
         </button>
-        <button disabled={disabled} type="button" onClick={onCancel} style={{ minHeight: 44 }}>
+        <button
+          disabled={disabled}
+          type="button"
+          onClick={onCancel}
+          className="ph-btn"
+          style={OPS_COMPACT_BTN_STYLE}
+        >
           {t('rooms.form.cancel')}
         </button>
       </div>

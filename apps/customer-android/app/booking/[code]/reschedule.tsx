@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
-import { color, radius, space, touchTargetDp, typography } from '@pinehill/ui-native';
+import { color, space, touchTargetDp } from '@pinehill/ui-native';
 import { createBookingApi } from '@pinehill/api-client';
 import type { BookingSummary, Quote } from '@pinehill/contracts';
 import { createSession } from '../../../src/session-factory';
@@ -21,6 +21,7 @@ import { t } from '../../../src/strings';
 import { bookingOf, loadOrderDetail, stayOf, type OrderDetailOutcome } from '../../../src/orders';
 import { OrderNotices } from '../../../src/order-view';
 import { bookingActionsFrom } from '../../../src/booking-actions-api';
+import { theme } from '../../../src/theme';
 import {
   STAY_ISSUE_KEYS,
   actionStates,
@@ -35,24 +36,8 @@ import {
 } from '../../../src/reschedule';
 import { DiffPanel, ResultPanel } from '../../../src/reschedule-panels';
 
-const BUTTON = {
-  alignItems: 'center',
-  borderColor: color.border,
-  borderRadius: radius.sm,
-  borderWidth: 1,
-  justifyContent: 'center',
-  minHeight: touchTargetDp,
-  paddingHorizontal: space.s3,
-} as const;
-
-const FIELD = {
-  borderColor: color.border,
-  borderRadius: radius.sm,
-  borderWidth: 1,
-  color: color.text,
-  minHeight: touchTargetDp,
-  paddingHorizontal: space.s3,
-} as const;
+const BUTTON = theme.buttonSecondary;
+const FIELD = theme.field;
 
 function Messages({ online, alert }: { online: boolean; alert: string | null }): ReactElement {
   return (
@@ -329,25 +314,33 @@ export default function RescheduleBookingScreen(): ReactElement {
   }, [actions, net, booking, checkIn, checkOut, note, quote]);
 
   if (!ready || busy)
-    return <ActivityIndicator accessibilityLabel={t('state.loading')} color={color.primary} />;
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: color.bg,
+        }}
+      >
+        <ActivityIndicator accessibilityLabel={t('state.loading')} color={color.primary} />
+      </View>
+    );
 
   const states = actionStates({ step, online, issue, same, quote, nowMs: Date.now() });
   return (
-    <ScrollView contentContainerStyle={{ gap: space.s3, padding: space.s4 }}>
-      <Text
-        accessibilityRole="header"
-        style={{ color: color.text, fontSize: typography.h1.sp, fontWeight: '700' }}
-      >
+    <ScrollView style={theme.scroll} contentContainerStyle={theme.scrollContent}>
+      <Text accessibilityRole="header" style={theme.title}>
         {t('booking.reschedule.title')}
       </Text>
       <OrderNotices outcome={outcome} />
       <Messages online={online} alert={alert} />
       {booking === null ? null : (
-        <View style={{ gap: space.s1 }}>
-          <Text style={{ color: color.text }} data-testid="reschedule-booking">
+        <View style={theme.card}>
+          <Text style={theme.body} data-testid="reschedule-booking">
             {t('orders.detail.code', { code: booking.code })}
           </Text>
-          <Text style={{ color: color.text }}>{stayOf(booking)}</Text>
+          <Text style={theme.muted}>{stayOf(booking)}</Text>
         </View>
       )}
       {booking === null || result !== null ? null : (

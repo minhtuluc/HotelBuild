@@ -2,7 +2,7 @@ import { makeTranslate } from '@pinehill/ui-web/messages';
 
 /** Câu chữ riêng của SCR-41 (HB-133); danh mục chung `lib/i18n.ts` không thuộc ticket nên không sửa. */
 export const text = makeTranslate({
-  title: 'Giám sát đồng bộ kênh và outbox (SCR-41)',
+  title: 'Giám sát đồng bộ kênh và outbox',
   intro:
     'Màn hình chỉ hiển thị trạng thái do máy chủ trả và gửi lệnh đã công bố; không đếm lỗi, không tự đặt trạng thái kênh.',
   channel: 'Kênh',

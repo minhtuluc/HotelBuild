@@ -6,13 +6,13 @@
  */
 import type { ReactElement } from 'react';
 import { Text, View } from 'react-native';
-import { color, space } from '@pinehill/ui-native';
 import type { BookingSummary, Quote } from '@pinehill/contracts';
 import { t } from './strings';
 import { formatVnd } from './search';
 import { calendarDateLabel } from './calendar-date';
 import { ORDER_STATUS_KEYS, stayOf } from './orders';
 import { nightsBetween, stayDifference } from './reschedule';
+import { theme } from './theme';
 
 const DIFF_KEYS = {
   more: 'booking.reschedule.diff.more',
@@ -38,27 +38,27 @@ export function DiffPanel({
   const nights = nightsBetween(checkIn, checkOut) ?? 0;
   const difference = stayDifference(quote.total, currentTotal);
   return (
-    <View style={{ gap: space.s1 }} data-testid="reschedule-diff">
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+    <View style={theme.card} data-testid="reschedule-diff">
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {t('booking.reschedule.diffTitle')}
       </Text>
-      <Text style={{ color: color.text }} data-testid="reschedule-new-stay">
+      <Text style={theme.body} data-testid="reschedule-new-stay">
         {t('booking.reschedule.newStay', {
           checkIn: calendarDateLabel(checkIn),
           checkOut: calendarDateLabel(checkOut),
           nights,
         })}
       </Text>
-      <Text style={{ color: color.text }} data-testid="reschedule-new-total">
+      <Text style={[theme.body, theme.tabular]} data-testid="reschedule-new-total">
         {t('booking.reschedule.newTotal', { amount: money(quote.total) })}
       </Text>
-      <Text style={{ color: color.textMuted }}>
+      <Text style={[theme.muted, theme.tabular]}>
         {t('booking.reschedule.currentTotal', { amount: money(currentTotal) })}
       </Text>
-      <Text style={{ color: color.text }} data-testid="reschedule-difference">
+      <Text style={[theme.body, theme.tabular]} data-testid="reschedule-difference">
         {t(DIFF_KEYS[difference.kind], { amount: money(difference.amount) })}
       </Text>
-      <Text style={{ color: color.textMuted }} data-testid="reschedule-fee">
+      <Text style={theme.muted} data-testid="reschedule-fee">
         {t('booking.reschedule.feeUnknown')}
       </Text>
     </View>
@@ -67,18 +67,18 @@ export function DiffPanel({
 
 export function ResultPanel({ booking }: { booking: BookingSummary }): ReactElement {
   return (
-    <View style={{ gap: space.s1 }} data-testid="reschedule-result">
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+    <View style={theme.card} data-testid="reschedule-result">
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {t('booking.reschedule.resultTitle')}
       </Text>
-      <Text style={{ color: color.text }} data-testid="reschedule-result-status">
+      <Text style={theme.body} data-testid="reschedule-result-status">
         {t('booking.reschedule.resultStatus', { status: t(ORDER_STATUS_KEYS[booking.status]) })}
       </Text>
-      <Text style={{ color: color.text }}>{stayOf(booking)}</Text>
-      <Text style={{ color: color.text }}>
+      <Text style={theme.body}>{stayOf(booking)}</Text>
+      <Text style={[theme.body, theme.tabular]}>
         {t('booking.reschedule.resultTotal', { amount: money(booking.totalAmount) })}
       </Text>
-      <Text style={{ color: color.text }} data-testid="reschedule-result-count">
+      <Text style={[theme.body, theme.tabular]} data-testid="reschedule-result-count">
         {t('booking.reschedule.resultCount', { count: booking.rescheduleCount })}
       </Text>
     </View>

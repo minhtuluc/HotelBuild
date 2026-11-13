@@ -1,10 +1,18 @@
 'use client';
 import type { ReactElement } from 'react';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../components/editorial-styles';
 import { text } from './messages';
 import { canSync, type FieldIssue } from './model';
 import { OutboxSection } from './outbox';
 import { StatusPanel, SyncForm } from './panels';
-import { SelectInput, box } from './parts';
+import { SelectInput } from './parts';
 import { CommandStatus, OperationPanel, ReadBanner } from './status';
 import type { ControllerState, SyncController } from './controller';
 import { useSync } from './use-sync';
@@ -31,9 +39,10 @@ function Workspace({
     <>
       <button
         type="button"
+        className="ph-btn"
         disabled={busy}
         onClick={() => void controller.load()}
-        style={{ minHeight: 44, justifySelf: 'start' }}
+        style={{ ...OPS_COMPACT_BTN_STYLE, justifySelf: 'start' }}
       >
         {text('reload')}
       </button>
@@ -88,11 +97,15 @@ export function ChannelSyncScreen(): ReactElement {
   const denied = state.phase === 'forbidden' || state.phase === 'expired';
   const empty = state.phase === 'ready' && state.channels.length === 0;
   return (
-    <section style={{ padding: 'var(--space-s6, 24px)', ...box, gap: 'var(--space-s4, 16px)' }}>
-      <h1 style={{ margin: 0 }}>{text('title')}</h1>
-      <p>{text('intro')}</p>
+    <section style={OPS_PAGE_STYLE}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{text('title')}</h1>
+        <p style={OPS_INTRO_STYLE}>{text('intro')}</p>
+      </header>
       {denied ? (
-        <p role="alert">{text(state.phase === 'expired' ? 'expired' : 'forbidden')}</p>
+        <p role="alert" style={opsNoticeStyle('danger')}>
+          {text(state.phase === 'expired' ? 'expired' : 'forbidden')}
+        </p>
       ) : null}
       <ReadBanner state={state} />
       {empty ? <p>{text('empty')}</p> : null}

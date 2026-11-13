@@ -1,12 +1,20 @@
 import type { FormEvent, ReactElement } from 'react';
 import type { RoomBlock, RoomSummary } from '@pinehill/contracts';
-import { formatStatusWithEnum } from '@pinehill/ui-web';
+import { color, formatStatusWithEnum, space } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_FILTER_ROW_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+} from '../../../components/editorial-styles';
 import { t } from '../../../lib/i18n';
 import {
   ROOM_BLOCK_REASONS,
   isRoomBlockReason,
   type RoomBlockDraft,
 } from '../../../lib/room-blocks';
+
 const REASON_LABEL: Readonly<
   Record<
     RoomBlock['reason'],
@@ -43,24 +51,17 @@ export function BlockTable({
     t('roomBlocks.col.actions'),
   ];
   return (
-    <div
-      role="region"
-      aria-label={t('roomBlocks.title')}
-      tabIndex={0}
-      style={{ overflowX: 'auto' }}
-    >
-      <table data-testid="room-blocks-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
+    <div role="region" aria-label={t('roomBlocks.title')} tabIndex={0} style={OPS_TABLE_WRAP_STYLE}>
+      <table data-testid="room-blocks-table" style={OPS_TABULAR_STYLE}>
+        <caption
+          style={{ textAlign: 'start', padding: space.s3, fontWeight: 500, color: color.text }}
+        >
           {t('roomBlocks.title')}
         </caption>
         <thead>
           <tr>
             {headers.map((label) => (
-              <th
-                key={label}
-                scope="col"
-                style={{ textAlign: 'start', borderBottom: '1px solid var(--color-border)' }}
-              >
+              <th key={label} scope="col">
                 {label}
               </th>
             ))}
@@ -69,7 +70,7 @@ export function BlockTable({
         <tbody>
           {blocks.map((block) => (
             <tr key={block.id} data-testid={`block-${roomCode(block.roomId)}-${block.startDate}`}>
-              <td>{roomCode(block.roomId)}</td>
+              <td style={{ fontWeight: 500 }}>{roomCode(block.roomId)}</td>
               <td>
                 {block.startDate} → {block.endDate}
               </td>
@@ -77,7 +78,12 @@ export function BlockTable({
               <td>{block.note ?? ''}</td>
               <td>
                 {canRemove ? (
-                  <button type="button" onClick={() => onRemove(block)} style={{ minHeight: 44 }}>
+                  <button
+                    type="button"
+                    onClick={() => onRemove(block)}
+                    className="ph-btn"
+                    style={OPS_COMPACT_BTN_STYLE}
+                  >
                     {t('roomBlocks.remove')}
                   </button>
                 ) : null}
@@ -107,14 +113,10 @@ export function BlockForm({
     <form
       data-testid="room-block-form"
       onSubmit={onSubmit}
-      style={{
-        display: 'flex',
-        gap: 'var(--space-s2, 8px)',
-        flexWrap: 'wrap',
-        alignItems: 'end',
-      }}
+      className="ph-card ph-filter-row"
+      style={OPS_FILTER_ROW_STYLE}
     >
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('roomBlocks.form.room')}
         <select
           disabled={disabled}
@@ -129,7 +131,7 @@ export function BlockForm({
           ))}
         </select>
       </label>
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('roomBlocks.form.from')}
         <input
           disabled={disabled}
@@ -138,7 +140,7 @@ export function BlockForm({
           onChange={(event) => onChange({ ...draft, startDate: event.target.value })}
         />
       </label>
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('roomBlocks.form.to')}
         <input
           disabled={disabled}
@@ -147,7 +149,7 @@ export function BlockForm({
           onChange={(event) => onChange({ ...draft, endDate: event.target.value })}
         />
       </label>
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('roomBlocks.form.reason')}
         <select
           disabled={disabled}
@@ -164,7 +166,7 @@ export function BlockForm({
           ))}
         </select>
       </label>
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('roomBlocks.form.note')}
         <input
           disabled={disabled}
@@ -173,7 +175,12 @@ export function BlockForm({
           onChange={(event) => onChange({ ...draft, note: event.target.value })}
         />
       </label>
-      <button type="submit" disabled={disabled} style={{ minHeight: 44 }}>
+      <button
+        type="submit"
+        disabled={disabled}
+        className="ph-btn-primary"
+        style={OPS_COMPACT_BTN_STYLE}
+      >
         {t('roomBlocks.create')}
       </button>
     </form>

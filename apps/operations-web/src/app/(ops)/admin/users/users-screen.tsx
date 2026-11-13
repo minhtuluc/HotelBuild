@@ -1,13 +1,15 @@
 'use client';
 import { useState, type ReactElement } from 'react';
+import { StateSurface, formatDateTimeVn, space, type ScreenState } from '@pinehill/ui-web';
 import {
-  StateSurface,
-  color,
-  formatDateTimeVn,
-  space,
-  typography,
-  type ScreenState,
-} from '@pinehill/ui-web';
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FILTER_ROW_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../../components/editorial-styles';
 import { useForcedState } from '../../../../components/forced-state';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { t } from '../../../../lib/i18n';
@@ -48,7 +50,8 @@ function Filters({
     <form
       aria-label={userText('list')}
       data-testid="users-filters"
-      style={{ display: 'flex', flexWrap: 'wrap', gap: space.s3, alignItems: 'end' }}
+      className="ph-card ph-filter-row"
+      style={OPS_FILTER_ROW_STYLE}
       onSubmit={(event) => {
         event.preventDefault();
         void controller.reload(draft);
@@ -104,7 +107,13 @@ function Filters({
           }}
         />
       </label>
-      <button type="submit" data-testid="users-apply" style={CONTROL} disabled={state.refreshing}>
+      <button
+        type="submit"
+        data-testid="users-apply"
+        className="ph-btn-primary"
+        style={OPS_COMPACT_BTN_STYLE}
+        disabled={state.refreshing}
+      >
         {userText('apply')}
       </button>
     </form>
@@ -166,7 +175,7 @@ function Notices({
   return (
     <>
       {state.notice === null ? null : (
-        <p role="status" data-testid="users-notice" style={{ margin: 0, color: color.text }}>
+        <p role="status" data-testid="users-notice" style={opsNoticeStyle('success')}>
           {userText(state.notice)}
         </p>
       )}
@@ -203,7 +212,8 @@ function Toolbar({
         <button
           type="button"
           data-testid="users-create-open"
-          style={CONTROL}
+          className="ph-btn-primary"
+          style={OPS_COMPACT_BTN_STYLE}
           onClick={() => {
             controller.openPanel({ kind: 'create' });
           }}
@@ -214,7 +224,8 @@ function Toolbar({
       <button
         type="button"
         data-testid="users-reload"
-        style={CONTROL}
+        className="ph-btn"
+        style={OPS_COMPACT_BTN_STYLE}
         disabled={state.refreshing || state.phase === 'loading'}
         onClick={() => {
           void controller.reload();
@@ -264,9 +275,9 @@ function Loaded({
       </StateSurface>
       {state.nextCursor === null ? null : (
         <button
+          className="ph-btn"
           type="button"
           data-testid="users-more"
-          style={CONTROL}
           disabled={state.refreshing}
           onClick={() => {
             void controller.loadMore();
@@ -310,18 +321,11 @@ export function UsersScreen({ baseUrl }: { baseUrl: string }): ReactElement {
   const forced = useForcedState();
   const { controller, state } = useUsers(baseUrl, forced === undefined);
   return (
-    <section
-      data-testid="users-screen"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr)',
-        gap: space.s4,
-        padding: `${space.s4} 0`,
-        maxWidth: 1280,
-      }}
-    >
-      <h1 style={{ margin: 0, fontSize: typography.h1.web }}>{userText('title')}</h1>
-      <p style={{ margin: 0, color: color.textMuted }}>{userText('intro')}</p>
+    <section data-testid="users-screen" style={OPS_PAGE_STYLE}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{userText('title')}</h1>
+        <p style={OPS_INTRO_STYLE}>{userText('intro')}</p>
+      </header>
       {forced === undefined ? (
         <Body state={state} controller={controller} />
       ) : (

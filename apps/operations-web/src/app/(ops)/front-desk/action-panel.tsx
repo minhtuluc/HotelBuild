@@ -1,9 +1,9 @@
 'use client';
 import type { ReactElement } from 'react';
-import { color, radius, space, typography } from '@pinehill/ui-web';
+import { color, fontFamily, space, typography } from '@pinehill/ui-web';
 import type { RoomSummary } from '@pinehill/contracts';
 import type { DeskApi } from './front-desk-api';
-import { CONTROL, type DeskPanel } from './desk-tables';
+import { type DeskPanel } from './desk-tables';
 import { CheckInPanel } from './check-in-panel';
 import { CheckOutPanel, NoShowPanel } from './stay-panels';
 import { deskText } from './messages';
@@ -35,17 +35,35 @@ export function ActionPanel({
     <section
       aria-labelledby="desk-action-title"
       data-testid="desk-action"
+      className="ph-card"
       style={{
         border: `1px solid ${color.borderStrong}`,
-        borderRadius: radius.md,
-        padding: space.s4,
+        boxShadow: `inset 0 0 0 1px ${color.primary}`,
         display: 'grid',
-        gap: space.s3,
+        gap: space.s4,
       }}
     >
-      <h2 id="desk-action-title" style={{ margin: 0, fontSize: typography.h2.web }}>
-        {title}
-      </h2>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: space.s2,
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: `1px solid ${color.border}`,
+          paddingBottom: space.s3,
+        }}
+      >
+        <h2
+          id="desk-action-title"
+          style={{ margin: 0, fontFamily: fontFamily.sans, fontSize: typography.h2.web }}
+        >
+          {title}
+        </h2>
+        <button type="button" className="ph-btn" onClick={onClose}>
+          {deskText('panelClose')}
+        </button>
+      </div>
       {panel.kind === 'checkIn' ? (
         <CheckInPanel
           booking={panel.booking}
@@ -65,9 +83,6 @@ export function ActionPanel({
       ) : (
         <NoShowPanel booking={panel.booking} api={api} onDone={onDone} onInspect={onInspect} />
       )}
-      <button type="button" style={CONTROL} onClick={onClose}>
-        {deskText('panelClose')}
-      </button>
     </section>
   );
 }

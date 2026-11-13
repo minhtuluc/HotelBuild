@@ -31,14 +31,17 @@ import {
   type OverrideDraft,
 } from '../../../lib/channels';
 import { readFailureState, writeFailureState } from '../../../lib/screen-state';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_FILTER_ROW_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../components/editorial-styles';
 import { ChannelTable, OverrideTable } from './channel-tables';
-
-const ROW_STYLE = {
-  display: 'flex',
-  gap: 'var(--space-s2, 8px)',
-  flexWrap: 'wrap',
-  alignItems: 'end',
-} as const;
 
 export function ChannelsScreen(): ReactElement {
   const forced = useForcedState();
@@ -126,11 +129,11 @@ export function ChannelsScreen(): ReactElement {
   }
 
   return (
-    <section
-      style={{ padding: 'var(--space-s6, 24px)', display: 'grid', gap: 'var(--space-s4, 16px)' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('channels.title')}</h1>
-      <p style={{ margin: 0 }}>{t('channels.intro')}</p>
+    <section style={OPS_PAGE_STYLE}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{t('channels.title')}</h1>
+        <p style={OPS_INTRO_STYLE}>{t('channels.intro')}</p>
+      </header>
       <StateSurface state={state}>
         {readError === null ? null : (
           <ScreenAlert error={readError} onRetry={() => void load(selected?.id ?? null)} />
@@ -147,7 +150,7 @@ export function ChannelsScreen(): ReactElement {
           />
         )}
         {saved ? (
-          <p role="status" data-testid="channels-note" style={{ margin: 0 }}>
+          <p role="status" data-testid="channels-note" style={opsNoticeStyle('success')}>
             {t('channels.saved')}
           </p>
         ) : null}
@@ -155,6 +158,7 @@ export function ChannelsScreen(): ReactElement {
           <>
             <form
               data-testid="channel-editor"
+              className="ph-card ph-filter-row"
               onSubmit={(event: FormEvent<HTMLFormElement>) => {
                 event.preventDefault();
                 const issues = validateDraft(draft);
@@ -164,33 +168,33 @@ export function ChannelsScreen(): ReactElement {
                 }
                 void patch(changedFields(draft, selected));
               }}
-              style={ROW_STYLE}
+              style={OPS_FILTER_ROW_STYLE}
             >
-              <legend>
+              <legend style={{ fontWeight: 600 }}>
                 {t('channels.form.legend', { code: selected.code, version: selected.version })}
               </legend>
-              <label style={{ display: 'grid', gap: 4 }}>
+              <label style={OPS_FIELD_LABEL_STYLE}>
                 {t('channels.form.multiplier')}
                 <input
                   value={draft.multiplier}
                   onChange={(event) => setDraft({ ...draft, multiplier: event.target.value })}
                 />
               </label>
-              <label style={{ display: 'grid', gap: 4 }}>
+              <label style={OPS_FIELD_LABEL_STYLE}>
                 {t('channels.form.commission')}
                 <input
                   value={draft.commissionPct}
                   onChange={(event) => setDraft({ ...draft, commissionPct: event.target.value })}
                 />
               </label>
-              <label style={{ display: 'grid', gap: 4 }}>
+              <label style={OPS_FIELD_LABEL_STYLE}>
                 {t('channels.form.hold')}
                 <input
                   value={draft.holdMinutes}
                   onChange={(event) => setDraft({ ...draft, holdMinutes: event.target.value })}
                 />
               </label>
-              <label style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <label style={{ display: 'flex', gap: 6, alignItems: 'center', minHeight: 44 }}>
                 <input
                   type="checkbox"
                   checked={draft.overbookAllowed}
@@ -200,19 +204,20 @@ export function ChannelsScreen(): ReactElement {
                 />
                 {t('channels.form.overbook')}
               </label>
-              <label style={{ display: 'grid', gap: 4 }}>
+              <label style={OPS_FIELD_LABEL_STYLE}>
                 {t('channels.form.reason')}
                 <input
                   value={draft.reason}
                   onChange={(event) => setDraft({ ...draft, reason: event.target.value })}
                 />
               </label>
-              <button type="submit" style={{ minHeight: 44 }}>
+              <button type="submit" className="ph-btn-primary" style={OPS_COMPACT_BTN_STYLE}>
                 {t('channels.form.save')}
               </button>
             </form>
             <form
               data-testid="channel-override"
+              className="ph-card ph-filter-row"
               onSubmit={(event: FormEvent<HTMLFormElement>) => {
                 event.preventDefault();
                 const issues = validateOverride(override);
@@ -224,9 +229,9 @@ export function ChannelsScreen(): ReactElement {
                   draft.reason.trim() === '' ? t('channels.override.reason') : draft.reason;
                 void patch(overrideUpdateRequest(override, reason));
               }}
-              style={ROW_STYLE}
+              style={OPS_FILTER_ROW_STYLE}
             >
-              <label style={{ display: 'grid', gap: 4 }}>
+              <label style={OPS_FIELD_LABEL_STYLE}>
                 {t('channels.override.property')}
                 <select
                   value={override.propertyId}
@@ -240,14 +245,14 @@ export function ChannelsScreen(): ReactElement {
                   ))}
                 </select>
               </label>
-              <label style={{ display: 'grid', gap: 4 }}>
+              <label style={OPS_FIELD_LABEL_STYLE}>
                 {t('channels.override.multiplier')}
                 <input
                   value={override.multiplier}
                   onChange={(event) => setOverride({ ...override, multiplier: event.target.value })}
                 />
               </label>
-              <label style={{ display: 'grid', gap: 4 }}>
+              <label style={OPS_FIELD_LABEL_STYLE}>
                 {t('channels.override.commission')}
                 <input
                   value={override.commissionPct}
@@ -256,7 +261,7 @@ export function ChannelsScreen(): ReactElement {
                   }
                 />
               </label>
-              <label style={{ display: 'grid', gap: 4 }}>
+              <label style={OPS_FIELD_LABEL_STYLE}>
                 {t('channels.override.effectiveFrom')}
                 <input
                   type="date"
@@ -266,7 +271,7 @@ export function ChannelsScreen(): ReactElement {
                   }
                 />
               </label>
-              <button type="submit" style={{ minHeight: 44 }}>
+              <button type="submit" className="ph-btn-primary" style={OPS_COMPACT_BTN_STYLE}>
                 {t('channels.override.add')}
               </button>
             </form>

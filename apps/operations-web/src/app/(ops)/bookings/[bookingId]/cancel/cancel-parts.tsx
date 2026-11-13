@@ -2,8 +2,16 @@
 
 /** Phần trình bày SCR-36 (HB-108): biểu mẫu lý do, bảng xem trước hoàn tiền, thang bậc, kết quả huỷ. */
 import type { ReactElement } from 'react';
-import { formatDateTimeVn, formatMoney } from '@pinehill/ui-web';
+import { formatDateTimeVn, formatMoney, space } from '@pinehill/ui-web';
 import type { CancelPreview, CancelResponse, CancellationPolicy } from '@pinehill/contracts';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_SUBTITLE_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+  opsNoticeStyle,
+} from '../../../../../components/editorial-styles';
 import { t } from '../../../../../lib/i18n';
 import {
   CANCEL_REASONS,
@@ -13,8 +21,6 @@ import {
   refundRows,
   type CancelDraft,
 } from './cancel-model';
-
-const CELL = { padding: '4px 12px 4px 0', textAlign: 'left' } as const;
 
 const REFUND_KEYS = {
   paid: 'ops.cancel.refund.paid',
@@ -39,8 +45,8 @@ export function CancelForm({
   canConfirm: boolean;
 }): ReactElement {
   return (
-    <div style={{ display: 'grid', gap: 8 }}>
-      <label style={{ display: 'grid', gap: 4 }}>
+    <div className="ph-card" style={{ display: 'grid', gap: space.s3, padding: space.s4 }}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('ops.cancel.reason')}
         <select
           name="reason"
@@ -58,7 +64,7 @@ export function CancelForm({
           ))}
         </select>
       </label>
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('ops.cancel.note')}
         <textarea
           name="note"
@@ -70,7 +76,7 @@ export function CancelForm({
           }}
         />
       </label>
-      <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 44 }}>
         <input
           name="forceMajeure"
           type="checkbox"
@@ -82,7 +88,7 @@ export function CancelForm({
         />
         {t('ops.cancel.forceMajeure')}
       </label>
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('ops.cancel.evidence')}
         <textarea
           name="evidence"
@@ -93,12 +99,21 @@ export function CancelForm({
           }}
         />
       </label>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button type="button" data-testid="cancel-preview" disabled={busy} onClick={onPreview}>
+      <div style={{ display: 'flex', gap: space.s2, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          className="ph-btn"
+          style={OPS_COMPACT_BTN_STYLE}
+          data-testid="cancel-preview"
+          disabled={busy}
+          onClick={onPreview}
+        >
           {t('ops.cancel.preview.run')}
         </button>
         <button
           type="button"
+          className="ph-btn-primary"
+          style={OPS_COMPACT_BTN_STYLE}
           data-testid="cancel-confirm"
           disabled={busy || !canConfirm}
           onClick={onConfirm}
@@ -112,35 +127,31 @@ export function CancelForm({
 
 function Ladder({ policy, hours }: { policy: CancellationPolicy; hours: number }): ReactElement {
   return (
-    <table data-testid="cancel-ladder">
-      <caption style={{ textAlign: 'left', paddingBottom: 4 }}>
-        {t('ops.cancel.ladder', { name: policy.name })}
-      </caption>
-      <thead>
-        <tr>
-          <th scope="col" style={CELL}>
-            {t('ops.cancel.ladder.hours')}
-          </th>
-          <th scope="col" style={CELL}>
-            {t('ops.cancel.ladder.percent')}
-          </th>
-          <th scope="col" style={CELL}>
-            {t('ops.cancel.ladder.label')}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {ladderRows(policy, hours).map((row) => (
-          <tr key={`${row.hours}-${row.percent}`} aria-current={row.applied ? 'true' : undefined}>
-            <td style={CELL}>{row.hours}</td>
-            <td style={CELL}>{row.percent}%</td>
-            <td style={CELL}>
-              {row.applied ? t('ops.cancel.ladder.applied') : (row.label ?? '—')}
-            </td>
+    <div style={OPS_TABLE_WRAP_STYLE}>
+      <table data-testid="cancel-ladder" style={OPS_TABULAR_STYLE}>
+        <caption
+          style={{ textAlign: 'left', padding: `${space.s3}px ${space.s4}px`, fontWeight: 600 }}
+        >
+          {t('ops.cancel.ladder', { name: policy.name })}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">{t('ops.cancel.ladder.hours')}</th>
+            <th scope="col">{t('ops.cancel.ladder.percent')}</th>
+            <th scope="col">{t('ops.cancel.ladder.label')}</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {ladderRows(policy, hours).map((row) => (
+            <tr key={`${row.hours}-${row.percent}`} aria-current={row.applied ? 'true' : undefined}>
+              <td>{row.hours}</td>
+              <td>{row.percent}%</td>
+              <td>{row.applied ? t('ops.cancel.ladder.applied') : (row.label ?? '—')}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -156,9 +167,10 @@ export function CancelPreviewPanel({
     <section
       data-testid="cancel-preview-panel"
       aria-labelledby="cancel-preview-title"
-      style={{ display: 'grid', gap: 8 }}
+      className="ph-card"
+      style={{ display: 'grid', gap: space.s3, padding: space.s4 }}
     >
-      <h2 id="cancel-preview-title" style={{ margin: 0 }}>
+      <h2 id="cancel-preview-title" style={OPS_SUBTITLE_STYLE}>
         {t('ops.cancel.preview.title')}
       </h2>
       <p style={{ margin: 0 }} data-testid="cancel-tier">
@@ -168,20 +180,20 @@ export function CancelPreviewPanel({
           percent: breakdown.refundPercent,
         })}
       </p>
-      <table data-testid="cancel-refund">
-        <tbody>
-          {refundRows(breakdown).map((row) => (
-            <tr key={row.key}>
-              <th scope="row" style={CELL}>
-                {t(REFUND_KEYS[row.key])}
-              </th>
-              <td style={CELL}>{formatMoney(row.amount)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div style={OPS_TABLE_WRAP_STYLE}>
+        <table data-testid="cancel-refund" style={OPS_TABULAR_STYLE}>
+          <tbody>
+            {refundRows(breakdown).map((row) => (
+              <tr key={row.key}>
+                <th scope="row">{t(REFUND_KEYS[row.key])}</th>
+                <td>{formatMoney(row.amount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {policy === null ? null : <Ladder policy={policy} hours={breakdown.hoursBeforeCheckIn} />}
-      <p style={{ margin: 0 }} data-testid="cancel-partial-gap">
+      <p style={opsNoticeStyle('neutral')} data-testid="cancel-partial-gap">
         {PARTIAL_CANCEL_SUPPORTED ? t('ops.cancel.partial.ready') : t('ops.cancel.partial.pending')}
       </p>
     </section>
@@ -193,9 +205,9 @@ export function CancelResult({ result }: { result: CancelResponse }): ReactEleme
     <section
       data-testid="cancel-result"
       aria-labelledby="cancel-result-title"
-      style={{ display: 'grid', gap: 8 }}
+      style={opsNoticeStyle('success')}
     >
-      <h2 id="cancel-result-title" style={{ margin: 0 }}>
+      <h2 id="cancel-result-title" style={OPS_SUBTITLE_STYLE}>
         {t('ops.cancel.result.title')}
       </h2>
       <p style={{ margin: 0 }} data-testid="cancel-result-status">

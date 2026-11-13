@@ -8,11 +8,12 @@
 import { useCallback, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { color, radius, space, touchTargetDp, typography } from '@pinehill/ui-native';
+import { color, space } from '@pinehill/ui-native';
 import { createAppApiClient } from '../../src/api';
 import { createPublicJourneyApi } from '../../src/public-client';
 import { netInfoSource } from '../../src/netinfo.native';
 import { t } from '../../src/strings';
+import { theme } from '../../src/theme';
 import {
   EMPTY_CRITERIA,
   formatVnd,
@@ -62,14 +63,7 @@ function Field({
         onChangeText={onChange}
         keyboardType={numeric ? 'number-pad' : 'default'}
         autoCapitalize="none"
-        style={{
-          borderColor: color.border,
-          borderRadius: radius.md,
-          borderWidth: 1,
-          color: color.text,
-          minHeight: touchTargetDp,
-          paddingHorizontal: space.s3,
-        }}
+        style={theme.field}
       />
     </View>
   );
@@ -89,19 +83,13 @@ function ResultRow({ row, onOpen }: { row: SearchRow; onOpen: () => void }): Rea
     <View
       accessible
       accessibilityLabel={`${row.name}. ${availability}. ${nightly}. ${total}`}
-      style={{
-        borderColor: color.border,
-        borderRadius: radius.md,
-        borderWidth: 1,
-        gap: space.s1,
-        padding: space.s3,
-      }}
+      style={theme.card}
     >
-      <Text style={{ color: color.text, fontWeight: '700' }}>{row.name}</Text>
+      <Text style={{ color: color.text, fontWeight: '600' }}>{row.name}</Text>
       <Text style={{ color: color.text }}>{availability}</Text>
-      <Text style={{ color: color.textMuted }}>{nightly}</Text>
-      <Text style={{ color: color.textMuted }}>{total}</Text>
-      <Text style={{ color: color.textMuted }}>
+      <Text style={[theme.muted, theme.tabular]}>{nightly}</Text>
+      <Text style={[theme.muted, theme.tabular]}>{total}</Text>
+      <Text style={theme.muted}>
         {t('search.row.nights', { min: row.minNights, max: row.maxNights })} ·{' '}
         {t('search.row.capacity', { count: row.capacityAdults })}
       </Text>
@@ -109,9 +97,9 @@ function ResultRow({ row, onOpen }: { row: SearchRow; onOpen: () => void }): Rea
         accessibilityRole="button"
         accessibilityLabel={`${t('room.open')} ${row.name}`}
         onPress={onOpen}
-        style={{ minHeight: touchTargetDp, justifyContent: 'center' }}
+        style={theme.buttonPlain}
       >
-        <Text style={{ color: color.primary, fontWeight: '700' }}>{t('room.open')}</Text>
+        <Text style={theme.buttonPlainText}>{t('room.open')}</Text>
       </Pressable>
     </View>
   );
@@ -146,11 +134,8 @@ export default function SearchScreen(): ReactElement {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ gap: space.s3, padding: space.s4 }}>
-      <Text
-        accessibilityRole="header"
-        style={{ color: color.text, fontSize: typography.h1.sp, fontWeight: '700' }}
-      >
+    <ScrollView style={theme.scroll} contentContainerStyle={theme.scrollContent}>
+      <Text accessibilityRole="header" style={theme.title}>
         {t('journey.search.title')}
       </Text>
 
@@ -218,18 +203,15 @@ export default function SearchScreen(): ReactElement {
         onPress={() => {
           void submit();
         }}
-        style={{
-          alignItems: 'center',
-          backgroundColor: color.primary,
-          borderRadius: radius.md,
-          justifyContent: 'center',
-          minHeight: touchTargetDp,
-        }}
+        style={theme.buttonPrimary}
       >
         {busy ? (
-          <ActivityIndicator accessibilityLabel={t('state.loading')} color={color.surface} />
+          <ActivityIndicator
+            accessibilityLabel={t('state.loading')}
+            color={color.primaryContrast}
+          />
         ) : (
-          <Text style={{ color: color.surface, fontWeight: '700' }}>{t('search.form.submit')}</Text>
+          <Text style={theme.buttonPrimaryText}>{t('search.form.submit')}</Text>
         )}
       </Pressable>
 
@@ -238,7 +220,7 @@ export default function SearchScreen(): ReactElement {
           <Text
             accessibilityRole="alert"
             accessibilityLiveRegion="polite"
-            style={{ color: color.danger }}
+            style={theme.alertDanger}
           >
             {t('guest.offline')}
           </Text>
@@ -248,9 +230,9 @@ export default function SearchScreen(): ReactElement {
             onPress={() => {
               void submit();
             }}
-            style={{ minHeight: touchTargetDp, justifyContent: 'center' }}
+            style={theme.buttonPlain}
           >
-            <Text style={{ color: color.primary }}>{t('search.form.retry')}</Text>
+            <Text style={theme.buttonPlainText}>{t('search.form.retry')}</Text>
           </Pressable>
         </View>
       ) : outcome.kind === 'failed' ? (
@@ -258,7 +240,7 @@ export default function SearchScreen(): ReactElement {
           <Text
             accessibilityRole="alert"
             accessibilityLiveRegion="polite"
-            style={{ color: color.danger }}
+            style={theme.alertDanger}
           >
             {t('search.failed', { code: outcome.code ?? 'UNKNOWN' })}
           </Text>
@@ -268,25 +250,25 @@ export default function SearchScreen(): ReactElement {
             onPress={() => {
               void submit();
             }}
-            style={{ minHeight: touchTargetDp, justifyContent: 'center' }}
+            style={theme.buttonPlain}
           >
-            <Text style={{ color: color.primary }}>{t('search.form.retry')}</Text>
+            <Text style={theme.buttonPlainText}>{t('search.form.retry')}</Text>
           </Pressable>
         </View>
       ) : outcome.kind === 'empty' ? (
-        <Text accessibilityRole="alert" style={{ color: color.textMuted }}>
+        <Text accessibilityRole="alert" style={theme.muted}>
           {t('search.empty')}
         </Text>
       ) : (
         <View style={{ gap: space.s2 }}>
-          <Text style={{ color: color.textMuted }}>
+          <Text style={theme.muted}>
             {t('search.results.criteria', {
               from: outcome.availability.checkIn,
               to: outcome.availability.checkOut,
               nights: outcome.availability.nights,
             })}
           </Text>
-          <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+          <Text accessibilityRole="header" style={theme.sectionTitle}>
             {t('search.results.title')}
           </Text>
           {searchRows(outcome.availability).map((row) => (

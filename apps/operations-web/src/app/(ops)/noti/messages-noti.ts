@@ -6,7 +6,7 @@ export const notiCatalog = {
   'ops.nav.notifications': 'Hàng đợi thông báo',
   'noti.title': 'Mẫu & hàng đợi thông báo',
   'noti.intro':
-    'Danh sách thông báo đã ghi kèm trạng thái, số lần thử và lỗi. Người nhận do máy chủ che (không lộ SĐT/email đầy đủ). Gửi lại tối đa 3 lần, cách nhau ít nhất 5 phút (BR-SYS-06).',
+    'Danh sách thông báo đã ghi kèm trạng thái, số lần thử và lỗi. Người nhận do máy chủ che (không lộ SĐT/email đầy đủ). Gửi lại tối đa 3 lần, cách nhau ít nhất 5 phút.',
   'noti.form.status': 'Trạng thái',
   'noti.form.channel': 'Kênh gửi',
   'noti.form.template': 'Mẫu thông báo',

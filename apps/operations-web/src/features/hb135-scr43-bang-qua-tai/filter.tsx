@@ -1,9 +1,10 @@
 'use client';
 import { useState, type ReactElement } from 'react';
+import { color, fontFamily, space, typography } from '@pinehill/ui-web';
 import type { PropertySummary, RoomTypeSummary } from '@pinehill/contracts';
 import { text } from './messages';
 import { filterIssues, type FieldIssue, type Filter } from './model';
-import { SelectInput, TextInput, box } from './parts';
+import { SelectInput, TextInput } from './parts';
 import { STATUS_TEXT } from './table';
 
 const STATUSES = ['OPEN', 'PROPOSED', 'RESOLVED', 'ESCALATED'] as const;
@@ -28,7 +29,15 @@ export function FilterForm(props: {
   return (
     <form
       aria-labelledby="hb135-filter-title"
-      style={{ ...box, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))' }}
+      className="ph-card"
+      style={{
+        display: 'grid',
+        gap: space.s3,
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))',
+        alignItems: 'end',
+        padding: space.s4,
+        minWidth: 0,
+      }}
       onSubmit={(event) => {
         event.preventDefault();
         const found = filterIssues(draft);
@@ -36,10 +45,15 @@ export function FilterForm(props: {
         if (found.length === 0) props.onApply(draft);
       }}
     >
-      <h2 id="hb135-filter-title" style={{ gridColumn: '1 / -1' }}>
-        {text('filterTitle')}
-      </h2>
-      <p style={{ gridColumn: '1 / -1', margin: 0 }}>{text('filterNote')}</p>
+      <div style={{ gridColumn: '1 / -1', display: 'grid', gap: 4 }}>
+        <h2
+          id="hb135-filter-title"
+          style={{ margin: 0, fontFamily: fontFamily.sans, fontSize: typography.h2.web }}
+        >
+          {text('filterTitle')}
+        </h2>
+        <p style={{ margin: 0, fontSize: 13, color: color.textMuted }}>{text('filterNote')}</p>
+      </div>
       <SelectInput
         name="propertyId"
         label={text('property')}
@@ -80,7 +94,16 @@ export function FilterForm(props: {
         issues={issues}
         onChange={(value) => patch({ dateTo: value })}
       />
-      <label style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 44 }}>
+      <label
+        style={{
+          display: 'flex',
+          gap: 8,
+          alignItems: 'center',
+          minHeight: 44,
+          fontSize: 14,
+          cursor: 'pointer',
+        }}
+      >
         <input
           type="checkbox"
           name="overdueOnly"
@@ -92,7 +115,8 @@ export function FilterForm(props: {
       <button
         type="submit"
         disabled={props.busy}
-        style={{ minHeight: 44, justifySelf: 'start' }}
+        className="ph-btn-primary"
+        style={{ justifySelf: 'start' }}
         data-testid="hb135-apply"
       >
         {text('apply')}

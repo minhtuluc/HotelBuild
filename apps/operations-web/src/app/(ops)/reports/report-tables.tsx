@@ -11,6 +11,11 @@ import type {
   RevenueByChannelReport,
 } from '@pinehill/contracts';
 import { formatDateTimeVn, formatMoney, formatStatusWithEnum } from '@pinehill/ui-web';
+import {
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+  opsNoticeStyle,
+} from '../../../components/editorial-styles';
 import { formatBusinessDate } from '../../../lib/business-date';
 import { t, type OperationsMessageKey } from '../../../lib/i18n';
 import { OPERATION_STATUS_KEY, OVERBOOKING_STATUS_KEY } from './report-shared';
@@ -27,6 +32,7 @@ const CHANNEL_LABEL: Readonly<Record<string, OperationsMessageKey>> = {
 };
 
 const CELL = { textAlign: 'start', borderBottom: '1px solid var(--color-border)' } as const;
+const NUM_CELL = { ...CELL, ...OPS_TABULAR_STYLE } as const;
 
 function Table({
   testId,
@@ -40,9 +46,11 @@ function Table({
   children: ReactElement;
 }): ReactElement {
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div className="ph-card" style={OPS_TABLE_WRAP_STYLE}>
       <table data-testid={testId} style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>{title}</caption>
+        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0', fontWeight: 600 }}>
+          {title}
+        </caption>
         <thead>
           <tr>
             {head.map((label) => (
@@ -76,9 +84,9 @@ export function OccupancyTable({ report }: { report: OccupancyReport }): ReactEl
           {report.rows.map((row) => (
             <tr key={row.key} data-testid={`occupancy-row-${row.key}`}>
               <td style={CELL}>{row.key}</td>
-              <td style={CELL}>{row.soldUnits}</td>
-              <td style={CELL}>{row.availableUnits}</td>
-              <td style={CELL}>{row.occupancyPct}</td>
+              <td style={NUM_CELL}>{row.soldUnits}</td>
+              <td style={NUM_CELL}>{row.availableUnits}</td>
+              <td style={NUM_CELL}>{row.occupancyPct}</td>
             </tr>
           ))}
         </>
@@ -110,11 +118,11 @@ export function AdrRevparTable({ report }: { report: AdrRevparReport }): ReactEl
           {report.rows.map((row) => (
             <tr key={row.key} data-testid={`adr-row-${row.key}`}>
               <td style={CELL}>{row.key}</td>
-              <td style={CELL}>{row.roomNightsSold}</td>
-              <td style={CELL}>{row.roomNightsAvailable}</td>
-              <td style={CELL}>{formatMoney(row.netRevenue)}</td>
-              <td style={CELL}>{formatMoney(row.adr)}</td>
-              <td style={CELL}>{formatMoney(row.revpar)}</td>
+              <td style={NUM_CELL}>{row.roomNightsSold}</td>
+              <td style={NUM_CELL}>{row.roomNightsAvailable}</td>
+              <td style={NUM_CELL}>{formatMoney(row.netRevenue)}</td>
+              <td style={NUM_CELL}>{formatMoney(row.adr)}</td>
+              <td style={NUM_CELL}>{formatMoney(row.revpar)}</td>
             </tr>
           ))}
         </>
@@ -149,10 +157,10 @@ export function RevenueByChannelTable({
           {report.rows.map((row) => (
             <tr key={row.channelCode} data-testid={`revenue-row-${row.channelCode}`}>
               <td style={CELL}>{t(CHANNEL_LABEL[row.channelCode] ?? 'reports.col.channel')}</td>
-              <td style={CELL}>{formatMoney(row.grossAmount)}</td>
-              <td style={CELL}>{formatMoney(row.commissionAmount)}</td>
-              <td style={CELL}>{formatMoney(row.netAmount)}</td>
-              <td style={CELL}>{row.bookings}</td>
+              <td style={NUM_CELL}>{formatMoney(row.grossAmount)}</td>
+              <td style={NUM_CELL}>{formatMoney(row.commissionAmount)}</td>
+              <td style={NUM_CELL}>{formatMoney(row.netAmount)}</td>
+              <td style={NUM_CELL}>{row.bookings}</td>
             </tr>
           ))}
         </>
@@ -198,8 +206,8 @@ export function CancellationsTable({ report }: { report: CancellationsReport }):
                   ? t('reports.cancel.catchAll')
                   : `${row.appliedTierOffsetHours}h`}
               </td>
-              <td style={CELL}>{row.cancellations}</td>
-              <td style={CELL}>{formatMoney(row.refundAmount)}</td>
+              <td style={NUM_CELL}>{row.cancellations}</td>
+              <td style={NUM_CELL}>{formatMoney(row.refundAmount)}</td>
             </tr>
           ))}
         </>
@@ -244,10 +252,10 @@ export function OverbookingTable({ report }: { report: OverbookingReport }): Rea
               <td style={CELL}>
                 {row.resolvedAt === null ? '—' : formatDateTimeVn(row.resolvedAt)}
               </td>
-              <td style={CELL}>{formatMoney(row.mergeDiscountAmount)}</td>
-              <td style={CELL}>{formatMoney(row.walkOutCompensationAmount)}</td>
-              <td style={CELL}>{formatMoney(row.transportSupportAmount)}</td>
-              <td style={CELL}>{formatMoney(row.totalCost)}</td>
+              <td style={NUM_CELL}>{formatMoney(row.mergeDiscountAmount)}</td>
+              <td style={NUM_CELL}>{formatMoney(row.walkOutCompensationAmount)}</td>
+              <td style={NUM_CELL}>{formatMoney(row.transportSupportAmount)}</td>
+              <td style={NUM_CELL}>{formatMoney(row.totalCost)}</td>
             </tr>
           ))}
         </>
@@ -261,8 +269,10 @@ export function OverbookingTable({ report }: { report: OverbookingReport }): Rea
 
 /** Tiến trình xuất báo cáo bất đồng bộ (§6): `PENDING/RUNNING/SUCCEEDED/FAILED` + tham chiếu kết quả. */
 export function OperationPanel({ view }: { view: OperationStatusView }): ReactElement {
+  const tone =
+    view.status === 'FAILED' ? 'danger' : view.status === 'SUCCEEDED' ? 'success' : 'info';
   return (
-    <p role="status" data-testid="report-operation" style={{ margin: 0 }}>
+    <p role="status" data-testid="report-operation" style={opsNoticeStyle(tone)}>
       {t('reports.export.status', { status: t(OPERATION_STATUS_KEY[view.status]) })} ·{' '}
       {view.operationId}
       {view.resultRef === undefined ? null : ` · ${view.resultRef}`}

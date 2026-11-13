@@ -19,8 +19,21 @@ import {
   StateSurface,
   formatMoney,
   formatStatusWithEnum,
+  space,
   type ScreenState,
 } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_FILTER_ROW_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../components/editorial-styles';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { useForcedState } from '../../../components/forced-state';
 import { useOpsSession } from '../../../lib/ops-session';
@@ -61,19 +74,17 @@ function QuoteTable({ quote }: { quote: MultiChannelQuote }): ReactElement {
     t('mcq.col.warnings'),
   ];
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table data-testid="mcq-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
+    <div style={OPS_TABLE_WRAP_STYLE}>
+      <table data-testid="mcq-table" style={{ ...OPS_TABULAR_STYLE, width: '100%' }}>
+        <caption
+          style={{ textAlign: 'start', padding: `${space.s3}px ${space.s4}px`, fontWeight: 600 }}
+        >
           {t('mcq.table.title')}
         </caption>
         <thead>
           <tr>
             {headers.map((label) => (
-              <th
-                key={label}
-                scope="col"
-                style={{ textAlign: 'start', borderBottom: '1px solid var(--color-border)' }}
-              >
+              <th key={label} scope="col">
                 {label}
               </th>
             ))}
@@ -197,22 +208,18 @@ export function MultiChannelQuoteScreen(): ReactElement {
   }
 
   return (
-    <section
-      style={{ padding: 'var(--space-s6, 24px)', display: 'grid', gap: 'var(--space-s4, 16px)' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('mcq.title')}</h1>
-      <p style={{ margin: 0 }}>{t('mcq.intro')}</p>
+    <section style={OPS_PAGE_STYLE}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{t('mcq.title')}</h1>
+        <p style={OPS_INTRO_STYLE}>{t('mcq.intro')}</p>
+      </header>
       <form
         data-testid="mcq-form"
+        className="ph-card ph-filter-row"
         onSubmit={(event) => void submit(event)}
-        style={{
-          display: 'flex',
-          gap: 'var(--space-s2, 8px)',
-          flexWrap: 'wrap',
-          alignItems: 'end',
-        }}
+        style={OPS_FILTER_ROW_STYLE}
       >
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('mcq.form.property')}
           <select
             value={options.propertyId}
@@ -233,7 +240,7 @@ export function MultiChannelQuoteScreen(): ReactElement {
             ))}
           </select>
         </label>
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('mcq.form.roomType')}
           <select value={roomTypeId} onChange={(event) => setRoomTypeId(event.target.value)}>
             {options.roomTypes.map((type) => (
@@ -243,7 +250,7 @@ export function MultiChannelQuoteScreen(): ReactElement {
             ))}
           </select>
         </label>
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('mcq.form.checkIn')}
           <input
             type="date"
@@ -251,7 +258,7 @@ export function MultiChannelQuoteScreen(): ReactElement {
             onChange={(event) => setRange({ ...range, from: event.target.value })}
           />
         </label>
-        <label style={{ display: 'grid', gap: 4 }}>
+        <label style={OPS_FIELD_LABEL_STYLE}>
           {t('mcq.form.checkOut')}
           <input
             type="date"
@@ -259,34 +266,45 @@ export function MultiChannelQuoteScreen(): ReactElement {
             onChange={(event) => setRange({ ...range, to: event.target.value })}
           />
         </label>
-        <button type="submit" style={{ minHeight: 44 }}>
+        <button type="submit" className="ph-btn-primary" style={OPS_COMPACT_BTN_STYLE}>
           {t('mcq.form.submit')}
         </button>
       </form>
-      <fieldset data-testid="mcq-channels" style={{ border: 0, padding: 0, margin: 0 }}>
-        <legend>{t('mcq.form.channels')}</legend>
-        {ALL_CHANNELS.map((code) => (
-          <label key={code} style={{ display: 'inline-flex', gap: 4, marginInlineEnd: 8 }}>
-            <input
-              type="checkbox"
-              checked={selected.includes(code)}
-              onChange={() => setSelected(toggleChannel(selected, code))}
-            />
-            {t(`enum.channelCode.${code}`)}
-          </label>
-        ))}
-        <p role="note" style={{ margin: 0 }}>
+      <fieldset
+        data-testid="mcq-channels"
+        className="ph-card"
+        style={{ margin: 0, padding: space.s4, display: 'grid', gap: space.s2 }}
+      >
+        <legend style={{ fontWeight: 600, paddingInline: space.s2 }}>
+          {t('mcq.form.channels')}
+        </legend>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: space.s3 }}>
+          {ALL_CHANNELS.map((code) => (
+            <label
+              key={code}
+              style={{ display: 'inline-flex', gap: 6, alignItems: 'center', minHeight: 44 }}
+            >
+              <input
+                type="checkbox"
+                checked={selected.includes(code)}
+                onChange={() => setSelected(toggleChannel(selected, code))}
+              />
+              {t(`enum.channelCode.${code}`)}
+            </label>
+          ))}
+        </div>
+        <p role="note" style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 13 }}>
           {t('mcq.channels.default', { count: channelsFor(selected).length })}
         </p>
       </fieldset>
-      <p role="note" style={{ margin: 0 }}>
+      <p role="note" style={opsNoticeStyle('neutral')}>
         {t('mcq.readonly')}
       </p>
       <StateSurface state={state}>
         {readError === null ? null : <ScreenAlert error={readError} onRetry={() => void load()} />}
         {quote === null ? null : (
           <>
-            <p role="status" data-testid="mcq-note" style={{ margin: 0 }}>
+            <p role="status" data-testid="mcq-note" style={opsNoticeStyle('info')}>
               {t('mcq.preview', { from: quote.checkIn, to: quote.checkOut })}
             </p>
             <QuoteTable quote={quote} />

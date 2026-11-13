@@ -89,8 +89,34 @@ export function LoginScreen({ contact }: { contact: string | null }): ReactEleme
         />
       )}
       <SubmitButton busy={busy} label={text('submitLogin')} testId="login-submit" />
-      <a href="/account/forgot-password">{text('toForgot')}</a>
-      <a href="/account/register">{text('toRegister')}</a>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
+        <a
+          href="/account/forgot-password"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            minHeight: 44,
+            color: 'var(--color-primary)',
+            textDecoration: 'underline',
+            textUnderlineOffset: 3,
+          }}
+        >
+          {text('toForgot')}
+        </a>
+        <a
+          href="/account/register"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            minHeight: 44,
+            color: 'var(--color-primary)',
+            textDecoration: 'underline',
+            textUnderlineOffset: 3,
+          }}
+        >
+          {text('toRegister')}
+        </a>
+      </div>
     </FormShell>
   );
 }

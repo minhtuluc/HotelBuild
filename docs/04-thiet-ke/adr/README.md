@@ -1,6 +1,6 @@
 # 04 — Nhật ký quyết định kiến trúc (ADR)
 
-> Ghi lại **18 quyết định kiến trúc** đã chốt cho hệ thống đặt phòng Pine Hill, khớp bảng "Quyết định công nghệ đã chốt" ở [00 §9](../../00-tong-quan.md). Mỗi ADR theo mẫu: Bối cảnh · Quyết định · Phương án đã cân nhắc · Hệ quả (tích cực/tiêu cực) · Trạng thái · Ngày.
+> Ghi lại **19 quyết định kiến trúc** đã chốt cho hệ thống đặt phòng Pine Hill, khớp bảng "Quyết định công nghệ đã chốt" ở [00 §9](../../00-tong-quan.md). Mỗi ADR theo mẫu: Bối cảnh · Quyết định · Phương án đã cân nhắc · Hệ quả (tích cực/tiêu cực) · Trạng thái · Ngày.
 >
 > Cách đọc: ADR trả lời "vì sao chọn cái này"; [kien-truc.md](../kien-truc.md) trả lời "hệ thống ráp lại ra sao". Mọi con số nghiệp vụ chỉ định nghĩa ở [02/quy tắc nghiệp vụ](../../02-nghiep-vu/quy-tac-nghiep-vu.md) — ADR tham chiếu mã BR, không chép giá trị.
 >
@@ -15,6 +15,7 @@ Các quyết định ADR-003/004/008/009/010 đọc cùng các bản chốt giao
 | [ADR-015](ADR-015-quote-policy-bat-bien.md) | Quote Redis; unique acceptance và snapshot giá/policy/commission bất biến |
 | [ADR-016](ADR-016-thanh-toan-hoan-tien.md) | Thu muộn, reservation NET, maker–checker và đối soát chi |
 | [ADR-017](ADR-017-inbox-outbox-idempotency.md) | Idempotency/inbox bền, ACK theo provider và delivery từng consumer |
+| [ADR-019](ADR-019-he-thong-thiet-ke-tuyen-pine-hill.md) | Hệ thống thiết kế "Tuyến Pine Hill" (vé tàu) một bộ token, hai mức biểu đạt cho bốn frontend |
 
 ---
 
@@ -35,6 +36,7 @@ Các quyết định ADR-003/004/008/009/010 đọc cùng các bản chốt giao
 | ADR-011 | Vitest + fast-check, Testcontainers + Supertest, Playwright, Maestro, k6 | Đã chấp nhận | 10/2026 | NFR-REL-01, NFR-MAIN-01/03 |
 | ADR-012 | GitHub Actions → Docker (API/worker) + Vercel (2 web) + EAS Build (2 Android) | Đã chấp nhận | 10/2026 | NFR-USE-01, NFR-REL-04 |
 | ADR-018 | Một backend chung, bốn frontend deploy độc lập | Đã chấp nhận | 22/09/2026 | NFR-MAIN-04, NFR-USE-01, ADR-005/006 |
+| [ADR-019](ADR-019-he-thong-thiet-ke-tuyen-pine-hill.md) | Hệ thống thiết kế "Tuyến Pine Hill" (vé tàu) cho bốn frontend | Đã chấp nhận | 11/2026 | NFR-USE-01, NFR-USE-02, NFR-LOC-01, NFR-MAIN-02 |
 | ADR-013 | Sơ đồ Mermaid nằm trong Markdown, lưu cùng mã nguồn | Đã chấp nhận | 10/2026 | [docs/README §3](../../README.md) |
 
 ## ADR-001 — TypeScript 5.x `strict` làm ngôn ngữ duy nhất cho toàn monorepo

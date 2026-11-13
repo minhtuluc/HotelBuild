@@ -7,7 +7,8 @@
  */
 import type { ReactElement } from 'react';
 import type { RateCalendar } from '@pinehill/contracts';
-import { formatMoney, formatStatusWithEnum } from '@pinehill/ui-web';
+import { color, formatMoney, formatStatusWithEnum, space } from '@pinehill/ui-web';
+import { OPS_TABLE_WRAP_STYLE, OPS_TABULAR_STYLE } from '../../../components/editorial-styles';
 import { t } from '../../../lib/i18n';
 import { toMoney } from '../../../lib/money';
 import { priceWarning } from '../../../lib/rate-calendar';
@@ -46,22 +47,17 @@ export function RateCalendarTable({
     t('rate.col.warning'),
   ];
   return (
-    <div style={{ overflowX: 'auto', minWidth: 0 }}>
-      <table
-        data-testid="rate-calendar-table"
-        style={{ width: '100%', borderCollapse: 'collapse' }}
-      >
-        <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0' }}>
+    <div style={OPS_TABLE_WRAP_STYLE}>
+      <table data-testid="rate-calendar-table" style={OPS_TABULAR_STYLE}>
+        <caption
+          style={{ textAlign: 'start', padding: space.s3, fontWeight: 500, color: color.text }}
+        >
           {t('rate.title')}
         </caption>
         <thead>
           <tr>
             {headers.map((label) => (
-              <th
-                key={label}
-                scope="col"
-                style={{ textAlign: 'start', borderBottom: '1px solid var(--color-border)' }}
-              >
+              <th key={label} scope="col">
                 {label}
               </th>
             ))}
@@ -77,7 +73,7 @@ export function RateCalendarTable({
                 : priceWarning(parsed, minPrice, maxPrice);
             return (
               <tr key={day.date} data-testid={`rate-row-${day.date}`}>
-                <th scope="row" style={{ textAlign: 'start' }}>
+                <th scope="row" style={{ textAlign: 'start', fontWeight: 500 }}>
                   {day.date}
                 </th>
                 <td data-testid={`rate-price-text-${day.date}`}>{formatMoney(day.price)}</td>
@@ -98,10 +94,13 @@ export function RateCalendarTable({
                     onChange={(event) => {
                       onPriceChange(day.date, event.target.value);
                     }}
-                    style={{ width: '9rem', minHeight: 44 }}
+                    style={{ width: '9rem', minHeight: 44, ...OPS_TABULAR_STYLE }}
                   />
                 </td>
-                <td data-testid={`rate-warning-${day.date}`}>
+                <td
+                  data-testid={`rate-warning-${day.date}`}
+                  style={warning === null ? undefined : { color: color.warning, fontWeight: 500 }}
+                >
                   {warning === null ? '' : t(`rate.warn.${warning}`)}
                 </td>
               </tr>

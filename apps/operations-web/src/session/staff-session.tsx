@@ -2,15 +2,26 @@
 
 /**
  * Khung phiên nhân viên: chặn nội dung cho tới khi cổng (`useStaffGate`) cho qua, rồi cấp ngữ cảnh
- * `useStaffSession()` / `useWorkingProperty()` cho các màn phía sau. Thanh đầu trang (cơ sở đang làm việc,
- * đổi cơ sở, đăng xuất) chỉ hiện ở khu vực `app`.
+ * `useStaffSession()` / `useWorkingProperty()` cho các màn phía sau. Thanh đầu trang (thương hiệu,
+ * ngăn điều hướng phân hệ, cơ sở đang làm việc, đổi cơ sở, đăng xuất) chỉ hiện ở khu vực `app`.
  */
-import { createContext, useContext, type ReactElement, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import type { ApiClient } from '@pinehill/api-client';
 import type { UserMe } from '@pinehill/contracts';
-import { color, space, touchTargetPx } from '@pinehill/ui-web';
+import { PineHillBrand, color, radius, space, touchTargetPx } from '@pinehill/ui-web';
 import type { GateStage, PropertyOption } from './gate';
 import { authText as text } from './messages';
+import { OpsModuleNav } from './ops-nav';
+import { VnClock } from '../components/vn-clock';
 import { useStaffGate, type StaffGate } from './use-staff-gate';
 
 export interface StaffSessionValue {
@@ -42,14 +53,7 @@ export function useWorkingProperty(): {
   return { propertyId, setProperty: selectProperty };
 }
 
-const BUTTON = {
-  minHeight: touchTargetPx,
-  border: `1px solid ${color.borderStrong}`,
-  borderRadius: 6,
-  padding: `0 ${space.s3}px`,
-  background: color.surface,
-  color: color.text,
-} as const;
+const START = { justifySelf: 'start' } as const;
 
 function Notice({
   role,
@@ -64,7 +68,16 @@ function Notice({
     <section
       role={role}
       data-testid={testId}
-      style={{ padding: space.s6, display: 'grid', gap: space.s3 }}
+      style={{
+        maxWidth: 540,
+        margin: `${space.s8}px auto`,
+        padding: space.s6,
+        background: color.surface,
+        border: `1px solid ${color.border}`,
+        borderRadius: radius.sm,
+        display: 'grid',
+        gap: space.s3,
+      }}
     >
       {children}
     </section>
@@ -77,13 +90,16 @@ function PropertySwitcher({ value }: { value: StaffSessionValue }): ReactElement
   if (properties.length <= 1 && me.role !== 'OWNER') {
     const only = properties.find((property) => property.id === propertyId);
     return (
-      <span data-testid="staff-property">
-        {text('barProperty')}: {only?.name ?? propertyId}
+      <span className="ph-ops-property">
+        {text('barProperty')}
+        <span data-testid="staff-property" className="ph-ops-property-static">
+          {only?.name ?? propertyId}
+        </span>
       </span>
     );
   }
   return (
-    <label style={{ display: 'inline-flex', gap: space.s2, alignItems: 'center' }}>
+    <label className="ph-ops-property">
       {text('barProperty')}
       <select
         data-testid="staff-property-select"
@@ -91,7 +107,6 @@ function PropertySwitcher({ value }: { value: StaffSessionValue }): ReactElement
         onChange={(event) => {
           selectProperty(event.target.value);
         }}
-        style={{ ...BUTTON, padding: space.s2 }}
       >
         {properties.map((property) => (
           <option key={property.id} value={property.id}>
@@ -103,38 +118,98 @@ function PropertySwitcher({ value }: { value: StaffSessionValue }): ReactElement
   );
 }
 
-function StaffBar({ value }: { value: StaffSessionValue }): ReactElement {
+/**
+ * Khung làm việc: thanh bên (điều hướng phân hệ, luôn hiện trên màn rộng; ngăn kéo trên màn hẹp) và
+ * thanh ngữ cảnh phía trên (cơ sở đang làm việc, người dùng, đăng xuất).
+ */
+function OpsFrame({
+  value,
+  children,
+}: {
+  value: StaffSessionValue;
+  children: ReactNode;
+}): ReactElement {
+  const [navOpen, setNavOpen] = useState(false);
+  const pathname = usePathname();
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname]);
+  useEffect(() => {
+    if (!navOpen) return undefined;
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setNavOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [navOpen]);
+
   return (
-    <div
-      role="group"
-      aria-label={text('barLabel')}
-      data-testid="staff-bar"
-      style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: space.s3,
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: `${space.s2}px ${space.s4}px`,
-        borderBottom: `1px solid ${color.border}`,
-      }}
-    >
-      <PropertySwitcher value={value} />
-      <span style={{ display: 'inline-flex', gap: space.s3, alignItems: 'center' }}>
-        <span data-testid="staff-user">
-          {text('barUser', { name: value.me.fullName, role: value.me.role })}
-        </span>
-        <button
-          type="button"
-          data-testid="staff-logout"
-          style={BUTTON}
-          onClick={() => {
-            void value.logout();
+    <div className="ph-ops-frame">
+      <aside className="ph-ops-rail" data-open={navOpen ? 'true' : 'false'}>
+        <div className="ph-ops-rail-head">
+          <Link
+            href="/"
+            style={{ textDecoration: 'none', display: 'inline-flex', minHeight: touchTargetPx }}
+            aria-label={text('navHome')}
+          >
+            <PineHillBrand tone="dark" compact subtitle={text('brandSubtitle')} />
+          </Link>
+          <button
+            type="button"
+            className="ph-btn ph-ops-menu-toggle ph-ops-rail-close"
+            onClick={() => {
+              setNavOpen(false);
+            }}
+          >
+            {text('navToggleClose')}
+          </button>
+        </div>
+        <OpsModuleNav
+          onNavigate={() => {
+            setNavOpen(false);
           }}
-        >
-          {text('signOut')}
-        </button>
-      </span>
+        />
+      </aside>
+      <div className="ph-ops-main">
+        <header aria-label={text('barLabel')} data-testid="staff-bar" className="ph-ops-topbar">
+          <div className="ph-ops-topbar-group">
+            <button
+              type="button"
+              className="ph-btn ph-ops-menu-toggle"
+              data-testid="ops-nav-toggle"
+              aria-expanded={navOpen}
+              aria-controls="ops-module-nav"
+              onClick={() => {
+                setNavOpen((previous) => !previous);
+              }}
+            >
+              {navOpen ? text('navToggleClose') : text('navToggleOpen')}
+            </button>
+            <PropertySwitcher value={value} />
+          </div>
+          <div className="ph-ops-topbar-group">
+            <VnClock label={text('clockLabel')} />
+            <span data-testid="staff-user" className="ph-ops-user">
+              {text('barUser', { name: value.me.fullName, role: value.me.role })}
+            </span>
+            <button
+              type="button"
+              data-testid="staff-logout"
+              className="ph-btn"
+              onClick={() => {
+                void value.logout();
+              }}
+            >
+              {text('signOut')}
+            </button>
+          </div>
+        </header>
+        <div id="ops-content" style={{ minWidth: 0 }}>
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
@@ -160,7 +235,7 @@ export function StaffSessionBoundary({
     return (
       <Notice role="alert" testId="staff-check-failed">
         <p style={{ margin: 0 }}>{text('checkFailed')}</p>
-        <button type="button" style={{ ...BUTTON, justifySelf: 'start' }} onClick={gate.retry}>
+        <button type="button" className="ph-btn" style={START} onClick={gate.retry}>
           {text('retry')}
         </button>
       </Notice>
@@ -171,7 +246,8 @@ export function StaffSessionBoundary({
         <p style={{ margin: 0 }}>{text('propertyNone')}</p>
         <button
           type="button"
-          style={{ ...BUTTON, justifySelf: 'start' }}
+          className="ph-btn"
+          style={START}
           onClick={() => {
             void gate.logout();
           }}
@@ -191,8 +267,7 @@ export function StaffSessionBoundary({
   };
   return (
     <StaffSessionContext.Provider value={value}>
-      {stage === 'app' ? <StaffBar value={value} /> : null}
-      {children}
+      {stage === 'app' ? <OpsFrame value={value}>{children}</OpsFrame> : children}
     </StaffSessionContext.Provider>
   );
 }

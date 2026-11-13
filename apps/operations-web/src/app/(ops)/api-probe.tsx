@@ -71,7 +71,7 @@ export function ApiProbe({ baseUrl }: { baseUrl: string }): ReactElement {
   if (state.kind === 'ok') {
     return (
       <p data-testid="api-probe-ok" role="status" style={{ margin: 0 }}>
-        {t('api.probe.ok')} · <code>{baseUrl}</code>
+        {t('api.probe.ok')}
       </p>
     );
   }

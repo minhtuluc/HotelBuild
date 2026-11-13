@@ -1,10 +1,11 @@
 import type { ReactElement } from 'react';
 import { ActivityIndicator, Linking, ScrollView, Text } from 'react-native';
 import { Link } from 'expo-router';
-import { color, space, typography } from '@pinehill/ui-native';
+import { color, space, touchTargetDp } from '@pinehill/ui-native';
 import { phaseMessages, paymentText as text } from './messages';
 import { PaymentSummary, PaymentActions } from './panels';
 import { usePayment } from './use-payment';
+import { theme } from '../theme';
 export function PaymentScreen({ bookingId }: { bookingId: string }): ReactElement {
   const runtime = usePayment(bookingId);
   const { view, flow, method, setMethod, handoffFailed, setHandoffFailed, retry } = runtime;
@@ -25,19 +26,13 @@ export function PaymentScreen({ bookingId }: { bookingId: string }): ReactElemen
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ gap: space.s3, padding: space.s4 }}
+      style={theme.scroll}
+      contentContainerStyle={theme.scrollContent}
     >
-      <Text
-        accessibilityRole="header"
-        style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}
-      >
+      <Text accessibilityRole="header" style={theme.title}>
         {text('title')}
       </Text>
-      <Text
-        accessibilityRole="alert"
-        accessibilityLiveRegion="polite"
-        style={{ color: color.text }}
-      >
+      <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={theme.body}>
         {phaseMessages[view.phase]}
       </Text>
       {view.busy ? (
@@ -45,7 +40,7 @@ export function PaymentScreen({ bookingId }: { bookingId: string }): ReactElemen
       ) : null}
       <PaymentSummary view={view} />
       {view.changed ? (
-        <Text accessibilityRole="alert" style={{ color: color.warning }}>
+        <Text accessibilityRole="alert" style={theme.alertWarning}>
           {text('changed')}
         </Text>
       ) : null}
@@ -60,11 +55,15 @@ export function PaymentScreen({ bookingId }: { bookingId: string }): ReactElemen
         check={() => void retry.current?.()}
       />
       {handoffFailed ? (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {text('handoffFailed')}
         </Text>
       ) : null}
-      <Link href="/(tabs)/bookings" accessibilityLabel={text('backToBookings')}>
+      <Link
+        href="/(tabs)/bookings"
+        accessibilityLabel={text('backToBookings')}
+        style={{ color: color.primary, minHeight: touchTargetDp, paddingVertical: space.s3 }}
+      >
         {text('backToBookings')}
       </Link>
     </ScrollView>

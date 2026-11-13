@@ -26,6 +26,16 @@ import {
   type PromotionDraft,
 } from '../../../lib/promotions';
 import { readFailureState, writeFailureState } from '../../../lib/screen-state';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  OPS_FILTER_ROW_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../components/editorial-styles';
 import { PromotionTable } from './promotion-table';
 
 /** Hai mã máy chủ trả kèm `details[]` khi cấu hình khuyến mãi sai (api.md §4.2). */
@@ -33,13 +43,6 @@ const CONFIG_CODES: Readonly<Record<string, 'promotions.floorBlocked' | 'promoti
   E_RATE_BELOW_FLOOR: 'promotions.floorBlocked',
   E_RATE_PROMO_INVALID: 'promotions.invalid',
 };
-
-const ROW_STYLE = {
-  display: 'flex',
-  gap: 'var(--space-s2, 8px)',
-  flexWrap: 'wrap',
-  alignItems: 'end',
-} as const;
 
 export function PromotionsScreen(): ReactElement {
   const forced = useForcedState();
@@ -135,23 +138,23 @@ export function PromotionsScreen(): ReactElement {
   }
 
   return (
-    <section
-      style={{ padding: 'var(--space-s6, 24px)', display: 'grid', gap: 'var(--space-s4, 16px)' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('promotions.title')}</h1>
-      <p style={{ margin: 0 }}>{t('promotions.intro')}</p>
+    <section style={OPS_PAGE_STYLE}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 style={OPS_TITLE_STYLE}>{t('promotions.title')}</h1>
+        <p style={OPS_INTRO_STYLE}>{t('promotions.intro')}</p>
+      </header>
       <StateSurface state={state}>
         {readError === null ? null : <ScreenAlert error={readError} onRetry={() => void load()} />}
         {rows.length === 0 ? null : <PromotionTable rows={rows} />}
         {saved === null ? null : (
-          <p role="status" data-testid="promotions-saved" style={{ margin: 0 }}>
+          <p role="status" data-testid="promotions-saved" style={opsNoticeStyle('success')}>
             {t('promotions.saved', { code: saved })}
           </p>
         )}
         {configIssue === null ? null : (
-          <div role="alert" data-testid="promotions-config-issue">
-            <p>{t(configIssue.messageKey)}</p>
-            <ul>
+          <div role="alert" data-testid="promotions-config-issue" style={opsNoticeStyle('danger')}>
+            <p style={{ margin: 0 }}>{t(configIssue.messageKey)}</p>
+            <ul style={{ margin: '4px 0 0', paddingInlineStart: 20 }}>
               {configIssue.details.map((detail) => (
                 <li key={`${detail.field}-${detail.issue}`}>
                   {t('state.validation.field', { field: detail.field, issue: detail.issue })}
@@ -162,17 +165,18 @@ export function PromotionsScreen(): ReactElement {
         )}
         <form
           data-testid="promotion-form"
+          className="ph-card ph-filter-row"
           onSubmit={(event) => void submit(event)}
-          style={ROW_STYLE}
+          style={OPS_FILTER_ROW_STYLE}
         >
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {t('promotions.form.code')}
             <input
               value={draft.code}
               onChange={(event) => setDraft({ ...draft, code: event.target.value })}
             />
           </label>
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {t('promotions.form.type')}
             <select
               value={draft.type}
@@ -189,28 +193,28 @@ export function PromotionsScreen(): ReactElement {
               ))}
             </select>
           </label>
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {t(valueUnitKey(draft.type))}
             <input
               value={draft.value}
               onChange={(event) => setDraft({ ...draft, value: event.target.value })}
             />
           </label>
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {t('promotions.form.minNights')}
             <input
               value={draft.minNights}
               onChange={(event) => setDraft({ ...draft, minNights: event.target.value })}
             />
           </label>
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {t('promotions.form.maxUses')}
             <input
               value={draft.maxUses}
               onChange={(event) => setDraft({ ...draft, maxUses: event.target.value })}
             />
           </label>
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {t('promotions.form.validFrom')}
             <input
               type="datetime-local"
@@ -218,7 +222,7 @@ export function PromotionsScreen(): ReactElement {
               onChange={(event) => setDraft({ ...draft, validFrom: event.target.value })}
             />
           </label>
-          <label style={{ display: 'grid', gap: 4 }}>
+          <label style={OPS_FIELD_LABEL_STYLE}>
             {t('promotions.form.validTo')}
             <input
               type="datetime-local"
@@ -226,7 +230,7 @@ export function PromotionsScreen(): ReactElement {
               onChange={(event) => setDraft({ ...draft, validTo: event.target.value })}
             />
           </label>
-          <label style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <label style={{ display: 'flex', gap: 6, alignItems: 'center', minHeight: 44 }}>
             <input
               type="checkbox"
               checked={draft.stackable}
@@ -237,7 +241,16 @@ export function PromotionsScreen(): ReactElement {
           <fieldset data-testid="promotion-channels" style={{ border: 0, padding: 0, margin: 0 }}>
             <legend>{t('promotions.form.channels')}</legend>
             {CHANNEL_CODES.map((code) => (
-              <label key={code} style={{ display: 'inline-flex', gap: 4, marginInlineEnd: 8 }}>
+              <label
+                key={code}
+                style={{
+                  display: 'inline-flex',
+                  gap: 6,
+                  alignItems: 'center',
+                  marginInlineEnd: 10,
+                  minHeight: 44,
+                }}
+              >
                 <input
                   type="checkbox"
                   checked={draft.channelScope.includes(code)}
@@ -252,7 +265,16 @@ export function PromotionsScreen(): ReactElement {
           <fieldset data-testid="promotion-roomtypes" style={{ border: 0, padding: 0, margin: 0 }}>
             <legend>{t('promotions.form.roomTypes')}</legend>
             {roomTypes.map((type) => (
-              <label key={type.id} style={{ display: 'inline-flex', gap: 4, marginInlineEnd: 8 }}>
+              <label
+                key={type.id}
+                style={{
+                  display: 'inline-flex',
+                  gap: 6,
+                  alignItems: 'center',
+                  marginInlineEnd: 10,
+                  minHeight: 44,
+                }}
+              >
                 <input
                   type="checkbox"
                   checked={draft.roomTypeScope.includes(type.id)}
@@ -264,7 +286,7 @@ export function PromotionsScreen(): ReactElement {
               </label>
             ))}
           </fieldset>
-          <button type="submit" style={{ minHeight: 44 }}>
+          <button type="submit" className="ph-btn-primary" style={OPS_COMPACT_BTN_STYLE}>
             {t('promotions.create')}
           </button>
         </form>

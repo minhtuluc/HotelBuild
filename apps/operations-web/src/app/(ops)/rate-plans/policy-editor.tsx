@@ -2,10 +2,15 @@
 import type { FormEvent, ReactElement } from 'react';
 import { validateTiers, type CancellationPolicyDraft, type TierRow } from '../../../lib/rate-plans';
 import { parseInteger, tierOffset } from '../../../lib/rate-policy-tiers';
+import { space } from '@pinehill/ui-web';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_FIELD_LABEL_STYLE,
+  opsNoticeStyle,
+} from '../../../components/editorial-styles';
 import { t } from '../../../lib/i18n';
 import { rateText as rs } from './messages-session';
 import type { ServerTierIssue } from './rate-plans-widgets';
-const FIELD_STYLE = { display: 'grid', gap: 4 } as const;
 export function PolicyEditor({
   draft,
   serverIssues,
@@ -45,13 +50,16 @@ export function PolicyEditor({
   return (
     <form
       data-testid="policy-editor"
+      className="ph-card"
       onSubmit={onSubmit}
-      style={{ display: 'grid', gap: 'var(--space-s2, 8px)' }}
+      style={{ display: 'grid', gap: space.s3, padding: space.s4 }}
     >
-      <legend>
+      <legend style={{ fontWeight: 600 }}>
         {t('ratePlans.form.legend.policy', { name: draft.id, version: draft.version })}
       </legend>
-      <p role="note">{rs('offsetHelp')}</p>
+      <p role="note" style={opsNoticeStyle('info')}>
+        {rs('offsetHelp')}
+      </p>
       {draft.tiers.map((tier, index) => {
         const issue = issueAt(index);
         return (
@@ -61,14 +69,18 @@ export function PolicyEditor({
             data-issue={issue ?? ''}
             style={{
               display: 'flex',
-              gap: 'var(--space-s2, 8px)',
+              gap: space.s2,
               alignItems: 'end',
               flexWrap: 'wrap',
               overflowWrap: 'anywhere',
-              border: issue === null ? undefined : '1px solid var(--color-danger, red)',
+              padding: space.s2,
+              border:
+                issue === null
+                  ? '1px solid var(--color-border)'
+                  : '1px solid var(--color-danger, red)',
             }}
           >
-            <label style={FIELD_STYLE}>
+            <label style={OPS_FIELD_LABEL_STYLE}>
               {t('ratePlans.form.hours')}
               <input
                 name={`hoursBeforeCheckIn-${index}`}
@@ -83,7 +95,7 @@ export function PolicyEditor({
                 }}
               />
             </label>
-            <label style={FIELD_STYLE}>
+            <label style={OPS_FIELD_LABEL_STYLE}>
               {t('ratePlans.form.refund')}
               <input
                 name={`refundPercent-${index}`}
@@ -91,7 +103,7 @@ export function PolicyEditor({
                 onChange={(event) => setTier(index, { refundPercent: event.target.value })}
               />
             </label>
-            <label style={FIELD_STYLE}>
+            <label style={{ display: 'flex', gap: 6, alignItems: 'center', minHeight: 44 }}>
               <input
                 type="checkbox"
                 name={`chargeFirstNight-${index}`}
@@ -101,17 +113,28 @@ export function PolicyEditor({
               {rs('firstNightRow', { index: index + 1 })}
             </label>
             {tierOffset(tier) === -1 ? <span>{rs('catchAll')}</span> : null}
-            {issue === null ? null : <span role="alert">{issue}</span>}
-            <button type="button" onClick={() => removeTier(index)}>
+            {issue === null ? null : (
+              <span role="alert" style={{ color: 'var(--color-danger)' }}>
+                {issue}
+              </span>
+            )}
+            <button
+              type="button"
+              className="ph-btn"
+              style={OPS_COMPACT_BTN_STYLE}
+              onClick={() => removeTier(index)}
+            >
               {t('ratePlans.removeTier')}
             </button>
           </div>
         );
       })}
-      <button type="button" onClick={addTier}>
-        {t('ratePlans.addTier')}
-      </button>
-      <label style={FIELD_STYLE}>
+      <div>
+        <button type="button" className="ph-btn" style={OPS_COMPACT_BTN_STYLE} onClick={addTier}>
+          {t('ratePlans.addTier')}
+        </button>
+      </div>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('ratePlans.form.earlyFreeHours')}
         <input
           name="earlyCheckoutFreeHours"
@@ -119,7 +142,7 @@ export function PolicyEditor({
           onChange={(event) => onChange({ ...draft, earlyCheckoutFreeHours: event.target.value })}
         />
       </label>
-      <label style={FIELD_STYLE}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('ratePlans.form.earlyRefundPct')}
         <input
           name="earlyCheckoutRefundPct"
@@ -127,7 +150,7 @@ export function PolicyEditor({
           onChange={(event) => onChange({ ...draft, earlyCheckoutRefundPct: event.target.value })}
         />
       </label>
-      <label style={FIELD_STYLE}>
+      <label style={OPS_FIELD_LABEL_STYLE}>
         {t('ratePlans.form.reason')}
         <input
           name="reason"
@@ -135,12 +158,14 @@ export function PolicyEditor({
           onChange={(event) => onChange({ ...draft, reason: event.target.value })}
         />
       </label>
-      <p role="note" style={{ margin: 0 }}>
+      <p role="note" style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 13 }}>
         {t('ratePlans.roundingNote')}
       </p>
-      <div style={{ display: 'flex', gap: 'var(--space-s2, 8px)' }}>
-        <button type="submit">{t('ratePlans.save')}</button>
-        <button type="button" onClick={onCancel}>
+      <div style={{ display: 'flex', gap: space.s2, flexWrap: 'wrap' }}>
+        <button type="submit" className="ph-btn-primary" style={OPS_COMPACT_BTN_STYLE}>
+          {t('ratePlans.save')}
+        </button>
+        <button type="button" className="ph-btn" style={OPS_COMPACT_BTN_STYLE} onClick={onCancel}>
           {t('ratePlans.cancel')}
         </button>
       </div>

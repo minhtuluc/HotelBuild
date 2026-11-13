@@ -2,9 +2,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import type { ReactElement } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
+import { color } from '@pinehill/ui-native';
 import { f6Deps, useF6Session } from '../../src/features/f6-overbooking/boot.native';
 import { f6Text as text } from '../../src/features/f6-overbooking/messages';
 import { RelocationScreen } from '../../src/features/f6-overbooking/relocation-screen';
+import { theme } from '../../src/theme';
 
 const one = (value: string | string[] | undefined): string =>
   (Array.isArray(value) ? value[0] : value) ?? '';
@@ -17,11 +19,25 @@ export default function RelocationRoute(): ReactElement {
     moveId?: string;
   }>();
   const { phase, session, profile } = useF6Session();
-  if (phase === 'boot') return <ActivityIndicator accessibilityLabel={text('loading')} />;
+  if (phase === 'boot')
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: color.bg,
+        }}
+      >
+        <ActivityIndicator accessibilityLabel={text('loading')} color={color.primary} />
+      </View>
+    );
   if (session === null || profile === null)
     return (
-      <View style={{ padding: 16 }}>
-        <Text testID="f6-boot-message">{text(phase === 'ready' ? 'error' : phase)}</Text>
+      <View style={theme.screen}>
+        <Text testID="f6-boot-message" style={theme.body}>
+          {text(phase === 'ready' ? 'error' : phase)}
+        </Text>
       </View>
     );
   return (

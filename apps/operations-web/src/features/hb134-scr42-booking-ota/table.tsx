@@ -1,7 +1,13 @@
 'use client';
 import { useState, type ReactElement } from 'react';
-import { formatDateTimeVn, formatMoney } from '@pinehill/ui-web';
+import { formatDateTimeVn, formatMoney, space } from '@pinehill/ui-web';
 import type { OtaBooking } from '@pinehill/contracts';
+import {
+  OPS_COMPACT_BTN_STYLE,
+  OPS_SUBTITLE_STYLE,
+  OPS_TABLE_WRAP_STYLE,
+  OPS_TABULAR_STYLE,
+} from '../../components/editorial-styles';
 import type { Rows } from './controller';
 import { text } from './messages';
 import { flagIssues, type FieldIssue, type FlagDraft } from './model';
@@ -92,9 +98,10 @@ function Row({
         <td>
           <button
             type="button"
+            className="ph-btn"
             disabled={busy}
             onClick={() => onAsk(row)}
-            style={{ minHeight: 44 }}
+            style={OPS_COMPACT_BTN_STYLE}
             data-testid={`hb134-flag-${row.id}`}
           >
             {row.flagged ? text('unflag') : text('flag')}
@@ -112,13 +119,8 @@ function Table(props: {
   onAsk: (row: OtaBooking) => void;
 }): ReactElement {
   return (
-    <div
-      role="region"
-      aria-label={text('listLabel')}
-      tabIndex={0}
-      style={{ overflowX: 'auto', maxWidth: '100%' }}
-    >
-      <table data-testid="hb134-table">
+    <div role="region" aria-label={text('listLabel')} tabIndex={0} style={OPS_TABLE_WRAP_STYLE}>
+      <table data-testid="hb134-table" style={OPS_TABULAR_STYLE}>
         <thead>
           <tr>
             <th scope="col">{text('colCode')}</th>
@@ -201,12 +203,21 @@ export function OtaTable(props: {
   const [target, setTarget] = useState<OtaBooking | null>(null);
   const rows = props.list?.rows ?? [];
   return (
-    <section style={box} aria-labelledby="hb134-list-title" data-testid="hb134-list">
-      <h2 id="hb134-list-title">{text('listLabel')}</h2>
-      {props.list === null ? null : <p>{text('total', { total: props.list.total })}</p>}
+    <section
+      className="ph-card"
+      style={{ ...box, padding: space.s4 }}
+      aria-labelledby="hb134-list-title"
+      data-testid="hb134-list"
+    >
+      <h2 id="hb134-list-title" style={OPS_SUBTITLE_STYLE}>
+        {text('listLabel')}
+      </h2>
+      {props.list === null ? null : (
+        <p style={{ margin: 0 }}>{text('total', { total: props.list.total })}</p>
+      )}
       {rows.length === 0 ? (
         props.list === null ? null : (
-          <p>{text('noRows')}</p>
+          <p style={{ margin: 0 }}>{text('noRows')}</p>
         )
       ) : (
         <Table rows={rows} canFlag={props.canFlag} busy={props.busy} onAsk={setTarget} />
@@ -214,8 +225,9 @@ export function OtaTable(props: {
       {props.list?.nextCursor === null || props.list === null ? null : (
         <button
           type="button"
+          className="ph-btn"
           onClick={props.onMore}
-          style={{ minHeight: 44, justifySelf: 'start' }}
+          style={{ ...OPS_COMPACT_BTN_STYLE, justifySelf: 'start' }}
         >
           {text('loadMore')}
         </button>

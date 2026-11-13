@@ -12,14 +12,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
-import {
-  color,
-  radius,
-  space,
-  touchTargetDp,
-  typography,
-  formatDateTimeVn,
-} from '@pinehill/ui-native';
+import { color, space, touchTargetDp, formatDateTimeVn } from '@pinehill/ui-native';
 import { createBookingApi } from '@pinehill/api-client';
 import type { CancelPreview, CancelResponse } from '@pinehill/contracts';
 import { createSession } from '../../../src/session-factory';
@@ -27,6 +20,7 @@ import { secureStorage } from '../../../src/storage.native';
 import { netInfoSource } from '../../../src/netinfo.native';
 import { t, type MessageKey } from '../../../src/strings';
 import { formatVnd } from '../../../src/search';
+import { theme } from '../../../src/theme';
 import {
   ORDER_STATUS_KEYS,
   bookingOf,
@@ -50,24 +44,8 @@ import {
   type RefundRow,
 } from '../../../src/cancel';
 
-const BUTTON = {
-  alignItems: 'center',
-  borderColor: color.border,
-  borderRadius: radius.sm,
-  borderWidth: 1,
-  justifyContent: 'center',
-  minHeight: touchTargetDp,
-  paddingHorizontal: space.s3,
-} as const;
-
-const FIELD = {
-  borderColor: color.border,
-  borderRadius: radius.sm,
-  borderWidth: 1,
-  color: color.text,
-  minHeight: touchTargetDp,
-  paddingHorizontal: space.s3,
-} as const;
+const BUTTON = theme.buttonSecondary;
+const FIELD = theme.field;
 
 const REFUND_KEYS: Readonly<Record<RefundRow['key'], MessageKey>> = {
   paid: 'booking.cancel.refund.paid',
@@ -83,11 +61,11 @@ function money(amount: number): string {
 function PreviewPanel({ preview }: { preview: CancelPreview }): ReactElement {
   const breakdown = preview.cancellation;
   return (
-    <View style={{ gap: space.s1 }} data-testid="cancel-preview">
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+    <View style={theme.card} data-testid="cancel-preview">
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {t('booking.cancel.previewTitle')}
       </Text>
-      <Text style={{ color: color.text }} data-testid="cancel-tier">
+      <Text style={theme.body} data-testid="cancel-tier">
         {t('booking.cancel.tier', {
           tier: breakdown.appliedTierId,
           hours: formatHoursBeforeCheckIn(breakdown.hoursBeforeCheckIn),
@@ -99,13 +77,13 @@ function PreviewPanel({ preview }: { preview: CancelPreview }): ReactElement {
           key={row.key}
           accessible
           accessibilityLabel={`${t(REFUND_KEYS[row.key])}: ${money(row.amount)}`}
-          style={{ color: color.textMuted }}
+          style={[theme.muted, theme.tabular]}
         >
           {`${t(REFUND_KEYS[row.key])}: ${money(row.amount)}`}
         </Text>
       ))}
       {(preview.warnings ?? []).map((warning) => (
-        <Text key={warning} style={{ color: color.warning }}>
+        <Text key={warning} style={theme.alertWarning}>
           {warning}
         </Text>
       ))}
@@ -115,20 +93,20 @@ function PreviewPanel({ preview }: { preview: CancelPreview }): ReactElement {
 
 function ResultPanel({ result }: { result: CancelResponse }): ReactElement {
   return (
-    <View style={{ gap: space.s1 }} data-testid="cancel-result">
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+    <View style={theme.card} data-testid="cancel-result">
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {t('booking.cancel.resultTitle')}
       </Text>
-      <Text style={{ color: color.text }} data-testid="cancel-result-status">
+      <Text style={theme.body} data-testid="cancel-result-status">
         {t(ORDER_STATUS_KEYS[result.status])}
       </Text>
-      <Text style={{ color: color.text }}>
+      <Text style={theme.body}>
         {t('booking.cancel.resultAt', { time: formatDateTimeVn(result.cancelledAt) })}
       </Text>
-      <Text style={{ color: color.text }}>
+      <Text style={theme.body}>
         {t('booking.cancel.resultReleased', { count: result.releasedAssignmentCount })}
       </Text>
-      <Text style={{ color: color.text }} data-testid="cancel-result-refund">
+      <Text style={[theme.body, theme.tabular]} data-testid="cancel-result-refund">
         {result.refundRequest === null
           ? t('booking.cancel.resultNoRefund')
           : t('booking.cancel.resultRefund', {
@@ -377,28 +355,36 @@ export default function CancelBookingScreen(): ReactElement {
   }, []);
 
   if (!ready || busy)
-    return <ActivityIndicator accessibilityLabel={t('state.loading')} color={color.primary} />;
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: color.bg,
+        }}
+      >
+        <ActivityIndicator accessibilityLabel={t('state.loading')} color={color.primary} />
+      </View>
+    );
 
   const booking = bookingOf(outcome);
   return (
-    <ScrollView contentContainerStyle={{ gap: space.s3, padding: space.s4 }}>
-      <Text
-        accessibilityRole="header"
-        style={{ color: color.text, fontSize: typography.h1.sp, fontWeight: '700' }}
-      >
+    <ScrollView style={theme.scroll} contentContainerStyle={theme.scrollContent}>
+      <Text accessibilityRole="header" style={theme.title}>
         {t('booking.cancel.title')}
       </Text>
       <OrderNotices outcome={outcome} />
       <Messages online={online} alert={alert} stale={stale} />
       {booking === null ? null : (
-        <View style={{ gap: space.s1 }}>
-          <Text style={{ color: color.text }} data-testid="cancel-booking">
+        <View style={theme.card}>
+          <Text style={theme.body} data-testid="cancel-booking">
             {t('orders.detail.code', { code: booking.code })}
           </Text>
-          <Text style={{ color: color.text }}>
+          <Text style={theme.body}>
             {t('orders.detail.status', { status: t(ORDER_STATUS_KEYS[booking.status]) })}
           </Text>
-          <Text style={{ color: color.text }}>{stayOf(booking)}</Text>
+          <Text style={theme.muted}>{stayOf(booking)}</Text>
         </View>
       )}
       {result === null ? null : <ResultPanel result={result} />}

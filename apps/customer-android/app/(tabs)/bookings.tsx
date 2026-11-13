@@ -8,14 +8,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import {
-  color,
-  radius,
-  space,
-  touchTargetDp,
-  typography,
-  formatDateTimeVn,
-} from '@pinehill/ui-native';
+import { color, space, formatDateTimeVn } from '@pinehill/ui-native';
 import { createBookingApi } from '@pinehill/api-client';
 import type { BookingSummary } from '@pinehill/contracts';
 import { createSession } from '../../src/session-factory';
@@ -23,6 +16,7 @@ import { secureStorage } from '../../src/storage.native';
 import { netInfoSource } from '../../src/netinfo.native';
 import { t } from '../../src/strings';
 import { formatVnd } from '../../src/search';
+import { theme } from '../../src/theme';
 import {
   ORDER_STATUS_KEYS,
   balanceRows,
@@ -54,25 +48,19 @@ function OrderRow({
     <View
       accessible
       accessibilityLabel={`${booking.code}. ${status}. ${stayOf(booking)}. ${moneyLine}`}
-      style={{
-        borderColor: color.border,
-        borderRadius: radius.sm,
-        borderWidth: 1,
-        gap: space.s1,
-        padding: space.s3,
-      }}
+      style={theme.card}
     >
-      <Text style={{ color: color.text, fontWeight: '700' }}>{booking.code}</Text>
+      <Text style={{ color: color.text, fontWeight: '600' }}>{booking.code}</Text>
       <Text style={CELL}>{status}</Text>
-      <Text style={{ color: color.textMuted }}>{stayOf(booking)}</Text>
-      <Text style={{ color: color.textMuted }}>{moneyLine}</Text>
+      <Text style={theme.muted}>{stayOf(booking)}</Text>
+      <Text style={[theme.muted, theme.tabular]}>{moneyLine}</Text>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${t('orders.open')} ${booking.code}`}
         onPress={onOpen}
-        style={{ minHeight: touchTargetDp, justifyContent: 'center' }}
+        style={theme.buttonPlain}
       >
-        <Text style={{ color: color.primary, fontWeight: '700' }}>{t('orders.open')}</Text>
+        <Text style={theme.buttonPlainText}>{t('orders.open')}</Text>
       </Pressable>
     </View>
   );
@@ -89,13 +77,6 @@ function SearchBar({
   onChange: (value: string) => void;
   onSearch: () => void;
 }): ReactElement {
-  const button = {
-    alignItems: 'center',
-    borderRadius: radius.sm,
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: touchTargetDp,
-  } as const;
   return (
     <View style={{ gap: space.s2 }}>
       <TextInput
@@ -104,14 +85,7 @@ function SearchBar({
         onChangeText={onChange}
         placeholder={t('orders.search')}
         autoCapitalize="characters"
-        style={{
-          borderColor: color.border,
-          borderRadius: radius.sm,
-          borderWidth: 1,
-          color: color.text,
-          minHeight: touchTargetDp,
-          paddingHorizontal: space.s3,
-        }}
+        style={theme.field}
       />
       <View style={{ flexDirection: 'row', gap: space.s2 }}>
         <Pressable
@@ -120,9 +94,9 @@ function SearchBar({
           accessibilityState={{ busy }}
           disabled={busy}
           onPress={onSearch}
-          style={{ ...button, backgroundColor: color.primary }}
+          style={[theme.buttonPrimary, { flex: 1 }]}
         >
-          <Text style={{ color: color.surface, fontWeight: '700' }}>{t('orders.search.run')}</Text>
+          <Text style={theme.buttonPrimaryText}>{t('orders.search.run')}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -130,9 +104,9 @@ function SearchBar({
           accessibilityState={{ busy }}
           disabled={busy}
           onPress={onSearch}
-          style={{ ...button, borderColor: color.border, borderWidth: 1 }}
+          style={[theme.buttonSecondary, { flex: 1 }]}
         >
-          <Text style={{ color: color.primary }}>{t('orders.reload')}</Text>
+          <Text style={{ color: color.primary, fontWeight: '500' }}>{t('orders.reload')}</Text>
         </Pressable>
       </View>
     </View>
@@ -229,7 +203,18 @@ export default function BookingsScreen(): ReactElement {
   }, [load, ready]);
 
   if (!ready)
-    return <ActivityIndicator accessibilityLabel={t('state.loading')} color={color.primary} />;
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: color.bg,
+        }}
+      >
+        <ActivityIndicator accessibilityLabel={t('state.loading')} color={color.primary} />
+      </View>
+    );
 
   const bookings =
     outcome === null
@@ -241,11 +226,8 @@ export default function BookingsScreen(): ReactElement {
           : [];
 
   return (
-    <ScrollView contentContainerStyle={{ gap: space.s3, padding: space.s4 }}>
-      <Text
-        accessibilityRole="header"
-        style={{ color: color.text, fontSize: typography.h1.sp, fontWeight: '700' }}
-      >
+    <ScrollView style={theme.scroll} contentContainerStyle={theme.scrollContent}>
+      <Text accessibilityRole="header" style={theme.title}>
         {t('orders.title')}
       </Text>
 

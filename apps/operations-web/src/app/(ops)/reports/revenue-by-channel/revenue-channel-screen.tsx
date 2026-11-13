@@ -21,6 +21,16 @@ import type {
 import { StateSurface, formatMoney, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
+import {
+  OPS_FIELD_LABEL_STYLE,
+  OPS_FILTER_ROW_STYLE,
+  OPS_HEADER_STYLE,
+  OPS_INTRO_STYLE,
+  OPS_PAGE_STYLE,
+  OPS_TABULAR_STYLE,
+  OPS_TITLE_STYLE,
+  opsNoticeStyle,
+} from '../../../../components/editorial-styles';
 import { t } from '../../../../lib/i18n';
 import { defaultRange } from '../../../../lib/inventory-grid';
 import { useOpsSession } from '../../../../lib/ops-session';
@@ -38,14 +48,8 @@ import {
 const POLL_INTERVAL_MS = 1_000;
 const POLL_MAX_ATTEMPTS = 30;
 
-const ROW_STYLE = {
-  display: 'flex',
-  gap: 'var(--space-s2, 8px)',
-  flexWrap: 'wrap',
-  alignItems: 'end',
-} as const;
-
-const FIELD_STYLE = { display: 'grid', gap: 4 } as const;
+const ROW_STYLE = OPS_FILTER_ROW_STYLE;
+const FIELD_STYLE = OPS_FIELD_LABEL_STYLE;
 
 function initialFilters(): ReportFilters {
   return { propertyId: '', ...defaultRange(new Date(), 7), groupBy: 'DAY' };
@@ -159,12 +163,15 @@ export function RevenueByChannelScreen(): ReactElement {
   const totals = report === null ? null : revenueTotals(report.rows);
 
   return (
-    <section
-      style={{ padding: 'var(--space-s6, 24px)', display: 'grid', gap: 'var(--space-s4, 16px)' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('reports.revenue.title')}</h1>
-      <p style={{ margin: 0 }}>{t('reports.revenue.intro')}</p>
+    <section style={OPS_PAGE_STYLE}>
+      <header style={OPS_HEADER_STYLE}>
+        <h1 className="ph-display" style={OPS_TITLE_STYLE}>
+          {t('reports.revenue.title')}
+        </h1>
+        <p style={OPS_INTRO_STYLE}>{t('reports.revenue.intro')}</p>
+      </header>
       <form
+        className="ph-card ph-filter-row"
         data-testid="revenue-filters"
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
           event.preventDefault();
@@ -205,7 +212,9 @@ export function RevenueByChannelScreen(): ReactElement {
             onChange={(event) => setDraft({ ...draft, to: event.target.value })}
           />
         </label>
-        <button type="submit">{t('reports.filters.load')}</button>
+        <button type="submit" className="ph-btn-primary">
+          {t('reports.filters.load')}
+        </button>
       </form>
       <StateSurface state={state}>
         {readError === null ? null : (
@@ -216,18 +225,22 @@ export function RevenueByChannelScreen(): ReactElement {
           <>
             <RevenueByChannelTable report={report} />
             {totals === null ? null : (
-              <p role="status" data-testid="revenue-total" style={{ margin: 0 }}>
+              <p
+                role="status"
+                data-testid="revenue-total"
+                style={{ ...opsNoticeStyle('info'), ...OPS_TABULAR_STYLE }}
+              >
                 {t('reports.revenue.total')}: {formatMoney(totals.grossAmount)} ·{' '}
                 {formatMoney(totals.commissionAmount)} · {formatMoney(totals.netAmount)} ·{' '}
                 {totals.bookings}
               </p>
             )}
             {canExport ? (
-              <div style={ROW_STYLE}>
-                <button type="button" onClick={() => void runExport('CSV')}>
+              <div className="ph-filter-row" style={ROW_STYLE}>
+                <button type="button" className="ph-btn" onClick={() => void runExport('CSV')}>
                   {t('reports.export.csv')}
                 </button>
-                <button type="button" onClick={() => void runExport('XLSX')}>
+                <button type="button" className="ph-btn" onClick={() => void runExport('XLSX')}>
                   {t('reports.export.xlsx')}
                 </button>
               </div>

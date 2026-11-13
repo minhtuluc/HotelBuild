@@ -70,8 +70,21 @@ export function ApiProbe({ baseUrl }: { baseUrl: string }): ReactElement {
   }
   if (state.kind === 'ok') {
     return (
-      <p data-testid="api-probe-ok" role="status" style={{ margin: 0 }}>
-        {t('api.probe.ok')} · <code>{baseUrl}</code>
+      <p
+        data-testid="api-probe-ok"
+        role="status"
+        style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: 8 }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 999,
+            background: 'var(--color-success, #17663A)',
+          }}
+        />
+        {t('api.probe.ok')}
       </p>
     );
   }

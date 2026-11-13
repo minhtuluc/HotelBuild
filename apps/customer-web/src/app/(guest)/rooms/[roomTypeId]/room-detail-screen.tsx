@@ -15,13 +15,60 @@ import { t } from '../../../../lib/i18n';
 import { fetchQuote, fetchRatePlans, type StayCriteria } from '../../search/journey-api';
 import { criteriaIssue, parseCriteria } from '../../search/search-params';
 import { isExpired } from './quote-model';
-import { NightsTable, QuoteSummary, QuoteWarnings } from './quote-tables';
-
-const FIELD_STYLE = { display: 'grid', gap: 4 } as const;
+import { NightsTable, PriceStrip, QuoteSummary, QuoteWarnings } from './quote-tables';
+import { formatCalendarDate } from '../../bookings/stay-format';
 
 function planCodeOf(value: string): RatePlanCode | null {
   const parsed = ratePlanCodeSchema.safeParse(value);
   return parsed.success ? parsed.data : null;
+}
+
+function bookHref(criteria: StayCriteria, roomTypeId: string, planCode: RatePlanCode | ''): string {
+  return `/book?${new URLSearchParams({
+    propertyId: criteria.propertyId,
+    roomTypeId,
+    ratePlanCode: planCode,
+    checkIn: criteria.checkIn,
+    checkOut: criteria.checkOut,
+    adults: String(criteria.adults),
+    children: String(criteria.children),
+    roomCount: String(criteria.roomCount),
+  }).toString()}`;
+}
+
+function RoomPlanHeader({
+  plans,
+  planCode,
+  onSelectPlan,
+}: {
+  plans: readonly RatePlanPublic[];
+  planCode: RatePlanCode | '';
+  onSelectPlan: (code: RatePlanCode) => void;
+}): ReactElement {
+  return (
+    <div>
+      <div className="ph-card" style={{ display: 'grid', gap: 16, maxWidth: 520 }}>
+        <label className="ph-field">
+          {t('guest.rooms.plan')}
+          <select
+            name="ratePlanCode"
+            value={planCode}
+            disabled={plans.length === 0}
+            onChange={(event) => {
+              const next = planCodeOf(event.target.value);
+              if (next !== null) onSelectPlan(next);
+            }}
+          >
+            {plans.map((plan) => (
+              <option key={plan.code} value={plan.code}>
+                {plan.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+    </div>
+  );
 }
 
 export function RoomDetailScreen(): ReactElement {
@@ -97,12 +144,18 @@ export function RoomDetailScreen(): ReactElement {
   if (criteria === null || roomTypeId === '') {
     const issue = criteriaIssue(new URLSearchParams(query));
     return (
-      <section data-testid="room-detail" style={{ display: 'grid', gap: 'var(--space-s3, 12px)' }}>
-        <h1 style={{ margin: 0 }}>{t('guest.rooms.title')}</h1>
-        <p role="alert" style={{ margin: 0 }}>
-          {t('guest.results.invalid', { field: issue.field })}
-        </p>
-        <Link href="/">{t('guest.results.backHome')}</Link>
+      <section data-testid="room-detail" className="ph-page-shell">
+        <div className="ph-page-header">
+          <h1 className="ph-page-title">{t('guest.rooms.title')}</h1>
+        </div>
+        <div className="ph-alert-box">
+          <p role="alert" style={{ margin: 0 }}>
+            {t('guest.results.invalid', { field: issue.field })}
+          </p>
+          <Link href="/" className="ph-btn">
+            {t('guest.results.backHome')}
+          </Link>
+        </div>
       </section>
     );
   }
@@ -110,84 +163,71 @@ export function RoomDetailScreen(): ReactElement {
   const expired = quote !== null && isExpired(quote.expiresAt, Date.now());
 
   return (
-    <section
-      data-testid="room-detail"
-      style={{ display: 'grid', gap: 'var(--space-s3, 12px)', padding: 'var(--space-s4, 16px) 0' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('guest.rooms.title')}</h1>
-      <p style={{ margin: 0 }}>
-        {t('guest.results.criteria', {
-          from: criteria.checkIn,
-          to: criteria.checkOut,
-          nights: quote?.nights.length ?? 0,
-        })}
-      </p>
-      <label style={FIELD_STYLE}>
-        {t('guest.rooms.plan')}
-        <select
-          name="ratePlanCode"
-          value={planCode}
-          disabled={plans.length === 0}
-          onChange={(event) => {
-            const next = planCodeOf(event.target.value);
-            if (next === null) return;
-            setPlanCode(next);
-            void runQuote(next);
-          }}
-        >
-          {plans.map((plan) => (
-            <option key={plan.code} value={plan.code}>
-              {plan.name}
-            </option>
-          ))}
-        </select>
-      </label>
+    <section data-testid="room-detail" className="ph-page-shell">
+      <div className="ph-page-header">
+        <h1 className="ph-page-title">{t('guest.rooms.title')}</h1>
+        <p className="ph-tabular" style={{ margin: 0, color: 'var(--color-textMuted)' }}>
+          {t('guest.results.criteria', {
+            from: formatCalendarDate(criteria.checkIn),
+            to: formatCalendarDate(criteria.checkOut),
+            nights: quote?.nights.length ?? 0,
+          })}
+        </p>
+      </div>
+      <RoomPlanHeader
+        plans={plans}
+        planCode={planCode}
+        onSelectPlan={(next) => {
+          setPlanCode(next);
+          void runQuote(next);
+        }}
+      />
       <StateSurface state={state}>
         {readError === null ? null : (
-          <div role="alert" style={{ display: 'grid', gap: 'var(--space-s2, 8px)' }}>
+          <div role="alert" className="ph-alert-box">
             <p style={{ margin: 0 }}>{t('guest.rooms.error')}</p>
-            <button type="button" onClick={() => void load()} style={{ minHeight: 44 }}>
+            <button type="button" className="ph-btn" onClick={() => void load()}>
               {t('guest.results.retry')}
             </button>
           </div>
         )}
         {quote === null ? null : (
-          <>
+          <div style={{ display: 'grid', gap: 20 }}>
             {expired ? (
-              <div role="alert" data-testid="quote-expired" style={{ display: 'grid', gap: 8 }}>
+              <div role="alert" data-testid="quote-expired" className="ph-alert-box">
                 <p style={{ margin: 0 }}>{t('guest.rooms.expired')}</p>
                 <button
                   type="button"
+                  className="ph-btn"
                   onClick={() => {
                     if (planCode !== '') void runQuote(planCode);
                   }}
-                  style={{ minHeight: 44 }}
                 >
                   {t('guest.rooms.renew')}
                 </button>
               </div>
             ) : null}
-            <NightsTable quote={quote} />
-            <QuoteWarnings quote={quote} />
-            <QuoteSummary quote={quote} />
-            <p role="note" style={{ margin: 0 }}>
-              {t('guest.rooms.engine', { version: quote.engineVersion })}
-            </p>
-            <Link
-              href={`/book?${new URLSearchParams({
-                propertyId: criteria.propertyId,
-                roomTypeId,
-                ratePlanCode: planCode,
-                checkIn: criteria.checkIn,
-                checkOut: criteria.checkOut,
-                adults: String(criteria.adults),
-                children: String(criteria.children),
-                roomCount: String(criteria.roomCount),
-              }).toString()}`}
-            >
-              {t('guest.rooms.continue')}
-            </Link>
-          </>
+            <PriceStrip quote={quote} />
+            <div className="ph-two-col">
+              <div style={{ display: 'grid', gap: 16 }}>
+                <NightsTable quote={quote} />
+                <QuoteWarnings quote={quote} />
+              </div>
+              <div style={{ display: 'grid', gap: 16 }}>
+                <QuoteSummary quote={quote} />
+                <p role="note" style={{ margin: 0, fontSize: 13, color: 'var(--color-textMuted)' }}>
+                  {t('guest.rooms.engine', { version: quote.engineVersion })}
+                </p>
+                <Link
+                  href={bookHref(criteria, roomTypeId, planCode)}
+                  className="ph-btn-accent ph-btn-lg"
+                  style={{ width: '100%' }}
+                >
+                  {t('guest.rooms.continue')}
+                </Link>
+              </div>
+            </div>
+          </div>
         )}
       </StateSurface>
     </section>

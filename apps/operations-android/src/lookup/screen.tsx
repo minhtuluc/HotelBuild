@@ -12,8 +12,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { color, space, touchTargetDp, typography } from '@pinehill/ui-native';
+import { color, space } from '@pinehill/ui-native';
 import type { Session } from '../session';
+import { theme } from '../theme';
 import { LookupReader, type LookupState } from './reader';
 import { lookupPorts } from './ports';
 import { lookupText as text } from './messages';
@@ -62,11 +63,8 @@ export function LookupScreen({
     void reader.load(term, session.selectedProperty() ?? undefined);
   }
   return (
-    <View style={{ flex: 1, padding: space.s4, gap: space.s3, backgroundColor: color.surface }}>
-      <Text
-        accessibilityRole="header"
-        style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}
-      >
+    <View style={theme.screen}>
+      <Text accessibilityRole="header" style={theme.title}>
         {text('title')}
       </Text>
       <TextInput
@@ -83,13 +81,7 @@ export function LookupScreen({
           setTerm(value);
         }}
         onSubmitEditing={search}
-        style={{
-          minHeight: touchTargetDp,
-          paddingHorizontal: space.s3,
-          borderWidth: 1,
-          borderRadius: 8,
-          color: color.text,
-        }}
+        style={theme.field}
       />
       <Pressable
         testID="lookup-search"
@@ -98,28 +90,18 @@ export function LookupScreen({
         accessibilityState={{ disabled: loading }}
         disabled={loading}
         onPress={search}
-        style={{
-          minHeight: touchTargetDp,
-          justifyContent: 'center',
-          paddingHorizontal: space.s3,
-          backgroundColor: color.primary,
-          borderRadius: 8,
-        }}
+        style={theme.buttonPrimary}
       >
-        <Text style={{ color: color.surface, textAlign: 'center', fontWeight: '600' }}>
-          {text('search')}
-        </Text>
+        <Text style={theme.buttonPrimaryText}>{text('search')}</Text>
       </Pressable>
-      {loading ? <ActivityIndicator accessibilityLabel={text('loading')} /> : null}
-      <Text
-        accessibilityLiveRegion="polite"
-        testID="lookup-state"
-        style={{ color: color.textMuted }}
-      >
+      {loading ? (
+        <ActivityIndicator accessibilityLabel={text('loading')} color={color.primary} />
+      ) : null}
+      <Text accessibilityLiveRegion="polite" testID="lookup-state" style={theme.muted}>
         {text(state.phase)}
       </Text>
       {state.truncated ? (
-        <Text accessibilityLiveRegion="polite" style={{ color: color.textMuted }}>
+        <Text accessibilityLiveRegion="polite" style={theme.muted}>
           {text('truncated')}
         </Text>
       ) : null}
@@ -144,9 +126,9 @@ export function LookupScreen({
         accessibilityRole="button"
         accessibilityLabel={text('back')}
         onPress={onBack}
-        style={{ minHeight: touchTargetDp, justifyContent: 'center', paddingHorizontal: space.s3 }}
+        style={theme.buttonPlain}
       >
-        <Text style={{ color: color.primary }}>{text('back')}</Text>
+        <Text style={theme.buttonPlainText}>{text('back')}</Text>
       </Pressable>
     </View>
   );

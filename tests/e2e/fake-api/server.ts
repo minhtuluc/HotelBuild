@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage } from 'node:http';
 import { readdir } from 'node:fs/promises';
+import { basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 import type { FakeApiContext, FakeHandler, FakeRequest, FakeResponse } from './core/types.js';
@@ -69,7 +70,7 @@ export async function startFakeApi(baseUrl: string) {
     platform: 'browser',
     target: 'es2022',
   });
-  const assets = new Map(built.outputFiles.map((file) => [file.path.split('/').at(-1), file.text]));
+  const assets = new Map(built.outputFiles.map((file) => [basename(file.path), file.text]));
   const origins = (
     process.env.E2E_APP_ORIGINS ?? 'http://127.0.0.1:3001,http://127.0.0.1:3002'
   ).split(',');
@@ -103,7 +104,7 @@ export async function startFakeApi(baseUrl: string) {
       const url = new URL(req.url ?? '/', `http://127.0.0.1:${address.port}`);
       if (['/__test/session-client.js', '/__test/f5-client.js'].includes(url.pathname)) {
         res.writeHead(200, { 'content-type': 'text/javascript' });
-        res.end(assets.get(url.pathname.split('/').at(-1)));
+        res.end(assets.get(basename(url.pathname)));
         return;
       }
       const request: FakeRequest = {

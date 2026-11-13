@@ -6,7 +6,7 @@
  */
 'use client';
 
-import type { ReactElement, ReactNode } from 'react';
+import type { CSSProperties, ReactElement, ReactNode } from 'react';
 import { formatDateTimeVn } from './format.js';
 import { useTranslate } from './i18n.js';
 
@@ -32,6 +32,46 @@ export interface StateSurfaceProps {
   children?: ReactNode;
 }
 
+const surfaceBoxBase: CSSProperties = {
+  padding: 'var(--space-s4, 16px) var(--space-s6, 24px)',
+  backgroundColor: 'var(--color-surface, #FBFAF7)',
+  color: 'var(--color-text, #1A1716)',
+  border: '1px solid var(--color-border, #D9D2CC)',
+  borderRadius: 'var(--radius-sm, 4px)',
+  display: 'grid',
+  gap: 'var(--space-s3, 12px)',
+  fontFamily: "var(--font-sans, 'Be Vietnam Pro', system-ui, sans-serif)",
+  fontSize: 'var(--text-body, 15px)',
+  lineHeight: 1.55,
+  fontVariantNumeric: 'tabular-nums',
+};
+
+function surfaceToneStyle(accentColor: string): CSSProperties {
+  return { ...surfaceBoxBase, borderColor: accentColor };
+}
+
+/**
+ * Nút hành động trong khối trạng thái: dùng class `.ph-btn-primary` của app (hover, tiêu điểm, không bấm được);
+ * style inline chỉ giữ vị trí và kích thước tối thiểu để khối vẫn dùng được khi thiếu CSS của app.
+ */
+const primaryActionStyle: CSSProperties = {
+  minHeight: 'var(--touch-target, 44px)',
+  justifySelf: 'start',
+};
+
+const fieldLinkButtonStyle: CSSProperties = {
+  minHeight: 'var(--touch-target, 44px)',
+  padding: '8px 4px',
+  backgroundColor: 'transparent',
+  color: 'var(--color-primary, #1B3A82)',
+  border: 'none',
+  borderBottom: '1px solid var(--color-border, #D9D2CC)',
+  textAlign: 'left',
+  fontSize: 'var(--text-sm, 13px)',
+  fontWeight: 500,
+  cursor: 'pointer',
+};
+
 /** `{field}` đến từ server nên phải escape trước khi dựng selector. */
 export function focusFieldByName(field: string): boolean {
   const escaped =
@@ -47,7 +87,12 @@ export function focusFieldByName(field: string): boolean {
 function LoadingBlock(): ReactElement {
   const t = useTranslate();
   return (
-    <div role="status" aria-busy="true" aria-live="polite" style={{ padding: 16 }}>
+    <div
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      style={surfaceToneStyle('var(--color-borderStrong, #6F625C)')}
+    >
       {t('state.loading')}
     </div>
   );
@@ -70,10 +115,15 @@ function EmptyBlock({
         ? 'state.empty.filtered'
         : 'state.empty.soldOut';
   return (
-    <div role="status" style={{ padding: 16 }}>
-      <p>{t(key)}</p>
+    <div role="status" style={surfaceToneStyle('var(--color-border, #D9D2CC)')}>
+      <p style={{ margin: 0 }}>{t(key)}</p>
       {canCreate && onCreate !== undefined ? (
-        <button type="button" onClick={onCreate}>
+        <button
+          type="button"
+          onClick={onCreate}
+          className="ph-btn-primary"
+          style={primaryActionStyle}
+        >
           {t('state.empty.create')}
         </button>
       ) : null}
@@ -84,7 +134,7 @@ function EmptyBlock({
 function ForbiddenBlock(): ReactElement {
   const t = useTranslate();
   return (
-    <div role="alert" style={{ padding: 16 }}>
+    <div role="alert" style={surfaceToneStyle('var(--color-danger, #9E1B32)')}>
       {t('state.forbidden')}
     </div>
   );
@@ -97,11 +147,16 @@ function ConflictBlock({
 }): ReactElement {
   const t = useTranslate();
   return (
-    <div role="alert" style={{ padding: 16 }}>
-      <p>
+    <div role="alert" style={surfaceToneStyle('var(--color-warning, #8A4B06)')}>
+      <p style={{ margin: 0 }}>
         {t('state.conflict', { attempted: state.attemptedVersion, current: state.currentVersion })}
       </p>
-      <button type="button" onClick={state.onReload}>
+      <button
+        type="button"
+        onClick={state.onReload}
+        className="ph-btn-primary"
+        style={primaryActionStyle}
+      >
         {t('state.conflict.reload')}
       </button>
     </div>
@@ -115,9 +170,14 @@ function ExpiredBlock({
 }): ReactElement {
   const t = useTranslate();
   return (
-    <div role="alert" style={{ padding: 16 }}>
-      <p>{t('state.expired', { time: formatDateTimeVn(state.expiresAt) })}</p>
-      <button type="button" onClick={state.onReload}>
+    <div role="alert" style={surfaceToneStyle('var(--color-warning, #8A4B06)')}>
+      <p style={{ margin: 0 }}>{t('state.expired', { time: formatDateTimeVn(state.expiresAt) })}</p>
+      <button
+        type="button"
+        onClick={state.onReload}
+        className="ph-btn-primary"
+        style={primaryActionStyle}
+      >
         {t('state.expired.reload')}
       </button>
     </div>
@@ -131,9 +191,14 @@ function UnknownOutcomeBlock({
 }): ReactElement {
   const t = useTranslate();
   return (
-    <div role="alert" style={{ padding: 16 }}>
-      <p>{t('state.unknownOutcome', { reference: state.referenceId })}</p>
-      <button type="button" onClick={state.onLookup}>
+    <div role="alert" style={surfaceToneStyle('var(--color-info, #1B3A82)')}>
+      <p style={{ margin: 0 }}>{t('state.unknownOutcome', { reference: state.referenceId })}</p>
+      <button
+        type="button"
+        onClick={state.onLookup}
+        className="ph-btn-primary"
+        style={primaryActionStyle}
+      >
         {t('state.unknownOutcome.lookup')}
       </button>
     </div>
@@ -147,10 +212,15 @@ function SuccessBlock({
 }): ReactElement {
   const t = useTranslate();
   return (
-    <div role="status" aria-live="polite" style={{ padding: 16 }}>
-      <p>{t('state.success')}</p>
+    <div role="status" aria-live="polite" style={surfaceToneStyle('var(--color-success, #17663A)')}>
+      <p style={{ margin: 0 }}>{t('state.success')}</p>
       {state.onCreateNext === undefined ? null : (
-        <button type="button" onClick={state.onCreateNext}>
+        <button
+          type="button"
+          onClick={state.onCreateNext}
+          className="ph-btn-primary"
+          style={primaryActionStyle}
+        >
           {t('state.empty.create')}
         </button>
       )}
@@ -189,7 +259,19 @@ function RefreshingBanner({
 }): ReactElement {
   const t = useTranslate();
   return (
-    <div role="status" aria-live="polite" style={{ padding: 16 }}>
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        ...surfaceToneStyle('var(--color-primary, #1B3A82)'),
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: 'var(--space-s2, 8px)',
+        fontSize: 'var(--text-sm, 13px)',
+        color: 'var(--color-textMuted, #5A4640)',
+      }}
+    >
       <span>{t('state.refreshing', { time: formatDateTimeVn(state.updatedAt) })}</span>
       {state.stale ? <span role="note"> · {t('state.refreshing.stale')}</span> : null}
     </div>
@@ -203,13 +285,16 @@ function ValidationSummary({
 }): ReactElement {
   const t = useTranslate();
   return (
-    <div role="alert" style={{ padding: 16 }}>
-      <p>{t('state.validation', { count: state.details.length })}</p>
-      <ul>
+    <div role="alert" style={surfaceToneStyle('var(--color-danger, #9E1B32)')}>
+      <p style={{ margin: 0, fontWeight: 500, color: 'var(--color-danger, #9E1B32)' }}>
+        {t('state.validation', { count: state.details.length })}
+      </p>
+      <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 'var(--space-s1, 4px)' }}>
         {state.details.map((detail) => (
           <li key={detail.field}>
             <button
               type="button"
+              style={fieldLinkButtonStyle}
               onClick={() => {
                 focusFieldByName(detail.field);
               }}

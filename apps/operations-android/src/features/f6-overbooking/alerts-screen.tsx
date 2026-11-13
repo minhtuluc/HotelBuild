@@ -5,10 +5,11 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 import type { UserMe } from '@pinehill/contracts';
-import { color, space, typography } from '@pinehill/ui-native';
+import { color, space } from '@pinehill/ui-native';
 import { ActionButton } from '../../arrivals/controls';
 import { formatVnDateTime } from '../../arrivals/format';
 import type { Session } from '../../session';
+import { theme } from '../../theme';
 import { f6Text as text } from './messages';
 import { emptyConfirmed, type AlertRow } from './model';
 import { f6Ports } from './ports';
@@ -115,25 +116,17 @@ function AlertCard({
 }): ReactElement {
   const label = (extra: string): string => `${text('open')} ${extra}`.trim();
   return (
-    <View
-      testID={`alert-${row.caseId}`}
-      accessible
-      style={{
-        borderWidth: 1,
-        borderColor: color.border,
-        borderRadius: 8,
-        padding: space.s3,
-        gap: space.s2,
-      }}
-    >
-      <Text style={{ fontWeight: '700', color: color.text }}>{headline(row)}</Text>
-      <Text>{text('statusLabel', { status: row.status })}</Text>
+    <View testID={`alert-${row.caseId}`} accessible style={theme.card}>
+      <Text style={{ fontWeight: '600', color: color.text }}>{headline(row)}</Text>
+      <Text style={theme.body}>{text('statusLabel', { status: row.status })}</Text>
       <Text style={{ color: row.overdue ? color.danger : color.textMuted }}>{dueLine(row)}</Text>
       {row.escalatedAt === null ? null : (
-        <Text>{text('escalatedAt', { time: formatVnDateTime(row.escalatedAt) })}</Text>
+        <Text style={theme.muted}>
+          {text('escalatedAt', { time: formatVnDateTime(row.escalatedAt) })}
+        </Text>
       )}
       {row.delayReason === null ? null : (
-        <Text>{text('delayReason', { reason: row.delayReason })}</Text>
+        <Text style={theme.muted}>{text('delayReason', { reason: row.delayReason })}</Text>
       )}
       {row.bookings.length === 0 ? (
         <ActionButton
@@ -185,14 +178,11 @@ function Message({ state }: { state: AlertsState }): ReactElement | null {
 export function AlertsScreen(props: AlertsScreenProps): ReactElement {
   const { state, reload } = useAlerts(props);
   return (
-    <View style={{ flex: 1, padding: space.s4, gap: space.s3 }}>
-      <Text
-        accessibilityRole="header"
-        style={{ fontSize: typography.h1.sp, fontWeight: '700', color: color.text }}
-      >
+    <View style={theme.screen}>
+      <Text accessibilityRole="header" style={theme.title}>
         {text('alertsTitle')}
       </Text>
-      <Text style={{ color: color.textMuted }}>{text('alertsHint')}</Text>
+      <Text style={theme.muted}>{text('alertsHint')}</Text>
       <ActionButton
         testID="alerts-refresh"
         label={text('refresh')}
@@ -200,7 +190,7 @@ export function AlertsScreen(props: AlertsScreenProps): ReactElement {
         disabled={state.phase === 'loading'}
       />
       {state.phase === 'loading' ? (
-        <ActivityIndicator accessibilityLabel={text('loading')} />
+        <ActivityIndicator accessibilityLabel={text('loading')} color={color.primary} />
       ) : null}
       <Freshness state={state} />
       <Message state={state} />

@@ -8,14 +8,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  color,
-  radius,
-  space,
-  touchTargetDp,
-  typography,
-  formatDateTimeVn,
-} from '@pinehill/ui-native';
+import { color, space, formatDateTimeVn } from '@pinehill/ui-native';
 import type { BookingSummary, Hold, RatePlanCode } from '@pinehill/contracts';
 import { createSession } from '../../src/session-factory';
 import { holdApiFrom } from '../../src/hold-api';
@@ -24,6 +17,7 @@ import { t } from '../../src/strings';
 import { calendarDateLabel } from '../../src/calendar-date';
 import { formatVnd } from '../../src/search';
 import { planCodeOf } from '../../src/room-detail';
+import { theme } from '../../src/theme';
 import {
   bookingResult,
   continueEnabled,
@@ -108,14 +102,7 @@ function Field({
         onChangeText={onChange}
         keyboardType={numeric ? 'phone-pad' : 'default'}
         autoCapitalize={numeric ? 'none' : 'words'}
-        style={{
-          borderColor: color.border,
-          borderRadius: radius.sm,
-          borderWidth: 1,
-          color: color.text,
-          minHeight: touchTargetDp,
-          paddingHorizontal: space.s3,
-        }}
+        style={theme.field}
       />
     </View>
   );
@@ -137,15 +124,9 @@ function Action({
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={{
-        alignItems: 'center',
-        backgroundColor: disabled ? color.borderStrong : color.primary,
-        borderRadius: radius.sm,
-        justifyContent: 'center',
-        minHeight: touchTargetDp,
-      }}
+      style={[theme.buttonPrimary, disabled ? { backgroundColor: color.borderStrong } : null]}
     >
-      <Text style={{ color: color.surface, fontWeight: '700' }}>{label}</Text>
+      <Text style={theme.buttonPrimaryText}>{label}</Text>
     </Pressable>
   );
 }
@@ -154,11 +135,11 @@ function HoldLine({ hold, nowMs }: { hold: Hold; nowMs: number }): ReactElement 
   const remaining = holdRemaining(hold, nowMs);
   const locked = remaining !== null && remaining <= 0;
   return (
-    <View style={{ gap: space.s1 }} accessible>
-      <Text style={{ color: locked ? color.warning : color.text }}>
+    <View style={theme.card} accessible>
+      <Text style={[{ color: locked ? color.warning : color.text }, theme.tabular]}>
         {t('hold.countdown', { time: formatCountdown(remaining ?? 0) })}
       </Text>
-      <Text style={{ color: color.textMuted }}>
+      <Text style={theme.muted}>
         {t('hold.expiresAt', { time: formatDateTimeVn(hold.expiresAt) })}
       </Text>
     </View>
@@ -167,13 +148,13 @@ function HoldLine({ hold, nowMs }: { hold: Hold; nowMs: number }): ReactElement 
 
 function Result({ booking }: { booking: BookingSummary }): ReactElement {
   return (
-    <View style={{ gap: space.s1 }} accessible>
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+    <View style={theme.card} accessible>
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {t('hold.result.title')}
       </Text>
       <Text style={CELL}>{t('hold.result.code', { code: booking.code })}</Text>
       <Text style={CELL}>{t('hold.result.status', { status: booking.status })}</Text>
-      <Text style={CELL}>
+      <Text style={[CELL, theme.tabular]}>
         {t('hold.result.total', {
           amount: t('room.money', { amount: formatVnd(booking.totalAmount) }),
         })}
@@ -317,8 +298,8 @@ export default function ConfirmHoldScreen(): ReactElement {
 
   if (parsed === null) {
     return (
-      <View style={{ gap: space.s3, padding: space.s4 }}>
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+      <View style={theme.screen}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {t('hold.invalid')}
         </Text>
       </View>
@@ -326,12 +307,23 @@ export default function ConfirmHoldScreen(): ReactElement {
   }
 
   if (!ready)
-    return <ActivityIndicator accessibilityLabel={t('state.loading')} color={color.primary} />;
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: color.bg,
+        }}
+      >
+        <ActivityIndicator accessibilityLabel={t('state.loading')} color={color.primary} />
+      </View>
+    );
 
   if (!session.hasAccessToken()) {
     return (
-      <View style={{ gap: space.s3, padding: space.s4 }}>
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+      <View style={theme.screen}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {t('guest.title')}
         </Text>
         <Action
@@ -350,11 +342,8 @@ export default function ConfirmHoldScreen(): ReactElement {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ gap: space.s3, padding: space.s4 }}>
-      <Text
-        accessibilityRole="header"
-        style={{ color: color.text, fontSize: typography.h1.sp, fontWeight: '700' }}
-      >
+    <ScrollView style={theme.scroll} contentContainerStyle={theme.scrollContent}>
+      <Text accessibilityRole="header" style={theme.title}>
         {t('hold.title')}
       </Text>
       <Text style={CELL}>
@@ -365,7 +354,7 @@ export default function ConfirmHoldScreen(): ReactElement {
         })}
       </Text>
 
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {t('hold.guest.title')}
       </Text>
       <Field

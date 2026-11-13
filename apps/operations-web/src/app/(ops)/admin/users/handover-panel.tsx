@@ -3,7 +3,7 @@ import { useState, type ReactElement } from 'react';
 import { color, typography } from '@pinehill/ui-web';
 import type { Handover } from './controller';
 import { userText } from './messages';
-import { CONTROL, PANEL } from './styles';
+import { PANEL } from './styles';
 
 type CopyState = 'idle' | 'copied' | 'failed';
 
@@ -41,16 +41,21 @@ export function HandoverPanel({
           {handover.password}
         </code>
       </p>
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div className="ph-actions">
         <button
+          className="ph-btn"
           type="button"
           data-testid="handover-copy"
-          style={CONTROL}
           onClick={() => void copyPassword()}
         >
           {userText('copy')}
         </button>
-        <button type="button" data-testid="handover-done" style={CONTROL} onClick={onDone}>
+        <button
+          className="ph-btn-primary"
+          type="button"
+          data-testid="handover-done"
+          onClick={onDone}
+        >
           {userText('handoverDone')}
         </button>
       </div>

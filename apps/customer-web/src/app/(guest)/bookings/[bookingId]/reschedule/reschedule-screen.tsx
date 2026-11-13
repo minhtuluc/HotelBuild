@@ -148,42 +148,50 @@ export function RescheduleScreen(): ReactElement {
     }
   }, [booking, bookingId, checkIn, checkOut, note, quote, session, failure]);
 
-  if (forbidden) return <AccessDeniedPanel backHref={`/bookings/${bookingId}`} />;
+  if (forbidden)
+    return (
+      <div className="ph-page-shell">
+        <AccessDeniedPanel backHref={`/bookings/${bookingId}`} />
+      </div>
+    );
   if (notFound) {
     return (
-      <section
-        role="alert"
-        data-testid="reschedule-not-found"
-        style={{
-          display: 'grid',
-          gap: 'var(--space-s3, 12px)',
-          padding: 'var(--space-s4, 16px) 0',
-        }}
-      >
-        <h1 style={{ margin: 0 }}>{t('guest.reschedule.title')}</h1>
-        <p style={{ margin: 0 }}>{t('guest.booking.notFound')}</p>
-        <Link href="/bookings">{t('guest.bookings.back')}</Link>
+      <section role="alert" data-testid="reschedule-not-found" className="ph-page-shell">
+        <div className="ph-page-header">
+          <h1 className="ph-page-title">{t('guest.reschedule.title')}</h1>
+        </div>
+        <div className="ph-alert-box">
+          <p style={{ margin: 0 }}>{t('guest.booking.notFound')}</p>
+          <Link href="/bookings" className="ph-btn">
+            {t('guest.bookings.back')}
+          </Link>
+        </div>
       </section>
     );
   }
 
   return (
-    <section
-      data-testid="reschedule-screen"
-      style={{ display: 'grid', gap: 'var(--space-s3, 12px)', padding: 'var(--space-s4, 16px) 0' }}
-    >
-      <h1 style={{ margin: 0 }}>{t('guest.reschedule.title')}</h1>
+    <section data-testid="reschedule-screen" className="ph-page-shell">
+      <div className="ph-page-header">
+        <h1 className="ph-page-title">{t('guest.reschedule.title')}</h1>
+      </div>
       <StateSurface state={state}>
         {baseline === null ? null : (
-          <p data-testid="reschedule-current" style={{ margin: 0 }}>
-            {t(result === null ? 'guest.reschedule.current' : 'guest.reschedule.currentBefore')}{' '}
-            <code>{baseline.code}</code> ·{' '}
-            {formatStatusWithEnum(t(STATUS_KEYS[baseline.status]), baseline.status)} ·{' '}
-            {formatStaySpan(
-              baseline.checkIn,
-              baseline.checkOut,
-              formatStayPeriod(baseline.nights, baseline.adults, baseline.children),
-            )}
+          <p
+            data-testid="reschedule-current"
+            className="ph-muted-box ph-tabular"
+            style={{ margin: 0 }}
+          >
+            <span>
+              {t(result === null ? 'guest.reschedule.current' : 'guest.reschedule.currentBefore')}{' '}
+              <code>{baseline.code}</code> ·{' '}
+              {formatStatusWithEnum(t(STATUS_KEYS[baseline.status]), baseline.status)} ·{' '}
+              {formatStaySpan(
+                baseline.checkIn,
+                baseline.checkOut,
+                formatStayPeriod(baseline.nights, baseline.adults, baseline.children),
+              )}
+            </span>
           </p>
         )}
 
@@ -209,7 +217,12 @@ export function RescheduleScreen(): ReactElement {
         ) : null}
 
         {alert === null ? null : (
-          <p role="alert" data-testid="reschedule-alert" style={{ margin: 0 }}>
+          <p
+            role="alert"
+            data-testid="reschedule-alert"
+            className="ph-alert-box"
+            style={{ margin: 0 }}
+          >
             {alert}
           </p>
         )}

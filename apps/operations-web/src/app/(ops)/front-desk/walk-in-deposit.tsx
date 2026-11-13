@@ -2,11 +2,11 @@
 import { useRef, useState, type ReactElement } from 'react';
 import Link from 'next/link';
 import { isApiError } from '@pinehill/api-client';
-import { color, formatMoney, radius, space, touchTargetPx } from '@pinehill/ui-web';
+import { color, formatMoney, radius, space } from '@pinehill/ui-web';
 import type { Payment, WalkInResult } from '@pinehill/contracts';
 import type { DeskApi } from './front-desk-api';
 import { actionFailure, amountIssue, type ActionFailure } from './front-desk-model';
-import { CONTROL, FailureNotice } from './desk-tables';
+import { FailureNotice } from './desk-tables';
 import {
   pinFailure,
   pinGrantValid,
@@ -113,35 +113,50 @@ export function WalkInDeposit({
   };
   if (payment !== null)
     return (
-      <div role="status" data-testid="walk-in-done" style={{ display: 'grid', gap: 8 }}>
-        <p style={{ margin: 0 }}>{deskText('depositDone', { code: result.booking.code })}</p>
-        <p style={{ margin: 0 }}>
+      <div
+        role="status"
+        data-testid="walk-in-done"
+        style={{
+          display: 'grid',
+          gap: space.s2,
+          padding: `${space.s3}px ${space.s4}px`,
+          background: '#E7F3EE',
+          border: `1px solid ${color.border}`,
+          boxShadow: `inset 0 0 0 1px ${color.success}`,
+          borderRadius: radius.sm,
+        }}
+      >
+        <p style={{ margin: 0, color: color.success, fontWeight: 500 }}>
+          {deskText('depositDone', { code: result.booking.code })}
+        </p>
+        <p style={{ margin: 0, fontVariantNumeric: 'tabular-nums' }}>
           {deskText('paymentReference', { id: payment.paymentId })} · {formatMoney(payment.amount)}{' '}
           · {payment.method}
         </p>
         <Link
           href={`/bookings/${encodeURIComponent(result.booking.id)}`}
-          style={{
-            minHeight: touchTargetPx,
-            display: 'inline-flex',
-            alignItems: 'center',
-            color: color.primary,
-            textDecoration: 'underline',
-          }}
+          className="ph-btn"
+          style={{ justifySelf: 'start' }}
         >
           {deskText('openBooking')}
         </Link>
       </div>
     );
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <p style={{ margin: 0 }}>{deskText('depositIntro')}</p>
-      <p style={{ margin: 0 }}>
-        {deskText('totalAmount', { amount: formatMoney(result.booking.totalAmount) })}
-      </p>
-      <p style={{ margin: 0 }} data-testid="walk-in-deposit">
-        {deskText('depositAmount', { amount: formatMoney(result.booking.depositAmount) })}
-      </p>
+    <div style={{ display: 'grid', gap: space.s3, maxWidth: 560 }}>
+      <p style={{ margin: 0, color: color.textMuted }}>{deskText('depositIntro')}</p>
+      <ul className="ph-list-lines" style={{ fontVariantNumeric: 'tabular-nums' }}>
+        <li>
+          <span>
+            {deskText('totalAmount', { amount: formatMoney(result.booking.totalAmount) })}
+          </span>
+        </li>
+        <li>
+          <strong data-testid="walk-in-deposit">
+            {deskText('depositAmount', { amount: formatMoney(result.booking.depositAmount) })}
+          </strong>
+        </li>
+      </ul>
       <PinDialog
         step={step}
         pin={pin}
@@ -157,16 +172,10 @@ export function WalkInDeposit({
         title={deskText('submitDeposit')}
         description={deskText('depositIntro')}
       />
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 500 }}>
         {deskText('method')}
         <select
           name="method"
-          style={{
-            minHeight: touchTargetPx,
-            border: `1px solid ${color.borderStrong}`,
-            borderRadius: radius.sm,
-            padding: space.s2,
-          }}
           value={method}
           disabled={busy}
           onChange={(event) => {
@@ -177,28 +186,33 @@ export function WalkInDeposit({
           <option value="BANK_TRANSFER">BANK_TRANSFER</option>
         </select>
       </label>
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={{ display: 'grid', gap: 4, fontSize: 13, fontWeight: 500 }}>
         {deskText('amount')}
         <input
-          style={CONTROL}
           name="amount"
           inputMode="numeric"
           value={amount}
           disabled={busy}
+          style={{ fontVariantNumeric: 'tabular-nums' }}
           onChange={(event) => {
             setAmount(event.target.value);
           }}
         />
       </label>
       {amountProblem === null ? null : (
-        <p role="alert" data-testid="amount-issue" style={{ margin: 0 }}>
+        <p
+          role="alert"
+          data-testid="amount-issue"
+          style={{ margin: 0, color: color.danger, fontSize: 13 }}
+        >
           {deskText('invalidAmount')}
         </p>
       )}
       {failure === null ? null : <FailureNotice failure={failure} onInspect={onInspect} />}
       <button
         type="button"
-        style={CONTROL}
+        className="ph-btn-primary"
+        style={{ justifySelf: 'start' }}
         disabled={busy || step !== 'verified' || amountProblem !== null}
         onClick={() => {
           void submit();

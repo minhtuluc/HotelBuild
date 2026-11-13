@@ -8,20 +8,14 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  color,
-  radius,
-  space,
-  touchTargetDp,
-  typography,
-  formatDateTimeVn,
-} from '@pinehill/ui-native';
+import { color, radius, space, touchTargetDp, formatDateTimeVn } from '@pinehill/ui-native';
 import type { Quote, RatePlanCode, RatePlanPublic } from '@pinehill/contracts';
 import { createAppApiClient } from '../../src/api';
 import { createPublicJourneyApi } from '../../src/public-client';
 import { netInfoSource } from '../../src/netinfo.native';
 import { t } from '../../src/strings';
 import { formatVnd } from '../../src/search';
+import { theme } from '../../src/theme';
 import {
   criteriaFromParams,
   detailView,
@@ -46,33 +40,25 @@ function money(amount: number): string {
 function NightsTable({ quote }: { quote: Quote }): ReactElement {
   return (
     <View style={{ gap: space.s2 }}>
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {t('room.nights.title')}
       </Text>
-      <Text style={{ color: color.textMuted }}>{t('room.nights.note')}</Text>
+      <Text style={theme.muted}>{t('room.nights.note')}</Text>
       {nightsTable(quote).map((night) => (
         <View
           key={night.date}
           accessible
           accessibilityLabel={`${night.date}. ${t('room.col.basePrice')} ${money(night.basePrice)}. ${t('room.col.nightlyPrice')} ${money(night.nightlyPrice)}${night.clamped ? `. ${t('room.flag.clamped')}` : ''}`}
-          style={{
-            borderColor: color.border,
-            borderRadius: radius.sm,
-            borderWidth: 1,
-            gap: space.s1,
-            padding: space.s2,
-          }}
+          style={theme.card}
         >
           <Text style={CELL}>{night.date}</Text>
-          <Text style={{ color: color.textMuted }}>
+          <Text style={[theme.muted, theme.tabular]}>
             {t('room.col.basePrice')}: {money(night.basePrice)}
           </Text>
-          <Text style={{ color: color.text, fontWeight: '700' }}>
+          <Text style={[{ color: color.text, fontWeight: '600' }, theme.tabular]}>
             {t('room.col.nightlyPrice')}: {money(night.nightlyPrice)}
           </Text>
-          {!night.clamped ? null : (
-            <Text style={{ color: color.warning }}>{t('room.flag.clamped')}</Text>
-          )}
+          {!night.clamped ? null : <Text style={theme.alertWarning}>{t('room.flag.clamped')}</Text>}
         </View>
       ))}
     </View>
@@ -87,8 +73,8 @@ function Totals({ quote }: { quote: Quote }): ReactElement {
     deposit: t('room.summary.deposit', { percent: quote.depositPercent }),
   } as const;
   return (
-    <View style={{ gap: space.s1 }}>
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+    <View style={theme.card}>
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {t('room.summary.title')}
       </Text>
       {totalsRows(quote).map((row) => (
@@ -96,10 +82,10 @@ function Totals({ quote }: { quote: Quote }): ReactElement {
           key={row.key}
           accessible
           accessibilityLabel={`${labels[row.key]}: ${money(row.amount)}`}
-          style={{ flexDirection: 'row' }}
+          style={[{ flexDirection: 'row', paddingVertical: space.s1 }, theme.hairline]}
         >
           <Text style={{ color: color.textMuted, flex: 1 }}>{labels[row.key]}</Text>
-          <Text style={CELL}>{money(row.amount)}</Text>
+          <Text style={[CELL, theme.tabular]}>{money(row.amount)}</Text>
         </View>
       ))}
     </View>
@@ -109,19 +95,17 @@ function Totals({ quote }: { quote: Quote }): ReactElement {
 function Terms({ plan }: { plan: RatePlanPublic }): ReactElement {
   const terms = planTerms(plan);
   return (
-    <View style={{ gap: space.s1 }} accessible>
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+    <View style={theme.card} accessible>
+      <Text accessibilityRole="header" style={theme.sectionTitle}>
         {t('room.terms.title')}
       </Text>
-      <Text style={{ color: color.text }}>
-        {t('room.terms.deposit', { percent: terms.depositPercent })}
-      </Text>
-      <Text style={{ color: color.textMuted }}>
+      <Text style={theme.body}>{t('room.terms.deposit', { percent: terms.depositPercent })}</Text>
+      <Text style={theme.muted}>
         {terms.freeCancelHours === null
           ? t('room.terms.freeCancelUnknown')
           : t('room.terms.freeCancel', { hours: terms.freeCancelHours })}
       </Text>
-      <Text style={{ color: color.textMuted }}>
+      <Text style={theme.muted}>
         {t('room.terms.nights', { min: terms.minNights, max: terms.maxNights })}
       </Text>
     </View>
@@ -198,8 +182,9 @@ function PlanPicker({
             onSelect(plan.code);
           }}
           style={{
+            backgroundColor: color.surface,
             borderColor: selected === plan.code ? color.primary : color.border,
-            borderRadius: radius.sm,
+            borderRadius: radius.md,
             borderWidth: selected === plan.code ? 2 : 1,
             justifyContent: 'center',
             minHeight: touchTargetDp,
@@ -344,11 +329,8 @@ export default function RoomDetailScreen(): ReactElement {
   }, [load]);
 
   return (
-    <ScrollView contentContainerStyle={{ gap: space.s3, padding: space.s4 }}>
-      <Text
-        accessibilityRole="header"
-        style={{ color: color.text, fontSize: typography.h1.sp, fontWeight: '700' }}
-      >
+    <ScrollView style={theme.scroll} contentContainerStyle={theme.scrollContent}>
+      <Text accessibilityRole="header" style={theme.title}>
         {t('room.title')}
       </Text>
       {criteria === null ? null : (

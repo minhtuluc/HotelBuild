@@ -1,9 +1,17 @@
 'use client';
 
-/** Phần trình bày SCR-37 (HB-109): hộp thoại PIN, biểu mẫu thu tiền, biên lai. */
-import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { formatDateTimeVn, formatMoney } from '@pinehill/ui-web';
-import type { Payment } from '@pinehill/contracts';
+/** Phần trình bày SCR-37 (HB-109): tóm tắt công nợ, biểu mẫu thu tiền, biên lai. */
+import type { CSSProperties, ReactElement } from 'react';
+import {
+  color,
+  fontFamily,
+  formatDateTimeVn,
+  formatMoney,
+  radius,
+  space,
+  typography,
+} from '@pinehill/ui-web';
+import type { BookingBalance, BookingSummary, Payment } from '@pinehill/contracts';
 import { t } from '../../../../../lib/i18n';
 import {
   COLLECT_METHODS,
@@ -14,176 +22,87 @@ import {
   type AmountIssue,
   type CollectMethod,
   type CollectType,
-  type PinIssue,
-  type PinStep,
 } from './collect-model';
 
-const CELL = { padding: '4px 12px 4px 0', textAlign: 'left' } as const;
+export { PinDialog } from './collect-pin-dialog';
 
-function PinHeader({
-  title,
-  description,
+const CELL: CSSProperties = {
+  padding: `${space.s2}px ${space.s3}px ${space.s2}px 0`,
+  textAlign: 'left',
+};
+
+const FIELD_LABEL: CSSProperties = {
+  display: 'grid',
+  gap: 4,
+  fontSize: 13,
+  fontWeight: 500,
+  color: color.text,
+};
+
+const ALERT_LINE: CSSProperties = {
+  margin: 0,
+  color: color.danger,
+  fontSize: 13,
+};
+
+export function BookingSummaryCard({
+  booking,
+  balance,
 }: {
-  title: string | undefined;
-  description: string | undefined;
+  booking: BookingSummary;
+  balance: BookingBalance;
 }): ReactElement {
   return (
-    <>
-      <h2 id="ops-collect-pin-title" style={{ margin: 0 }}>
-        {title ?? t('ops.collect.pin.title')}
-      </h2>
-      <p style={{ margin: 0 }}>{description ?? t('ops.collect.pin.note')}</p>
-    </>
-  );
-}
-
-export function PinDialog({
-  step,
-  pin,
-  issue,
-  lockedMinutes,
-  wrong,
-  unavailable,
-  busy,
-  onPin,
-  onSubmit,
-  title,
-  description,
-  autoOpen,
-}: {
-  step: PinStep;
-  pin: string;
-  issue: PinIssue | null;
-  lockedMinutes: number | null;
-  wrong: boolean;
-  unavailable: boolean;
-  busy: boolean;
-  onPin: (value: string) => void;
-  onSubmit: () => void;
-  title?: string;
-  description?: string;
-  /**
-   * Mặc định mở ngay. `false` khi PIN là bước hai sau khi xem số máy chủ trả (UI-03, SCR-39/69):
-   * hộp thoại modal mở ngay khi vào màn sẽ làm cả trang `inert`, chặn bước một (HB-219).
-   */
-  autoOpen?: boolean;
-}): ReactElement {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const initiallyOpen = autoOpen !== false;
-  const [open, setOpen] = useState(initiallyOpen);
-  // PIN đã dùng xong (verified → idle sau lệnh ghi): quay về trạng thái đầu, không bật lại modal đè kết quả.
-  useEffect(() => {
-    if (step === 'verified') setOpen(initiallyOpen);
-  }, [step, initiallyOpen]);
-  useEffect(() => {
-    const element = dialog.current;
-    if (element === null || !open || step === 'verified') return;
-    element.showModal();
-    return () => element.close();
-  }, [open, step]);
-  const close = () => {
-    if (busy) return;
-    onPin('');
-    setOpen(false);
-  };
-  if (step === 'verified')
-    return (
-      <p role="status" data-testid="pin-verified" style={{ margin: 0 }}>
-        {t('ops.collect.pin.verified')}
-      </p>
-    );
-  return (
-    <>
-      <button type="button" data-testid="pin-open" disabled={busy} onClick={() => setOpen(true)}>
-        {t('ops.collect.pin.open')}
-      </button>
-      {open ? (
-        <dialog
-          ref={dialog}
-          aria-labelledby="ops-collect-pin-title"
-          data-testid="pin-dialog"
-          onCancel={(event) => {
-            event.preventDefault();
-            close();
-          }}
-          onKeyDown={(event) => {
-            if (event.key !== 'Tab') return;
-            const controls = [
-              ...event.currentTarget.querySelectorAll<HTMLInputElement | HTMLButtonElement>(
-                'input:not(:disabled), button:not(:disabled)',
-              ),
-            ];
-            const first = controls[0];
-            const last = controls.at(-1);
-            if (event.shiftKey && document.activeElement === first) {
-              event.preventDefault();
-              last?.focus();
-            } else if (!event.shiftKey && document.activeElement === last) {
-              event.preventDefault();
-              first?.focus();
-            }
-          }}
+    <section className="ph-card" style={{ display: 'grid', gap: space.s4 }}>
+      <div style={{ display: 'grid', gap: 6 }}>
+        <p
+          data-testid="collect-booking"
+          style={{ margin: 0, fontFamily: fontFamily.sans, fontSize: typography.h2.web }}
+        >
+          {t('ops.collect.booking', { code: booking.code, status: booking.status })}
+        </p>
+        <p
+          data-testid="collect-balance"
           style={{
-            maxWidth: 'calc(100vw - 32px)',
-            margin: 'auto',
-            border: '1px solid var(--color-border)',
-            padding: 16,
+            margin: 0,
+            color: color.textMuted,
+            fontSize: 14,
+            fontVariantNumeric: 'tabular-nums',
           }}
         >
-          <div style={{ display: 'grid', gap: 8 }}>
-            <PinHeader title={title} description={description} />
-            <>
-              <label style={{ display: 'grid', gap: 4 }}>
-                {t('ops.collect.pin.label')}
-                <input
-                  name="pin"
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  maxLength={6}
-                  value={pin}
-                  disabled={busy || step === 'locked'}
-                  onChange={(event) => {
-                    onPin(event.target.value);
-                  }}
-                />
-              </label>
-              {issue === null ? null : (
-                <p role="alert" data-testid="pin-issue" style={{ margin: 0 }}>
-                  {t('ops.collect.pin.issue.FORMAT')}
-                </p>
-              )}
-              {!unavailable ? null : (
-                <p role="alert" data-testid="pin-unavailable">
-                  {t('ops.collect.pin.unavailable')}
-                </p>
-              )}
-              {!wrong ? null : (
-                <p role="alert" data-testid="pin-wrong" style={{ margin: 0 }}>
-                  {t('ops.collect.pin.wrong')}
-                </p>
-              )}
-              {step !== 'locked' ? null : (
-                <p role="alert" data-testid="pin-locked" style={{ margin: 0 }}>
-                  {t('ops.collect.pin.locked', { minutes: lockedMinutes ?? 0 })}
-                </p>
-              )}
-              <button
-                type="button"
-                data-testid="pin-submit"
-                disabled={busy || step === 'locked'}
-                onClick={onSubmit}
-              >
-                {t('ops.collect.pin.submit')}
-              </button>
-            </>
-            <button type="button" data-testid="pin-cancel" disabled={busy} onClick={close}>
-              {t('ops.collect.pin.cancel')}
-            </button>
-          </div>
-        </dialog>
-      ) : null}
-    </>
+          {t('ops.collect.balance', {
+            paid: formatMoney(balance.paidAmount),
+            due: formatMoney(balance.balanceDue),
+          })}
+        </p>
+      </div>
+      <ul className="ph-list-lines" style={{ fontVariantNumeric: 'tabular-nums' }}>
+        <li>
+          <span style={{ color: color.textMuted }}>{t('ops.bookings.col.code')}</span>
+          <strong>{booking.code}</strong>
+        </li>
+        <li>
+          <span style={{ color: color.textMuted }}>{t('ops.bookings.col.stay')}</span>
+          <span>
+            {booking.checkIn} → {booking.checkOut} ({booking.nights})
+          </span>
+        </li>
+        <li>
+          <span style={{ color: color.textMuted }}>{t('ops.bookings.col.money')}</span>
+          <span>{formatMoney(balance.totalAmount)}</span>
+        </li>
+        <li>
+          <span style={{ color: color.textMuted }}>{t('ops.bookings.col.paid')}</span>
+          <span style={{ color: color.success }}>{formatMoney(balance.paidAmount)}</span>
+        </li>
+        <li>
+          <span style={{ color: color.textMuted }}>{t('ops.bookings.col.balance')}</span>
+          <strong style={{ fontSize: 18, color: color.text }}>
+            {formatMoney(balance.balanceDue)}
+          </strong>
+        </li>
+      </ul>
+    </section>
   );
 }
 
@@ -223,8 +142,8 @@ export function CollectForm({
         ? 'ops.collect.issue.POSITIVE'
         : 'ops.collect.issue.OVER';
   return (
-    <div data-testid="collect-form" style={{ display: 'grid', gap: 8, maxWidth: 520 }}>
-      <label style={{ display: 'grid', gap: 4 }}>
+    <div data-testid="collect-form" style={{ display: 'grid', gap: space.s3 }}>
+      <label style={FIELD_LABEL}>
         {t('ops.collect.type')}
         <select
           name="type"
@@ -242,7 +161,7 @@ export function CollectForm({
           ))}
         </select>
       </label>
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={FIELD_LABEL}>
         {t('ops.collect.method')}
         <select
           name="method"
@@ -260,27 +179,36 @@ export function CollectForm({
           ))}
         </select>
       </label>
-      <p style={{ margin: 0 }} data-testid="collect-suggested">
+      <p
+        style={{
+          margin: 0,
+          fontSize: 14,
+          color: color.textMuted,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+        data-testid="collect-suggested"
+      >
         {t('ops.collect.suggested', { amount: formatMoney(suggested) })}
       </p>
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={FIELD_LABEL}>
         {t('ops.collect.amount')}
         <input
           name="amount"
           inputMode="numeric"
           value={amount}
           disabled={busy}
+          style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}
           onChange={(event) => {
             onAmount(event.target.value);
           }}
         />
       </label>
       {issue === null ? null : (
-        <p role="alert" data-testid="collect-issue" style={{ margin: 0 }}>
+        <p role="alert" data-testid="collect-issue" style={ALERT_LINE}>
           {t(issueKey)}
         </p>
       )}
-      <label style={{ display: 'grid', gap: 4 }}>
+      <label style={FIELD_LABEL}>
         {t('ops.collect.note')}
         <input
           name="note"
@@ -293,14 +221,28 @@ export function CollectForm({
         />
       </label>
       {pinReady ? null : (
-        <p role="status" data-testid="pin-required" style={{ margin: 0 }}>
+        <p
+          role="status"
+          data-testid="pin-required"
+          style={{
+            margin: 0,
+            padding: `${space.s2}px ${space.s3}px`,
+            background: '#FDF8EF',
+            border: `1px solid ${color.border}`,
+            boxShadow: `inset 0 0 0 1px ${color.warning}`,
+            borderRadius: radius.sm,
+            color: color.warning,
+            fontSize: 13,
+          }}
+        >
           {t('ops.collect.pin.required')}
         </p>
       )}
-      <p style={{ margin: 0 }}>{t('ops.collect.noCard')}</p>
+      <p style={{ margin: 0, fontSize: 13, color: color.textMuted }}>{t('ops.collect.noCard')}</p>
       <button
         type="button"
         data-testid="collect-send"
+        className="ph-btn-primary"
         disabled={busy || !pinReady}
         onClick={onSend}
       >
@@ -321,12 +263,16 @@ export function Receipt({
     <section
       data-testid="collect-receipt"
       aria-labelledby="ops-collect-receipt-title"
-      style={{ display: 'grid', gap: 8 }}
+      className="ph-card"
+      style={{ display: 'grid', gap: space.s4 }}
     >
-      <h2 id="ops-collect-receipt-title" style={{ margin: 0 }}>
+      <h2
+        id="ops-collect-receipt-title"
+        style={{ margin: 0, fontFamily: fontFamily.sans, fontSize: typography.h2.web }}
+      >
         {t('ops.collect.receipt.title')}
       </h2>
-      <table>
+      <table style={{ fontVariantNumeric: 'tabular-nums' }}>
         <tbody>
           {receiptLines(payment).map((line) => (
             <tr key={line.key}>
@@ -344,7 +290,12 @@ export function Receipt({
           </tr>
         </tbody>
       </table>
-      <button type="button" data-testid="collect-print" onClick={onPrint}>
+      <button
+        type="button"
+        data-testid="collect-print"
+        className="ph-btn-primary"
+        onClick={onPrint}
+      >
         {t('ops.collect.print')}
       </button>
     </section>

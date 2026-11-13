@@ -23,10 +23,31 @@ test.describe('SCR-02/SCR-03 kết quả tìm phòng & giá từng đêm (HB-081
     await expect(row).toContainText('3');
     await expect(row).toContainText('1.000.000 ₫');
     await expect(row).toContainText('2.000.000 ₫');
+    const roomThumbnail = row.locator('img.ph-room-thumb');
+    await expect(roomThumbnail).toHaveAttribute('src', '/images/pine-hill/hang-STD.webp');
+    await expect
+      .poll(() =>
+        roomThumbnail.evaluate(
+          (node) => node instanceof HTMLImageElement && node.complete && node.naturalWidth > 0,
+        ),
+      )
+      .toBe(true);
     await expect(row.getByRole('link')).toHaveAttribute(
       'href',
       `/rooms/synthetic-room?propertyId=synthetic-property&${STAY}&roomCount=1`,
     );
+  });
+
+  test('SCR-02 xếp kết quả thành thẻ đọc được ở 360 px (AC1)', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.goto(`/search?propertyId=synthetic-property&${STAY}`);
+    const row = page.getByTestId('availability-row-synthetic-room');
+    await expect(row).toHaveCSS('display', 'grid');
+    await expect(row.getByRole('link', { name: 'Xem chi tiết & giá từng đêm' })).toBeVisible();
+    const overflow = await page.evaluate(
+      () => document.scrollingElement.scrollWidth - document.scrollingElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
   });
 
   test('SCR-02 không còn loại phòng nào thì hiện trạng thái rỗng (AC1)', async ({ page }) => {

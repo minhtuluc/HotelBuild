@@ -1,7 +1,7 @@
 import { useState, type ReactElement } from 'react';
 import { Text, View } from 'react-native';
-import { color, space } from '@pinehill/ui-native';
 import { formatVnd } from '../lookup/view';
+import { theme } from '../theme';
 import { ActionButton, Choice, Field } from './controls';
 import type { WalkInFlow, WalkInState } from './flow';
 import { walkInText as text } from './messages';
@@ -124,15 +124,17 @@ export function DepositStep({
   if (booking === undefined) return null;
   const due = booking.depositAmount > 0;
   return (
-    <View style={{ gap: space.s2 }} testID="walk-in-deposit">
-      <Text style={{ color: color.success, fontWeight: '700' }}>
+    <View style={theme.card} testID="walk-in-deposit">
+      <Text style={[theme.alertSuccess, { fontWeight: '600' }]}>
         {text('created', { code: booking.code })}
       </Text>
       {state.result?.created === false ? (
         <Problem id="walk-in-duplicate" message={text('duplicate')} />
       ) : null}
-      <Text>{text('totalAmount', { amount: formatVnd(booking.totalAmount) })}</Text>
-      <Text testID="walk-in-deposit-amount">
+      <Text style={[theme.body, theme.tabular]}>
+        {text('totalAmount', { amount: formatVnd(booking.totalAmount) })}
+      </Text>
+      <Text testID="walk-in-deposit-amount" style={[theme.moneyInline, theme.tabular]}>
         {due
           ? text('depositAmount', { amount: formatVnd(booking.depositAmount) })
           : text('noDeposit')}
