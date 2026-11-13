@@ -38,6 +38,13 @@ export const tokenPairSchema = z.object({
   refreshExpiresInSeconds: z.number().int().positive(),
   /** Bắt buộc đổi mật khẩu ở lần đăng nhập đầu (QĐ-03 quyết định 8). */
   mustChangePassword: z.boolean().optional(),
+  /**
+   * HB-243: phiên **nhân viên** trả kèm vai trò và phạm vi cơ sở (cùng giá trị ký trong access token) để
+   * client dựng bộ chọn cơ sở ngay sau đăng nhập/làm mới, không cần gọi thêm `GET /auth/me`. Phiên khách
+   * không có hai trường này. OWNER có phạm vi toàn chuỗi dù danh sách có thể rỗng (như `/auth/me`).
+   */
+  role: userRoleSchema.optional(),
+  propertyScope: z.array(z.string().min(1)).optional(),
 });
 
 /** PIN 6 số cho thao tác tài chính trên Android (ADR-010, BR-RBAC-05). */

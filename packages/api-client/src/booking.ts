@@ -53,6 +53,8 @@ export interface BookingApi {
   list(query?: {
     propertyId?: string;
     status?: BookingSummary['status'];
+    /** HB-243: nhiều trạng thái trong một lần gọi; không dùng cùng `status`. */
+    statuses?: readonly BookingSummary['status'][];
     channelCode?: string;
     from?: string;
     to?: string;
@@ -86,7 +88,7 @@ export function createBookingApi(client: ApiClient): BookingApi {
       client.request({
         method: 'GET',
         path: '/bookings',
-        ...(query === undefined ? {} : { query }),
+        ...(query === undefined ? {} : { query: bookingsQuery(query) }),
         decoder: listResponseSchema(bookingSummarySchema),
       }),
     get: (bookingId) =>
@@ -143,4 +145,17 @@ export function createBookingApi(client: ApiClient): BookingApi {
         query: { reason },
       }),
   };
+}
+
+/** `statuses` gửi dạng `A,B` như hợp đồng `bookingsQuerySchema` (HB-243). */
+function bookingsQuery(
+  query: Parameters<BookingApi['list']>[0] & object,
+): Record<string, string | number> {
+  const { statuses, ...rest } = query;
+  const plain = Object.fromEntries(
+    Object.entries(rest).filter(
+      (entry): entry is [string, string | number] => entry[1] !== undefined,
+    ),
+  );
+  return statuses === undefined ? plain : { ...plain, statuses: statuses.join(',') };
 }

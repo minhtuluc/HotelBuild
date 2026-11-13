@@ -149,6 +149,8 @@ export function bookingFilter(
   const to = filterDate(query.to);
   if (query.propertyId !== undefined) conditions.push({ property_id: query.propertyId });
   if (query.status !== undefined) conditions.push({ status: query.status });
+  if (query.statuses !== undefined)
+    conditions.push({ status: { in: [...new Set(query.statuses.split(','))] } });
   if (query.channelCode !== undefined)
     conditions.push({ channels: { is: { code: query.channelCode } } });
   if (from !== null) conditions.push({ check_in: { gte: from } });

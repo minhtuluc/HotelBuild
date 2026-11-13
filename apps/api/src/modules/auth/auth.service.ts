@@ -6,7 +6,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Clock, IdGenerator } from '@pinehill/domain';
 import { userRoleSchema } from '@pinehill/contracts';
-import type { UserMe } from '@pinehill/contracts';
+import type { UserMe, UserRole } from '@pinehill/contracts';
 import { AppError } from '../../common/app-error.js';
 import type { ActorContext } from '../../common/actor/actor-context.js';
 import { CONFIG } from '../../config/env.js';
@@ -44,6 +44,9 @@ export interface TokenPairResponse {
   readonly refreshToken: string;
   readonly refreshExpiresInSeconds: number;
   readonly mustChangePassword: boolean;
+  /** HB-243: chỉ phiên nhân viên. */
+  readonly role?: UserRole;
+  readonly propertyScope?: string[];
 }
 
 export interface LoginInput {

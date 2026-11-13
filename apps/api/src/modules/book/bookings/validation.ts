@@ -201,5 +201,7 @@ export function bookingId(value: unknown): string {
 export function listQuery(value: unknown): BookingsQuery {
   const parsed = bookingsQuerySchema.safeParse(value);
   if (!parsed.success) throw invalid();
+  // HB-243: `status` và `statuses` loại trừ nhau — không đoán ý người gọi.
+  if (parsed.data.status !== undefined && parsed.data.statuses !== undefined) throw invalid();
   return parsed.data;
 }
