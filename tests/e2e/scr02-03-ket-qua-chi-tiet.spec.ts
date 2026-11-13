@@ -44,9 +44,10 @@ test.describe('SCR-02/SCR-03 kết quả tìm phòng & giá từng đêm (HB-081
     const row = page.getByTestId('availability-row-synthetic-room');
     await expect(row).toHaveCSS('display', 'grid');
     await expect(row.getByRole('link', { name: 'Xem chi tiết & giá từng đêm' })).toBeVisible();
-    const overflow = await page.evaluate(
-      () => document.scrollingElement.scrollWidth - document.scrollingElement.clientWidth,
-    );
+    const overflow = await page.evaluate(() => {
+      const root = document.scrollingElement ?? document.documentElement;
+      return root.scrollWidth - root.clientWidth;
+    });
     expect(overflow).toBeLessThanOrEqual(1);
   });
 
