@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { businessDateSchema, isoUtcTimestampSchema } from './common.js';
 import { channelCodeSchema } from './enums.js';
+import { publicPhotoSchema } from './property.js';
 
 /** Số ngày giữa hai ngày `YYYY-MM-DD` (UTC) — dùng cho giới hạn khoảng lưới tồn. */
 function daysBetween(from: string, to: string): number {
@@ -112,6 +113,8 @@ export const availabilityItemSchema = z.object({
   maxNights: z.number().int().min(1),
   nightlyFrom: z.number().int().positive(),
   totalFrom: z.number().int().positive(),
+  /** HB-244: ảnh của **đúng** loại phòng này ở cơ sở này; optional để phản hồi cũ vẫn đọc được. */
+  photos: z.array(publicPhotoSchema).optional(),
 });
 
 /** Phản hồi `200`: kỳ, số đêm và danh sách loại phòng kèm phân trang con trỏ (api.md §3.8). */

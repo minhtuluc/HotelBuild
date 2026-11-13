@@ -19,6 +19,7 @@ import { CheckOutModule } from './modules/fo/check-out/module.js';
 import { NoShowModule } from './modules/fo/no-show/module.js';
 import { GridModule } from './modules/inv/grid/module.js';
 import { DayBoardModule } from './modules/inv/day-board/module.js';
+import { PhotosModule } from './modules/prop/photos/module.js';
 import { AvailabilityModule } from './modules/inv/availability/module.js';
 import { AllotmentsModule } from './modules/inv/allotments/module.js';
 import { RoomBlocksModule } from './modules/prop/room-blocks/module.js';
@@ -160,6 +161,7 @@ export class AppModule {
         AllotmentsModule,
         GridModule,
         DayBoardModule,
+        PhotosModule,
         AvailabilityModule,
         RatePlansModule,
         ChannelsModule,

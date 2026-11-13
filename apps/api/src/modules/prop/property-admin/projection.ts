@@ -13,12 +13,23 @@ export function propertyView(row: properties & { _count: { rooms: number } }) {
     version: numeric(row.version),
   };
 }
-export function publicView(row: properties) {
+export function publicView(
+  row: properties & {
+    property_photos?: readonly { url: string; alt: string; width: number; height: number }[];
+  },
+) {
   return {
     id: row.id,
     name: row.name,
     checkInTime: time(row.check_in_time),
     checkOutTime: time(row.check_out_time),
+    // HB-244: ảnh theo thứ tự hiển thị (rỗng khi chưa khai).
+    photos: (row.property_photos ?? []).map(({ url, alt, width, height }) => ({
+      url,
+      alt,
+      width,
+      height,
+    })),
   };
 }
 export const beds = (row: Pick<room_types, 'code' | 'capacity_adults'>) =>

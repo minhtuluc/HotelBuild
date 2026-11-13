@@ -609,6 +609,7 @@ model properties {
   rooms                                              rooms[]
   seasons                                            seasons[]
   user_property_scopes                               user_property_scopes[]
+  property_photos                                    property_photos[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -903,8 +904,39 @@ model room_types {
   rate_calendars           rate_calendars[]
   properties               properties                 @relation(fields: [property_id], references: [id], onUpdate: NoAction)
   rooms                    rooms[]
+  room_type_photos         room_type_photos[]
 
   @@unique([property_id, code], map: "uq_room_types_property_code")
+}
+
+/// HB-244: ảnh công khai của cơ sở — dòng bất biến, thay cả danh sách (migration 0013).
+model property_photos {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  property_id String     @db.Uuid
+  position    Int        @db.SmallInt
+  url         String
+  alt         String
+  width       Int
+  height      Int
+  created_at  DateTime   @default(now()) @db.Timestamptz(6)
+  properties  properties @relation(fields: [property_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([property_id, position], map: "uq_property_photos_position")
+}
+
+/// HB-244: ảnh công khai của loại phòng — dòng bất biến, thay cả danh sách (migration 0013).
+model room_type_photos {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  room_type_id String     @db.Uuid
+  position     Int        @db.SmallInt
+  url          String
+  alt          String
+  width        Int
+  height       Int
+  created_at   DateTime   @default(now()) @db.Timestamptz(6)
+  room_types   room_types @relation(fields: [room_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([room_type_id, position], map: "uq_room_type_photos_position")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

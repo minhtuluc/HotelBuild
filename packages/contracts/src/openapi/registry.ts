@@ -27,6 +27,7 @@ import { bearerWrite, idempotencyHeaders, jsonBody, makeErrorResponse } from './
 import { registerF2Paths } from './paths/f2.js';
 import { registerF3Paths } from './paths/f3.js';
 import { registerDayBoardPaths } from './paths/day-board.js';
+import { registerPhotoPaths } from './paths/photos.js';
 import { registerF4Paths } from './paths/f4.js';
 import { registerF5Paths } from './paths/f5.js';
 // Pha F6 (kênh OTA + quá tải/điều chuyển/ghép phòng) — HB-120.
@@ -334,6 +335,7 @@ registerF2Paths(registry, errorBodyComponent);
 // Pha F3 (RATE + gói giá + chính sách huỷ) — HB-050.
 registerF3Paths(registry, errorBodyComponent);
 registerDayBoardPaths(registry, errorBodyComponent);
+registerPhotoPaths(registry, errorBodyComponent);
 // Pha F4 (journey khách: availability, quotes, bookings, confirm, holds) — HB-070.
 registerF4Paths(registry, errorBodyComponent);
 // Pha F5 (thanh toán, huỷ/hoàn, đổi ngày, xoá booking) — HB-090.
