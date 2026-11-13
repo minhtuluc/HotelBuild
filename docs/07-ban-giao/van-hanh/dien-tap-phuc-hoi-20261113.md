@@ -44,6 +44,15 @@
 | RTO (restore + replay tới T) | ≤ 4 giờ | **27 giây** (CSDL 29,6 MB) |
 | RPO | ≤ 15 phút | Dữ liệu sau T mất đúng như thiết kế. Trong vận hành, RPO bị chặn trên bởi `archive_timeout=300` (≤ 5 phút) |
 
+## 3b. Lượt lại sau khi image chạy không root (`USER postgres`, Trivy DS-0002)
+
+Lúc `00:57Z`, dựng lại từ volume trống bằng image mới:
+- `stanza-create`, `check`, full: đều `completed successfully`; `backup` healthy; postgres chạy với `uid=70(postgres)`.
+- `restore-drill` khôi phục tới WAL cuối: `archive recovery complete`, `ready to accept connections`.
+- Lượt này **cố ý không chạy `migrate`**. Truy vấn đối soát báo lỗi `relation "bookings" does not exist`, đúng như mong muốn: script báo lỗi to khi thiếu bảng nghiệp vụ, không im lặng in số 0.
+
+Phát hiện phụ: lệnh tạo bucket trong `s3.local.yml` bị chạy đua với filer của SeaweedFS (`weed shell` trả 0 cả khi lỗi). Đã sửa thành thử lại cho tới khi bucket thật sự xuất hiện. Lỗi này chỉ thuộc file cục bộ, không ảnh hưởng production.
+
 ## 4. Dọn dẹp
 
 `docker compose -p hb179drill --profile drill down -v`: xoá toàn bộ container và volume của project diễn tập riêng này.

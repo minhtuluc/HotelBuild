@@ -32,7 +32,15 @@ services:
     entrypoint:
       - sh
       - -c
-      - echo "s3.bucket.create -name $$B" | weed shell -master=s3:9333
+      # `weed shell` trả 0 cả khi filer chưa sẵn sàng ⇒ thử lại tới khi bucket thật sự xuất hiện.
+      - |
+        for i in $$(seq 1 60); do
+          echo "s3.bucket.create -name $$B" | weed shell -master=s3:9333 >/dev/null 2>&1
+          echo "s3.bucket.list" | weed shell -master=s3:9333 2>/dev/null | grep -q "$$B" && exit 0
+          sleep 2
+        done
+        echo "không tạo được bucket $$B" >&2
+        exit 1
     environment:
       B: ${BACKUP_S3_BUCKET:?}
     networks: [backend]
