@@ -8,7 +8,7 @@ import { StateSurface } from '@pinehill/ui-web';
 import { paymentPorts } from './payment-api';
 import { PaymentFlow, type PaymentView } from './payment-flow';
 import { canPoll } from './payment-model';
-import { messages as m } from './messages-payment';
+import { usePaymentCatalog } from '../../../../../i18n/client';
 import {
   PaymentSummary,
   PaymentForm,
@@ -98,6 +98,7 @@ function usePaymentFlow(
   };
 }
 export function PaymentScreen({ fixtureOrigin }: { fixtureOrigin?: string | undefined }) {
+  const m = usePaymentCatalog();
   const { bookingId } = useParams<{ bookingId: string }>();
   const requestedId = useSearchParams().get('paymentId') ?? undefined;
   const flow = usePaymentFlow(bookingId, requestedId, fixtureOrigin);
@@ -115,7 +116,7 @@ export function PaymentScreen({ fixtureOrigin }: { fixtureOrigin?: string | unde
         </h1>
         <p className={styles.intro}>{m.intro}</p>
       </div>
-      <StateSurface state={paymentSurface(view, flow.invalid, flow.reload, flow.reference)} />
+      <StateSurface state={paymentSurface(view, flow.invalid, flow.reload, flow.reference, m)} />
       {view.offer ? <PaymentSummary offer={view.offer} /> : null}
       <PaymentForm
         view={view}

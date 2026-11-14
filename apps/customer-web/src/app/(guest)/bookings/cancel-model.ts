@@ -8,7 +8,7 @@
 import type { CancelPreview } from '@pinehill/contracts';
 
 export type CancellationBreakdown = CancelPreview['cancellation'];
-import type { CustomerMessageKey } from '../../../lib/i18n';
+import type { CustomerMessageKey } from '../../../i18n/catalogs';
 
 /** Lý do khách được phép khai trên web khách (máy chủ vẫn kiểm quyền theo từng lý do). */
 export type CancelReason = 'GUEST_REQUEST' | 'FORCE_MAJEURE';

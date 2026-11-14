@@ -1,13 +1,12 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import ts from 'typescript';
 import { expect, test } from 'vitest';
-import {
-  messages,
-  paymentText,
-} from '../../src/app/(guest)/booking/[bookingId]/pay/messages-payment';
+import { viPayment as messages } from '../../src/i18n/catalogs/vi/payment';
+import { translatorsFor } from '../../src/i18n/translate';
 import { paymentSurface } from '../../src/app/(guest)/booking/[bookingId]/pay/payment-panels';
 import type { PaymentView } from '../../src/app/(guest)/booking/[bookingId]/pay/payment-flow';
 
+const paymentText = translatorsFor('vi').payment;
 const folder = new URL('../../src/app/(guest)/booking/[bookingId]/pay/', import.meta.url);
 function hardcodedText(source: string, name: string): string[] {
   const ast = ts.createSourceFile(name, source, ts.ScriptTarget.Latest, true);
@@ -32,7 +31,7 @@ function hardcodedText(source: string, name: string): string[] {
 }
 test('payment flow keeps Vietnamese literal and JSX text in its catalog', () => {
   const findings = readdirSync(folder)
-    .filter((name) => /\.tsx?$/.test(name) && name !== 'messages-payment.ts')
+    .filter((name) => /\.tsx?$/.test(name))
     .flatMap((name) =>
       hardcodedText(readFileSync(new URL(name, folder), 'utf8'), name).map((text) => ({
         name,
@@ -75,11 +74,11 @@ test('localized validation and conflict preserve the existing state protocol', (
     changed: false,
   };
   const reload = () => undefined;
-  expect(paymentSurface(view, true, reload, 'reference')).toEqual({
+  expect(paymentSurface(view, true, reload, 'reference', messages)).toEqual({
     kind: 'validationError',
     details: [{ field: 'method', issue: 'Hãy chọn VNPay hoặc MoMo.' }],
   });
-  expect(paymentSurface({ ...view, changed: true }, false, reload, 'reference')).toEqual({
+  expect(paymentSurface({ ...view, changed: true }, false, reload, 'reference', messages)).toEqual({
     kind: 'conflict',
     currentVersion: 'máy chủ mới',
     attemptedVersion: 'bản trước',

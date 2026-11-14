@@ -6,7 +6,7 @@
  * (`POST /quotes`) rồi hiện chênh lệch giữa hai con số **máy chủ** đã trả; phần "phí" không có trong hợp
  * đồng nên màn hình nói rõ máy chủ chưa trả trường này thay vì bịa số 0.
  */
-import type { CustomerMessageKey } from '../../../lib/i18n';
+import type { CustomerMessageKey } from '../../../i18n/catalogs';
 
 /** Lỗi kiểm tra tại chỗ cho kỳ mới (máy chủ vẫn là nơi quyết định cuối cùng). */
 export type StayIssue = 'MISSING' | 'ORDER' | 'RANGE';

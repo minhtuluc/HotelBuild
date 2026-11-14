@@ -4,17 +4,10 @@
  * SCR-09 — "Đơn của tôi" (UC-BOOK-07): danh sách booking **của chính khách** (máy chủ giới hạn theo phiên),
  * lọc theo trạng thái và tra cứu theo mã/SĐT (`q`), cuộn tiếp theo con trỏ máy chủ trả.
  */
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type FormEvent,
-  type ReactElement,
-} from 'react';
+import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { createSessionClient } from '@pinehill/web-session/client';
+import { useGuestSession } from '../../../components/use-guest-session';
 import { isApiError } from '@pinehill/api-client';
 import { bookingStatusSchema } from '@pinehill/contracts';
 import type { BookingSummary } from '@pinehill/contracts';
@@ -25,7 +18,7 @@ import {
   formatStatusWithEnum,
   type ScreenState,
 } from '@pinehill/ui-web';
-import { t } from '../../../lib/i18n';
+import { useT, useTranslators } from '../../../i18n/client';
 import { fetchMyBookings } from './api';
 import {
   NO_FILTERS,
@@ -49,6 +42,7 @@ function FilterForm({
   current: BookingFilters;
   onApply: (filters: BookingFilters) => void;
 }): ReactElement {
+  const t = useT();
   const [status, setStatus] = useState<BookingStatusValue>(current.status);
   const [q, setQ] = useState(current.q);
 
@@ -112,6 +106,8 @@ function FilterForm({
 }
 
 function BookingRow({ booking }: { booking: BookingSummary }): ReactElement {
+  const text = useTranslators();
+  const t = useT();
   const hold = holdView(booking, Date.now());
   return (
     <tr data-testid={`booking-row-${booking.code}`}>
@@ -131,7 +127,7 @@ function BookingRow({ booking }: { booking: BookingSummary }): ReactElement {
         </Link>
       </td>
       <td>{formatStatusWithEnum(t(STATUS_KEYS[booking.status]), booking.status)}</td>
-      <td className="ph-tabular">{stayText(booking)}</td>
+      <td className="ph-tabular">{stayText(text, booking)}</td>
       <td className="ph-tabular">{formatMoney(booking.totalAmount)}</td>
       <td className="ph-tabular" style={{ fontWeight: 500 }}>
         {formatMoney(booking.balanceDue)}
@@ -153,6 +149,7 @@ function BookingRow({ booking }: { booking: BookingSummary }): ReactElement {
 }
 
 function BookingsTable({ bookings }: { bookings: readonly BookingSummary[] }): ReactElement {
+  const t = useT();
   return (
     <div className="ph-table-wrap">
       <table data-testid="bookings-list">
@@ -188,6 +185,7 @@ function BookingsTable({ bookings }: { bookings: readonly BookingSummary[] }): R
 }
 
 function ReadErrorBlock({ onRetry }: { onRetry: () => void }): ReactElement {
+  const t = useT();
   return (
     <div role="alert" data-testid="bookings-alert" className="ph-alert-box">
       <p style={{ margin: 0 }}>{t('guest.bookings.error')}</p>
@@ -199,17 +197,16 @@ function ReadErrorBlock({ onRetry }: { onRetry: () => void }): ReactElement {
 }
 
 export function BookingsScreen(): ReactElement {
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const filters = filtersFrom(searchParams);
 
-  const session = useMemo(() => createSessionClient({ kind: 'guest' }), []);
+  const session = useGuestSession();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [bookings, setBookings] = useState<readonly BookingSummary[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [readError, setReadError] = useState(false);
-
-  useEffect(() => () => session.dispose(), [session]);
 
   const load = useCallback(
     async (after: string | null): Promise<void> => {

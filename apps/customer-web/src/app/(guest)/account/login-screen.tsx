@@ -14,12 +14,13 @@ import {
   TextField,
   useFocusFirstIssue,
 } from './form-parts';
-import { accountText as text } from './messages';
+import { useAccountText } from '../../../i18n/client';
 
 type Field = 'phone' | 'password';
 const ORDER: readonly Field[] = ['phone', 'password'];
 
 export function LoginScreen({ contact }: { contact: string | null }): ReactElement {
+  const text = useAccountText();
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNext(params.get('next'));
@@ -85,7 +86,7 @@ export function LoginScreen({ contact }: { contact: string | null }): ReactEleme
         <Notice
           tone="error"
           testId="login-failure"
-          lines={failureLines(failure, 'login', contact)}
+          lines={failureLines(text, failure, 'login', contact)}
         />
       )}
       <SubmitButton busy={busy} label={text('submitLogin')} testId="login-submit" />

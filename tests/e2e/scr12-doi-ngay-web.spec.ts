@@ -7,7 +7,10 @@ import { bookingInput, quoteInput } from '../../packages/web-session/test/journe
 /** SCR-12 chỉ có ở web khách (ADR-018). */
 function customerWebOnly(): void {
   test.beforeEach(({}, testInfo) => {
-    test.skip(!testInfo.project.name.startsWith('customer-web'), 'ca này chỉ chạy trên customer-web');
+    test.skip(
+      !testInfo.project.name.startsWith('customer-web'),
+      'ca này chỉ chạy trên customer-web',
+    );
   });
 }
 
@@ -42,8 +45,9 @@ async function createBooking(page: Page): Promise<string> {
         onUnauthorized: (token) => window.sessionClient!.onUnauthorized(token),
         maxAttempts: 1,
       });
-      const quote = (await module.createQuoteApi(client).quote({ ...quoteInput, ratePlanCode: 'SAVER3' }))
-        .data;
+      const quote = (
+        await module.createQuoteApi(client).quote({ ...quoteInput, ratePlanCode: 'SAVER3' })
+      ).data;
       const booking = (
         await module.createBookingApi(client).create({
           ...bookingInput,
@@ -62,14 +66,11 @@ async function createBooking(page: Page): Promise<string> {
  * còn cookie phiên của BFF vẫn nguyên nên session client mới lấy được access token.
  */
 async function guestToken(page: Page): Promise<string | null> {
-  return await page.evaluate(
-    async (sessionUrl) => {
-      const sessionModule = await import(sessionUrl);
-      const session = sessionModule.createSessionClient({ kind: 'guest' });
-      return await session.getAccessToken();
-    },
-    `${origin}/__test/session-client.js`,
-  );
+  return await page.evaluate(async (sessionUrl) => {
+    const sessionModule = await import(sessionUrl);
+    const session = sessionModule.createSessionClient({ kind: 'guest' });
+    return await session.getAccessToken();
+  }, `${origin}/__test/session-client.js`);
 }
 
 /** Đọc lại booking từ máy chủ (kiểm trạng thái/kỳ lưu trú sau thao tác). */
@@ -152,12 +153,16 @@ test.describe('SCR-12 đổi ngày trên API giả (HB-104)', () => {
     );
     await expect(page.getByTestId('reschedule-new-total')).toContainText('3.000.000 ₫');
     await expect(page.getByTestId('reschedule-difference')).toContainText('tăng thêm 2.000.000 ₫');
-    await expect(page.getByTestId('reschedule-fee')).toContainText('hợp đồng chưa có trường này');
+    await expect(page.getByTestId('reschedule-fee')).toContainText(
+      'Phí đổi ngày (nếu có) tính theo chính sách của gói bạn đã chọn.',
+    );
 
     await expect(page.getByTestId('reschedule-confirm')).toBeEnabled();
     await page.getByTestId('reschedule-confirm').click();
     await expect(page.getByTestId('reschedule-result')).toBeVisible();
-    await expect(page.getByTestId('reschedule-result-status')).toContainText('Trạng thái giữ nguyên');
+    await expect(page.getByTestId('reschedule-result-status')).toContainText(
+      'Trạng thái giữ nguyên',
+    );
     await expect(page.getByTestId('reschedule-result-status')).toContainText('HELD');
     await expect(page.getByTestId('reschedule-result-stay')).toContainText(
       '12/10/2026 → 15/10/2026',
@@ -211,14 +216,18 @@ test.describe('SCR-12 đổi ngày trên API giả (HB-104)', () => {
     expect(quotes).toBe(0);
   });
 
-  test('kỳ mới trùng kỳ đang giữ thì nói rõ và không cho xem chênh lệch (AC1)', async ({ page }) => {
+  test('kỳ mới trùng kỳ đang giữ thì nói rõ và không cho xem chênh lệch (AC1)', async ({
+    page,
+  }) => {
     await openReschedule(page);
     await expect(page.getByTestId('reschedule-same')).toContainText('trùng kỳ đang giữ');
     await expect(page.getByTestId('reschedule-check')).toBeDisabled();
     await expect(page.getByTestId('reschedule-confirm')).toBeDisabled();
   });
 
-  test('không có vi phạm axe serious/critical và không cuộn ngang 360 px (AC2)', async ({ page }) => {
+  test('không có vi phạm axe serious/critical và không cuộn ngang 360 px (AC2)', async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 360, height: 800 });
     await openReschedule(page);
     await page.getByLabel('Ngày nhận phòng mới').fill(STAY.checkIn);

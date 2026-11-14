@@ -4,8 +4,8 @@
  */
 import type { CSSProperties, ReactElement } from 'react';
 import { formatMoney } from '@pinehill/ui-web';
-
-const WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'] as const;
+import { dayMonth, weekdayShort } from '../i18n/format';
+import type { Locale } from '../i18n/locales';
 
 export interface CalendarDay {
   readonly iso: string;
@@ -13,14 +13,12 @@ export interface CalendarDay {
   readonly dayMonth: string;
 }
 
-/** Đọc ngày lịch `YYYY-MM-DD` (không theo múi giờ máy) thành thứ + ngày/tháng để in lên tem. */
-export function calendarDay(iso: string): CalendarDay | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  if (match === null) return null;
-  const [, y, m, d] = match;
-  const utc = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
-  if (Number.isNaN(utc.getTime())) return null;
-  return { iso, weekday: WEEKDAYS[utc.getUTCDay()] ?? '', dayMonth: `${d}/${m}` };
+/** Đọc ngày lịch `YYYY-MM-DD` (không theo múi giờ máy) thành thứ + ngày/tháng theo locale để in lên tem. */
+export function calendarDay(iso: string, locale: Locale): CalendarDay | null {
+  const weekday = weekdayShort(iso, locale);
+  const day = dayMonth(iso, locale);
+  if (weekday === null || day === null) return null;
+  return { iso, weekday, dayMonth: day };
 }
 
 /** Các đêm của kỳ [checkIn, checkOut): ngày lịch nối tiếp, tối đa `limit` đêm để vẽ. */

@@ -4,11 +4,13 @@
 import type { ReactElement } from 'react';
 import Link from 'next/link';
 import type { BookingSummary, Quote } from '@pinehill/contracts';
-import { formatMoney, formatStatusWithEnum, formatStayPeriod } from '@pinehill/ui-web';
-import { t, type CustomerMessageKey } from '../../../../../lib/i18n';
-import { STATUS_KEYS } from '../../model';
+import { formatMoney, formatStatusWithEnum } from '@pinehill/ui-web';
+import { useT, useTranslators } from '../../../../../i18n/client';
+import type { CustomerMessageKey } from '../../../../../i18n/catalogs';
+import { STATUS_KEYS, stayText } from '../../model';
 import { nightsBetween, stayDifference } from '../../reschedule-model';
-import { formatStayNights, formatStaySpan } from '../../stay-format';
+import { formatStayNights } from '../../stay-format';
+import { DateLine } from '../../../../../components/date-line';
 
 const DIFF_KEYS = {
   more: 'guest.reschedule.diff.more',
@@ -27,6 +29,8 @@ function QuoteDiff({
   checkIn: string;
   checkOut: string;
 }): ReactElement {
+  const text = useTranslators();
+  const t = useT();
   const nights = nightsBetween(checkIn, checkOut) ?? 0;
   const difference = stayDifference(quote.total, booking.totalAmount);
   return (
@@ -41,7 +45,7 @@ function QuoteDiff({
       </h2>
       <ul className="ph-list-lines ph-tabular">
         <li data-testid="reschedule-new-stay">
-          <span>{formatStayNights(checkIn, checkOut, nights)}</span>
+          <span>{formatStayNights(text, checkIn, checkOut, nights)}</span>
         </li>
         <li data-testid="reschedule-new-total">
           <span>{t('guest.reschedule.diff.newTotal', { amount: formatMoney(quote.total) })}</span>
@@ -74,6 +78,8 @@ function RescheduleResult({
   previousStatus: string;
   booking: BookingSummary;
 }): ReactElement {
+  const text = useTranslators();
+  const t = useT();
   return (
     <section
       data-testid="reschedule-result"
@@ -98,13 +104,7 @@ function RescheduleResult({
           </span>
         </li>
         <li data-testid="reschedule-result-stay">
-          <span>
-            {formatStaySpan(
-              booking.checkIn,
-              booking.checkOut,
-              formatStayPeriod(booking.nights, booking.adults, booking.children),
-            )}
-          </span>
+          <span>{stayText(text, booking)}</span>
         </li>
         <li>
           <span>
@@ -151,6 +151,7 @@ export function RescheduleForm({
   onCheck: () => void;
   onConfirm: () => void;
 }): ReactElement {
+  const t = useT();
   return (
     <div className="ph-card" style={{ display: 'grid', gap: 16 }}>
       <div className="ph-search-grid">
@@ -159,24 +160,28 @@ export function RescheduleForm({
           <input
             name="checkIn"
             type="date"
+            aria-describedby="reschedule-checkIn-line"
             value={checkIn}
             disabled={busy}
             onChange={(event) => {
               onCheckIn(event.target.value);
             }}
           />
+          <DateLine id="reschedule-checkIn-line" iso={checkIn} />
         </label>
         <label className="ph-field">
           {t('guest.reschedule.checkOut')}
           <input
             name="checkOut"
             type="date"
+            aria-describedby="reschedule-checkOut-line"
             value={checkOut}
             disabled={busy}
             onChange={(event) => {
               onCheckOut(event.target.value);
             }}
           />
+          <DateLine id="reschedule-checkOut-line" iso={checkOut} />
         </label>
       </div>
       <label className="ph-field">

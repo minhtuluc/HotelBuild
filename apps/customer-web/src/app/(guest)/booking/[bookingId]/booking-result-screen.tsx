@@ -9,10 +9,10 @@
  * - **AC1**: đồng hồ đếm theo mốc `holdExpiresAt` của máy chủ; đếm về 0 thì **đọc lại** máy chủ và khoá nút
  *   tiếp tục khi vẫn quá hạn giữ chỗ.
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createSessionClient } from '@pinehill/web-session/client';
+import { useGuestSession } from '../../../../components/use-guest-session';
 import { isApiError } from '@pinehill/api-client';
 import type { BookingStatus, BookingSummary } from '@pinehill/contracts';
 import {
@@ -21,7 +21,8 @@ import {
   formatStatusWithEnum,
   type ScreenState,
 } from '@pinehill/ui-web';
-import { t, type CustomerMessageKey } from '../../../../lib/i18n';
+import { useT } from '../../../../i18n/client';
+import type { CustomerMessageKey } from '../../../../i18n/catalogs';
 import { fetchBooking } from '../booking-api';
 import { continueAction, continueHref, holdView, type HoldView } from '../booking-model';
 import {
@@ -57,6 +58,7 @@ function ContinueButton({
   hold: HoldView;
   bookingId: string;
 }): ReactElement | null {
+  const t = useT();
   const router = useRouter();
   const action = continueAction(booking, hold);
   if (action.kind === 'none') return null;
@@ -76,6 +78,7 @@ function ContinueButton({
 }
 
 function CodeLine({ code }: { code: string }): ReactElement {
+  const t = useT();
   const [note, setNote] = useState<'ok' | 'failed' | null>(null);
   return (
     <div className="ph-card" style={{ display: 'grid', gap: 8 }}>
@@ -138,6 +141,7 @@ function BookingDetails({
   bookingId: string;
   onReload: () => void;
 }): ReactElement {
+  const t = useT();
   const locked = continueAction(booking, hold).kind === 'locked';
   return (
     <div style={{ display: 'grid', gap: 20 }}>
@@ -181,6 +185,7 @@ function BookingDetails({
 }
 
 function NotFoundBlock(): ReactElement {
+  const t = useT();
   return (
     <section role="alert" data-testid="booking-not-found" className="ph-page-shell">
       <div className="ph-page-header">
@@ -198,17 +203,16 @@ function NotFoundBlock(): ReactElement {
 }
 
 export function BookingResultScreen(): ReactElement {
+  const t = useT();
   const routeParams = useParams<{ bookingId: string }>();
   const bookingId = typeof routeParams.bookingId === 'string' ? routeParams.bookingId : '';
-  const session = useMemo(() => createSessionClient({ kind: 'guest' }), []);
+  const session = useGuestSession();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [booking, setBooking] = useState<BookingSummary | null>(null);
   const [readError, setReadError] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const recheckDone = useRef(false);
-
-  useEffect(() => () => session.dispose(), [session]);
 
   const load = useCallback(async (): Promise<void> => {
     setReadError(false);

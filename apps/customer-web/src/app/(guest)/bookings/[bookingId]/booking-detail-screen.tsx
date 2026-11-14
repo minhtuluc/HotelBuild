@@ -4,10 +4,10 @@
  * SCR-10 — chi tiết booking của tôi (UC-BOOK-07): đọc lại booking **và** số dư từ máy chủ, hiện lối vào
  * các thao tác huỷ/đổi ngày (SCR-11/SCR-12).
  */
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { createSessionClient } from '@pinehill/web-session/client';
+import { useGuestSession } from '../../../../components/use-guest-session';
 import { isApiError } from '@pinehill/api-client';
 import type { BookingBalance, BookingSummary } from '@pinehill/contracts';
 import {
@@ -18,13 +18,14 @@ import {
   formatStatusWithEnum,
   type ScreenState,
 } from '@pinehill/ui-web';
-import { t } from '../../../../lib/i18n';
+import type { CustomerMessageKey } from '../../../../i18n/catalogs';
+import { useT, useTranslators } from '../../../../i18n/client';
 import { fetchBookingBalance } from '../api';
 import { fetchBooking } from '../../booking/booking-api';
 import { STATUS_KEYS, balanceRows, stayText, type BalanceRow } from '../model';
 import { formatCountdown, holdView, type HoldView } from '../../booking/booking-model';
 
-const BALANCE_KEYS: Readonly<Record<BalanceRow['key'], Parameters<typeof t>[0]>> = {
+const BALANCE_KEYS: Readonly<Record<BalanceRow['key'], CustomerMessageKey>> = {
   total: 'guest.bookings.balance.total',
   paid: 'guest.bookings.balance.paid',
   refunded: 'guest.bookings.balance.refunded',
@@ -33,6 +34,7 @@ const BALANCE_KEYS: Readonly<Record<BalanceRow['key'], Parameters<typeof t>[0]>>
 };
 
 function BalancePanel({ balance }: { balance: BookingBalance }): ReactElement {
+  const t = useT();
   return (
     <div className="ph-table-wrap">
       <table data-testid="booking-detail-balance">
@@ -69,6 +71,8 @@ export function StayPanel({
   booking: BookingSummary;
   hold: HoldView | null;
 }): ReactElement {
+  const text = useTranslators();
+  const t = useT();
   return (
     <div className="ph-table-wrap">
       <table data-testid="booking-detail-stay">
@@ -85,7 +89,7 @@ export function StayPanel({
         <tbody>
           <tr>
             <th scope="row">{t('guest.booking.stay.period')}</th>
-            <td className="ph-tabular">{stayText(booking)}</td>
+            <td className="ph-tabular">{stayText(text, booking)}</td>
           </tr>
           <tr>
             <th scope="row">{t('guest.booking.stay.rooms')}</th>
@@ -110,6 +114,7 @@ export function StayPanel({
 }
 
 function DetailActions({ bookingId }: { bookingId: string }): ReactElement {
+  const t = useT();
   return (
     <div
       data-testid="booking-detail-actions"
@@ -129,17 +134,16 @@ function DetailActions({ bookingId }: { bookingId: string }): ReactElement {
 }
 
 export function BookingDetailScreen(): ReactElement {
+  const t = useT();
   const routeParams = useParams<{ bookingId: string }>();
   const bookingId = typeof routeParams.bookingId === 'string' ? routeParams.bookingId : '';
 
-  const session = useMemo(() => createSessionClient({ kind: 'guest' }), []);
+  const session = useGuestSession();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [booking, setBooking] = useState<BookingSummary | null>(null);
   const [balance, setBalance] = useState<BookingBalance | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [readError, setReadError] = useState(false);
-
-  useEffect(() => () => session.dispose(), [session]);
 
   const load = useCallback(async (): Promise<void> => {
     setReadError(false);

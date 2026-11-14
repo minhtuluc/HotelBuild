@@ -17,15 +17,14 @@ import {
   formatDateTimeVn,
   formatMoney,
   formatStatusWithEnum,
-  formatStayPeriod,
   mapErrorToUiAction,
   type ScreenState,
 } from '@pinehill/ui-web';
-import { t, type CustomerMessageKey } from '../../../../../lib/i18n';
+import { useT, useTranslators } from '../../../../../i18n/client';
+import type { CustomerMessageKey } from '../../../../../i18n/catalogs';
 import { fetchBooking } from '../../../booking/booking-api';
 import { fetchCancelPreview, cancelBooking } from '../../api';
-import { STATUS_KEYS } from '../../model';
-import { formatStaySpan } from '../../stay-format';
+import { STATUS_KEYS, stayText } from '../../model';
 import {
   CANCEL_REASONS,
   CANCEL_REASON_KEYS,
@@ -48,6 +47,7 @@ const REFUND_KEYS: Readonly<Record<'paid' | 'requested' | 'penalty' | 'fee', Cus
   };
 
 function BreakdownPanel({ breakdown }: { breakdown: CancellationBreakdown }): ReactElement {
+  const t = useT();
   return (
     <section
       data-testid="cancel-preview"
@@ -87,6 +87,7 @@ function BreakdownPanel({ breakdown }: { breakdown: CancellationBreakdown }): Re
 }
 
 function CancelResult({ result }: { result: CancelResponse }): ReactElement {
+  const t = useT();
   return (
     <section
       data-testid="cancel-result"
@@ -151,6 +152,7 @@ function CancelForm({
   onPreview: () => void;
   onConfirm: () => void;
 }): ReactElement {
+  const t = useT();
   return (
     <div className="ph-card" style={{ display: 'grid', gap: 16 }}>
       <label className="ph-field">
@@ -237,6 +239,7 @@ function CancelOutcome({
 }
 
 function CancelMessages({ alert, stale }: { alert: string | null; stale: boolean }): ReactElement {
+  const t = useT();
   return (
     <>
       {alert === null ? null : (
@@ -254,6 +257,8 @@ function CancelMessages({ alert, stale }: { alert: string | null; stale: boolean
 }
 
 export function CancelScreen(): ReactElement {
+  const text = useTranslators();
+  const t = useT();
   const routeParams = useParams<{ bookingId: string }>();
   const bookingId = typeof routeParams.bookingId === 'string' ? routeParams.bookingId : '';
 
@@ -384,11 +389,7 @@ export function CancelScreen(): ReactElement {
             <span>
               <code>{booking.code}</code> ·{' '}
               {formatStatusWithEnum(t(STATUS_KEYS[booking.status]), booking.status)} ·{' '}
-              {formatStaySpan(
-                booking.checkIn,
-                booking.checkOut,
-                formatStayPeriod(booking.nights, booking.adults, booking.children),
-              )}
+              {stayText(text, booking)}
             </span>
           </p>
         )}

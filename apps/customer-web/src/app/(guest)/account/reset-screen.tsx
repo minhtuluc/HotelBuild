@@ -14,12 +14,13 @@ import {
   TextField,
   useFocusFirstIssue,
 } from './form-parts';
-import { accountText as text } from './messages';
+import { useAccountText } from '../../../i18n/client';
 
 type Field = 'password' | 'confirm';
 const ORDER: readonly Field[] = ['password', 'confirm'];
 
 export function ResetScreen({ contact }: { contact: string | null }): ReactElement {
+  const text = useAccountText();
   const params = useSearchParams();
   // Token đọc một lần vào state: dọn thanh địa chỉ bên dưới không được làm mất nó.
   const [token] = useState(() => params.get('token') ?? '');
@@ -113,7 +114,7 @@ export function ResetScreen({ contact }: { contact: string | null }): ReactEleme
         <Notice
           tone="error"
           testId="reset-failure"
-          lines={failureLines(failure, 'reset', contact)}
+          lines={failureLines(text, failure, 'reset', contact)}
         />
       )}
       <SubmitButton busy={busy} label={text('submitReset')} testId="reset-submit" />

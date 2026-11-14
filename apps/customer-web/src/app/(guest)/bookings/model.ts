@@ -8,8 +8,8 @@
  */
 import { bookingStatusSchema } from '@pinehill/contracts';
 import type { BookingBalance, BookingStatus, BookingSummary, ListPage } from '@pinehill/contracts';
-import { formatStayPeriod } from '@pinehill/ui-web';
-import type { CustomerMessageKey } from '../../../lib/i18n';
+import type { CustomerMessageKey } from '../../../i18n/catalogs';
+import type { Translators } from '../../../i18n/translate';
 import { formatStaySpan } from './stay-format';
 
 /** Nhãn trạng thái dùng chung cho danh sách và chi tiết (danh mục câu chữ ở `lib/i18n.ts`). */
@@ -31,17 +31,25 @@ export const STATUS_KEYS: Readonly<Record<BookingStatus, CustomerMessageKey>> = 
  * Ghép hai helper dùng chung đã có (`formatStaySpan` + `formatStayPeriod`) để danh sách và chi tiết nói
  * cùng một câu; ngày lịch đổi sang `dd/MM/yyyy` bằng thao tác chuỗi, không dựng `Date`.
  */
-export function stayText(booking: {
-  readonly checkIn: string;
-  readonly checkOut: string;
-  readonly nights: number;
-  readonly adults: number;
-  readonly children: number;
-}): string {
+export function stayText(
+  text: Translators,
+  booking: {
+    readonly checkIn: string;
+    readonly checkOut: string;
+    readonly nights: number;
+    readonly adults: number;
+    readonly children: number;
+  },
+): string {
   return formatStaySpan(
+    text,
     booking.checkIn,
     booking.checkOut,
-    formatStayPeriod(booking.nights, booking.adults, booking.children),
+    text.t('format.stayPeriod', {
+      nights: booking.nights,
+      adults: booking.adults,
+      children: booking.children,
+    }),
   );
 }
 

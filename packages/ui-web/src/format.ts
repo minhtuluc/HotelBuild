@@ -29,10 +29,26 @@ function partValue(parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPa
   return parts.find((part) => part.type === type)?.value ?? '';
 }
 
-/** `1.222.000 ₫` — số nguyên VND, phân cách nghìn bằng dấu chấm. */
-export function formatMoney(amountVnd: number): string {
+const moneyFormatters = new Map<string, Intl.NumberFormat>([[LOCALE, moneyFormatter]]);
+
+function moneyFormatterFor(locale: string): Intl.NumberFormat {
+  const cached = moneyFormatters.get(locale);
+  if (cached !== undefined) return cached;
+  const made = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+  moneyFormatters.set(locale, made);
+  return made;
+}
+
+/**
+ * `1.222.000 ₫` — số nguyên VND. Luôn là VND; `locale` (thẻ BCP 47, mặc định `vi-VN`) chỉ đổi dấu phân
+ * cách nghìn cho khách đọc theo ngôn ngữ của mình (kế hoạch đa ngôn ngữ §4).
+ */
+export function formatMoney(amountVnd: number, locale: string = LOCALE): string {
   if (!Number.isInteger(amountVnd)) throw new RangeError('Tiền phải là số nguyên VND (BR-GEN-01).');
-  return `${moneyFormatter.format(amountVnd)} ₫`;
+  return `${moneyFormatterFor(locale).format(amountVnd)} ₫`;
 }
 
 /**

@@ -5,6 +5,10 @@
  * Xem trước toàn bộ ô ảnh: mở trang với `?anh=1` (vd. http://localhost:3001/?anh=1).
  * Brief chụp chi tiết: docs/04-thiet-ke/anh-trang-khach.md.
  */
+import type { Locale } from '../i18n/locales';
+
+/** Câu chữ theo locale (alt ảnh): locale mới phải có đủ. */
+export type Localized = Readonly<Record<Locale, string>>;
 
 export type PhotoRatio = '3/4' | '4/3' | '3/2' | '1200/630';
 
@@ -18,7 +22,7 @@ export interface PhotoSlot {
   /** Cần chụp gì, một câu. */
   readonly brief: string;
   /** Văn bản thay thế cho trình đọc màn hình; sửa cho khớp ảnh thật. */
-  readonly alt: string;
+  readonly alt: Localized;
 }
 
 const station = (
@@ -27,7 +31,7 @@ const station = (
   poster: string,
   room: string,
   view: string,
-  alts: { readonly poster: string; readonly room: string; readonly view: string },
+  alts: { readonly poster: Localized; readonly room: Localized; readonly view: Localized },
 ): readonly PhotoSlot[] => [
   {
     id: `ga-${code}-poster`,
@@ -63,9 +67,9 @@ export const STATION_PHOTOS: readonly PhotoSlot[] = [
     'Phòng Deluxe hoặc Family đã dọn sẵn, ánh sáng tự nhiên từ cửa sổ, thấy giường và cửa sổ nhìn ra thông.',
     'Đồi thông hoặc hồ gần cơ sở, đúng thứ khách nhìn thấy khi bước ra cửa (không dùng ảnh hồ Xuân Hương của người khác).',
     {
-      poster: 'Biệt thự gỗ bên hồ bơi giữa vườn cây',
-      room: 'Phòng ngủ gỗ rộng với giường đôi và khu ghế ngồi',
-      view: 'Con đường trong rừng thông Châu Sơn, Lâm Đồng',
+      poster: { vi: 'Biệt thự gỗ bên hồ bơi giữa vườn cây' },
+      room: { vi: 'Phòng ngủ gỗ rộng với giường đôi và khu ghế ngồi' },
+      view: { vi: 'Con đường trong rừng thông Châu Sơn, Lâm Đồng' },
     },
   ),
   ...station(
@@ -75,9 +79,9 @@ export const STATION_PHOTOS: readonly PhotoSlot[] = [
     'Phòng có ban công hoặc cửa sổ hướng biển, rèm mở, ánh sáng ban ngày.',
     'Đồi cát hoặc bãi biển gần nhất lúc bình minh, có thể thấy người nhỏ ở xa (không cần xin phép khuôn mặt).',
     {
-      poster: 'Nhà hàng bên mặt nước dưới đồi xanh',
-      room: 'Phòng ngủ gỗ rộng nhìn ra vườn',
-      view: 'Cây trên đồi cát Mũi Né, Phan Thiết',
+      poster: { vi: 'Nhà hàng bên mặt nước dưới đồi xanh' },
+      room: { vi: 'Phòng ngủ gỗ rộng nhìn ra vườn' },
+      view: { vi: 'Cây trên đồi cát Mũi Né, Phan Thiết' },
     },
   ),
   ...station(
@@ -87,14 +91,14 @@ export const STATION_PHOTOS: readonly PhotoSlot[] = [
     'Phòng Standard hoặc Superior, góc rộng từ cửa vào, ánh sáng ban ngày.',
     'Biển hoặc đường lên hải đăng gần cơ sở, chiều muộn.',
     {
-      poster: 'Biệt thự hồ bơi giữa đồi cây',
-      room: 'Phòng ngủ gỗ với giường đôi và hai ghế bên cửa sổ',
-      view: 'Hoàng hôn trên vịnh Vũng Tàu',
+      poster: { vi: 'Biệt thự hồ bơi giữa đồi cây' },
+      room: { vi: 'Phòng ngủ gỗ với giường đôi và hai ghế bên cửa sổ' },
+      view: { vi: 'Hoàng hôn trên vịnh Vũng Tàu' },
     },
   ),
 ];
 
-const roomClass = (code: string, name: string, brief: string, alt: string): PhotoSlot => ({
+const roomClass = (code: string, name: string, brief: string, alt: Localized): PhotoSlot => ({
   id: `hang-${code}`,
   where: `Hàng "${name}" trong dải "Hạng phòng"; cũng làm ảnh nhỏ trong bảng kết quả tìm phòng`,
   ratio: '4/3',
@@ -108,31 +112,25 @@ export const CLASS_PHOTOS: readonly PhotoSlot[] = [
     'STD',
     'Standard',
     'Phòng đôi gọn, chụp từ góc cửa, thấy toàn bộ giường đôi và lối đi.',
-    'Cận cảnh giường đôi trong phòng ngủ gỗ',
+    { vi: 'Cận cảnh giường đôi trong phòng ngủ gỗ' },
   ),
   roomClass(
     'SUP',
     'Superior',
     'Phòng đôi rộng hơn, thấy khoảng trống thêm (ghế, bàn) so với Standard.',
-    'Phòng ngủ gỗ có giường đôi, bàn làm việc và khu ghế ngồi',
+    { vi: 'Phòng ngủ gỗ có giường đôi, bàn làm việc và khu ghế ngồi' },
   ),
-  roomClass(
-    'DLX',
-    'Deluxe',
-    'Phòng ba người, thấy rõ chỗ nằm cho người thứ ba.',
-    'Phòng ngủ có hai giường và khu ghế ngồi nhìn ra biển',
-  ),
-  roomClass(
-    'FAM',
-    'Family',
-    'Phòng bốn người, thấy cả hai giường hoặc giường đôi + giường tầng.',
-    'Phòng ngủ có hai giường, bàn ghế và cửa sổ hướng biển',
-  ),
+  roomClass('DLX', 'Deluxe', 'Phòng ba người, thấy rõ chỗ nằm cho người thứ ba.', {
+    vi: 'Phòng ngủ có hai giường và khu ghế ngồi nhìn ra biển',
+  }),
+  roomClass('FAM', 'Family', 'Phòng bốn người, thấy cả hai giường hoặc giường đôi + giường tầng.', {
+    vi: 'Phòng ngủ có hai giường, bàn ghế và cửa sổ hướng biển',
+  }),
   roomClass(
     'DOR',
     'Dorm',
     'Phòng 6 giường tầng, thấy rèm che từng giường, tủ khoá cá nhân nếu có.',
-    'Phòng dorm với dãy giường tầng có rèm che và ngăn kéo',
+    { vi: 'Phòng dorm với dãy giường tầng có rèm che và ngăn kéo' },
   ),
 ];
 
@@ -142,7 +140,7 @@ export const SHARE_PHOTO: PhotoSlot = {
   ratio: '1200/630',
   minSize: '1200 × 630',
   brief: 'Một ảnh ngang đẹp nhất trong ba cơ sở, chừa khoảng trống bên trái cho chữ nếu cần.',
-  alt: 'Toàn cảnh khu nghỉ dưỡng bên vịnh lúc hoàng hôn',
+  alt: { vi: 'Toàn cảnh khu nghỉ dưỡng bên vịnh lúc hoàng hôn' },
 };
 
 export const ALL_PHOTO_SLOTS: readonly PhotoSlot[] = [
@@ -153,4 +151,9 @@ export const ALL_PHOTO_SLOTS: readonly PhotoSlot[] = [
 
 export function slotById(id: string): PhotoSlot | undefined {
   return ALL_PHOTO_SLOTS.find((slot) => slot.id === id);
+}
+
+/** Văn bản thay thế của ô ảnh theo locale. */
+export function photoAlt(slot: PhotoSlot, locale: Locale): string {
+  return slot.alt[locale];
 }

@@ -1,6 +1,5 @@
-import { makeTranslate } from '@pinehill/ui-web/messages';
-
-export const messages = {
+/** Câu chữ tiếng Việt của SCR-06: thanh toán tiền cọc. */
+export const viPayment = {
   title: 'Thanh toán tiền cọc',
   intro: 'Chọn cổng thanh toán. Trạng thái giao dịch và đặt phòng được kiểm tra lại từ máy chủ.',
   pending: 'Chưa có xác nhận đã nhận tiền. Không thanh toán thêm khi kết quả chưa rõ.',
@@ -43,4 +42,4 @@ export const messages = {
   paymentExpiry: 'Hạn giao dịch: {time}.',
 } as const;
 
-export const paymentText = makeTranslate(messages);
+export type PaymentMessageKey = keyof typeof viPayment;
