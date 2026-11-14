@@ -229,7 +229,10 @@ test.describe('SCR-35/SCR-36 sửa/đổi ngày/huỷ booking (HB-108)', () => {
     await expect(page.getByTestId('reschedule-diff')).toBeVisible();
     await expect(page.getByTestId('reschedule-new-total')).toContainText('3.000.000 ₫');
     await expect(page.getByTestId('reschedule-difference')).toContainText('tăng thêm 1.000.000 ₫');
-    await expect(page.getByTestId('reschedule-fee-gap')).toContainText('chưa có trường này');
+    // Báo giá đổi ngày chưa có trường phí; câu sau #298 vẫn nói phí chưa hiện và chỉ chỗ ghi phí NONREF.
+    await expect(page.getByTestId('reschedule-fee-gap')).toHaveText(
+      'Phí đổi ngày chưa hiện ở đây; với gói không hoàn tiền, ghi phí ở màn sửa booking.',
+    );
 
     await page.getByTestId('reschedule-confirm').click();
     await expect(page.getByTestId('reschedule-result')).toContainText('số lần đổi 1');

@@ -25,7 +25,8 @@ test.describe('SCR-54/SCR-55 báo cáo huỷ & quá tải trên API giả (HB-16
   test('SCR-54 lọc theo gói giá đi vào cả lần đọc và lệnh xuất (AC1)', async ({ page }) => {
     const spy = installReportApi(page);
     await page.goto('/reports/cancellations');
-    await page.getByLabel('Gói giá').selectOption('SAVER3');
+    // Ô chọn theo vai trò: vùng cuộn bảng (HB-321) có nhãn "Huỷ phòng theo gói giá…" cũng khớp getByLabel.
+    await page.getByRole('combobox', { name: 'Gói giá' }).selectOption('SAVER3');
     await page.getByRole('button', { name: 'Xem báo cáo' }).click();
     await expect(page.getByTestId('cancellations-table')).toBeVisible();
     expect(spy.reportUrls().at(-1) ?? '').toContain('ratePlanCode=SAVER3');

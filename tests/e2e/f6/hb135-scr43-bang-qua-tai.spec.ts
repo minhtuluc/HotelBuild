@@ -57,11 +57,11 @@ const CASE = {
   ladderPreview: LADDER,
   version: 3,
 };
+// Hình dạng `meta.scan` theo hợp đồng sau HB-220 (`overbookingScanMetadataSchema`).
 const SCAN = {
-  scanStatus: 'OK',
-  lastSuccessfulScanAt: '2026-11-10T01:00:00.000Z',
-  nextScanAt: '2026-11-10T01:05:00.000Z',
-  scannedThrough: '2026-12-10',
+  status: 'SUCCEEDED',
+  lastSuccessAt: '2026-11-10T01:00:00.000Z',
+  dataAsOf: '2026-11-10T01:00:00.000Z',
 };
 const RESOLVED = {
   caseId: 'k1',
