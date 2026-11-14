@@ -12,6 +12,8 @@ allow:
   - docs/04-thiet-ke/ke-hoach-phat-trien-giao-dien-tiep-theo.md
   - docs/07-ban-giao/no-ky-thuat.md
   - docs/08-thi-cong/tickets/HB-310-trang-noi-dung-mau.md
+  - docs/04-thiet-ke/bao-cao-gop-y-cai-tien-ui-ux-va-noi-dung-customer-web.md
+  - YEU-CAU-API-TU-FRONTEND.md
 unlock:
   - docs/08-thi-cong/tickets/HB-310-trang-noi-dung-mau.md
 ---
