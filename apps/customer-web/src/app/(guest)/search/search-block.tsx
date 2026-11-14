@@ -17,27 +17,13 @@ import {
   type ReactNode,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { createJourneyApiClient } from '@pinehill/web-session/client';
-import { listResponseSchema, propertyPublicSummarySchema } from '@pinehill/contracts';
 import type { PropertyPublicSummary } from '@pinehill/contracts';
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
 import { useLocale, useT } from '../../../i18n/client';
 import { calendarDay, stayNights } from '../../../components/stamps';
 import { DateLine } from '../../../components/date-line';
 import { defaultDraft, searchHref, validateSearch, type SearchDraft } from './search-model';
-
-async function fetchProperties(baseUrl: string): Promise<readonly PropertyPublicSummary[]> {
-  const client = createJourneyApiClient({
-    baseUrl,
-    session: { getAccessToken: () => null, onUnauthorized: async () => false },
-  });
-  const page = await client.request({
-    method: 'GET',
-    path: '/public/properties',
-    decoder: listResponseSchema(propertyPublicSummarySchema),
-  });
-  return page.data.data;
-}
+import { fetchPublicProperties, initialPropertyId } from './public-properties';
 
 /** Số chặng in tối đa trên vé; kỳ dài hơn in "+n chặng". */
 const MAX_SEGMENTS = 6;
@@ -192,7 +178,14 @@ function Field({
   );
 }
 
-export function SearchBlock({ intro }: { intro?: ReactNode }): ReactElement {
+export function SearchBlock({
+  intro,
+  preferredPropertyName,
+}: {
+  intro?: ReactNode;
+  /** Trang ga dẫn về (`/?ga=<slug>`): chọn sẵn cơ sở có tên chứa chuỗi này. */
+  preferredPropertyName?: string | undefined;
+}): ReactElement {
   const t = useT();
   const router = useRouter();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
@@ -206,11 +199,11 @@ export function SearchBlock({ intro }: { intro?: ReactNode }): ReactElement {
     setLoading(true);
     setState({ kind: 'loading' });
     try {
-      const loaded = await fetchProperties(window.location.origin);
+      const loaded = await fetchPublicProperties(window.location.origin);
       setProperties(loaded);
       setDraft((current) =>
-        current.propertyId === '' && loaded[0] !== undefined
-          ? { ...current, propertyId: loaded[0].id }
+        current.propertyId === ''
+          ? { ...current, propertyId: initialPropertyId(loaded, preferredPropertyName) }
           : current,
       );
       setState(
@@ -225,7 +218,7 @@ export function SearchBlock({ intro }: { intro?: ReactNode }): ReactElement {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [preferredPropertyName]);
 
   useEffect(() => {
     void load();

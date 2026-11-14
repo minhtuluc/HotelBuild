@@ -3,9 +3,11 @@
  * Mở rộng danh mục dùng chung của `ui-web`; không viết cứng câu chữ trong component.
  */
 import { viCatalog as uiWebVi } from '@pinehill/ui-web/messages';
+import { viContent } from './content';
 
 export const viCustomer = {
   ...uiWebVi,
+  ...viContent,
   'guest.app.title': 'Pine Hill · Đặt phòng trực tiếp',
   'guest.app.description': 'Đặt phòng trực tiếp tại chuỗi Pine Hill',
   'guest.home.intro':
