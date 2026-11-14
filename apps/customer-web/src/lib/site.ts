@@ -6,15 +6,10 @@
  * đường dẫn tương đối thay vì đoán một tên miền.
  */
 import { photoSrc } from './photos';
+import { siteOrigin as configuredOrigin } from '../config/session';
 
 export function siteOrigin(): string | null {
-  const value = process.env.SESSION_APP_ORIGIN;
-  if (value === undefined || value === '') return null;
-  try {
-    return new URL(value).origin;
-  } catch {
-    return null;
-  }
+  return configuredOrigin();
 }
 
 /** URL tuyệt đối nếu biết origin, không thì đường dẫn tương đối. */
