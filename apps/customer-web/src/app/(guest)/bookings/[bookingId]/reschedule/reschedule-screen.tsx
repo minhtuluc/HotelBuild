@@ -21,20 +21,20 @@ import {
   StateSurface,
   actionMessageKey,
   formatStatusWithEnum,
-  formatStayPeriod,
   mapErrorToUiAction,
   type ScreenState,
 } from '@pinehill/ui-web';
-import { t } from '../../../../../lib/i18n';
+import { useT, useTranslators } from '../../../../../i18n/client';
 import { fetchBooking } from '../../../booking/booking-api';
 import { fetchQuoteWithSession } from '../../../book/booking-api';
 import { rescheduleBooking } from '../../api';
-import { STATUS_KEYS } from '../../model';
+import { STATUS_KEYS, stayText } from '../../model';
 import { STAY_ISSUE_KEYS, isSameStay, stayIssue } from '../../reschedule-model';
-import { formatStaySpan } from '../../stay-format';
 import { RescheduleForm, RescheduleOutcome } from './reschedule-parts';
 
 export function RescheduleScreen(): ReactElement {
+  const text = useTranslators();
+  const t = useT();
   const routeParams = useParams<{ bookingId: string }>();
   const bookingId = typeof routeParams.bookingId === 'string' ? routeParams.bookingId : '';
 
@@ -186,11 +186,7 @@ export function RescheduleScreen(): ReactElement {
               {t(result === null ? 'guest.reschedule.current' : 'guest.reschedule.currentBefore')}{' '}
               <code>{baseline.code}</code> ·{' '}
               {formatStatusWithEnum(t(STATUS_KEYS[baseline.status]), baseline.status)} ·{' '}
-              {formatStaySpan(
-                baseline.checkIn,
-                baseline.checkOut,
-                formatStayPeriod(baseline.nights, baseline.adults, baseline.children),
-              )}
+              {stayText(text, baseline)}
             </span>
           </p>
         )}

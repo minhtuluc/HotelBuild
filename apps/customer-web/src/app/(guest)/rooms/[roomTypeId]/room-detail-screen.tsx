@@ -11,12 +11,12 @@ import Link from 'next/link';
 import { ratePlanCodeSchema } from '@pinehill/contracts';
 import type { Quote, RatePlanCode, RatePlanPublic } from '@pinehill/contracts';
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
-import { t } from '../../../../lib/i18n';
+import { useLocale, useT } from '../../../../i18n/client';
 import { fetchQuote, fetchRatePlans, type StayCriteria } from '../../search/journey-api';
 import { criteriaIssue, parseCriteria } from '../../search/search-params';
 import { isExpired } from './quote-model';
 import { NightsTable, PriceStrip, QuoteSummary, QuoteWarnings } from './quote-tables';
-import { formatCalendarDate } from '../../bookings/stay-format';
+import { calendarDate } from '../../../../i18n/format';
 
 function planCodeOf(value: string): RatePlanCode | null {
   const parsed = ratePlanCodeSchema.safeParse(value);
@@ -45,6 +45,7 @@ function RoomPlanHeader({
   planCode: RatePlanCode | '';
   onSelectPlan: (code: RatePlanCode) => void;
 }): ReactElement {
+  const t = useT();
   return (
     <div>
       <div className="ph-card" style={{ display: 'grid', gap: 16, maxWidth: 520 }}>
@@ -72,6 +73,8 @@ function RoomPlanHeader({
 }
 
 export function RoomDetailScreen(): ReactElement {
+  const locale = useLocale();
+  const t = useT();
   const routeParams = useParams<{ roomTypeId: string }>();
   const searchParams = useSearchParams();
   const query = searchParams.toString();
@@ -168,8 +171,8 @@ export function RoomDetailScreen(): ReactElement {
         <h1 className="ph-page-title">{t('guest.rooms.title')}</h1>
         <p className="ph-tabular" style={{ margin: 0, color: 'var(--color-textMuted)' }}>
           {t('guest.results.criteria', {
-            from: formatCalendarDate(criteria.checkIn),
-            to: formatCalendarDate(criteria.checkOut),
+            from: calendarDate(criteria.checkIn, locale),
+            to: calendarDate(criteria.checkOut, locale),
             nights: quote?.nights.length ?? 0,
           })}
         </p>

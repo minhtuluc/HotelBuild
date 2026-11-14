@@ -6,11 +6,12 @@
  */
 import { useEffect, useState, type ReactElement } from 'react';
 import { guestSession, isSignedIn, subscribeSignedIn } from '../../../session/guest-session';
-import { accountText as text } from './messages';
+import { useAccountText } from '../../../i18n/client';
 
 type Status = 'checking' | 'in' | 'out';
 
 export function SessionStatus(): ReactElement {
+  const text = useAccountText();
   const [status, setStatus] = useState<Status>('checking');
   const [busy, setBusy] = useState(false);
   const [partial, setPartial] = useState(false);

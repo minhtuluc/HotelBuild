@@ -1,10 +1,12 @@
 /**
- * Danh mục câu chữ của Customer Web: mở rộng danh mục dùng chung, không viết cứng trong component.
+ * Danh mục câu chữ tiếng Việt của Customer Web (locale `vi`, nguồn chân lý cho mọi locale khác).
+ * Mở rộng danh mục dùng chung của `ui-web`; không viết cứng câu chữ trong component.
  */
-import { makeTranslate, viCatalog } from '@pinehill/ui-web/messages';
+import { viCatalog as uiWebVi } from '@pinehill/ui-web/messages';
 
-export const customerCatalog = {
-  ...viCatalog,
+export const viCustomer = {
+  ...uiWebVi,
+  'guest.app.title': 'Pine Hill · Đặt phòng trực tiếp',
   'guest.app.description': 'Đặt phòng trực tiếp tại chuỗi Pine Hill',
   'guest.home.intro':
     'Ba cơ sở Pine Hill là ba ga trên một tuyến. Chọn ga và ngày: mỗi đêm hiện thành một chặng có giá riêng, kèm tiền cọc và mức hoàn nếu bạn trả vé.',
@@ -196,7 +198,7 @@ export const customerCatalog = {
   'guest.reschedule.diff.less': 'Chênh lệch giảm {amount}',
   'guest.reschedule.diff.same': 'Không chênh lệch',
   'guest.reschedule.feeUnknown':
-    'Phí đổi ngày: hợp đồng chưa có trường này — máy chủ giữ cam kết cũ (BR-BOOK-12), cơ sở sẽ xác nhận nếu phát sinh.',
+    'Phí đổi ngày (nếu có) tính theo chính sách của gói bạn đã chọn. Cơ sở sẽ xác nhận với bạn trước khi áp dụng.',
   'guest.reschedule.planUnresolved':
     'Không xác định được mã gói giá của đơn này để lấy giá kỳ mới — vui lòng liên hệ cơ sở.',
   'guest.reschedule.result.title': 'Đã đổi ngày',
@@ -308,6 +310,4 @@ export const customerCatalog = {
   'guest.book.summaryHeading': 'Chi tiết báo giá đã khoá',
 } as const;
 
-export type CustomerMessageKey = keyof typeof customerCatalog;
-
-export const t = makeTranslate(customerCatalog);
+export type CustomerMessageKey = keyof typeof viCustomer;

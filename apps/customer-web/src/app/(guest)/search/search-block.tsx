@@ -21,8 +21,9 @@ import { createJourneyApiClient } from '@pinehill/web-session/client';
 import { listResponseSchema, propertyPublicSummarySchema } from '@pinehill/contracts';
 import type { PropertyPublicSummary } from '@pinehill/contracts';
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
-import { t } from '../../../lib/i18n';
+import { useLocale, useT } from '../../../i18n/client';
 import { calendarDay, stayNights } from '../../../components/stamps';
+import { DateLine } from '../../../components/date-line';
 import { defaultDraft, searchHref, validateSearch, type SearchDraft } from './search-model';
 
 async function fetchProperties(baseUrl: string): Promise<readonly PropertyPublicSummary[]> {
@@ -53,6 +54,7 @@ function DepartureBoard({
   selectedId: string;
   onPick: (id: string) => void;
 }): ReactElement {
+  const t = useT();
   return (
     <div className="ph-board" data-testid="departure-board">
       <div className="ph-board-head">
@@ -117,6 +119,8 @@ function DepartureBoard({
 
 /** Các chặng của kỳ: mỗi đêm một ô in thứ + ngày, đánh số chặng. */
 function Segments({ draft }: { draft: SearchDraft }): ReactElement {
+  const locale = useLocale();
+  const t = useT();
   const nights = stayNights(draft.checkIn, draft.checkOut);
   if (nights === null) {
     return (
@@ -133,7 +137,7 @@ function Segments({ draft }: { draft: SearchDraft }): ReactElement {
       aria-label={t('guest.ticket.segmentsAria', { nights: nights.length })}
     >
       {nights.slice(0, MAX_SEGMENTS).map((iso, index) => {
-        const day = calendarDay(iso);
+        const day = calendarDay(iso, locale);
         return (
           <li key={`${draft.checkIn}-${iso}`} className="ph-segment">
             <span className="ph-segment-no">{t('guest.ticket.segment', { n: index + 1 })}</span>
@@ -156,6 +160,7 @@ function TicketStub({
   draft: SearchDraft;
   property: PropertyPublicSummary | undefined;
 }): ReactElement {
+  const t = useT();
   const nights = stayNights(draft.checkIn, draft.checkOut);
   return (
     <aside className="ph-ticket-stub" aria-label={t('guest.ticket.stubAria')}>
@@ -188,6 +193,7 @@ function Field({
 }
 
 export function SearchBlock({ intro }: { intro?: ReactNode }): ReactElement {
+  const t = useT();
   const router = useRouter();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [properties, setProperties] = useState<readonly PropertyPublicSummary[]>([]);
@@ -285,17 +291,21 @@ export function SearchBlock({ intro }: { intro?: ReactNode }): ReactElement {
                   <input
                     type="date"
                     name="checkIn"
+                    aria-describedby="search-checkIn-line"
                     value={draft.checkIn}
                     onChange={(event) => setDraft({ ...draft, checkIn: event.target.value })}
                   />
+                  <DateLine id="search-checkIn-line" iso={draft.checkIn} />
                 </Field>
                 <Field label={t('guest.search.checkOut')}>
                   <input
                     type="date"
                     name="checkOut"
+                    aria-describedby="search-checkOut-line"
                     value={draft.checkOut}
                     onChange={(event) => setDraft({ ...draft, checkOut: event.target.value })}
                   />
+                  <DateLine id="search-checkOut-line" iso={draft.checkOut} />
                 </Field>
                 <Field label={t('guest.search.adults')}>
                   <input

@@ -4,6 +4,9 @@ import { describe, expect, it, vi } from 'vitest';
 import type { BookingSummary } from '@pinehill/contracts';
 import { stayText } from '../../src/app/(guest)/bookings/model';
 import { StayPanel } from '../../src/app/(guest)/bookings/[bookingId]/booking-detail-screen';
+import { translatorsFor } from '../../src/i18n/translate';
+
+const viText = translatorsFor('vi');
 
 // Màn chi tiết dùng `useParams`; ở đây chỉ dựng markup tĩnh nên chỉ cần module nạp được.
 vi.mock('next/navigation', () => ({ useParams: () => ({ bookingId: 'b1' }) }));
@@ -50,15 +53,15 @@ function booking(overrides: Partial<BookingSummary> = {}): BookingSummary {
 
 describe('SCR-09/SCR-10 ngày lịch hiển thị dd/MM/yyyy (HB-102)', () => {
   it('kỳ lưu trú đổi ngày lịch sang dd/MM/yyyy, giữ nguyên câu chữ và dấu phân cách', () => {
-    const text = stayText(booking());
+    const text = stayText(viText, booking());
     expect(text).toBe('24/12/2026 → 26/12/2026 · 2 đêm · 2 người lớn · 0 trẻ em');
     expect(text).not.toMatch(ISO_DAY);
   });
 
   it('kỳ lưu trú ở năm khác cũng dựng đúng dd/MM/yyyy', () => {
-    expect(stayText(booking({ checkIn: '2027-01-01', checkOut: '2027-01-03', nights: 2 }))).toBe(
-      '01/01/2027 → 03/01/2027 · 2 đêm · 2 người lớn · 0 trẻ em',
-    );
+    expect(
+      stayText(viText, booking({ checkIn: '2027-01-01', checkOut: '2027-01-03', nights: 2 })),
+    ).toBe('01/01/2027 → 03/01/2027 · 2 đêm · 2 người lớn · 0 trẻ em');
   });
 
   it('bảng kỳ lưu trú của màn chi tiết hiện dd/MM/yyyy và không còn ISO nguyên văn', () => {

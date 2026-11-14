@@ -5,9 +5,10 @@
  */
 import type { ReactElement } from 'react';
 import type { BookingSummary } from '@pinehill/contracts';
-import { formatDateTimeVn, formatMoney, formatStayPeriod } from '@pinehill/ui-web';
-import { formatStaySpan } from '../../bookings/stay-format';
-import { t, type CustomerMessageKey } from '../../../../lib/i18n';
+import { formatDateTimeVn, formatMoney } from '@pinehill/ui-web';
+import { stayText } from '../../bookings/model';
+import { useT, useTranslators } from '../../../../i18n/client';
+import type { CustomerMessageKey } from '../../../../i18n/catalogs';
 import { formatCountdown, moneyRows, type HoldView, type MoneyRow } from '../booking-model';
 
 const MONEY_KEYS: Readonly<Record<MoneyRow['key'], CustomerMessageKey>> = {
@@ -20,6 +21,7 @@ const MONEY_KEYS: Readonly<Record<MoneyRow['key'], CustomerMessageKey>> = {
 
 /** Dòng hiển thị đồng hồ giữ chỗ theo mốc `holdExpiresAt` từ máy chủ. */
 export function HoldLine({ hold }: { hold: HoldView }): ReactElement {
+  const t = useT();
   if (hold.kind === 'active') {
     const expires = hold.expiresAt === null ? '' : formatDateTimeVn(hold.expiresAt);
     return (
@@ -57,6 +59,8 @@ export function HoldLine({ hold }: { hold: HoldView }): ReactElement {
 
 /** Kỳ ở hiển thị ở màn kết quả (SCR-07): ngày lịch dd/MM/yyyy qua helper dùng chung. */
 export function StayTable({ booking }: { booking: BookingSummary }): ReactElement {
+  const text = useTranslators();
+  const t = useT();
   return (
     <div className="ph-table-wrap">
       <table data-testid="booking-stay">
@@ -73,13 +77,7 @@ export function StayTable({ booking }: { booking: BookingSummary }): ReactElemen
         <tbody>
           <tr>
             <th scope="row">{t('guest.booking.stay.period')}</th>
-            <td className="ph-tabular">
-              {formatStaySpan(
-                booking.checkIn,
-                booking.checkOut,
-                formatStayPeriod(booking.nights, booking.adults, booking.children),
-              )}
-            </td>
+            <td className="ph-tabular">{stayText(text, booking)}</td>
           </tr>
           <tr>
             <th scope="row">{t('guest.booking.stay.rooms')}</th>
@@ -93,6 +91,7 @@ export function StayTable({ booking }: { booking: BookingSummary }): ReactElemen
 
 /** Bảng tóm tắt số tiền đặt phòng (tổng, đặt cọc, đã trả, phạt, còn lại). */
 export function MoneyTable({ booking }: { booking: BookingSummary }): ReactElement {
+  const t = useT();
   return (
     <div className="ph-table-wrap">
       <table data-testid="booking-money">
@@ -125,6 +124,7 @@ export function MoneyTable({ booking }: { booking: BookingSummary }): ReactEleme
 
 /** Danh sách cờ trạng thái đặc biệt của booking (bán quá số lượng, nghi trùng, khoá giá). */
 export function FlagsList({ booking }: { booking: BookingSummary }): ReactElement | null {
+  const t = useT();
   const flags = [
     booking.oversold ? t('guest.booking.flag.oversold') : null,
     booking.duplicateSuspected ? t('guest.booking.flag.duplicate') : null,
@@ -142,6 +142,8 @@ export function FlagsList({ booking }: { booking: BookingSummary }): ReactElemen
 
 /** Khối xác nhận của màn kết quả (SCR-07): kỳ ở hiển thị ngày lịch dd/MM/yyyy qua helper dùng chung. */
 export function ConfirmationBlock({ booking }: { booking: BookingSummary }): ReactElement {
+  const text = useTranslators();
+  const t = useT();
   return (
     <section
       data-testid="booking-confirmation"
@@ -158,13 +160,7 @@ export function ConfirmationBlock({ booking }: { booking: BookingSummary }): Rea
         </li>
         <li>
           <span style={{ color: 'var(--color-textMuted)' }}>{t('guest.booking.stay')}</span>
-          <span>
-            {formatStaySpan(
-              booking.checkIn,
-              booking.checkOut,
-              formatStayPeriod(booking.nights, booking.adults, booking.children),
-            )}
-          </span>
+          <span>{stayText(text, booking)}</span>
         </li>
         <li>
           <span style={{ color: 'var(--color-textMuted)' }}>{t('guest.booking.money.total')}</span>

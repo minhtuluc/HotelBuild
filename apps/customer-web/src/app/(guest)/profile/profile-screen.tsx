@@ -15,7 +15,8 @@ import {
   mapErrorToUiAction,
   type ScreenState,
 } from '@pinehill/ui-web';
-import { t, type CustomerMessageKey } from '../../../lib/i18n';
+import { useT } from '../../../i18n/client';
+import type { CustomerMessageKey } from '../../../i18n/catalogs';
 import { fetchMyLoyalty, fetchMyProfile } from './profile-api';
 import {
   TIER_KEYS,
@@ -42,6 +43,7 @@ const LOYALTY_KEYS: Readonly<Record<LoyaltyRow['key'], CustomerMessageKey>> = {
 };
 
 function ProfileCard({ guest }: { guest: GuestSummary }): ReactElement {
+  const t = useT();
   return (
     <div className="ph-table-wrap">
       <table data-testid="profile-card">
@@ -85,6 +87,7 @@ function LoyaltyPanel({
   guest: GuestSummary;
   loyalty: GuestLoyalty;
 }): ReactElement {
+  const t = useT();
   return (
     <section
       data-testid="profile-loyalty"
@@ -135,6 +138,7 @@ function LoyaltyPanel({
 }
 
 export function ProfileScreen(): ReactElement {
+  const t = useT();
   const session = useMemo(() => createSessionClient({ kind: 'guest' }), []);
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [guest, setGuest] = useState<GuestSummary | null>(null);

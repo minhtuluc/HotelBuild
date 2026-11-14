@@ -13,9 +13,10 @@ import {
   TextField,
   useFocusFirstIssue,
 } from './form-parts';
-import { accountText as text } from './messages';
+import { useAccountText } from '../../../i18n/client';
 
 export function ForgotScreen({ contact }: { contact: string | null }): ReactElement {
+  const text = useAccountText();
   const [phone, setPhone] = useState('');
   const [issues, setIssues] = useState<Issues<'phone'>>({});
   const [failure, setFailure] = useState<AccountFailure | null>(null);
@@ -60,7 +61,7 @@ export function ForgotScreen({ contact }: { contact: string | null }): ReactElem
         <Notice
           tone="error"
           testId="forgot-failure"
-          lines={failureLines(failure, 'forgot', contact)}
+          lines={failureLines(text, failure, 'forgot', contact)}
         />
       )}
       {sent ? <Notice tone="success" testId="forgot-done" lines={[text('forgotDone')]} /> : null}

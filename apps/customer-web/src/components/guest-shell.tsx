@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import Link from 'next/link';
 import { PineHillBrand } from '@pinehill/ui-web';
-import { t } from '../lib/i18n';
+import { serverTranslators } from '../i18n/server';
 import { VnClock } from './vn-clock';
 
 const NAV_ITEMS = [
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
 
 /** Dải bảng ga trên cùng: tên tuyến, điều hướng, giờ VN. */
 export function GuestHeader(): ReactElement {
+  const { t } = serverTranslators();
   return (
     <header className="ph-header">
       <div className="ph-header-inner">
@@ -33,6 +34,7 @@ export function GuestHeader(): ReactElement {
 }
 
 export function GuestFooter(): ReactElement {
+  const { t } = serverTranslators();
   return (
     <footer className="ph-footer">
       <div className="ph-footer-inner">

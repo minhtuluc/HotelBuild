@@ -3,7 +3,8 @@ import styles from './payment.module.css';
 import { formatDateTimeVn, formatMoney, type ScreenState } from '@pinehill/ui-web';
 import type { PaymentView } from './payment-flow';
 import { approvedAmount, safePaymentUrl, type Offer } from './payment-model';
-import { messages as m, paymentText as text } from './messages-payment';
+import type { PaymentCatalog } from '../../../../../i18n/catalogs';
+import { usePaymentCatalog, usePaymentText } from '../../../../../i18n/client';
 export type MethodChoice = 'VNPAY' | 'MOMO' | '';
 function blockedSurface(view: PaymentView, reload: () => void): ScreenState {
   const expiry = view.offer?.booking.holdExpiresAt;
@@ -31,7 +32,12 @@ function fixedSurface(
       return null;
   }
 }
-function auxiliarySurface(view: PaymentView, invalid: boolean, reload: () => void): ScreenState {
+function auxiliarySurface(
+  view: PaymentView,
+  invalid: boolean,
+  reload: () => void,
+  m: PaymentCatalog,
+): ScreenState {
   if (view.changed)
     return {
       kind: 'conflict',
@@ -57,10 +63,13 @@ export function paymentSurface(
   invalid: boolean,
   reload: () => void,
   reference: string,
+  m: PaymentCatalog,
 ): ScreenState {
-  return fixedSurface(view, reload, reference) ?? auxiliarySurface(view, invalid, reload);
+  return fixedSurface(view, reload, reference) ?? auxiliarySurface(view, invalid, reload, m);
 }
 export function PaymentSummary({ offer }: { offer: Offer }) {
+  const m = usePaymentCatalog();
+  const text = usePaymentText();
   const amount = approvedAmount(offer.booking, offer.balance);
   const expiry = offer.booking.holdExpiresAt;
   return (
@@ -111,6 +120,8 @@ export function PaymentForm({
   onPrepare: () => void;
   onConfirm: () => void;
 }) {
+  const m = usePaymentCatalog();
+  const text = usePaymentText();
   if (!['ready', 'confirm'].includes(view.phase) || view.changed) return null;
   return (
     <div className={styles.card}>
@@ -171,7 +182,7 @@ function portalUrl(view: PaymentView, fixtureOrigin?: string): string | null {
   if (payment.expiresAt !== null && Date.now() >= Date.parse(payment.expiresAt)) return null;
   return safePaymentUrl(view.fullPayment, fixtureOrigin);
 }
-function observedMessage(view: PaymentView): string {
+function observedMessage(view: PaymentView, m: PaymentCatalog): string {
   const map: Partial<Record<PaymentView['phase'], string>> = {
     received: m.received,
     confirmed: m.confirmed,
@@ -186,6 +197,8 @@ export function PaymentDetails({
   view: PaymentView;
   fixtureOrigin?: string | undefined;
 }) {
+  const m = usePaymentCatalog();
+  const text = usePaymentText();
   const payment = view.payment;
   if (!payment) return null;
   const portal = portalUrl(view, fixtureOrigin);
@@ -199,7 +212,7 @@ export function PaymentDetails({
         {text('paymentStatus', { amount: formatMoney(payment.amount), status: payment.status })}
       </p>
       <p role="status" data-testid="payment-result" className={styles.statusBox}>
-        {observedMessage(view)}
+        {observedMessage(view, m)}
       </p>
       {payment.expiresAt ? (
         <p className={styles.note}>

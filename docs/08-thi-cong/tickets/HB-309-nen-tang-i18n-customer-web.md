@@ -47,6 +47,8 @@ unlock:
 3. **Định dạng theo locale** (`src/i18n/format.ts`, `packages/ui-web/src/format.ts`):
    - `formatMoney(amount, locale?)`: mặc định `vi-VN`, nên operations web không đổi.
    - Ngày lịch, nhãn thứ trên tem đêm, dòng ngày đầy đủ: `vi` giữ nguyên đầu ra hiện tại (`dd/MM/yyyy`, `CN`/`T2`…).
+   - Câu kỳ lưu trú (`stayText`) lấy câu "n đêm · người lớn · trẻ em" từ danh mục của locale; bốn màn ghép tay `formatStaySpan` + `formatStayPeriod` chuyển sang `stayText`.
+   - Các chỗ gọi `formatMoney` trong màn khách vẫn dùng mặc định `vi-VN`; nối `money(amount, locale)` khi có locale thứ hai (HB-312).
 4. **Nội dung tĩnh theo locale:** `landingContent(locale)`, `photoAlt(slot, locale)`. Tiếng Việt giữ nguyên văn.
 5. **Dòng ngày dưới ô ngày** (SCR-01 tìm phòng, SCR-12 đổi ngày):
    - Giữ `<input type="date">` gốc.
@@ -55,13 +57,14 @@ unlock:
    - Thay "hợp đồng chưa có trường này — máy chủ giữ cam kết cũ (BR-BOOK-12)…" bằng câu cho khách: phí (nếu có) theo chính sách gói đã chọn, cơ sở xác nhận trước khi áp dụng.
    - Assertion E2E `scr12-doi-ngay-web.spec.ts` đổi theo câu mới. Test này không bị khoá ở HB-104; lý do đổi ghi ở đây và trong PR.
    - Không thêm quy tắc phí ở frontend.
-7. **Lỗi phiên khi chạy dev** (React StrictMode) ở SCR-04/05 và SCR-07: phiên tạo trong `useMemo` bị huỷ ở cleanup rồi dùng lại. Chuyển sang tạo trong effect hoặc tạo lại sau khi huỷ. Bản production không bị.
+7. **Lỗi phiên khi chạy dev** (React StrictMode) ở SCR-04/05 và SCR-07: phiên tạo trong `useMemo` bị huỷ ở cleanup rồi dùng lại (bản production không bị). Hook `useGuestSession` hẹn huỷ sang nhịp sau và bỏ hẹn khi effect chạy lại; dùng cho SCR-04/05, SCR-07, SCR-09 và SCR-10 (hai màn sau trước đây không huỷ phiên).
 
 ## Tiêu chí nghiệm thu
 
 1. Unit test mới:
    - `test/i18n/catalogs.spec.ts`: mọi locale đủ khoá, không khoá rỗng.
    - `test/i18n/format.spec.ts`: ngày, thứ, tiền theo `vi` giữ đầu ra cũ.
+   - E2E `scr01-tim-phong.spec.ts`: dòng ngày "T5, 24/12/2026" và mô tả truy cập của ô.
    - Toàn bộ unit customer-web và ui-web đạt.
 2. Không còn import `t` singleton, `accountText`, `paymentText` toàn cục trong `src/` (kiểm bằng test quét nguồn).
 3. E2E customer-web hiện có đạt; giao diện tiếng Việt không đổi (ảnh chụp trước/sau ở 1440 px và 360 px của trang chủ, kết quả, chi tiết phòng, đặt phòng, đơn của tôi).

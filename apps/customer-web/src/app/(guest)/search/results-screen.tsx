@@ -10,11 +10,11 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { formatMoney, StateSurface, type ScreenState } from '@pinehill/ui-web';
 import type { Availability } from '@pinehill/contracts';
-import { t } from '../../../lib/i18n';
+import { useLocale, useT } from '../../../i18n/client';
 import { fetchAvailability, type StayCriteria } from './journey-api';
 import { criteriaIssue, detailHref, parseCriteria } from './search-params';
 import { RoomCodeStamp } from '../../../components/stamps';
-import { formatCalendarDate } from '../bookings/stay-format';
+import { calendarDate } from '../../../i18n/format';
 
 function AvailabilityTable({
   availability,
@@ -25,6 +25,7 @@ function AvailabilityTable({
   criteria: StayCriteria;
   photos: Readonly<Record<string, string>>;
 }): ReactElement {
+  const t = useT();
   return (
     <div className="ph-table-wrap ph-availability-wrap">
       <table data-testid="availability-table" className="ph-availability-table">
@@ -114,6 +115,8 @@ export function SearchResultsScreen({
   /** Ảnh hạng phòng đang có (mã ô `hang-<CODE>` → đường dẫn), do trang máy chủ đọc từ `public/`. */
   photos?: Readonly<Record<string, string>>;
 }): ReactElement {
+  const locale = useLocale();
+  const t = useT();
   const params = useSearchParams();
   const query = params.toString();
   const criteria = parseCriteria(new URLSearchParams(query));
@@ -172,8 +175,8 @@ export function SearchResultsScreen({
         <h1 className="ph-page-title">{t('guest.results.title')}</h1>
         <p className="ph-tabular" style={{ margin: 0, color: 'var(--color-textMuted)' }}>
           {t('guest.results.criteria', {
-            from: formatCalendarDate(criteria.checkIn),
-            to: formatCalendarDate(criteria.checkOut),
+            from: calendarDate(criteria.checkIn, locale),
+            to: calendarDate(criteria.checkOut, locale),
             nights: availability?.nights ?? availability?.data.length ?? 0,
           })}
         </p>
