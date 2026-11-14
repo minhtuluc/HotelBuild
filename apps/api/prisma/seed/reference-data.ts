@@ -12,6 +12,8 @@
 
 export interface PropertySeed {
   code: string;
+  /** Định danh URL công khai (`GET /public/properties`, trang ga `/stays/[slug]`) — HB-319. */
+  slug: string;
   name: string;
   address: string;
   phone: string;
@@ -37,6 +39,7 @@ export interface RoomTypeSeed {
 export const PROPERTIES: readonly PropertySeed[] = [
   {
     code: 'CS-01',
+    slug: 'da-lat',
     name: 'Pine Hill Đà Lạt',
     address: 'Số 1 đường Trần Phú, Đà Lạt, Lâm Đồng (địa chỉ dev)',
     phone: '+842633000001',
@@ -46,6 +49,7 @@ export const PROPERTIES: readonly PropertySeed[] = [
   },
   {
     code: 'CS-02',
+    slug: 'vung-tau',
     name: 'Pine Hill Vũng Tàu',
     address: 'Số 2 đường Thùy Vân, Vũng Tàu, Bà Rịa – Vũng Tàu (địa chỉ dev)',
     phone: '+842543000002',
@@ -55,6 +59,7 @@ export const PROPERTIES: readonly PropertySeed[] = [
   },
   {
     code: 'CS-03',
+    slug: 'phan-thiet',
     name: 'Pine Hill Phan Thiết',
     address: 'Số 3 đường Nguyễn Đình Chiểu, Phan Thiết, Bình Thuận (địa chỉ dev)',
     phone: '+842523000003',

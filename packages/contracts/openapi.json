@@ -2130,6 +2130,10 @@
                             "minLength": 1,
                             "maxLength": 120
                           },
+                          "slug": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                          },
                           "checkInTime": {
                             "type": "string",
                             "pattern": "^\\d{2}:\\d{2}$"
@@ -2142,6 +2146,7 @@
                         "required": [
                           "id",
                           "name",
+                          "slug",
                           "checkInTime",
                           "checkOutTime"
                         ]

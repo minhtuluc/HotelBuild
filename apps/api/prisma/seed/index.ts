@@ -66,14 +66,15 @@ async function seedRooms(
   for (const property of PROPERTIES) {
     const propertyId = await upsertId(
       db,
-      `INSERT INTO properties (code, name, address, phone, latitude, longitude)
-       VALUES ($1,$2,$3,$4,$5,$6)
+      `INSERT INTO properties (code, slug, name, address, phone, latitude, longitude)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
        ON CONFLICT (code) DO UPDATE SET
-         name = EXCLUDED.name, address = EXCLUDED.address, phone = EXCLUDED.phone,
+         slug = EXCLUDED.slug, name = EXCLUDED.name, address = EXCLUDED.address, phone = EXCLUDED.phone,
          latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude, updated_at = now()
        RETURNING id`,
       [
         property.code,
+        property.slug,
         property.name,
         property.address,
         property.phone,

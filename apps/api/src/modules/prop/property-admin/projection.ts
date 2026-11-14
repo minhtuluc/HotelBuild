@@ -17,6 +17,7 @@ export function publicView(row: properties) {
   return {
     id: row.id,
     name: row.name,
+    slug: row.slug,
     checkInTime: time(row.check_in_time),
     checkOutTime: time(row.check_out_time),
   };
