@@ -3,7 +3,13 @@
  * Mùa chồng nhau **được phép**; chọn mùa thắng là của máy chủ (engine HB-052) — giao diện chỉ
  * hiển thị `source`/`seasonName` do `GET rate-calendar` trả, **không** tự so `priority`.
  */
-import type { RateCalendar, SeasonCreateRequest } from '@pinehill/contracts';
+import type {
+  RateCalendar,
+  SeasonCreateRequest,
+  SeasonSummary,
+  SeasonUpdateRequest,
+} from '@pinehill/contracts';
+import { reasonIssues, sameDecimal, type EditIssue } from './config-edit';
 
 /** Một ngày trong lịch giá do `GET rate-calendar` trả (kiểu suy từ hợp đồng, không khai lại). */
 export type RateCalendarEntry = RateCalendar['entries'][number];
@@ -142,4 +148,75 @@ export function overlappingSeasonNames(
     if (!names.includes(name)) names.push(name);
   }
   return names;
+}
+
+// ---------------------------------------------------------------------------------------------
+// HB-310 (TD-06): sửa / ngừng / bật lại mùa qua `PUT /seasons/{id}` (chỉ OWNER).
+// ---------------------------------------------------------------------------------------------
+
+export interface SeasonEditDraft {
+  name: string;
+  startDate: string;
+  endDate: string;
+  multiplier: string;
+  priority: string;
+  weekendSurchargeEnabled: boolean;
+  reason: string;
+}
+
+/** Hệ số hiển thị 2 chữ số, dấu phẩy kiểu Việt Nam để khớp ô nhập lúc tạo. */
+export function seasonEditDraftOf(season: SeasonSummary): SeasonEditDraft {
+  return {
+    name: season.name,
+    startDate: season.startDate,
+    endDate: season.endDate,
+    multiplier: season.multiplier.toFixed(2).replace('.', ','),
+    priority: String(season.priority),
+    weekendSurchargeEnabled: season.weekendSurchargeEnabled,
+    reason: '',
+  };
+}
+
+export function validateSeasonEdit(draft: SeasonEditDraft): readonly EditIssue[] {
+  const asCreate: SeasonDraft = { ...draft, propertyId: '-', roomTypeId: '-' };
+  return [...validateSeasonDraft(asCreate), ...reasonIssues(draft.reason)];
+}
+
+/**
+ * Thân `PUT` chỉ gồm trường khác bản đang xem; `null` khi không đổi gì (màn hình báo "chưa có thay
+ * đổi" thay vì gửi một lệnh rỗng mà máy chủ sẽ từ chối).
+ */
+export function toSeasonUpdate(
+  baseline: SeasonSummary,
+  draft: SeasonEditDraft,
+): SeasonUpdateRequest | null {
+  const multiplier = parseMultiplier(draft.multiplier);
+  const priority = parsePriority(draft.priority);
+  if (multiplier === null || priority === null)
+    throw new RangeError('Bản sửa mùa chưa qua kiểm tra (multiplier/priority).');
+  const changes: Omit<SeasonUpdateRequest, 'reason'> = {
+    ...(draft.name.trim() === baseline.name ? {} : { name: draft.name.trim() }),
+    ...(draft.startDate === baseline.startDate ? {} : { startDate: draft.startDate }),
+    ...(draft.endDate === baseline.endDate ? {} : { endDate: draft.endDate }),
+    ...(sameDecimal(multiplier, baseline.multiplier) ? {} : { multiplier }),
+    ...(priority === baseline.priority ? {} : { priority }),
+    ...(draft.weekendSurchargeEnabled === baseline.weekendSurchargeEnabled
+      ? {}
+      : { weekendSurchargeEnabled: draft.weekendSurchargeEnabled }),
+  };
+  if (Object.keys(changes).length === 0) return null;
+  return { ...changes, reason: draft.reason.trim() };
+}
+
+/** Mùa không trả `status` (phản hồi cũ) coi như đang áp dụng. */
+export function seasonStatus(season: SeasonSummary): 'ACTIVE' | 'INACTIVE' {
+  return season.status ?? 'ACTIVE';
+}
+
+/** Ngừng (báo giá mới bỏ qua mùa) hoặc bật lại. */
+export function toSeasonToggle(season: SeasonSummary, reason: string): SeasonUpdateRequest {
+  return {
+    status: seasonStatus(season) === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
+    reason: reason.trim(),
+  };
 }

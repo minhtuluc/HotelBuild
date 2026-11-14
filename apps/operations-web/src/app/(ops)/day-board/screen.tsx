@@ -7,7 +7,6 @@ import {
   OPS_FIELD_LABEL_STYLE,
   OPS_FILTER_ROW_STYLE,
   OPS_PAGE_STYLE,
-  OPS_SUBTITLE_STYLE,
   OPS_TABLE_WRAP_STYLE,
   OPS_TABULAR_STYLE,
   OPS_TITLE_STYLE,
@@ -16,6 +15,8 @@ import { useForcedState } from '../../../components/forced-state';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { t } from '../../../lib/i18n';
 import { useDayBoard } from './use-board';
+import { DayBoardSection } from './day-groups';
+import { useOptionalStaffSession } from '../../../session/staff-session';
 import { dayText } from './messages';
 import { validDay, type DayData } from './model';
 import type { DayState, DayBoardController } from './controller';
@@ -42,7 +43,13 @@ export function DayBoardScreen({
   initialDay: string;
 }): ReactElement {
   const forced = useForcedState();
-  const { controller, state } = useDayBoard(baseUrl, initialDay, forced === undefined);
+  const staff = useOptionalStaffSession();
+  const { controller, state } = useDayBoard(
+    baseUrl,
+    initialDay,
+    forced === undefined,
+    staff?.propertyId ?? null,
+  );
   if (forced)
     return (
       <section style={OPS_PAGE_STYLE}>
@@ -60,19 +67,20 @@ export function DayBoardScreen({
         <ScreenAlert error={state.error} onRetry={() => void controller.load()} />
       ) : null}
       <StateSurface state={surface(state)}>
-        {state.data ? <DayTable data={state.data} /> : null}
+        {state.data ? (
+          <>
+            <DayMeta data={state.data} />
+            <DayBoardSection
+              board={state.data.board}
+              error={state.data.boardError}
+              rows={state.data.rows}
+              onRetry={() => void controller.load()}
+            />
+            <DayTable data={state.data} />
+          </>
+        ) : null}
       </StateSurface>
       <QuickLinks />
-      <section
-        data-testid="day-unsupported"
-        className="ph-card"
-        style={{ display: 'grid', gap: space.s2 }}
-      >
-        <h2 style={OPS_SUBTITLE_STYLE}>{dayText('unsupported')}</h2>
-        <p style={{ margin: 0, color: color.textMuted }}>{dayText('arrivals')}</p>
-        <p style={{ margin: 0, color: color.textMuted }}>{dayText('cases')}</p>
-        <p style={{ margin: 0, color: color.textMuted }}>{dayText('channels')}</p>
-      </section>
     </section>
   );
 }
@@ -129,30 +137,34 @@ function DayForm({
     </form>
   );
 }
-function DayTable({ data }: { data: DayData }): ReactElement {
+function DayMeta({ data }: { data: DayData }): ReactElement {
   const property = data.properties.find((item) => item.id === data.propertyId);
   return (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        gap: space.s2,
+        fontSize: 13,
+        color: color.textMuted,
+        ...OPS_TABULAR_STYLE,
+      }}
+    >
+      <p data-testid="day-displayed" style={{ margin: 0, color: color.text, fontWeight: 500 }}>
+        {dayText('displayed', { date: data.date, property: property?.name ?? data.propertyId })}
+      </p>
+      <p data-testid="day-captured" style={{ margin: 0 }}>
+        {data.capturedAt
+          ? dayText('captured', { time: formatDateTimeVn(data.capturedAt) })
+          : dayText('missingTime')}
+      </p>
+    </div>
+  );
+}
+function DayTable({ data }: { data: DayData }): ReactElement {
+  return (
     <section style={{ display: 'grid', gap: space.s3 }}>
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          gap: space.s2,
-          fontSize: 13,
-          color: color.textMuted,
-          ...OPS_TABULAR_STYLE,
-        }}
-      >
-        <p data-testid="day-displayed" style={{ margin: 0, color: color.text, fontWeight: 500 }}>
-          {dayText('displayed', { date: data.date, property: property?.name ?? data.propertyId })}
-        </p>
-        <p data-testid="day-captured" style={{ margin: 0 }}>
-          {data.capturedAt
-            ? dayText('captured', { time: formatDateTimeVn(data.capturedAt) })
-            : dayText('missingTime')}
-        </p>
-      </div>
       <div style={OPS_TABLE_WRAP_STYLE}>
         <table style={{ tableLayout: 'fixed', ...OPS_TABULAR_STYLE }}>
           <caption

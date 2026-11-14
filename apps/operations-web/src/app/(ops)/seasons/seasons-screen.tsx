@@ -39,11 +39,28 @@ import {
   type SeasonDraft,
 } from '../../../lib/seasons';
 import { SeasonListTable, WinnerTable, fetchCalendar, type SeasonTarget } from './seasons-parts';
+import { SeasonEditPanel } from './season-edit-panel';
+import { useSeasonEdit } from './use-season-edit';
+import { useOptionalStaffSession } from '../../../session/staff-session';
 
 export function SeasonsScreen(): ReactElement {
   const forced = useForcedState();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
-  const [draft, setDraft] = useState<SeasonDraft>(EMPTY_SEASON_DRAFT);
+  const staff = useOptionalStaffSession();
+  const workingPropertyId = staff?.propertyId ?? '';
+  // Mở màn ở cơ sở đang làm việc của phiên; đổi cơ sở trên thanh ngữ cảnh thì màn đi theo (TD-44).
+  const [draft, setDraft] = useState<SeasonDraft>(() => ({
+    ...EMPTY_SEASON_DRAFT,
+    propertyId: workingPropertyId,
+  }));
+  useEffect(() => {
+    if (workingPropertyId === '') return;
+    setDraft((current) =>
+      current.propertyId === workingPropertyId
+        ? current
+        : { ...current, propertyId: workingPropertyId, roomTypeId: '' },
+    );
+  }, [workingPropertyId]);
   const [range, setRange] = useState<GridRange>(() => defaultRange(new Date()));
   const [pendingRange, setPendingRange] = useState<GridRange>(() => defaultRange(new Date()));
   const [properties, setProperties] = useState<readonly PropertySummary[]>([]);
@@ -87,6 +104,16 @@ export function SeasonsScreen(): ReactElement {
     },
     [session],
   );
+
+  // Chỉ OWNER sửa/ngừng được mùa (api.md §2.4); ngoài khung phiên (test, demo) vẫn hiện nút và để
+  // máy chủ quyết — 403 được báo ngay trong khung sửa.
+  const canEdit = staff === null || staff.me.role === 'OWNER';
+  const [updatedName, setUpdatedName] = useState<string | null>(null);
+  const seasonEdit = useSeasonEdit(session.client, async (name) => {
+    setSavedName(null);
+    setUpdatedName(name);
+    await load(draft, range);
+  });
 
   const { propertyId: draftProperty, roomTypeId: draftRoomType } = draft;
   useEffect(() => {
@@ -135,13 +162,13 @@ export function SeasonsScreen(): ReactElement {
         <h1 style={OPS_TITLE_STYLE}>{t('seasons.title')}</h1>
         <p style={OPS_INTRO_STYLE}>{t('seasons.intro')}</p>
       </div>
-      {seasons.length === 0 ? (
-        <p data-testid="seasons-list-empty" style={{ margin: 0, color: color.textMuted }}>
-          {t('seasons.list.empty')}
-        </p>
-      ) : (
-        <SeasonListTable seasons={seasons} />
-      )}
+      <SeasonListSection
+        seasons={seasons}
+        updatedName={updatedName}
+        canEdit={canEdit}
+        seasonEdit={seasonEdit}
+        onReload={() => void load(draft, range)}
+      />
       <form
         data-testid="seasons-range"
         onSubmit={(event) => {
@@ -286,5 +313,56 @@ export function SeasonsScreen(): ReactElement {
         )}
       </StateSurface>
     </section>
+  );
+}
+
+function SeasonListSection({
+  seasons,
+  updatedName,
+  canEdit,
+  seasonEdit,
+  onReload,
+}: {
+  seasons: readonly SeasonSummary[];
+  updatedName: string | null;
+  canEdit: boolean;
+  seasonEdit: ReturnType<typeof useSeasonEdit>;
+  onReload: () => void;
+}): ReactElement {
+  return (
+    <>
+      {updatedName === null ? null : (
+        <p
+          role="status"
+          data-testid="seasons-updated"
+          style={{ ...opsNoticeStyle('success'), color: color.success, fontWeight: 500 }}
+        >
+          {t('seasons.updated', { name: updatedName })}
+        </p>
+      )}
+      {seasons.length === 0 ? (
+        <p data-testid="seasons-list-empty" style={{ margin: 0, color: color.textMuted }}>
+          {t('seasons.list.empty')}
+        </p>
+      ) : (
+        <SeasonListTable
+          seasons={seasons}
+          onEdit={canEdit ? (season) => seasonEdit.open(season, 'edit') : undefined}
+          onToggle={canEdit ? (season) => seasonEdit.open(season, 'toggle') : undefined}
+        />
+      )}
+      {seasonEdit.edit === null ? null : (
+        <SeasonEditPanel
+          edit={seasonEdit.edit}
+          onChange={seasonEdit.change}
+          onSubmit={() => void seasonEdit.submit()}
+          onCancel={seasonEdit.close}
+          onReload={() => {
+            seasonEdit.close();
+            onReload();
+          }}
+        />
+      )}
+    </>
   );
 }

@@ -279,8 +279,6 @@ export const customerCatalog = {
   'guest.route.climate': 'Thời tiết',
   'guest.route.best': 'Nên đến',
   'guest.route.getThere': 'Đường tới',
-  'guest.route.illustrative':
-    'Toàn bộ ảnh và mô tả trong bản đồ án là minh hoạ từ Amanoi, Wikimedia Commons và Pexels, không phải ảnh thật của các cơ sở Pine Hill.',
   'guest.classes.title': 'Hạng phòng, như hạng khoang',
   'guest.classes.lede':
     'Năm hạng phòng dùng chung ở cả ba cơ sở. Dorm bán theo giường, hợp cho người đi một mình.',

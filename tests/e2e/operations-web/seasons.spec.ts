@@ -194,3 +194,117 @@ test.describe('SCR-27 mùa & hệ số trên API giả (HB-059)', () => {
     await expect(page.getByTestId('seasons-list-empty')).toContainText('chưa có mùa');
   });
 });
+
+/** HB-310 (TD-06): sửa / ngừng mùa qua `PUT /seasons/{id}`. */
+function editBackend(
+  page: Page,
+  put: (body: string, ifMatch: string | undefined) => [number, string],
+) {
+  const puts: { body: string; ifMatch: string | undefined }[] = [];
+  let version = SEASON.version;
+  void page.route(PROPERTIES, (route) => fulfillJson(route, 200, listBody([PROPERTY])));
+  void page.route(ROOM_TYPES, (route) => fulfillJson(route, 200, listBody([ROOM_TYPE])));
+  void page.route(CALENDARS, (route) => fulfillJson(route, 200, JSON.stringify(CALENDAR)));
+  void page.route(SEASONS, async (route) => {
+    const request = route.request();
+    if (request.method() === 'PUT') {
+      const body = request.postData() ?? '';
+      const ifMatch = await request.headerValue('if-match');
+      puts.push({ body, ifMatch: ifMatch ?? undefined });
+      const [status, response] = put(body, ifMatch ?? undefined);
+      if (status === 204) version += 1;
+      return fulfillJson(route, status, response);
+    }
+    return fulfillJson(route, 200, listBody([{ ...SEASON, status: 'ACTIVE', version }]));
+  });
+  return { puts: () => puts };
+}
+
+test.describe('SCR-27 sửa / ngừng mùa (HB-310)', () => {
+  test('OWNER sửa hệ số: chỉ gửi trường đổi, kèm lý do và If-Match của bản đang xem', async ({
+    page,
+  }) => {
+    const spy = editBackend(page, () => [204, '']);
+    await page.goto('/seasons');
+    await page.getByTestId('season-Hè 2026').getByRole('button', { name: 'Sửa' }).click();
+    const panel = page.getByTestId('season-edit');
+    await expect(panel).toContainText('Sửa mùa Hè 2026 (phiên bản 2)');
+    await panel.getByLabel('Hệ số').fill('1,5');
+    await panel.getByLabel('Lý do thay đổi').fill('Tăng giá lễ 2/9');
+    await panel.getByRole('button', { name: 'Lưu thay đổi' }).click();
+    await expect(page.getByTestId('seasons-updated')).toContainText('Đã lưu mùa Hè 2026');
+    await expect(panel).toHaveCount(0);
+    expect(spy.puts()).toHaveLength(1);
+    expect(JSON.parse(spy.puts()[0]?.body ?? '{}')).toEqual({
+      multiplier: 1.5,
+      reason: 'Tăng giá lễ 2/9',
+    });
+    expect(spy.puts()[0]?.ifMatch).toBe('"2"');
+    await expect(page.getByTestId('season-Hè 2026')).toContainText('3');
+  });
+
+  test('thiếu lý do hoặc không đổi gì thì không gọi API', async ({ page }) => {
+    const spy = editBackend(page, () => [204, '']);
+    await page.goto('/seasons');
+    await page.getByTestId('season-Hè 2026').getByRole('button', { name: 'Sửa' }).click();
+    const panel = page.getByTestId('season-edit');
+    await panel.getByLabel('Hệ số').fill('1,5');
+    await panel.getByRole('button', { name: 'Lưu thay đổi' }).click();
+    await expect(panel).toContainText('Lý do thay đổi: bắt buộc nhập');
+    await panel.getByLabel('Hệ số').fill('1,40');
+    await panel.getByLabel('Lý do thay đổi').fill('Thử');
+    await panel.getByRole('button', { name: 'Lưu thay đổi' }).click();
+    await expect(panel).toContainText('Chưa có trường nào thay đổi');
+    expect(spy.puts()).toHaveLength(0);
+  });
+
+  test('ngừng mùa gửi status INACTIVE bằng nút cảnh báo', async ({ page }) => {
+    const spy = editBackend(page, () => [204, '']);
+    await page.goto('/seasons');
+    await page.getByTestId('season-Hè 2026').getByRole('button', { name: 'Ngừng' }).click();
+    const panel = page.getByTestId('season-toggle');
+    await expect(panel).toContainText('báo giá mới bỏ qua hệ số');
+    await panel.getByLabel('Lý do thay đổi').fill('Kết thúc chương trình');
+    const submit = panel.getByRole('button', { name: 'Ngừng mùa' });
+    await expect(submit).toHaveClass(/ph-btn-danger/);
+    await submit.click();
+    await expect(page.getByTestId('seasons-updated')).toBeVisible();
+    expect(JSON.parse(spy.puts()[0]?.body ?? '{}')).toEqual({
+      status: 'INACTIVE',
+      reason: 'Kết thúc chương trình',
+    });
+  });
+
+  test('xung đột phiên bản và thiếu quyền được báo trong khung sửa, danh sách vẫn còn', async ({
+    page,
+  }) => {
+    let status = 412;
+    editBackend(page, () => [
+      status,
+      errorBody(
+        status === 412 ? 'E_GEN_VERSION_CONFLICT' : 'E_RBAC_FORBIDDEN',
+        'trace-put',
+        '/api/session/sys/seasons/s1',
+      ),
+    ]);
+    await page.goto('/seasons');
+    await page.getByTestId('season-Hè 2026').getByRole('button', { name: 'Sửa' }).click();
+    const panel = page.getByTestId('season-edit');
+    await panel.getByLabel('Ưu tiên').fill('6');
+    await panel.getByLabel('Lý do thay đổi').fill('Đổi ưu tiên');
+    await panel.getByRole('button', { name: 'Lưu thay đổi' }).click();
+    await expect(page.getByTestId('season-edit-conflict')).toContainText('vừa được người khác sửa');
+    status = 403;
+    await panel.getByRole('button', { name: 'Lưu thay đổi' }).click();
+    await expect(page.getByTestId('season-edit-forbidden')).toContainText('Chỉ chủ chuỗi');
+    await expect(page.getByTestId('seasons-list')).toBeVisible();
+  });
+});
+
+test('MANAGER xem danh sách mùa nhưng không có nút sửa / ngừng', async ({ page, request }) => {
+  await loginRefundStaff(page, request, 'MANAGER');
+  backend(page);
+  await page.goto('/seasons');
+  await expect(page.getByTestId('seasons-list')).toContainText('Hè 2026');
+  await expect(page.getByTestId('season-Hè 2026').getByRole('button')).toHaveCount(0);
+});

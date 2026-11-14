@@ -1,6 +1,6 @@
 # HB-040 — daily board
 
-Approved F2 scope only: one property/day, server availability and capture timestamp, static links. Arrivals/departures/in-house, overbooking cases and degraded-channel indicators explicitly remain unsupported; no fake zero or local reconstruction from bookings.
+One property/day: server availability and capture timestamp, static links. HB-309 (TD-09) adds arrivals, departures, in-house guests, open overbooking cases and degraded channels from `GET /operations/day-board`; every count is the server's `total`, lists cut at 200 rows say so, nothing is reconstructed from bookings. A day-board failure (including 403 for RESERVATION_AGENT, who may read the grid but not guest lists) only hides that part; 401 still clears the whole screen. The board opens on the session's working property (TD-44) when it is in the server's property list.
 
 The authenticated client creates its staff session lazily during the first request, disposes it on unmount, and denies when authentication is unavailable or expires. Property/type lists are scoped by the server. Switching property removes old numbers immediately; generation checks ignore late responses. Same-scope read errors retain the old applied date and server timestamp. 401/403 remove all data and property options. No business role inheritance or local inventory/price engine is introduced.
 

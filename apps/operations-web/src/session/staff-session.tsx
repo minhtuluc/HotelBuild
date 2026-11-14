@@ -44,6 +44,14 @@ export function useStaffSession(): StaffSessionValue {
   return value;
 }
 
+/**
+ * Như `useStaffSession` nhưng trả `null` khi màn được render ngoài khung phiên (test đơn vị, trạng thái
+ * demo). Dùng cho gợi ý giao diện theo vai trò; quyền thật vẫn do máy chủ quyết.
+ */
+export function useOptionalStaffSession(): StaffSessionValue | null {
+  return useContext(StaffSessionContext);
+}
+
 /** Hook chung cho các màn: cơ sở đang làm việc để truyền làm `propertyId` (QĐ-03 quyết định 9). */
 export function useWorkingProperty(): {
   propertyId: string | null;

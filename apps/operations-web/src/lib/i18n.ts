@@ -10,6 +10,7 @@ import { allotmentsCatalog } from './messages-allotments.js';
 import { ratePlansCatalog } from './messages-rate-plans.js';
 import { reportsCatalog } from '../app/(ops)/reports/messages-reports.js';
 import { crmCatalog } from '../app/(ops)/crm/messages-crm.js';
+import { configEditCatalog } from './messages-config-edit.js';
 import { notiCatalog } from '../app/(ops)/noti/messages-noti.js';
 
 export const operationsCatalog = {
@@ -20,6 +21,7 @@ export const operationsCatalog = {
   ...ratePlansCatalog,
   ...reportsCatalog,
   ...crmCatalog,
+  ...configEditCatalog,
   ...notiCatalog,
   'ops.home.title': 'Bắt đầu ca làm việc',
   'ops.home.intro':

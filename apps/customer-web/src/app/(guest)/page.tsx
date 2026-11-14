@@ -141,7 +141,6 @@ function Stations({ photos }: { photos: PhotoContext }): ReactElement {
             );
           })}
         </div>
-        <p className="ph-fineprint">{t('guest.route.illustrative')}</p>
       </div>
     </section>
   );

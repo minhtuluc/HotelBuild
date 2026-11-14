@@ -6,7 +6,7 @@ export const ratePlansCatalog = {
   'ops.nav.ratePlans': 'Gói giá & chính sách huỷ',
   'ratePlans.title': 'Gói giá & chính sách huỷ',
   'ratePlans.intro':
-    'Cấu hình gói giá (cọc, số đêm, chính sách áp dụng) và chính sách huỷ (toàn bộ bậc + ngoại lệ trả phòng sớm). Sửa chỉ áp cho báo giá mới — booking đã chốt giữ snapshot cũ.',
+    'Cấu hình gói giá (cọc, số đêm, chính sách áp dụng) và chính sách huỷ (toàn bộ bậc + ngoại lệ trả phòng sớm). Thay đổi chỉ có hiệu lực với báo giá mới; booking đã chốt vẫn giữ snapshot lúc đặt.',
   'ratePlans.planSection': 'Gói giá',
   'ratePlans.policySection': 'Chính sách huỷ',
   'ratePlans.col.code': 'Mã gói',
