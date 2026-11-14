@@ -15,11 +15,13 @@ import {
   useFocusFirstIssue,
 } from './form-parts';
 import { useAccountText } from '../../../i18n/client';
+import { useLocalePath } from '../../../i18n/client';
 
 type Field = 'password' | 'confirm';
 const ORDER: readonly Field[] = ['password', 'confirm'];
 
 export function ResetScreen({ contact }: { contact: string | null }): ReactElement {
+  const localPath = useLocalePath();
   const text = useAccountText();
   const params = useSearchParams();
   // Token đọc một lần vào state: dọn thanh địa chỉ bên dưới không được làm mất nó.
@@ -61,7 +63,7 @@ export function ResetScreen({ contact }: { contact: string | null }): ReactEleme
         </h1>
         <Notice tone="success" testId="reset-done-notice" lines={[text('resetDone')]} />
         <a
-          href="/account/login?reset=1"
+          href={localPath('/account/login?reset=1')}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -119,7 +121,7 @@ export function ResetScreen({ contact }: { contact: string | null }): ReactEleme
       )}
       <SubmitButton busy={busy} label={text('submitReset')} testId="reset-submit" />
       <a
-        href="/account/forgot-password"
+        href={localPath('/account/forgot-password')}
         data-testid="reset-new-link"
         style={{
           display: 'inline-flex',

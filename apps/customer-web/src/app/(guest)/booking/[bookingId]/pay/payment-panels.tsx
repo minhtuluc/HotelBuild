@@ -1,10 +1,15 @@
 'use client';
 import styles from './payment.module.css';
-import { formatDateTimeVn, formatMoney, type ScreenState } from '@pinehill/ui-web';
+import { type ScreenState } from '@pinehill/ui-web';
 import type { PaymentView } from './payment-flow';
 import { approvedAmount, safePaymentUrl, type Offer } from './payment-model';
 import type { PaymentCatalog } from '../../../../../i18n/catalogs';
-import { usePaymentCatalog, usePaymentText } from '../../../../../i18n/client';
+import {
+  useDateTimeVn,
+  useMoney,
+  usePaymentCatalog,
+  usePaymentText,
+} from '../../../../../i18n/client';
 export type MethodChoice = 'VNPAY' | 'MOMO' | '';
 function blockedSurface(view: PaymentView, reload: () => void): ScreenState {
   const expiry = view.offer?.booking.holdExpiresAt;
@@ -68,6 +73,8 @@ export function paymentSurface(
   return fixedSurface(view, reload, reference) ?? auxiliarySurface(view, invalid, reload, m);
 }
 export function PaymentSummary({ offer }: { offer: Offer }) {
+  const fmtTime = useDateTimeVn();
+  const fmtMoney = useMoney();
   const m = usePaymentCatalog();
   const text = usePaymentText();
   const amount = approvedAmount(offer.booking, offer.balance);
@@ -78,21 +85,21 @@ export function PaymentSummary({ offer }: { offer: Offer }) {
       <dl className={styles.summaryList}>
         <div className={styles.summaryRow}>
           <dt>{m.total}</dt>
-          <dd>{formatMoney(offer.balance.totalAmount)}</dd>
+          <dd>{fmtMoney(offer.balance.totalAmount)}</dd>
         </div>
         <div className={styles.summaryRow}>
           <dt>{m.paid}</dt>
-          <dd>{formatMoney(offer.balance.paidAmount)}</dd>
+          <dd>{fmtMoney(offer.balance.paidAmount)}</dd>
         </div>
         <div className={styles.summaryRow}>
           <dt>{m.balance}</dt>
-          <dd>{formatMoney(offer.balance.balanceDue)}</dd>
+          <dd>{fmtMoney(offer.balance.balanceDue)}</dd>
         </div>
         {amount !== null ? (
           <div className={styles.summaryRow}>
             <dt>{m.deposit}</dt>
             <dd data-testid="approved-deposit" className={styles.depositValue}>
-              {formatMoney(amount)}
+              {fmtMoney(amount)}
             </dd>
           </div>
         ) : null}
@@ -102,7 +109,7 @@ export function PaymentSummary({ offer }: { offer: Offer }) {
         </div>
       </dl>
       {expiry ? (
-        <p className={styles.note}>{text('holdExpiry', { time: formatDateTimeVn(expiry) })}</p>
+        <p className={styles.note}>{text('holdExpiry', { time: fmtTime(expiry) })}</p>
       ) : null}
     </section>
   );
@@ -197,6 +204,8 @@ export function PaymentDetails({
   view: PaymentView;
   fixtureOrigin?: string | undefined;
 }) {
+  const fmtTime = useDateTimeVn();
+  const fmtMoney = useMoney();
   const m = usePaymentCatalog();
   const text = usePaymentText();
   const payment = view.payment;
@@ -209,15 +218,13 @@ export function PaymentDetails({
         {m.transaction} <span style={{ overflowWrap: 'anywhere' }}>{payment.paymentId}</span>
       </p>
       <p style={{ margin: 0 }} className="ph-tabular">
-        {text('paymentStatus', { amount: formatMoney(payment.amount), status: payment.status })}
+        {text('paymentStatus', { amount: fmtMoney(payment.amount), status: payment.status })}
       </p>
       <p role="status" data-testid="payment-result" className={styles.statusBox}>
         {observedMessage(view, m)}
       </p>
       {payment.expiresAt ? (
-        <p className={styles.note}>
-          {text('paymentExpiry', { time: formatDateTimeVn(payment.expiresAt) })}
-        </p>
+        <p className={styles.note}>{text('paymentExpiry', { time: fmtTime(payment.expiresAt) })}</p>
       ) : null}
       {portal ? (
         <div className="ph-actions">

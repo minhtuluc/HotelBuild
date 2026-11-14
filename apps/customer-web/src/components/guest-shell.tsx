@@ -1,7 +1,8 @@
 import type { ReactElement } from 'react';
-import Link from 'next/link';
+import { LocaleLink as Link } from './locale-link';
 import { PineHillBrand } from '@pinehill/ui-web';
 import { serverTranslators } from '../i18n/server';
+import { LanguageSelect } from './language-select';
 import { VnClock } from './vn-clock';
 
 const NAV_ITEMS = [
@@ -11,9 +12,9 @@ const NAV_ITEMS = [
   { href: '/account/login', key: 'guest.nav.account' },
 ] as const;
 
-/** Dải bảng ga trên cùng: tên tuyến, điều hướng, giờ VN. */
-export function GuestHeader(): ReactElement {
-  const { t } = serverTranslators();
+/** Dải bảng ga trên cùng: tên tuyến, điều hướng, chọn ngôn ngữ, giờ VN. */
+export async function GuestHeader(): Promise<ReactElement> {
+  const { t } = await serverTranslators();
   return (
     <header className="ph-header">
       <div className="ph-header-inner">
@@ -27,14 +28,17 @@ export function GuestHeader(): ReactElement {
             </Link>
           ))}
         </nav>
-        <VnClock label={t('guest.home.clock')} />
+        <div className="ph-header-tools">
+          <LanguageSelect />
+          <VnClock label={t('guest.home.clock')} />
+        </div>
       </div>
     </header>
   );
 }
 
-export function GuestFooter(): ReactElement {
-  const { t } = serverTranslators();
+export async function GuestFooter(): Promise<ReactElement> {
+  const { t } = await serverTranslators();
   return (
     <footer className="ph-footer">
       <div className="ph-footer-inner">

@@ -9,6 +9,7 @@ export const viCustomer = {
   ...uiWebVi,
   ...viContent,
   'guest.app.title': 'Pine Hill · Đặt phòng trực tiếp',
+  'guest.time.vn': '(giờ VN)',
   'guest.app.description': 'Đặt phòng trực tiếp tại chuỗi Pine Hill',
   'guest.home.intro':
     'Ba cơ sở Pine Hill là ba ga trên một tuyến. Chọn ga và ngày: mỗi đêm hiện thành một chặng có giá riêng, kèm tiền cọc và mức hoàn nếu bạn trả vé.',

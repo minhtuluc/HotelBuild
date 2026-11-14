@@ -7,10 +7,12 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { guestSession, isSignedIn, subscribeSignedIn } from '../../../session/guest-session';
 import { useAccountText } from '../../../i18n/client';
+import { useLocalePath } from '../../../i18n/client';
 
 type Status = 'checking' | 'in' | 'out';
 
 export function SessionStatus(): ReactElement {
+  const localPath = useLocalePath();
   const text = useAccountText();
   const [status, setStatus] = useState<Status>('checking');
   const [busy, setBusy] = useState(false);
@@ -60,7 +62,7 @@ export function SessionStatus(): ReactElement {
     >
       <nav aria-label={text('navLabel')} style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         <a
-          href="/"
+          href={localPath('/')}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -74,7 +76,7 @@ export function SessionStatus(): ReactElement {
         </a>
         {status === 'in' ? (
           <a
-            href="/profile"
+            href={localPath('/profile')}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -89,7 +91,7 @@ export function SessionStatus(): ReactElement {
         ) : null}
         {status === 'out' ? (
           <a
-            href="/account/login"
+            href={localPath('/account/login')}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -104,7 +106,7 @@ export function SessionStatus(): ReactElement {
         ) : null}
         {status === 'out' ? (
           <a
-            href="/account/register"
+            href={localPath('/account/register')}
             style={{
               display: 'inline-flex',
               alignItems: 'center',

@@ -67,9 +67,18 @@ export const STATION_PHOTOS: readonly PhotoSlot[] = [
     'Phòng Deluxe hoặc Family đã dọn sẵn, ánh sáng tự nhiên từ cửa sổ, thấy giường và cửa sổ nhìn ra thông.',
     'Đồi thông hoặc hồ gần cơ sở, đúng thứ khách nhìn thấy khi bước ra cửa (không dùng ảnh hồ Xuân Hương của người khác).',
     {
-      poster: { vi: 'Biệt thự gỗ bên hồ bơi giữa vườn cây' },
-      room: { vi: 'Phòng ngủ gỗ rộng với giường đôi và khu ghế ngồi' },
-      view: { vi: 'Con đường trong rừng thông Châu Sơn, Lâm Đồng' },
+      poster: {
+        vi: 'Biệt thự gỗ bên hồ bơi giữa vườn cây',
+        en: 'Timber villa beside a pool in a leafy garden',
+      },
+      room: {
+        vi: 'Phòng ngủ gỗ rộng với giường đôi và khu ghế ngồi',
+        en: 'Spacious timber bedroom with a double bed and a seating area',
+      },
+      view: {
+        vi: 'Con đường trong rừng thông Châu Sơn, Lâm Đồng',
+        en: 'A road through the Chau Son pine forest, Lam Dong',
+      },
     },
   ),
   ...station(
@@ -79,9 +88,18 @@ export const STATION_PHOTOS: readonly PhotoSlot[] = [
     'Phòng có ban công hoặc cửa sổ hướng biển, rèm mở, ánh sáng ban ngày.',
     'Đồi cát hoặc bãi biển gần nhất lúc bình minh, có thể thấy người nhỏ ở xa (không cần xin phép khuôn mặt).',
     {
-      poster: { vi: 'Nhà hàng bên mặt nước dưới đồi xanh' },
-      room: { vi: 'Phòng ngủ gỗ rộng nhìn ra vườn' },
-      view: { vi: 'Cây trên đồi cát Mũi Né, Phan Thiết' },
+      poster: {
+        vi: 'Nhà hàng bên mặt nước dưới đồi xanh',
+        en: 'Waterside restaurant below green hills',
+      },
+      room: {
+        vi: 'Phòng ngủ gỗ rộng nhìn ra vườn',
+        en: 'Spacious timber bedroom looking onto the garden',
+      },
+      view: {
+        vi: 'Cây trên đồi cát Mũi Né, Phan Thiết',
+        en: 'A tree on the Mui Ne sand dunes, Phan Thiet',
+      },
     },
   ),
   ...station(
@@ -91,9 +109,12 @@ export const STATION_PHOTOS: readonly PhotoSlot[] = [
     'Phòng Standard hoặc Superior, góc rộng từ cửa vào, ánh sáng ban ngày.',
     'Biển hoặc đường lên hải đăng gần cơ sở, chiều muộn.',
     {
-      poster: { vi: 'Biệt thự hồ bơi giữa đồi cây' },
-      room: { vi: 'Phòng ngủ gỗ với giường đôi và hai ghế bên cửa sổ' },
-      view: { vi: 'Hoàng hôn trên vịnh Vũng Tàu' },
+      poster: { vi: 'Biệt thự hồ bơi giữa đồi cây', en: 'Pool villa among wooded hills' },
+      room: {
+        vi: 'Phòng ngủ gỗ với giường đôi và hai ghế bên cửa sổ',
+        en: 'Timber bedroom with a double bed and two chairs by the window',
+      },
+      view: { vi: 'Hoàng hôn trên vịnh Vũng Tàu', en: 'Sunset over the bay at Vung Tau' },
     },
   ),
 ];
@@ -112,25 +133,36 @@ export const CLASS_PHOTOS: readonly PhotoSlot[] = [
     'STD',
     'Standard',
     'Phòng đôi gọn, chụp từ góc cửa, thấy toàn bộ giường đôi và lối đi.',
-    { vi: 'Cận cảnh giường đôi trong phòng ngủ gỗ' },
+    {
+      vi: 'Cận cảnh giường đôi trong phòng ngủ gỗ',
+      en: 'Close-up of a double bed in a timber bedroom',
+    },
   ),
   roomClass(
     'SUP',
     'Superior',
     'Phòng đôi rộng hơn, thấy khoảng trống thêm (ghế, bàn) so với Standard.',
-    { vi: 'Phòng ngủ gỗ có giường đôi, bàn làm việc và khu ghế ngồi' },
+    {
+      vi: 'Phòng ngủ gỗ có giường đôi, bàn làm việc và khu ghế ngồi',
+      en: 'Timber bedroom with a double bed, a desk and a seating area',
+    },
   ),
   roomClass('DLX', 'Deluxe', 'Phòng ba người, thấy rõ chỗ nằm cho người thứ ba.', {
     vi: 'Phòng ngủ có hai giường và khu ghế ngồi nhìn ra biển',
+    en: 'Bedroom with two beds and a seating area facing the sea',
   }),
   roomClass('FAM', 'Family', 'Phòng bốn người, thấy cả hai giường hoặc giường đôi + giường tầng.', {
     vi: 'Phòng ngủ có hai giường, bàn ghế và cửa sổ hướng biển',
+    en: 'Bedroom with two beds, a table and chairs, and sea-facing windows',
   }),
   roomClass(
     'DOR',
     'Dorm',
     'Phòng 6 giường tầng, thấy rèm che từng giường, tủ khoá cá nhân nếu có.',
-    { vi: 'Phòng dorm với dãy giường tầng có rèm che và ngăn kéo' },
+    {
+      vi: 'Phòng dorm với dãy giường tầng có rèm che và ngăn kéo',
+      en: 'Dorm room with a row of curtained bunk beds and drawers',
+    },
   ),
 ];
 
@@ -140,7 +172,10 @@ export const SHARE_PHOTO: PhotoSlot = {
   ratio: '1200/630',
   minSize: '1200 × 630',
   brief: 'Một ảnh ngang đẹp nhất trong ba cơ sở, chừa khoảng trống bên trái cho chữ nếu cần.',
-  alt: { vi: 'Toàn cảnh khu nghỉ dưỡng bên vịnh lúc hoàng hôn' },
+  alt: {
+    vi: 'Toàn cảnh khu nghỉ dưỡng bên vịnh lúc hoàng hôn',
+    en: 'Wide view of the resort on the bay at sunset',
+  },
 };
 
 export const ALL_PHOTO_SLOTS: readonly PhotoSlot[] = [

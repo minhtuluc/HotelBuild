@@ -22,12 +22,14 @@ import {
   useFocusFirstIssue,
 } from './form-parts';
 import { useAccountText } from '../../../i18n/client';
+import { useLocalePath } from '../../../i18n/client';
 
 type Field = 'fullName' | 'phone' | 'email' | 'password';
 const ORDER: readonly Field[] = ['fullName', 'phone', 'email', 'password'];
 const EMPTY: RegisterForm = { fullName: '', phone: '', email: '', password: '', consent: false };
 
 export function RegisterScreen({ contact }: { contact: string | null }): ReactElement {
+  const localPath = useLocalePath();
   const text = useAccountText();
   const router = useRouter();
   const next = safeNext(useSearchParams().get('next'));
@@ -53,7 +55,7 @@ export function RegisterScreen({ contact }: { contact: string | null }): ReactEl
     setIssues(outcome.kind === 'issues' ? outcome.issues : {});
     if (outcome.kind === 'failed') setFailure(outcome.failure);
     if (outcome.kind === 'createdNotSignedIn') setNotSignedIn(true);
-    if (outcome.kind === 'done') router.replace(next);
+    if (outcome.kind === 'done') router.replace(localPath(next));
   }
 
   return (
@@ -142,12 +144,12 @@ export function RegisterScreen({ contact }: { contact: string | null }): ReactEl
       )}
       {notSignedIn ? (
         <Notice tone="info" testId="register-created" lines={[text('registeredNotSignedIn')]}>
-          <a href="/account/login">{text('loginLink')}</a>
+          <a href={localPath('/account/login')}>{text('loginLink')}</a>
         </Notice>
       ) : null}
       <SubmitButton busy={busy} label={text('submitRegister')} testId="register-submit" />
       <a
-        href="/account/login"
+        href={localPath('/account/login')}
         style={{
           display: 'inline-flex',
           alignItems: 'center',

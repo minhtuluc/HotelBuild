@@ -5,9 +5,9 @@
  */
 import type { ReactElement } from 'react';
 import type { BookingSummary } from '@pinehill/contracts';
-import { formatDateTimeVn, formatMoney } from '@pinehill/ui-web';
+
 import { stayText } from '../../bookings/model';
-import { useT, useTranslators } from '../../../../i18n/client';
+import { useDateTimeVn, useMoney, useT, useTranslators } from '../../../../i18n/client';
 import type { CustomerMessageKey } from '../../../../i18n/catalogs';
 import { formatCountdown, moneyRows, type HoldView, type MoneyRow } from '../booking-model';
 
@@ -21,9 +21,10 @@ const MONEY_KEYS: Readonly<Record<MoneyRow['key'], CustomerMessageKey>> = {
 
 /** Dòng hiển thị đồng hồ giữ chỗ theo mốc `holdExpiresAt` từ máy chủ. */
 export function HoldLine({ hold }: { hold: HoldView }): ReactElement {
+  const fmtTime = useDateTimeVn();
   const t = useT();
   if (hold.kind === 'active') {
-    const expires = hold.expiresAt === null ? '' : formatDateTimeVn(hold.expiresAt);
+    const expires = hold.expiresAt === null ? '' : fmtTime(hold.expiresAt);
     return (
       <div data-testid="booking-hold" className="ph-muted-box ph-tabular">
         <span>
@@ -47,7 +48,7 @@ export function HoldLine({ hold }: { hold: HoldView }): ReactElement {
   const text =
     hold.kind === 'expired'
       ? t('guest.booking.hold.expired', {
-          time: hold.expiresAt === null ? '' : formatDateTimeVn(hold.expiresAt),
+          time: hold.expiresAt === null ? '' : fmtTime(hold.expiresAt),
         })
       : t('guest.booking.hold.none');
   return (
@@ -91,6 +92,7 @@ export function StayTable({ booking }: { booking: BookingSummary }): ReactElemen
 
 /** Bảng tóm tắt số tiền đặt phòng (tổng, đặt cọc, đã trả, phạt, còn lại). */
 export function MoneyTable({ booking }: { booking: BookingSummary }): ReactElement {
+  const fmtMoney = useMoney();
   const t = useT();
   return (
     <div className="ph-table-wrap">
@@ -113,7 +115,7 @@ export function MoneyTable({ booking }: { booking: BookingSummary }): ReactEleme
                   ? t(MONEY_KEYS[row.key], { percent: booking.depositPercent })
                   : t(MONEY_KEYS[row.key])}
               </th>
-              <td className="ph-tabular">{formatMoney(row.amount)}</td>
+              <td className="ph-tabular">{fmtMoney(row.amount)}</td>
             </tr>
           ))}
         </tbody>
@@ -142,6 +144,8 @@ export function FlagsList({ booking }: { booking: BookingSummary }): ReactElemen
 
 /** Khối xác nhận của màn kết quả (SCR-07): kỳ ở hiển thị ngày lịch dd/MM/yyyy qua helper dùng chung. */
 export function ConfirmationBlock({ booking }: { booking: BookingSummary }): ReactElement {
+  const fmtTime = useDateTimeVn();
+  const fmtMoney = useMoney();
   const text = useTranslators();
   const t = useT();
   return (
@@ -164,17 +168,17 @@ export function ConfirmationBlock({ booking }: { booking: BookingSummary }): Rea
         </li>
         <li>
           <span style={{ color: 'var(--color-textMuted)' }}>{t('guest.booking.money.total')}</span>
-          <strong>{formatMoney(booking.totalAmount)}</strong>
+          <strong>{fmtMoney(booking.totalAmount)}</strong>
         </li>
         <li>
           <span style={{ color: 'var(--color-textMuted)' }}>
             {t('guest.booking.money.balance')}
           </span>
-          <strong>{formatMoney(booking.balanceDue)}</strong>
+          <strong>{fmtMoney(booking.balanceDue)}</strong>
         </li>
         <li>
           <span style={{ color: 'var(--color-textMuted)' }}>{t('guest.booking.created')}</span>
-          <span>{formatDateTimeVn(booking.createdAt)}</span>
+          <span>{fmtTime(booking.createdAt)}</span>
         </li>
       </ul>
     </section>

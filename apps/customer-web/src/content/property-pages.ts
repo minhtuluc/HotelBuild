@@ -67,6 +67,25 @@ const COPY: Readonly<Record<Locale, Readonly<Record<string, PropertyPageCopy>>>>
       illustrative: true,
     },
   },
+  en: {
+    'da-lat': {
+      summary:
+        'The first station on the line, up in the highlands. Come to Da Lat to slow down: misty mornings, mild sun at noon, evenings cool enough for a jacket.',
+      story: [
+        'The property sits among pine hills, far enough from the centre to hear the wind. Morning mist hangs low and lifts before nine; in the evening the temperature drops quickly, so bring a warm layer if you are coming up from the lowlands.',
+        'Da Lat suits a stay of a few nights: rest after the journey on the first night, then walk, cycle around the lake or simply stay put. Each night is priced on its own leg of the ticket, so you can see which nights are weekends and which fall in high season.',
+      ],
+      arrival: [
+        'Fly to Lien Khuong airport, then about 30 km by taxi or airport shuttle.',
+        'Sleeper coaches from Ho Chi Minh City take about 7 hours; many run overnight and arrive early in the morning, before check-in time.',
+        'If you arrive before check-in time, leave your luggage at reception; check-in and check-out times are on the timetable above.',
+      ],
+      seoTitle: 'Da Lat Station · Pine Hill',
+      seoDescription:
+        'The Pine Hill property in the Da Lat highlands: check-in and check-out times, getting there, room classes and photos. See nightly prices when you pick dates.',
+      illustrative: true,
+    },
+  },
 };
 
 export function propertyPageKey(slug: string): PropertyPageKey | undefined {

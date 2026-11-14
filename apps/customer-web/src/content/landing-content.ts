@@ -11,6 +11,7 @@
  * Không có giá bán, đánh giá hay số liệu kinh doanh nào ở đây.
  */
 import type { Locale } from '../i18n/locales';
+import { LANDING_EN } from './landing-content-en';
 
 export interface Station {
   readonly code: string;
@@ -270,6 +271,7 @@ const LANDING: Readonly<Record<Locale, LandingContent>> = {
     bookingSteps: BOOKING_STEPS,
     faq: FAQ,
   },
+  en: LANDING_EN,
 };
 
 /** Nội dung tĩnh trang chủ theo locale (HB-309). Locale mới phải đủ mọi phần. */
