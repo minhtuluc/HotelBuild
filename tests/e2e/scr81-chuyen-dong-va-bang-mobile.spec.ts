@@ -101,7 +101,7 @@ test.describe('Chuyển động an toàn (ANIM-04, ANIM-06)', () => {
     await expect.poll(() => page.locator('.ph-reveal-pending').count()).toBeGreaterThan(0);
     // Dải đã nằm trong màn đầu lúc tải không bao giờ bị gắn trạng thái chờ.
     const pendingInFold = await page.evaluate(() =>
-      [...document.querySelectorAll('.ph-reveal-pending')].some(
+      Array.from(document.querySelectorAll('.ph-reveal-pending')).some(
         (node) => node.getBoundingClientRect().top < window.innerHeight,
       ),
     );
