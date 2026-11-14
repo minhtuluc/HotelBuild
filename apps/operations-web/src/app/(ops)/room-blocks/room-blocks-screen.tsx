@@ -14,6 +14,7 @@ import {
   opsNoticeStyle,
 } from '../../../components/editorial-styles';
 import { useForcedState } from '../../../components/forced-state';
+import { useWorkingPropertyId } from '../../../session/staff-session';
 import { t } from '../../../lib/i18n';
 import { businessDate } from '../../../lib/inventory-grid';
 import {
@@ -44,6 +45,13 @@ function useBlocks(enabled: boolean) {
   const [editor, setEditor] = useState<Editor | null>(null);
   const [removal, setRemoval] = useState<Removal | null>(null);
   const [initial] = useState(emptyDraft);
+  const working = useWorkingPropertyId();
+  // Đổi cơ sở trên thanh ngữ cảnh: bỏ lựa chọn trên màn để mở ở cơ sở mới (TD-44, HB-320).
+  useEffect(() => {
+    setChosenId('');
+    setEditor(null);
+    setRemoval(null);
+  }, [working]);
   useEffect(() => {
     if (
       state.phase === 'expired' ||
@@ -64,7 +72,7 @@ function useBlocks(enabled: boolean) {
     if (state.receipt?.kind === 'room-block-create') setEditor(null);
     if (state.receipt?.kind === 'room-block-delete') setRemoval(null);
   }, [state.receipt]);
-  const { properties, propertyId, rooms, blocks, roomIds } = selection(state, chosenId);
+  const { properties, propertyId, rooms, blocks, roomIds } = selection(state, chosenId, working);
   const draft = visibleDraft(state, editor, propertyId, roomIds, initial);
   const visibleRemoval = currentRemoval(state, removal, propertyId, blocks);
   const onChange = (data: RoomBlockDraft) => {

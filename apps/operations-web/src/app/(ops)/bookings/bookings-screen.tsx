@@ -6,6 +6,9 @@
  * Lọc và phân trang **do máy chủ làm** (`GET /bookings`): màn hình chỉ đọc truy vấn URL, gửi đúng tham số
  * hợp đồng và nối trang theo con trỏ. Phạm vi cơ sở do máy chủ giới hạn theo phiên nhân viên; lối "xoá
  * cứng" chỉ hiện với DRAFT/HELD (BR-BOOK-17/14) và máy chủ vẫn chặn lần cuối.
+ *
+ * Ô "Cơ sở" (TD-44, HB-320) chọn trong danh sách `GET /properties` trả; không có `propertyId` trên URL thì
+ * lọc theo cơ sở đang làm việc và đi theo khi đổi trên thanh ngữ cảnh.
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -23,7 +26,9 @@ import { useOpsSession } from '../../../lib/ops-session';
 import { t } from '../../../lib/i18n';
 import { readFailureState, writeFailureState } from '../../../lib/screen-state';
 import { BookingsTable, DeletePanel, FilterForm } from './bookings-parts';
+import { useBookingProperty } from './use-booking-property';
 import {
+  ALL_PROPERTIES,
   NO_FILTERS,
   appendBookings,
   filtersFrom,
@@ -41,10 +46,16 @@ export function BookingsScreen(): ReactElement {
   const searchParams = useSearchParams();
   const filters = filtersFrom(searchParams);
 
-  const session = useOpsSession(['/bookings'], {
+  const session = useOpsSession(['/bookings', '/properties'], {
     onExpired: () => setState({ kind: 'forbidden' }),
   });
   const api = useMemo(() => createBookingApi(session.client), [session]);
+  // Danh sách booking chỉ tải khi đã biết cơ sở lọc (`property !== null`).
+  const { properties, property, selected, formKey } = useBookingProperty(
+    session.client,
+    forced === undefined,
+    filters.propertyId,
+  );
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [bookings, setBookings] = useState<readonly BookingSummary[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -58,9 +69,12 @@ export function BookingsScreen(): ReactElement {
     async (after: string | null): Promise<void> => {
       setReadError(null);
       if (after === null) setState({ kind: 'loading' });
+      if (property === null) return;
+      const target = { ...filters, propertyId: property === ALL_PROPERTIES ? '' : property };
       try {
-        const page = (await api.list(listQuery(filters, PAGE_SIZE, after))).data;
-        setBookings((previous) => appendBookings(previous, page));
+        const page = (await api.list(listQuery(target, PAGE_SIZE, after))).data;
+        // Trang đầu (đổi bộ lọc/cơ sở) thay toàn bộ; trang sau mới nối tiếp.
+        setBookings((previous) => appendBookings(after === null ? [] : previous, page));
         setCursor(nextCursorOf(page));
         setState({ kind: 'ready' });
       } catch (caught) {
@@ -74,15 +88,7 @@ export function BookingsScreen(): ReactElement {
         setState({ kind: 'ready' });
       }
     },
-    [
-      api,
-      filters.channelCode,
-      filters.from,
-      filters.propertyId,
-      filters.q,
-      filters.status,
-      filters.to,
-    ],
+    [api, property, filters.channelCode, filters.from, filters.q, filters.status, filters.to],
   );
 
   useEffect(() => {
@@ -131,7 +137,13 @@ export function BookingsScreen(): ReactElement {
   return (
     <section data-testid="bookings-screen" style={OPS_PAGE_STYLE}>
       <h1 style={OPS_TITLE_STYLE}>{t('ops.bookings.title')}</h1>
-      <FilterForm current={filters} onApply={applyFilters} />
+      <FilterForm
+        key={formKey}
+        current={filters}
+        properties={properties}
+        property={selected}
+        onApply={applyFilters}
+      />
       {writeState === null ? null : <StateSurface state={writeState} />}
       <StateSurface
         state={

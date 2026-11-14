@@ -35,6 +35,8 @@ import { useForcedState } from '../../../components/forced-state';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { t } from '../../../lib/i18n';
 import { readFailureState, writeFailureState } from '../../../lib/screen-state';
+import { chooseProperty } from '../../../lib/working-property';
+import { useWorkingPropertyId } from '../../../session/staff-session';
 import {
   pinFailure,
   pinGrantValid,
@@ -151,6 +153,8 @@ export function ReconciliationScreen({ baseUrl }: { baseUrl: string }): ReactEle
   const session = useRef<ReturnType<typeof createSessionClient> | null>(null);
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [properties, setProperties] = useState<readonly PropertySummary[]>([]);
+  // Mở ở cơ sở đang làm việc; đổi cơ sở trên thanh ngữ cảnh thì đọc lại ở cơ sở mới (TD-44, HB-320).
+  const working = useWorkingPropertyId();
   const [propertyId, setPropertyId] = useState('');
   const [businessDate, setBusinessDate] = useState(() => defaultBusinessDate(new Date()));
   const [report, setReport] = useState<RevenueByChannelReport | null>(null);
@@ -194,17 +198,16 @@ export function ReconciliationScreen({ baseUrl }: { baseUrl: string }): ReactEle
       setError(null);
       setState({ kind: 'loading' });
       try {
-        const [propRes, repRes] = await Promise.all([
-          api.properties.list(),
-          api.reports.revenueByChannel({
-            from: targetDate,
-            to: targetDate,
-            ...(targetPropertyId === '' ? {} : { propertyId: targetPropertyId }),
-          }),
-        ]);
-        const list = propRes.data.data;
+        // Chọn cơ sở trong danh sách máy chủ trả rồi mới đọc báo cáo: id ngoài danh sách bị bỏ qua.
+        const list = (await api.properties.list()).data.data;
+        const chosen = chooseProperty(list, targetPropertyId, working);
+        const repRes = await api.reports.revenueByChannel({
+          from: targetDate,
+          to: targetDate,
+          ...(chosen === '' ? {} : { propertyId: chosen }),
+        });
         setProperties(list);
-        if (targetPropertyId === '' && list[0] !== undefined) setPropertyId(list[0].id);
+        setPropertyId(chosen);
         setReport(repRes.data);
         setState({ kind: 'ready' });
       } catch (caught) {
@@ -213,12 +216,12 @@ export function ReconciliationScreen({ baseUrl }: { baseUrl: string }): ReactEle
         if (mapped === undefined) setError(caught);
       }
     },
-    [api],
+    [api, working],
   );
 
   useEffect(() => {
-    if (forced === undefined) void load('', businessDate);
-  }, [forced, load, businessDate]);
+    if (forced === undefined) void load(working, businessDate);
+  }, [forced, load, businessDate, working]);
 
   const verifyPin = async (): Promise<void> => {
     if (pinIssue(pin) !== null) return;

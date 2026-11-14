@@ -12,3 +12,14 @@ export function chooseProperty(
   if (preferred && available.some((item) => item.id === preferred)) return preferred;
   return available[0]?.id ?? '';
 }
+
+/**
+ * Cơ sở đang làm việc nếu có trong danh sách máy chủ trả, nếu không thì `''` (HB-320). Dùng để chọn sẵn
+ * cơ sở trong form tạo/ghi đè: không có thì để người dùng tự chọn, không rơi về cơ sở đầu danh sách.
+ */
+export function workingIfAvailable(
+  available: readonly { readonly id: string }[],
+  working: string | null | undefined,
+): string {
+  return working && available.some((item) => item.id === working) ? working : '';
+}

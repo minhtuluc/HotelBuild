@@ -24,6 +24,7 @@ import {
 import { useOpsSession } from '../../../../lib/ops-session';
 import { t } from '../../../../lib/i18n';
 import { readFailureState } from '../../../../lib/screen-state';
+import { useWorkingPropertyId } from '../../../../session/staff-session';
 import { EMPTY_SEARCH, searchParams, TIER_LABEL_KEY } from '../crm-shared';
 
 const FIELD_STYLE = OPS_FIELD_LABEL_STYLE;
@@ -43,7 +44,12 @@ export function LoyaltyScreen(): ReactElement {
   const wanted = params.get('guestId') ?? '';
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [guests, setGuests] = useState<readonly GuestSummary[]>([]);
-  const [guestId, setGuestId] = useState(wanted);
+  // Danh sách chọn khách theo cơ sở đang làm việc (TD-44, HB-320). Lựa chọn gắn với cơ sở lúc chọn: đổi
+  // cơ sở trên thanh ngữ cảnh thì bỏ khách đang chọn và nạp lại một lần (không tải hai lần).
+  const working = useWorkingPropertyId();
+  const [picked, setPicked] = useState({ working, guestId: wanted });
+  const guestId = picked.working === working ? picked.guestId : '';
+  const setGuestId = (id: string): void => setPicked({ working, guestId: id });
   const [loyalty, setLoyalty] = useState<GuestLoyalty | null>(null);
   const [readError, setReadError] = useState<unknown>(null);
 
@@ -52,7 +58,10 @@ export function LoyaltyScreen(): ReactElement {
       setReadError(null);
       try {
         const api = createGuestApi(session.client);
-        const guestPage = await api.list(searchParams(EMPTY_SEARCH));
+        const guestPage = await api.list({
+          ...searchParams(EMPTY_SEARCH),
+          ...(working === '' ? {} : { propertyId: working }),
+        });
         const list = guestPage.data.data;
         const target = chosen === '' ? (list[0]?.id ?? '') : chosen;
         const loaded: Loaded | null =
@@ -66,7 +75,7 @@ export function LoyaltyScreen(): ReactElement {
           return;
         }
         setGuests(loaded.guests);
-        setGuestId(loaded.guestId);
+        setPicked({ working, guestId: loaded.guestId });
         setLoyalty(loaded.loyalty);
         setState({ kind: 'ready' });
       } catch (caught) {
@@ -79,7 +88,7 @@ export function LoyaltyScreen(): ReactElement {
         setState({ kind: 'ready' });
       }
     },
-    [session],
+    [session, working],
   );
 
   useEffect(() => {

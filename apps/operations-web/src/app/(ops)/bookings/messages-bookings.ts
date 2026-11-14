@@ -5,6 +5,7 @@ export const bookingsCatalog = {
   'ops.bookings.table': 'Booking theo bộ lọc (trong phạm vi cơ sở của bạn)',
   'ops.bookings.more': 'Tải thêm',
   'ops.bookings.filter.propertyId': 'Cơ sở',
+  'ops.bookings.filter.allProperties': 'Tất cả cơ sở',
   'ops.bookings.filter.status': 'Trạng thái',
   'ops.bookings.filter.all': 'Tất cả trạng thái',
   'ops.bookings.filter.channelCode': 'Kênh',
