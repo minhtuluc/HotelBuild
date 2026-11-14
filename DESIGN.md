@@ -268,6 +268,8 @@ Không có cỡ dưới 44px. Nút trong cùng một hàng luôn cùng cỡ (kh�
 - Ảnh thật đặt theo mã ô ở `apps/customer-web/public/images/pine-hill/` (danh mục `src/content/photo-slots.ts`, brief `docs/04-thiet-ke/anh-trang-khach.md`). Thiếu ảnh: áp phích về tranh SVG, ô khác ẩn. `?anh=1` hiện khung ô ảnh.
 
 ### Content Pages (HB-310)
+**Dining & Price Includes (HB-318).** Trang `/dining` theo nhịp dải giấy → bảng ga (ba khung giờ, giờ in chữ hẹp màu tín hiệu, nhãn trạng thái viền mảnh) → giấy (quanh ga + khối báo trước) → giấy vé. Khối "Giá đã gồm" là giấy vé bo góc, tiêu đề kẻ đôi như khối đường đến, hai cột *đã gồm / chưa gồm* với gạch đầu dòng mực vé, không dấu tick, không viền một bên. Nội dung chỉ theo `docs/02-nghiep-vu/tien-nghi-trong-gia.md`.
+
 Trang nội dung (`/stays/[slug]`, `/room-types/[code]`) dùng đúng ba vật liệu của trang chủ, không thêm khuôn "resort editorial" (ảnh tràn màn, chữ trắng đè ảnh, hàng thẻ tiện ích có biểu tượng). Đầu trang luôn là `h1` trên nền mẫu biểu, ảnh nằm trong khung giấy.
 
 **Station Sheet — tờ giới thiệu ga (`/stays/[slug]`)**

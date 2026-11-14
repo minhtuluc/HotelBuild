@@ -12,6 +12,9 @@ const NAV_ITEMS = [
   { href: '/account/login', key: 'guest.nav.account' },
 ] as const;
 
+/** Chân trang thêm trang nội dung toàn chuỗi (HB-318); thanh trên giữ gọn cho màn hẹp. */
+const FOOTER_ITEMS = [...NAV_ITEMS, { href: '/dining', key: 'guest.nav.dining' }] as const;
+
 /** Dải bảng ga trên cùng: tên tuyến, điều hướng, chọn ngôn ngữ, giờ VN. */
 export async function GuestHeader(): Promise<ReactElement> {
   const { t } = await serverTranslators();
@@ -47,7 +50,7 @@ export async function GuestFooter(): Promise<ReactElement> {
             <PineHillBrand tone="dark" compact subtitle={t('guest.brand.subtitle')} />
           </Link>
           <nav aria-label={t('guest.nav.footer')} className="ph-footer-nav">
-            {NAV_ITEMS.map((item) => (
+            {FOOTER_ITEMS.map((item) => (
               <Link key={item.href} href={item.href} className="ph-footer-link">
                 {t(item.key)}
               </Link>

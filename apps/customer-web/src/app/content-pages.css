@@ -596,6 +596,157 @@
     }
   }
 
+  /* ——— Giá đã gồm (HB-318, UX-03): giấy vé như khối đường đến, hai cột đối chiếu ——— */
+  .ph-includes {
+    --color-textMuted: var(--color-world-ticketMuted, #6b2f22);
+    display: grid;
+    gap: 18px;
+    padding: 22px clamp(18px, 3vw, 28px) 24px;
+    border-radius: 6px;
+    background: var(--color-world-ticketLight, #f6dcd3);
+  }
+
+  .ph-band-ticket .ph-includes {
+    background: var(--color-surface, #fbfaf7);
+  }
+
+  .ph-content-includes {
+    margin-top: clamp(40px, 6vw, 72px);
+  }
+
+  /* Đầu khối giấy vé: tiêu đề kẻ đôi bên dưới, như `.ph-arrival`. */
+  .ph-includes h2 {
+    margin: 0;
+    padding-bottom: 10px;
+    border-bottom: 3px double var(--color-primary, #1b3a82);
+    font-family: var(--font-display, 'Barlow Condensed', sans-serif);
+    font-size: clamp(1.9rem, 3.2vw, 2.6rem);
+    font-weight: 600;
+    line-height: 1.05;
+  }
+
+  .ph-includes-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: 20px clamp(24px, 4vw, 48px);
+  }
+
+  .ph-includes h3 {
+    margin: 0 0 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-textMuted, #6b2f22);
+  }
+
+  .ph-includes ul {
+    display: grid;
+    gap: 6px;
+    margin: 0 0 16px;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Gạch đầu dòng kỹ thuật bằng mực vé, không dùng dấu tick (DESIGN.md › Refund Plans). */
+  .ph-includes li {
+    position: relative;
+    padding-left: 20px;
+  }
+
+  .ph-includes li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--color-textMuted, #6b2f22);
+  }
+
+  .ph-includes-no li {
+    color: var(--color-textMuted, #6b2f22);
+  }
+
+  .ph-includes-note {
+    margin: 0 0 12px;
+    font-size: 14px;
+    color: var(--color-textMuted, #6b2f22);
+  }
+
+  .ph-includes-link {
+    font-weight: 600;
+  }
+
+  /* ——— Ăn uống ở ga (HB-318): ba nhịp trên bảng ga ——— */
+  .ph-dining-illustrative {
+    margin: 0;
+    max-width: 56ch;
+    font-size: 14px;
+    color: var(--color-textMuted, #5c5450);
+  }
+
+  .ph-dining-services {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ph-dining-service {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    padding: 22px clamp(18px, 2.5vw, 26px) 24px;
+    border-top: 1px solid rgb(244 239 230 / 0.18);
+  }
+
+  .ph-dining-service h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+  }
+
+  .ph-dining-service p {
+    margin: 0;
+    max-width: 44ch;
+  }
+
+  .ph-dining-hours {
+    font-family: var(--font-display, 'Barlow Condensed', sans-serif);
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: var(--color-world-signal, #f2b632);
+  }
+
+  .ph-dining-status {
+    justify-self: start;
+    padding: 4px 10px;
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .ph-dining-service[data-status='included'] .ph-dining-status {
+    color: var(--color-world-signal, #f2b632);
+  }
+
+  .ph-dining-nearby {
+    display: grid;
+    gap: 18px;
+    margin: 8px 0 0;
+  }
+
+  .ph-dining-nearby dt {
+    font-weight: 600;
+  }
+
+  .ph-dining-nearby dd {
+    margin: 4px 0 0;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .ph-content-poster,
     .ph-cabin-stamp {

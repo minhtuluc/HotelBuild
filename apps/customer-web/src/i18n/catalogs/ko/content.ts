@@ -40,4 +40,22 @@ export const koContent: Readonly<Record<keyof typeof viContent, string>> = {
   'guest.gallery.close': '닫기',
   'guest.gallery.prev': '이전 사진',
   'guest.gallery.next': '다음 사진',
+  'guest.nav.dining': '식사',
+  'guest.dining.title': '역에서의 식사',
+  'guest.dining.servicesTitle': '역에서의 하루 식사',
+  'guest.dining.hours': '시간',
+  'guest.dining.status.included': '객실 요금에 포함',
+  'guest.dining.status.extra': '카운터에서 따로 주문',
+  'guest.dining.status.none': '역에서 제공하지 않음',
+  'guest.dining.nearbyTitle': '역 주변',
+  'guest.dining.notesTitle': '역에 미리 알려 주세요',
+  'guest.dining.illustrative':
+    '운영 시간, 메뉴, 주변 식당은 예시 정보이며 도착 시 프런트에서 확인해 드립니다.',
+  'guest.includes.title': '요금에 포함된 것',
+  'guest.includes.all': '모든 객실 등급',
+  'guest.includes.dorm': '도미토리 추가',
+  'guest.includes.excluded': '포함되지 않은 것',
+  'guest.includes.note':
+    '포함되지 않은 항목은 역에서 판매하는 경우 카운터에서 따로 결제하며 예약 시스템을 거치지 않습니다.',
+  'guest.includes.more': '역에서의 식사',
 };

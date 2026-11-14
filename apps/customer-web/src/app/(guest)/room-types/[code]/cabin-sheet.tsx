@@ -4,6 +4,7 @@
  */
 import type { ReactElement } from 'react';
 import { LocaleLink as Link } from '../../../../components/locale-link';
+import { PriceIncludes } from '../../../../components/content/price-includes';
 import { Breadcrumbs } from '../../../../components/content/breadcrumbs';
 import { GalleryGrid, type GalleryItem } from '../../../../components/content/gallery-grid';
 import { JsonLd, breadcrumbList } from '../../../../components/content/json-ld';
@@ -197,6 +198,7 @@ export function CabinSheet(props: CabinProps): ReactElement {
           </div>
           <StationsServed {...props} />
         </div>
+        <PriceIncludes text={text} showDorm={pageKey.code === 'DOR'} linkDining />
         {gallery.length === 0 ? null : (
           <div className="ph-content-gallery">
             <GalleryGrid items={gallery} />

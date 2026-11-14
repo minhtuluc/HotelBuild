@@ -40,4 +40,22 @@ export const enContent: Readonly<Record<keyof typeof viContent, string>> = {
   'guest.gallery.close': 'Close',
   'guest.gallery.prev': 'Previous photo',
   'guest.gallery.next': 'Next photo',
+  'guest.nav.dining': 'Eating',
+  'guest.dining.title': 'Eating at the station',
+  'guest.dining.servicesTitle': 'A day of eating at the station',
+  'guest.dining.hours': 'Hours',
+  'guest.dining.status.included': 'Included in the room price',
+  'guest.dining.status.extra': 'Order and pay at the counter',
+  'guest.dining.status.none': 'Not served at the station',
+  'guest.dining.nearbyTitle': 'Around the station',
+  'guest.dining.notesTitle': 'Let the station know ahead',
+  'guest.dining.illustrative':
+    'Serving hours, dishes and nearby places are illustrative; reception confirms them when you arrive.',
+  'guest.includes.title': 'The price includes',
+  'guest.includes.all': 'Every room class',
+  'guest.includes.dorm': 'Extra in the Dorm',
+  'guest.includes.excluded': 'Not included',
+  'guest.includes.note':
+    'Items not included, if the station sells them, are paid at the counter and do not go through the booking system.',
+  'guest.includes.more': 'Eating at the station',
 };

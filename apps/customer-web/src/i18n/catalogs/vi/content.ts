@@ -38,4 +38,22 @@ export const viContent = {
   'guest.gallery.close': 'Đóng',
   'guest.gallery.prev': 'Ảnh trước',
   'guest.gallery.next': 'Ảnh sau',
+  'guest.nav.dining': 'Ăn uống',
+  'guest.dining.title': 'Ăn uống ở ga',
+  'guest.dining.servicesTitle': 'Một ngày ăn uống ở ga',
+  'guest.dining.hours': 'Giờ',
+  'guest.dining.status.included': 'Đã gồm trong giá phòng',
+  'guest.dining.status.extra': 'Gọi riêng tại quầy',
+  'guest.dining.status.none': 'Ga không phục vụ',
+  'guest.dining.nearbyTitle': 'Quanh ga',
+  'guest.dining.notesTitle': 'Báo trước cho ga',
+  'guest.dining.illustrative':
+    'Giờ phục vụ, món và quán quanh ga là thông tin minh hoạ; lễ tân xác nhận khi bạn đến.',
+  'guest.includes.title': 'Giá đã gồm',
+  'guest.includes.all': 'Mọi hạng phòng',
+  'guest.includes.dorm': 'Thêm cho Dorm',
+  'guest.includes.excluded': 'Chưa gồm',
+  'guest.includes.note':
+    'Khoản chưa gồm, nếu ga có bán, trả riêng tại quầy, không đi qua hệ thống đặt phòng.',
+  'guest.includes.more': 'Ăn uống ở ga',
 } as const;

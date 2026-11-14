@@ -45,8 +45,8 @@ Trong lúc demo, mọi dữ liệu minh hoạ vẫn mang cờ (`illustrative`, `
 | P1 | E2E SCR-07 (3 ca) đỏ khi chạy trên dev server: API trả 401 ngay sau khi tạo booking thành công | Chạy lại bằng cấu hình chuẩn (build + `next start`) ở đợt 1; lỗi thật thì sửa trong đợt |
 | P2 | E2E SCR-12 khoá câu "hợp đồng chưa có trường này…", câu kỹ thuật hiện thẳng cho khách | Đổi ở đợt 2 khi chuyển câu chữ sang catalog: ticket HB-309 ghi rõ việc đổi assertion và lý do, test khoá mới được ghim lại theo quy trình của AGENTS.md |
 | P3 | Ticket HB-300 và HB-305 trên `main` vẫn mô tả hướng Lyon/Amanoi Editorial | Không sửa đặc tả cũ; ticket mới (HB-308+) dẫn chiếu ADR-019 và DESIGN.md |
-| P4 | Trang `/dining`: Pine Hill không có dịch vụ ăn uống trong nghiệp vụ (§8.3) | **Chờ chủ dự án:** đổi thành trang "Quanh ga" hay bỏ |
-| P5 | Khối "Vé gồm / Chưa gồm", dịch vụ tại ga: chưa có điều khoản (Q12) | **Chờ chủ dự án** đưa điều khoản vào `docs/02` |
+| P4 | Trang `/dining`: Pine Hill không có dịch vụ ăn uống trong nghiệp vụ (§8.3) | **Chủ dự án quyết (15/11/2026):** giữ trang, nội dung minh hoạ. Làm ở [HB-318](../08-thi-cong/tickets/HB-318-am-thuc-va-gia-da-gom.md) |
+| P5 | Khối "Vé gồm / Chưa gồm", dịch vụ tại ga: chưa có điều khoản (Q12) | **Chủ dự án quyết (15/11/2026):** giá đã gồm tiện nghi cơ bản. Điều khoản ở [tien-nghi-trong-gia.md](../02-nghiep-vu/tien-nghi-trong-gia.md); khối "Giá đã gồm" làm ở HB-318 |
 | P6 | Nút "giữ chỗ qua email" khi lỗi mạng mở kênh đặt phòng ngoài hệ thống (§8.3) | **Chờ chủ dự án:** đề xuất chỉ hiện liên hệ lễ tân |
 
 ## 3. Thứ tự đề xuất và lý do
@@ -110,9 +110,9 @@ Mỗi màn có unit test cho model, E2E trên API giả và axe.
 - Tách làm hai ticket (§8.4):
   - **HB-311:** 3 trang ga + 5 trang hạng. Chờ `slug` trong `GET /public/properties` (TD-82).
   - **HB-311b:** trang cấp chuỗi getting-here, experiences, offers, gallery + menu "Khám phá" (trên điện thoại là ngăn kéo).
-- Trang `/dining` chưa làm: Pine Hill không có dịch vụ ăn uống trong nghiệp vụ (§8.3, chờ chủ dự án P4).
+- Trang `/dining` làm ở HB-318 (P4): quầy ăn sáng, góc trà, quanh ga, nội dung minh hoạ.
 - Nội dung chưa có nguồn thật đánh dấu `illustrative: true` (trang không hiện nhãn, quyết định Q1).
-- Không đưa số liệu, giải thưởng, tiện nghi, dịch vụ hay điều khoản "giá đã gồm" khi chưa có nguồn.
+- Không đưa số liệu, giải thưởng, tiện nghi hay dịch vụ khi chưa có nguồn. "Giá đã gồm" chỉ theo [tien-nghi-trong-gia.md](../02-nghiep-vu/tien-nghi-trong-gia.md) (P5).
 
 ### Đợt 5 — Tiếng Anh
 
@@ -139,6 +139,7 @@ Mỗi màn có unit test cho model, E2E trên API giả và axe.
 | HB-317 | — | Góp ý UI/UX gói C: giữ ngữ cảnh ga/ngày (FEAT-01), lịch mùa điền sẵn ngày (FEAT-02), nút chọn nhanh số đêm (FEAT-03), sao chép link + in A4 (FEAT-06) | Chưa mở | HB-311 |
 | [HB-312](../08-thi-cong/tickets/HB-312-locale-en.md) | 5 | Locale `en` | Đang làm | HB-309 |
 | [HB-313](../08-thi-cong/tickets/HB-313-locale-zh-ja-ko-ru.md) | 6 | Locale `zh-CN`, `ja`, `ko`, `ru` + font | Đang làm | HB-312 |
+| [HB-318](../08-thi-cong/tickets/HB-318-am-thuc-va-gia-da-gom.md) | — | Trang `/dining` (P4) + khối "Giá đã gồm" (P5, UX-03) trên trang ẩm thực, hạng phòng, ga | Đang làm | HB-313 |
 | HB-315 | — | E2E SCR-48 bàn tiền sảnh xanh lại sau #298 | Đã merge ([#303](https://github.com/minhtuluc/HotelBuild/pull/303)) | — |
 | [HB-314](../08-thi-cong/tickets/HB-314-co-so-dang-lam-viec.md) | — | TD-44 cho các màn vận hành còn lại (lưới tồn, lịch giá, danh sách booking, báo cáo, kênh, người dùng, hạng phòng, SCR-40/43/47) | Đã merge ([#309](https://github.com/minhtuluc/HotelBuild/pull/309)) (phần 2) | HB-308 |
 | [HB-320](../08-thi-cong/tickets/HB-320-co-so-dang-lam-viec-phan-3.md) | — | TD-44 phần 3: danh sách booking (ô chọn cơ sở), form tạo hạng phòng, ghi đè kênh, đối soát, khoá phòng, báo giá đa kênh, khách thân thiết — TD-44 đã trả | Đang làm | HB-314 |
@@ -165,7 +166,7 @@ Việc cần backend, đề xuất gửi song song qua [YEU-CAU-API-TU-FRONTEND.
 | Q9 | Font CJK, Cyrillic | Dùng font hệ thống (Noto Sans CJK, Hiragino, Malgun Gothic) làm fallback, chưa đóng gói | Đủ cho demo, tránh tăng dung lượng; đóng gói nếu QA thấy lỗi hiển thị |
 | Q10 | Thứ tự | Đợt 1 → 2 → 3 → 4, tiếng Anh (đợt 5) làm ngay sau đợt 2 song song với nội dung | Đợt 1 không phụ thuộc gì; i18n trước nội dung để không viết lại trang |
 | Q11 | Báo cáo góp ý UI/UX (14/11/2026) | Nhận phần UX/animation; phần nội dung chỉ nhận thứ có nguồn hoặc thuần mô tả (§8) | Nội dung minh hoạ được phép cho demo (Q1), điều khoản bán hàng thì không: trang nội dung không được nói khác báo giá |
-| Q12 | "Vé gồm / chưa gồm", dịch vụ tại ga, giờ phục vụ | Không làm đến khi có điều khoản trong `docs/02` | Là điều khoản thương mại; AGENTS.md cấm đưa policy vào frontend |
+| Q12 | "Vé gồm / chưa gồm", dịch vụ tại ga, giờ phục vụ | Chỉ làm theo điều khoản trong `docs/02` (đã có từ 15/11/2026: `tien-nghi-trong-gia.md`) | Là điều khoản thương mại; AGENTS.md cấm đưa policy vào frontend |
 | Q13 | Mốc huỷ quy ra ngày giờ (FEAT-04) | Không tính ở frontend; chỉ hiện khi API trả mốc tuyệt đối (yêu cầu API §7) | Tự cộng trừ giờ là tự áp chính sách huỷ |
 | Q14 | Nhãn mùa "thấp/cao điểm" trên lịch mùa | Không in | Mùa giá là cấu hình theo cơ sở (SCR-27), nhãn tĩnh có thể lệch báo giá |
 | Q15 | So sánh "đặt web lợi hơn trung gian" ở `/offers` | Không in | Quy tắc cân bằng giá kênh (BR-RATE-09) |
@@ -212,8 +213,8 @@ Nguồn: [báo cáo góp ý cải tiến UI/UX và nội dung customer web](bao-
 
 | Mã | Lý do | Việc chờ |
 |---|---|---|
-| CONT-04 `/dining` | Không có dịch vụ ăn uống trong nghiệp vụ; "đã gồm trong giá" là điều khoản | P4: đổi thành trang "Quanh ga" (quán gần ga, minh hoạ, không hứa dịch vụ) hay bỏ |
-| UX-03 khối "Vé gồm / Chưa gồm" | Điều khoản thương mại chưa có (Q12) | P5: chủ dự án đưa điều khoản vào `docs/02` |
+| CONT-04 `/dining` | Không có dịch vụ ăn uống trong nghiệp vụ; "đã gồm trong giá" là điều khoản | Đã quyết P4: giữ trang, nội dung minh hoạ (HB-318) |
+| UX-03 khối "Vé gồm / Chưa gồm" | Điều khoản thương mại chưa có (Q12) | Đã quyết P5: điều khoản ở `docs/02-nghiep-vu/tien-nghi-trong-gia.md` (HB-318) |
 | FEAT-04 trên trang tĩnh | Tự áp chính sách huỷ (Q13) | Yêu cầu API §7 |
 | FEAT-06 "giữ chỗ qua email" | Mở kênh đặt phòng ngoài hệ thống: không giữ chỗ, không chống gửi trùng | P6: đề xuất chỉ hiện liên hệ lễ tân (`NEXT_PUBLIC_FRONT_DESK_CONTACT`) |
 
