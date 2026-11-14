@@ -126,7 +126,7 @@ Mỗi màn có unit test cho model, E2E trên API giả và axe.
 |---|---|---|---|---|
 | [HB-308](../08-thi-cong/tickets/HB-308-dot-1-back-office-api-moi.md) | 0 + 1 | SCR-23 bảng ngày, SCR-27 sửa/ngừng mùa, SCR-29 sửa/tắt khuyến mãi, TD-44 cho SCR-23/27, gỡ nhãn minh hoạ trang demo | PR [#302](https://github.com/minhtuluc/HotelBuild/pull/302) | — |
 | [HB-309](../08-thi-cong/tickets/HB-309-nen-tang-i18n-customer-web.md) | 2 | Nền tảng i18n customer web (chỉ `vi`), định dạng theo locale, dòng ngày dưới ô ngày, đổi câu phí đổi ngày SCR-12, sửa lỗi phiên khi chạy dev | Đang làm | HB-308 (cùng sửa danh mục khách) |
-| HB-310 | 3 | Trang cơ sở và trang hạng phòng mẫu + mục DESIGN.md mới | Chưa mở | HB-309 |
+| [HB-310](../08-thi-cong/tickets/HB-310-trang-noi-dung-mau.md) | 3 | Trang cơ sở và trang hạng phòng mẫu + mục DESIGN.md mới | Đang làm | HB-309 |
 | HB-311 | 4 | Nhân nội dung 3 + 5 + 5 trang | Chưa mở | HB-310 |
 | HB-312 | 5 | Locale `en` | Chưa mở | HB-309 |
 | HB-313 | 6 | Locale `zh-CN`, `ja`, `ko`, `ru` + font | Chưa mở | HB-312 |

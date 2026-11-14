@@ -266,6 +266,31 @@ Không có cỡ dưới 44px. Nút trong cùng một hàng luôn cùng cỡ (kh�
 ### Photo Slots
 - Ảnh thật đặt theo mã ô ở `apps/customer-web/public/images/pine-hill/` (danh mục `src/content/photo-slots.ts`, brief `docs/04-thiet-ke/anh-trang-khach.md`). Thiếu ảnh: áp phích về tranh SVG, ô khác ẩn. `?anh=1` hiện khung ô ảnh.
 
+### Content Pages (HB-310)
+Trang nội dung (`/stays/[slug]`, `/room-types/[code]`) dùng đúng ba vật liệu của trang chủ, không thêm khuôn "resort editorial" (ảnh tràn màn, chữ trắng đè ảnh, hàng thẻ tiện ích có biểu tượng). Đầu trang luôn là `h1` trên nền mẫu biểu, ảnh nằm trong khung giấy.
+
+**Station Sheet — tờ giới thiệu ga (`/stays/[slug]`)**
+- **Đầu trang:** lưới hai cột trên ≥ 900px. Bên trái: đường dẫn, mã ga lớn, `h1` "Ga {tên}" cỡ Headline, loại ga, đoạn tóm tắt ≤ 60ch, nút "Xem phòng trống". Bên phải: áp phích ga (Áp phích treo, xoay −1°), ảnh LCP nên không `lazy`. Dưới 900px áp phích xuống dưới chữ, rộng tối đa 420px.
+- **Bảng giờ:** một bảng ga (vật liệu bảng đen chữ hổ phách) in giờ nhận/trả phòng **lấy từ API** (`GET /public/properties`), độ cao, khí hậu, mùa đẹp. Chưa tải xong thì in "--:--", lỗi thì in "Xem ở bước tìm phòng"; không đoán giờ.
+- **Sơ đồ tuyến:** dùng lại sơ đồ ba ga của trang chủ; ga đang xem có `aria-current="page"`, chấm đặc đỏ dấu bấm và nhãn đậm. Ga chưa có trang thì link về dải ga tương ứng ở trang chủ.
+- **Thân trang:** đoạn kể (giấy in, ≤ 64ch), "Đến ga" (một khối giấy vé kẻ đôi đầu), gallery, các hạng phòng ở ga (dải giấy vé như trang chủ, mỗi hàng link sang trang hạng).
+
+**Cabin Class — hạng khoang (`/room-types/[code]`)**
+- **Đầu trang:** tem mã hạng lớn (nhãn dấu bấm như `RoomCodeStamp`, 2×) cạnh `h1` "Hạng {tên}" và tên khoang; đoạn tóm tắt.
+- **Mặt sau vé:** thông số in như mặt sau tấm vé: khối giấy vé hồng, đầu kẻ đôi, các dòng `dt`/`dd` cách nhau bằng đường chấm (dot leader), nhãn 11px chữ hoa, giá trị chữ thân 16px. Chỉ in thông số có nguồn (sức chứa, số chỗ ngủ, có ở ga nào). **Không in diện tích, view, tiện nghi hay giá** khi chưa có dữ liệu thật; giá luôn ở bước tìm phòng, theo từng đêm.
+- **Có ở ga:** hàng ga trên bảng đen nhỏ, mỗi ga một liên kết.
+
+**Breadcrumbs**
+- Một dòng 13px chữ thân mực phụ trên `h1`, ngăn bằng "›" (`aria-hidden`), trang hiện tại không là liên kết và có `aria-current="page"`. Không thay cho tiêu đề; không phải nhãn trên tiêu đề (không vi phạm The No Eyebrow Rule vì là điều hướng, không phải nhãn trang trí).
+
+**Gallery + Lightbox**
+- **Lưới:** ảnh đầu chiếm 2 cột × 2 hàng, các ảnh sau vuông góc 3px, khung giấy in 6px (Ảnh kẹp). Mỗi ảnh là một `<button>` có tên "Xem ảnh {n}/{tổng}: {alt}". 1 ảnh thì không có lưới, chỉ ảnh kẹp.
+- **Lightbox:** `<dialog>` gốc mở bằng `showModal()` (khoá tiêu điểm, nền tối #121614 90%). Ảnh vừa khung, chú thích là alt + "n/tổng". Phím ← → chuyển ảnh, Esc và nút "Đóng" (44px, góc trên phải) đóng; đóng xong trả tiêu điểm về ảnh đã mở. Không tự chạy, không vuốt bắt buộc.
+
+**Sticky Booking Stub — cuống vé dính đáy**
+- Chỉ dưới 760px: dải giấy vé hồng cao 52px dính đáy màn (+ `env(safe-area-inset-bottom)`), mép trên là đường xé nét đứt mực xanh, bên trái tên ga/hạng chữ cạnh hẹp, bên phải nút dấu bấm đậm "Xem phòng trống". Trang cộng thêm đệm đáy bằng chiều cao dải để không che nội dung cuối. Trên 760px không dính: nút nằm ở đầu trang và cuối trang.
+- **CTA:** chưa có ngày thì về khối tìm phòng trang chủ với ga chọn sẵn (`/?ga={slug}#search-block`); không tự bịa ngày hay tồn phòng.
+
 ## Do's and Don'ts
 
 ### Do:
@@ -274,6 +299,7 @@ Không có cỡ dưới 44px. Nút trong cùng một hàng luôn cùng cỡ (kh�
 - **Do** dùng #6B2F22 và #962A16 cho chữ phụ và đỏ trên giấy vé.
 - **Do** để mọi số tiền dùng `tabular-nums` và ≥ 14px.
 - **Do** đặt nội dung minh hoạ trong `src/content/` và ghi rõ là để thay.
+- **Do** để trang nội dung chỉ in thông số có nguồn; thiếu thì bỏ dòng, không điền cho đẹp.
 
 ### Don't:
 - **Don't** đặt ảnh hero toàn màn hay thanh tìm kiếm nổi trên ảnh ở màn đầu.
