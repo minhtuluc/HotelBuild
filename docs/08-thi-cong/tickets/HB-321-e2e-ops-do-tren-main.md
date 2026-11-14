@@ -9,6 +9,7 @@ allow:
   - tests/e2e/f6/hb136-scr44-dieu-chuyen.spec.ts
   - tests/e2e/scr35-36-sua-huy-ops.spec.ts
   - tests/e2e/scr38-duyet-hoan-ops.spec.ts
+  - tests/e2e/scr54-55-bao-cao-huy-qua-tai.spec.ts
   - apps/operations-web/src/app/(ops)/reports/report-tables.tsx
 ---
 
@@ -39,6 +40,10 @@ Bộ E2E project `operations-web` chạy trên bản build production của `mai
 3. SCR-55 không còn vi phạm serious/critical; vùng cuộn bảng báo cáo có `role="region"`, nhãn và `tabIndex={0}` — test: `tests/e2e/a11y/scan.spec.ts::SCR-55 — Báo cáo quá tải & điều chuyển`, `tests/e2e/f8/axe-f8.spec.ts::SCR-55 quá tải không có vi phạm serious/critical`.
 4. SCR-35 hiện ghi chú phí đổi ngày đúng nguyên câu hiện hành — test: `tests/e2e/scr35-36-sua-huy-ops.spec.ts::đổi ngày: chênh lệch trước xác nhận + ghi chú phí chờ hợp đồng (AC2)`.
 5. SCR-38 PIN preflight/denied và đọc bị từ chối muộn đạt ở mọi cổng app — test: `tests/e2e/scr38-duyet-hoan-ops.spec.ts` (3 ca nêu trên).
+
+## Hệ quả đã xử lý
+
+- Vùng cuộn có nhãn = tiêu đề bảng; ở SCR-54 nhãn "Huỷ phòng theo gói giá và bậc chính sách" cũng khớp `getByLabel('Gói giá')` (không `exact`) → `scr54-55-bao-cao-huy-qua-tai.spec.ts::SCR-54 lọc theo gói giá…` chọn ô bằng `getByRole('combobox', { name: 'Gói giá' })`, cùng phần tử, cùng assertion.
 
 ## Ngoài phạm vi
 
