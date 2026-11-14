@@ -4,6 +4,7 @@ import { defaultRange } from '../../lib/inventory-grid';
 import { useOpsSession } from '../../lib/ops-session';
 import { ConfigController, INITIAL_STATE, type ControllerState } from './controller';
 import { createPorts } from './port';
+import { useWorkingPropertyId } from '../../session/staff-session';
 
 const MODULES = [
   '/auth',
@@ -23,11 +24,13 @@ export function useConfig(): ConfigModel {
   const holder = useRef<ConfigController | null>(null);
   const session = useOpsSession(MODULES, { onExpired: () => holder.current?.expire() });
   const [controller, setController] = useState<ConfigController | null>(null);
+  // Mở ở cơ sở đang làm việc (`pick` chỉ nhận id có trong danh sách máy chủ trả) — TD-44.
+  const working = useWorkingPropertyId();
   useEffect(() => {
     const created = new ConfigController({
       ports: createPorts(session.client),
       selection: {
-        propertyId: null,
+        propertyId: working === '' ? null : working,
         channelId: null,
         roomTypeId: null,
         range: defaultRange(new Date()),
@@ -40,7 +43,7 @@ export function useConfig(): ConfigModel {
       created.dispose();
       holder.current = null;
     };
-  }, [session]);
+  }, [session, working]);
   const subscribe = useCallback(
     (listener: () => void) => controller?.subscribe(listener) ?? (() => undefined),
     [controller],
