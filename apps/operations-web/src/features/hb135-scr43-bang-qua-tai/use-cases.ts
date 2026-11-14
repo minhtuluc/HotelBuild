@@ -5,6 +5,7 @@ import { CaseController, INITIAL_STATE, type ControllerState } from './controlle
 import { emptyFilter } from './model';
 import { createPorts } from './port';
 import { defaultRange } from '../../lib/inventory-grid';
+import { useWorkingPropertyId } from '../../session/staff-session';
 
 /** Mặc định xem 30 ngày tới (AC1); người dùng xoá ngày để xem cả ca đã qua. */
 const defaultWindow = (now: Date) => {
@@ -24,10 +25,12 @@ export function useCases(): CasesModel {
   const holder = useRef<CaseController | null>(null);
   const session = useOpsSession(MODULES, { onExpired: () => holder.current?.expire() });
   const [controller, setController] = useState<CaseController | null>(null);
+  // Mở ở cơ sở đang làm việc và dựng lại khi đổi cơ sở trên thanh ngữ cảnh (TD-44).
+  const working = useWorkingPropertyId();
   useEffect(() => {
     const created = new CaseController({
       ports: createPorts(session.client),
-      filter: { ...emptyFilter, ...defaultWindow(new Date()) },
+      filter: { ...emptyFilter, ...defaultWindow(new Date()), propertyId: working },
     });
     holder.current = created;
     setController(created);
@@ -36,7 +39,7 @@ export function useCases(): CasesModel {
       created.dispose();
       holder.current = null;
     };
-  }, [session]);
+  }, [session, working]);
   const subscribe = useCallback(
     (listener: () => void) => controller?.subscribe(listener) ?? (() => undefined),
     [controller],

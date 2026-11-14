@@ -2,7 +2,9 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useOpsSession } from '../../lib/ops-session';
 import { ExceptionController, INITIAL_STATE, type ControllerState } from './controller';
+import { emptyFilter } from './model';
 import { createPorts, type PinBox } from './port';
+import { useWorkingPropertyId } from '../../session/staff-session';
 
 const MODULES = ['/auth', '/properties', '/refund-requests'] as const;
 
@@ -20,8 +22,13 @@ export function useExceptions(): ExceptionsModel {
     getPinToken: () => pin.current.current,
   });
   const [controller, setController] = useState<ExceptionController | null>(null);
+  // Mở ở cơ sở đang làm việc và dựng lại khi đổi cơ sở trên thanh ngữ cảnh (TD-44).
+  const working = useWorkingPropertyId();
   useEffect(() => {
-    const created = new ExceptionController({ ports: createPorts(session.client, pin.current) });
+    const created = new ExceptionController({
+      ports: createPorts(session.client, pin.current),
+      filter: { ...emptyFilter, propertyId: working },
+    });
     holder.current = created;
     setController(created);
     void created.load();
@@ -29,7 +36,7 @@ export function useExceptions(): ExceptionsModel {
       created.dispose();
       holder.current = null;
     };
-  }, [session]);
+  }, [session, working]);
   const subscribe = useCallback(
     (listener: () => void) => controller?.subscribe(listener) ?? (() => undefined),
     [controller],

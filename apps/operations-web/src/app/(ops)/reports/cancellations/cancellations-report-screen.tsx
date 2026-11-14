@@ -45,6 +45,8 @@ import {
   rangeIssue,
   type ReportFilters,
 } from '../report-shared';
+import { useFollowWorkingProperty } from '../../../../components/use-follow-working-property';
+import { useWorkingPropertyId } from '../../../../session/staff-session';
 
 const POLL_INTERVAL_MS = 1_000;
 const POLL_MAX_ATTEMPTS = 30;
@@ -71,9 +73,12 @@ export function CancellationsReportScreen(): ReactElement {
   const forced = useForcedState();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [properties, setProperties] = useState<readonly PropertySummary[]>([]);
-  const [initial] = useState<ReportFilters>(initialFilters);
+  // Mở ở cơ sở đang làm việc; chọn "tất cả" trên màn vẫn được (TD-44).
+  const working = useWorkingPropertyId();
+  const [initial] = useState<ReportFilters>(() => ({ ...initialFilters(), propertyId: working }));
   const [draft, setDraft] = useState<ReportFilters>(initial);
   const [applied, setApplied] = useState<ReportFilters>(initial);
+  useFollowWorkingProperty(working, [setDraft, setApplied]);
   const [ratePlan, setRatePlan] = useState<RatePlanCode | ''>('');
   const [appliedRatePlan, setAppliedRatePlan] = useState<RatePlanCode | ''>('');
   const [report, setReport] = useState<CancellationsReport | null>(null);

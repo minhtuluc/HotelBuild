@@ -60,6 +60,8 @@ export interface ControllerState {
 
 export interface ControllerOptions {
   ports: ExceptionPorts;
+  /** Bộ lọc mở màn (vd. cơ sở đang làm việc — TD-44). */
+  filter?: Filter;
   newKey?: () => string;
   now?: () => number;
 }
@@ -89,6 +91,7 @@ export class ExceptionController {
   private readonly now: () => number;
 
   constructor(private readonly options: ControllerOptions) {
+    this.filter = options.filter ?? emptyFilter;
     this.newKey = options.newKey ?? (() => crypto.randomUUID());
     this.now = options.now ?? (() => Date.now());
   }

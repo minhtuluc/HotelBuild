@@ -27,6 +27,8 @@ import { useOpsSession } from '../../../../lib/ops-session';
 import { readFailureState } from '../../../../lib/screen-state';
 import { OverbookingTable } from '../report-tables';
 import { overbookingTotals, rangeIssue, type ReportFilters } from '../report-shared';
+import { useFollowWorkingProperty } from '../../../../components/use-follow-working-property';
+import { useWorkingPropertyId } from '../../../../session/staff-session';
 
 const STATUSES = ['OPEN', 'PROPOSED', 'RESOLVED', 'ESCALATED'] as const;
 
@@ -47,9 +49,12 @@ export function OverbookingReportScreen(): ReactElement {
   const forced = useForcedState();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [properties, setProperties] = useState<readonly PropertySummary[]>([]);
-  const [initial] = useState<ReportFilters>(initialFilters);
+  // Mở ở cơ sở đang làm việc; chọn "tất cả" trên màn vẫn được (TD-44).
+  const working = useWorkingPropertyId();
+  const [initial] = useState<ReportFilters>(() => ({ ...initialFilters(), propertyId: working }));
   const [draft, setDraft] = useState<ReportFilters>(initial);
   const [applied, setApplied] = useState<ReportFilters>(initial);
+  useFollowWorkingProperty(working, [setDraft, setApplied]);
   const [status, setStatus] = useState<OverbookingStatus | ''>('');
   const [appliedStatus, setAppliedStatus] = useState<OverbookingStatus | ''>('');
   const [report, setReport] = useState<OverbookingReport | null>(null);
