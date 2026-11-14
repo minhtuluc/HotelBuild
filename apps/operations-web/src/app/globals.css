@@ -831,7 +831,7 @@
     max-width: 20rem;
   }
 
-  .ph-filter-row > label > :is(input, select) {
+  .ph-filter-row > label > :is(input:not([type='checkbox']):not([type='radio']), select) {
     width: 100%;
     max-width: none;
   }
@@ -1049,6 +1049,214 @@
 
     .ph-ops-menu-toggle {
       display: inline-flex;
+    }
+  }
+
+  /* Các trường trong khung sửa / ngừng (SCR-27, SCR-29): cùng nhịp với hàng bộ lọc. */
+  .ph-edit-fields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  /* Nhãn kèm ô tick chỉ rộng bằng nội dung, không giãn như ô nhập. */
+  .ph-filter-row > label:has(> input[type='checkbox']) {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* Ô ngày giờ cần chỗ cho cả ngày, giờ và nút lịch. */
+  .ph-filter-row > label:has(> input[type='datetime-local']) {
+    flex-basis: 15rem;
+    max-width: 22rem;
+  }
+
+  /* Ô chọn có nhãn: cả hàng là vùng chạm 44px, căn đáy cùng các ô nhập trong hàng bộ lọc. */
+  .ph-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  /* Nhóm ô chọn (phạm vi kênh, loại phòng): chiếm trọn một hàng trong hàng bộ lọc. */
+  .ph-check-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 16px;
+    flex: 1 1 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .ph-check-group > legend {
+    padding: 0;
+    margin-bottom: 2px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  /*
+   * SCR-23: dải tóm tắt ngày. Màn duy nhất ở back-office dùng hàng bảng ga (nền đen, số hổ phách), vì nó
+   * đúng là "bảng giờ trong ngày". Mỗi ô là một link tới nhóm tương ứng; ô có việc cần xử lý thì số đỏ nhạt.
+   */
+  .ph-day-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+    gap: 2px;
+    padding: 2px;
+    background: var(--color-dark, #121614);
+    border-radius: var(--radius-md, 6px);
+  }
+
+  .ph-day-stat {
+    display: grid;
+    align-content: start;
+    gap: 2px;
+    min-height: 44px;
+    padding: 12px 14px 14px;
+    background: var(--color-world-boardRow, #1c221f);
+    color: var(--color-darkText, #f4efe6);
+    text-decoration: none;
+    transition: background-color 150ms ease;
+  }
+
+  .ph-day-stat:first-child {
+    border-radius: 4px 0 0 4px;
+  }
+
+  .ph-day-stat:last-child {
+    border-radius: 0 4px 4px 0;
+  }
+
+  .ph-day-stat:hover {
+    background: #26302b;
+  }
+
+  .ph-day-stat:focus-visible {
+    outline-color: var(--color-world-signal, #f2b632);
+    outline-offset: -2px;
+  }
+
+  .ph-day-stat-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-darkTextMuted, #a9b3ac);
+  }
+
+  .ph-day-stat-value {
+    font-family: var(--font-display, 'Barlow Condensed', sans-serif);
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-world-signal, #f2b632);
+  }
+
+  .ph-day-stat[data-alert='true'] .ph-day-stat-value {
+    color: #ff9a85;
+  }
+
+  .ph-day-stat-note {
+    font-size: 12px;
+    color: var(--color-darkTextMuted, #a9b3ac);
+  }
+
+  .ph-day-pair {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .ph-day-pair > .ph-card {
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .ph-day-table th.ph-day-code {
+    background: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .ph-day-money {
+    text-align: right;
+  }
+
+  td.ph-day-money[data-due='true'] {
+    font-weight: 600;
+  }
+
+  /*
+   * Màn hẹp: mỗi đơn là một thẻ (mã đơn làm đầu thẻ, các cột thành cặp nhãn – giá trị) thay cho bảng 7 cột
+   * phải cuộn ngang. Ô tóm tắt thứ năm lẻ hàng thì chiếm trọn hàng cuối.
+   */
+  @media (max-width: 640px) {
+    .ph-day-stat:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
+
+    .ph-day-table thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+
+    .ph-day-table,
+    .ph-day-table tbody,
+    .ph-day-table tr {
+      display: block;
+    }
+
+    .ph-day-table tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 4px 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--color-border, #d9d2cc);
+    }
+
+    .ph-day-table tr:last-child {
+      border-bottom: 0;
+    }
+
+    .ph-day-table th.ph-day-code {
+      grid-column: 1 / -1;
+      padding: 0;
+      border: 0;
+      font-size: 15px;
+    }
+
+    .ph-day-table td {
+      display: grid;
+      gap: 0;
+      padding: 0;
+      border: 0;
+      font-size: 14px;
+    }
+
+    .ph-day-table td::before {
+      content: attr(data-label);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-textMuted, #5a4640);
+    }
+
+    .ph-day-table td.ph-day-money {
+      text-align: left;
+    }
+
+    .ph-day-table tbody tr:hover td {
+      background: transparent;
     }
   }
 

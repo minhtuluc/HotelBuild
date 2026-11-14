@@ -2,7 +2,7 @@ import { isApiError } from '@pinehill/api-client';
 import { validDay, type DayData } from './model';
 
 export interface DayApi {
-  load(propertyId: string, date: string): Promise<DayData>;
+  load(propertyId: string, date: string, preferred?: string): Promise<DayData>;
 }
 export interface DayState {
   phase: 'loading' | 'ready' | 'error' | 'forbidden';
@@ -20,6 +20,8 @@ export class DayBoardController {
   constructor(
     private readonly api: DayApi,
     date: string,
+    /** Cơ sở đang làm việc của phiên; chỉ dùng cho lần tải khi chưa chọn cơ sở (TD-44). */
+    private readonly preferred = '',
   ) {
     this.state = {
       phase: 'loading',
@@ -65,7 +67,7 @@ export class DayBoardController {
     const { propertyId, date } = this.state;
     this.update({ phase: 'loading', error: null });
     try {
-      const data = await this.api.load(propertyId, date);
+      const data = await this.api.load(propertyId, date, this.preferred);
       if (stamp !== this.epoch || this.denied) return;
       this.update({
         phase: 'ready',

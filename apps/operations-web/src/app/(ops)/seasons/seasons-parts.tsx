@@ -16,7 +16,12 @@ import {
 import { OPS_TABLE_WRAP_STYLE, OPS_TABULAR_STYLE } from '../../../components/editorial-styles';
 import { t } from '../../../lib/i18n';
 import type { GridRange } from '../../../lib/inventory-grid';
-import type { CalendarRow, RateCalendarEntry, SeasonDraft } from '../../../lib/seasons';
+import {
+  seasonStatus,
+  type CalendarRow,
+  type RateCalendarEntry,
+  type SeasonDraft,
+} from '../../../lib/seasons';
 
 export interface Loaded {
   properties: readonly PropertySummary[];
@@ -29,7 +34,7 @@ export type SeasonTarget = Pick<SeasonDraft, 'propertyId' | 'roomTypeId'>;
 
 /** Chọn giá trị đang dùng: giữ lựa chọn cũ nếu còn hợp lệ, ngược lại lấy mục đầu tiên. */
 export function pickId(preferred: string, options: readonly { id: string }[]): string {
-  return preferred === '' ? (options[0]?.id ?? '') : preferred;
+  return options.some((option) => option.id === preferred) ? preferred : (options[0]?.id ?? '');
 }
 
 /** Tải danh sách cơ sở, hạng phòng, lịch giá và mùa cho màn SCR-27. */
@@ -112,15 +117,26 @@ export function WinnerTable({ rows }: { rows: readonly CalendarRow[] }): ReactEl
   );
 }
 
-/** Danh sách mùa hiện có của cơ sở — đọc thẳng từ `GET /seasons` (AC1). */
-export function SeasonListTable({ seasons }: { seasons: readonly SeasonSummary[] }): ReactElement {
+/** Danh sách mùa hiện có của cơ sở — đọc thẳng từ `GET /seasons` (AC1); OWNER thêm nút sửa / ngừng. */
+export function SeasonListTable({
+  seasons,
+  onEdit,
+  onToggle,
+}: {
+  seasons: readonly SeasonSummary[];
+  onEdit?: ((season: SeasonSummary) => void) | undefined;
+  onToggle?: ((season: SeasonSummary) => void) | undefined;
+}): ReactElement {
+  const actions = onEdit !== undefined && onToggle !== undefined;
   const headers = [
     t('seasons.col.name'),
     t('seasons.col.range'),
     t('seasons.col.multiplier'),
     t('seasons.col.priority'),
     t('seasons.col.weekend'),
+    t('seasons.col.status'),
     t('seasons.col.version'),
+    ...(actions ? [t('seasons.col.actions')] : []),
   ];
   return (
     <div style={OPS_TABLE_WRAP_STYLE}>
@@ -140,18 +156,44 @@ export function SeasonListTable({ seasons }: { seasons: readonly SeasonSummary[]
           </tr>
         </thead>
         <tbody>
-          {seasons.map((season) => (
-            <tr key={season.id} data-testid={`season-${season.name}`}>
-              <td style={{ fontWeight: 500 }}>{season.name}</td>
-              <td>
-                {season.startDate} → {season.endDate}
-              </td>
-              <td>{formatMultiplier(season.multiplier)}</td>
-              <td>{season.priority}</td>
-              <td>{season.weekendSurchargeEnabled ? t('seasons.yes') : t('seasons.no')}</td>
-              <td>{season.version}</td>
-            </tr>
-          ))}
+          {seasons.map((season) => {
+            const active = seasonStatus(season) === 'ACTIVE';
+            return (
+              <tr
+                key={season.id}
+                data-testid={`season-${season.name}`}
+                style={active ? undefined : { color: color.textMuted }}
+              >
+                <td style={{ fontWeight: 500 }}>{season.name}</td>
+                <td>
+                  {season.startDate} → {season.endDate}
+                </td>
+                <td>{formatMultiplier(season.multiplier)}</td>
+                <td>{season.priority}</td>
+                <td>{season.weekendSurchargeEnabled ? t('seasons.yes') : t('seasons.no')}</td>
+                <td data-testid={`season-status-${season.name}`}>
+                  {t(active ? 'seasons.status.ACTIVE' : 'seasons.status.INACTIVE')}
+                </td>
+                <td>{season.version}</td>
+                {actions ? (
+                  <td>
+                    <div className="ph-actions" style={{ gap: 8, flexWrap: 'nowrap' }}>
+                      <button type="button" className="ph-btn" onClick={() => onEdit(season)}>
+                        {t('seasons.edit')}
+                      </button>
+                      <button
+                        type="button"
+                        className={active ? 'ph-btn-danger' : 'ph-btn'}
+                        onClick={() => onToggle(season)}
+                      >
+                        {t(active ? 'seasons.deactivate' : 'seasons.activate')}
+                      </button>
+                    </div>
+                  </td>
+                ) : null}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

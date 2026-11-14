@@ -5,7 +5,7 @@ import { createSessionClient } from '@pinehill/web-session/client';
 import { DayBoardController } from './controller';
 import { dayApi } from './api';
 
-function createBoard(baseUrl: string, initialDay: string) {
+function createBoard(baseUrl: string, initialDay: string, preferred: string) {
   let session: ReturnType<typeof createSessionClient> | undefined;
   let active = true;
   const token = async () => {
@@ -17,7 +17,7 @@ function createBoard(baseUrl: string, initialDay: string) {
     return value;
   };
   const client = new ApiClient({ baseUrl, maxAttempts: 2, getAccessToken: token });
-  const board = new DayBoardController(dayApi(client), initialDay);
+  const board = new DayBoardController(dayApi(client), initialDay, preferred);
   return {
     board,
     start: () => {
@@ -31,8 +31,18 @@ function createBoard(baseUrl: string, initialDay: string) {
     },
   };
 }
-export function useDayBoard(baseUrl: string, initialDay: string, enabled: boolean) {
-  const workspace = useMemo(() => createBoard(baseUrl, initialDay), [baseUrl, initialDay]);
+export function useDayBoard(
+  baseUrl: string,
+  initialDay: string,
+  enabled: boolean,
+  workingPropertyId: string | null = null,
+) {
+  // Đổi cơ sở đang làm việc trên thanh ngữ cảnh thì dựng lại bảng cho cơ sở mới (TD-44).
+  const preferred = workingPropertyId ?? '';
+  const workspace = useMemo(
+    () => createBoard(baseUrl, initialDay, preferred),
+    [baseUrl, initialDay, preferred],
+  );
   const [state, setState] = useState(workspace.board.state);
   useEffect(() => {
     workspace.start();

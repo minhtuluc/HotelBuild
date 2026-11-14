@@ -597,6 +597,35 @@ const FIXTURES: Record<FixtureName, (ctx: FixtureContext) => Promise<FixtureResu
         }),
       );
     });
+    await page.route('**/api/v1/operations/day-board*', (route) => {
+      const date = new URL(route.request().url()).searchParams.get('date') ?? '2026-12-24';
+      const guest = {
+        bookingId: 'b1',
+        code: 'PH1',
+        guestName: 'Khách tổng hợp',
+        roomTypeId: 'rt1',
+        roomCount: 1,
+        checkIn: date,
+        checkOut: '2026-12-31',
+        status: 'CONFIRMED',
+        channelCode: 'WEB',
+        balanceDue: 500000,
+      };
+      return fulfillJson(
+        route,
+        200,
+        JSON.stringify({
+          propertyId: 'p1',
+          date,
+          capturedAt: '2026-10-12T00:00:00.000Z',
+          arrivals: { total: 1, truncated: false, items: [guest] },
+          departures: { total: 0, truncated: false, items: [] },
+          inHouse: { total: 1, truncated: false, items: [{ ...guest, status: 'CHECKED_IN' }] },
+          overbooking: { openFromDate: 1, onDate: 1 },
+          degradedChannels: [],
+        }),
+      );
+    });
     return {};
   },
   'ops-inventory-grid': async ({ page, request }) => {

@@ -8,7 +8,16 @@ import { OPS_TABLE_WRAP_STYLE, OPS_TABULAR_STYLE } from '../../../components/edi
 import { t } from '../../../lib/i18n';
 import { usageText } from '../../../lib/promotions';
 
-export function PromotionTable({ rows }: { rows: readonly PromotionSummary[] }): ReactElement {
+export function PromotionTable({
+  rows,
+  onEdit,
+  onToggle,
+}: {
+  rows: readonly PromotionSummary[];
+  onEdit?: ((promotion: PromotionSummary) => void) | undefined;
+  onToggle?: ((promotion: PromotionSummary) => void) | undefined;
+}): ReactElement {
+  const actions = onEdit !== undefined && onToggle !== undefined;
   const headers = [
     t('promotions.col.code'),
     t('promotions.col.type'),
@@ -18,6 +27,7 @@ export function PromotionTable({ rows }: { rows: readonly PromotionSummary[] }):
     t('promotions.col.usage'),
     t('promotions.col.scope'),
     t('promotions.col.status'),
+    ...(actions ? [t('promotions.col.actions')] : []),
   ];
   return (
     <div style={OPS_TABLE_WRAP_STYLE}>
@@ -55,11 +65,27 @@ export function PromotionTable({ rows }: { rows: readonly PromotionSummary[] }):
               <td>
                 {row.channelScope.join(', ')} · {row.roomTypeScope.join(', ')}
               </td>
-              <td>
+              <td data-testid={`promotion-status-${row.code}`}>
                 {row.status === 'ACTIVE'
                   ? t('promotions.status.ACTIVE')
                   : t('promotions.status.INACTIVE')}
               </td>
+              {actions ? (
+                <td>
+                  <div className="ph-actions" style={{ gap: 8, flexWrap: 'nowrap' }}>
+                    <button type="button" className="ph-btn" onClick={() => onEdit(row)}>
+                      {t('promotions.edit')}
+                    </button>
+                    <button
+                      type="button"
+                      className={row.status === 'ACTIVE' ? 'ph-btn-danger' : 'ph-btn'}
+                      onClick={() => onToggle(row)}
+                    >
+                      {t(row.status === 'ACTIVE' ? 'promotions.deactivate' : 'promotions.activate')}
+                    </button>
+                  </div>
+                </td>
+              ) : null}
             </tr>
           ))}
         </tbody>

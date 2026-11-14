@@ -17,7 +17,21 @@ async function fixture(page:Page) {
     await fulfillJson(route,200,JSON.stringify({propertyId:'p1',roomTypeId:'rt1',from:date,to:date,capturedAt:'2026-10-12T00:00:00.000Z',
       cells:[{date,supply:6,demand:2,pool:4,blocked:0,published:3}]}));
   });
+  await page.route('**/api/v1/operations/day-board*',route=>{
+    const url=new URL(route.request().url());const date=url.searchParams.get('date') ?? '';
+    return fulfillJson(route,200,JSON.stringify(boardBody(date)));
+  });
   return requests;
+}
+const guest=(code:string,status:string,patch:Record<string,unknown>={})=>({bookingId:`b-${code}`,code,guestName:`Khách ${code}`,roomTypeId:'rt1',roomCount:1,
+  checkIn:'2026-10-12',checkOut:'2026-10-14',status,channelCode:'WEB',balanceDue:0,...patch});
+function boardBody(date:string){
+  return {propertyId:'p1',date,capturedAt:'2026-10-12T00:00:00.000Z',
+    arrivals:{total:2,truncated:false,items:[guest('PH2','CHECKED_IN'),guest('PH1','CONFIRMED',{balanceDue:700000,roomCount:2})]},
+    departures:{total:0,truncated:false,items:[]},
+    inHouse:{total:250,truncated:true,items:[guest('PH9','CHECKED_IN')]},
+    overbooking:{openFromDate:3,onDate:1},
+    degradedChannels:[{channelId:'c1',code:'OTA_BOOKING',name:'Booking.com',consecutiveFailures:4,lastSyncAt:null}]};
 }
 test('hiện bảng tồn của ngày và mốc cập nhật máy chủ theo giờ VN',async({page})=>{
   await fixture(page);await page.goto('/day-board');
@@ -46,13 +60,31 @@ test('lỗi mạng giữ số liệu ngày đã tải và mốc cũ, không gi�
   await expect(page.getByTestId('day-row-rt1')).toContainText('3');await expect(page.getByTestId('day-captured')).toContainText('07:00');
   await expect(page.getByText('Chưa có dữ liệu',{exact:true})).toHaveCount(0);
 });
-test('liên kết nhanh và phần chưa hỗ trợ có lý do, không giả số 0',async({page})=>{
+test('liên kết nhanh và bảng ngày lấy số từ máy chủ, khách chưa nhận phòng lên đầu',async({page})=>{
   await fixture(page);await page.goto('/day-board');await expect(page.getByTestId('day-row-rt1')).toBeVisible();
   for (const [name,href] of [['Lưới tồn','/inventory-grid'],['Allotment theo kênh','/channel-allotments'],['Khoá phòng','/room-blocks']] as const)
-    await expect(page.getByRole('link',{name,exact:true})).toHaveAttribute('href',href);
-  await expect(page.getByTestId('day-unsupported')).toContainText('Đến / đi / ở: chưa hỗ trợ');
-  await expect(page.getByTestId('day-unsupported')).toContainText('Ca quá tải: chưa hỗ trợ');
-  await expect(page.getByTestId('day-unsupported')).toContainText('Kênh suy giảm đồng bộ: chưa hỗ trợ');
+    await expect(page.getByRole('navigation',{name:'Điều hướng nhanh'}).getByRole('link',{name,exact:true})).toHaveAttribute('href',href);
+  await expect(page.getByTestId('day-unsupported')).toHaveCount(0);
+  await expect(page.getByTestId('day-stat-arrivals')).toContainText('2');
+  await expect(page.getByTestId('day-stat-arrivals')).toContainText('1 chưa làm thủ tục');
+  await expect(page.getByTestId('day-stat-inHouse')).toContainText('250');
+  await expect(page.getByTestId('day-stat-cases')).toContainText('3 ca mở từ ngày này');
+  await expect(page.getByTestId('day-stat-cases')).toHaveAttribute('href','/overbooking/cases');
+  const rows=page.getByTestId('day-group-arrivals').locator('tbody tr');
+  await expect(rows.first()).toContainText('PH1');await expect(rows.first()).toContainText('DOR × 2');
+  await expect(rows.first()).toContainText('700.000');
+  await expect(page.getByTestId('day-booking-PH1').getByRole('link',{name:'PH1'})).toHaveAttribute('href','/bookings/b-PH1');
+  await expect(page.getByTestId('day-group-departures')).toContainText('Không có khách trả phòng');
+  await expect(page.getByTestId('day-truncated-inHouse')).toContainText('1/250');
+  await expect(page.getByTestId('day-channel-OTA_BOOKING')).toContainText('chưa đồng bộ được lần nào');
+});
+test('403 ở bảng ngày chỉ ẩn danh sách khách, vẫn giữ tồn khả dụng',async({page})=>{
+  await fixture(page);
+  await page.route('**/api/v1/operations/day-board*',route=>fulfillJson(route,403,errorBody('E_RBAC_FORBIDDEN','synthetic','/api/v1/operations/day-board')));
+  await page.goto('/day-board');
+  await expect(page.getByTestId('day-row-rt1')).toContainText('3');
+  await expect(page.getByTestId('day-board-error')).toContainText('Vai trò của bạn không xem được');
+  await expect(page.getByTestId('day-stats')).toHaveCount(0);
 });
 test('bàn phím, axe và 360px không cuộn ngang',async({page})=>{
   await fixture(page);await page.setViewportSize({width:360,height:800});await page.goto('/day-board');

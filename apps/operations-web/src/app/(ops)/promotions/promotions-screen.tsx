@@ -37,6 +37,8 @@ import {
   opsNoticeStyle,
 } from '../../../components/editorial-styles';
 import { PromotionTable } from './promotion-table';
+import { PromotionEditPanel, usePromotionEdit } from './promotion-edit';
+import { useOptionalStaffSession } from '../../../session/staff-session';
 
 /** Hai mã máy chủ trả kèm `details[]` khi cấu hình khuyến mãi sai (api.md §4.2). */
 const CONFIG_CODES: Readonly<Record<string, 'promotions.floorBlocked' | 'promotions.invalid'>> = {
@@ -58,6 +60,16 @@ export function PromotionsScreen(): ReactElement {
   const [readError, setReadError] = useState<unknown>(null);
   const session = useOpsSession(['/properties', '/room-types', '/promotions'], {
     onExpired: () => setState({ kind: 'forbidden' }),
+  });
+
+  const staff = useOptionalStaffSession();
+  // Chỉ OWNER sửa/tắt được khuyến mãi; ngoài khung phiên vẫn hiện nút và để máy chủ quyết.
+  const canEdit = staff === null || staff.me.role === 'OWNER';
+  const [updated, setUpdated] = useState<string | null>(null);
+  const promotionEdit = usePromotionEdit(session.client, async (code) => {
+    setSaved(null);
+    setUpdated(code);
+    await load();
   });
 
   const load = useCallback(async (): Promise<void> => {
@@ -145,7 +157,14 @@ export function PromotionsScreen(): ReactElement {
       </header>
       <StateSurface state={state}>
         {readError === null ? null : <ScreenAlert error={readError} onRetry={() => void load()} />}
-        {rows.length === 0 ? null : <PromotionTable rows={rows} />}
+        <PromotionList
+          rows={rows}
+          roomTypes={roomTypes}
+          updated={updated}
+          canEdit={canEdit}
+          promotionEdit={promotionEdit}
+          onReload={() => void load()}
+        />
         {saved === null ? null : (
           <p role="status" data-testid="promotions-saved" style={opsNoticeStyle('success')}>
             {t('promotions.saved', { code: saved })}
@@ -292,5 +311,50 @@ export function PromotionsScreen(): ReactElement {
         </form>
       </StateSurface>
     </section>
+  );
+}
+
+function PromotionList({
+  rows,
+  roomTypes,
+  updated,
+  canEdit,
+  promotionEdit,
+  onReload,
+}: {
+  rows: readonly PromotionSummary[];
+  roomTypes: readonly RoomTypeSummary[];
+  updated: string | null;
+  canEdit: boolean;
+  promotionEdit: ReturnType<typeof usePromotionEdit>;
+  onReload: () => void;
+}): ReactElement | null {
+  if (rows.length === 0) return null;
+  return (
+    <>
+      {updated === null ? null : (
+        <p role="status" data-testid="promotions-updated" style={opsNoticeStyle('success')}>
+          {t('promotions.updated', { code: updated })}
+        </p>
+      )}
+      <PromotionTable
+        rows={rows}
+        onEdit={canEdit ? (row) => promotionEdit.open(row, 'edit') : undefined}
+        onToggle={canEdit ? (row) => promotionEdit.open(row, 'toggle') : undefined}
+      />
+      {promotionEdit.edit === null ? null : (
+        <PromotionEditPanel
+          edit={promotionEdit.edit}
+          roomTypes={roomTypes}
+          onChange={promotionEdit.change}
+          onSubmit={() => void promotionEdit.submit()}
+          onCancel={promotionEdit.close}
+          onReload={() => {
+            promotionEdit.close();
+            onReload();
+          }}
+        />
+      )}
+    </>
   );
 }
