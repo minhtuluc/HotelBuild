@@ -10,6 +10,7 @@
  * hành công khai. Không có giá, tồn phòng, mốc huỷ, diện tích, tiện nghi hay giải thưởng ở đây.
  */
 import type { Locale } from '../i18n/locales';
+import { CONTENT_PACKS } from './locale-packs';
 import type { RoomTypeCode } from './room-type-pages';
 
 export interface PropertyPageKey {
@@ -86,6 +87,10 @@ const COPY: Readonly<Record<Locale, Readonly<Record<string, PropertyPageCopy>>>>
       illustrative: true,
     },
   },
+  'zh-CN': CONTENT_PACKS['zh-CN'].properties,
+  ja: CONTENT_PACKS.ja.properties,
+  ko: CONTENT_PACKS.ko.properties,
+  ru: CONTENT_PACKS.ru.properties,
 };
 
 export function propertyPageKey(slug: string): PropertyPageKey | undefined {

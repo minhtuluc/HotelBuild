@@ -6,7 +6,7 @@
  * Thêm locale = thêm vào `LOCALES` + `LOCALE_META` + danh mục đủ khoá trong `catalogs/`.
  */
 
-export const LOCALES = ['vi', 'en'] as const;
+export const LOCALES = ['vi', 'en', 'zh-CN', 'ja', 'ko', 'ru'] as const;
 
 export type Locale = (typeof LOCALES)[number];
 
@@ -29,6 +29,17 @@ export const LOCALE_META: Readonly<Record<Locale, LocaleMeta>> = {
   vi: { intl: 'vi-VN', htmlLang: 'vi', ogLocale: 'vi_VN', label: 'Tiếng Việt', prefix: '' },
   // en-GB: ngày trước tháng (24/12/2026) như tiếng Việt, tránh khách đọc nhầm ngày/tháng.
   en: { intl: 'en-GB', htmlLang: 'en', ogLocale: 'en_GB', label: 'English', prefix: '/en' },
+  // Bốn locale HB-313: tiền tố viết thường (URL), `htmlLang` dùng cho `:lang()` chọn font CJK (globals.css).
+  'zh-CN': {
+    intl: 'zh-CN',
+    htmlLang: 'zh-CN',
+    ogLocale: 'zh_CN',
+    label: '简体中文',
+    prefix: '/zh-cn',
+  },
+  ja: { intl: 'ja-JP', htmlLang: 'ja', ogLocale: 'ja_JP', label: '日本語', prefix: '/ja' },
+  ko: { intl: 'ko-KR', htmlLang: 'ko', ogLocale: 'ko_KR', label: '한국어', prefix: '/ko' },
+  ru: { intl: 'ru-RU', htmlLang: 'ru', ogLocale: 'ru_RU', label: 'Русский', prefix: '/ru' },
 };
 
 export function isLocale(value: string): value is Locale {

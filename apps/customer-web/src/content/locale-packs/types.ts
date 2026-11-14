@@ -1,0 +1,23 @@
+/**
+ * Gói nội dung tĩnh của một locale thêm sau (HB-313): trang chủ, trang ga, trang hạng phòng, alt ảnh. `vi` và
+ * `en` giữ ở chỗ cũ (`landing-content*.ts`, `COPY` trong từng file trang); locale mới gom vào một file để
+ * người duyệt bản dịch đọc một chỗ.
+ *
+ * Phần tả nơi chốn là MINH HOẠ (`illustrative: true`), phần chính sách dịch từ docs/02 và cần người bản ngữ
+ * duyệt trước ngày phát hành công khai (quyết định Q6). Mã gói, số tiền, mốc giờ giữ nguyên.
+ */
+import type { Locale } from '../../i18n/locales';
+import type { LandingContent } from '../landing-content';
+import type { PropertyPageCopy } from '../property-pages';
+import type { RoomTypeCode, RoomTypePageCopy } from '../room-type-pages';
+
+export type PackLocale = Exclude<Locale, 'vi' | 'en'>;
+
+export interface LocaleContentPack {
+  readonly landing: LandingContent;
+  /** Theo slug trang ga. */
+  readonly properties: Readonly<Record<string, PropertyPageCopy>>;
+  readonly roomTypes: Partial<Readonly<Record<RoomTypeCode, RoomTypePageCopy>>>;
+  /** Alt ảnh theo mã ô ảnh (`photo-slots.ts`); test `locale-packs.spec.ts` bắt đủ mọi ô. */
+  readonly photoAlts: Readonly<Record<string, string>>;
+}

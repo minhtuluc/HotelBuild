@@ -7,6 +7,7 @@
  * tiện nghi hay giá: giá luôn in theo từng đêm ở bước tìm phòng.
  */
 import type { Locale } from '../i18n/locales';
+import { CONTENT_PACKS } from './locale-packs';
 
 export type RoomTypeCode = 'STD' | 'SUP' | 'DLX' | 'FAM' | 'DOR';
 
@@ -73,6 +74,10 @@ const COPY: Readonly<Record<Locale, Partial<Readonly<Record<RoomTypeCode, RoomTy
       illustrative: true,
     },
   },
+  'zh-CN': CONTENT_PACKS['zh-CN'].roomTypes,
+  ja: CONTENT_PACKS.ja.roomTypes,
+  ko: CONTENT_PACKS.ko.roomTypes,
+  ru: CONTENT_PACKS.ru.roomTypes,
 };
 
 export function roomTypePageKey(code: string): RoomTypePageKey | undefined {

@@ -174,6 +174,7 @@ Mực xanh và đỏ dấu bấm trên giấy hồng, trên nền xanh xám, c�
 
 **Display Font:** Barlow Condensed 500/600 (với Arial Narrow)
 **Body Font:** Be Vietnam Pro 400/500/600/700 (với Segoe UI, system-ui)
+**Scripts (HB-313):** font thương hiệu chỉ có Latin + tiếng Việt. Chữ Hán, Kana, Hangul, Cyrillic dùng font hệ thống theo `:lang()` (`app/locale-type.css`): zh-CN PingFang SC / Microsoft YaHei / Noto Sans SC; ja Hiragino Sans / Yu Gothic / Noto Sans JP; ko Apple SD Gothic Neo / Malgun Gothic / Noto Sans KR; ru chữ hẹp hệ thống cho display. CJK không giãn chữ, tiêu đề dòng 1.3, thân bài 1.7; không tải font CJK.
 
 **Character:** Chữ cạnh hẹp của biển ga và bảng giờ tàu đi cùng một chữ không chân do người Việt thiết kế, đủ dấu, đọc êm ở cỡ nhỏ. Cả hai đóng gói cục bộ (OFL), không phụ thuộc CDN.
 

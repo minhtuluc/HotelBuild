@@ -27,7 +27,7 @@ async function axeClean(page: Page): Promise<void> {
 }
 
 test.describe('Tiếng Anh (HB-312)', () => {
-  test('/en: html lang, tiêu đề, hreflang đủ ba mục, link nội bộ giữ /en, axe sạch', async ({
+  test('/en: html lang, tiêu đề, hreflang đủ mọi locale, link nội bộ giữ /en, axe sạch', async ({
     page,
   }) => {
     await page.goto('/en');
@@ -37,7 +37,7 @@ test.describe('Tiếng Anh (HB-312)', () => {
     const hreflang = await page
       .locator('link[rel="alternate"][hreflang]')
       .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('hreflang')));
-    expect(hreflang.sort()).toEqual(['en', 'vi', 'x-default']);
+    expect(hreflang.sort()).toEqual(['en', 'ja', 'ko', 'ru', 'vi', 'x-default', 'zh-CN']);
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
     await expect(nav.getByRole('link', { name: 'My bookings' })).toHaveAttribute(
       'href',
@@ -49,11 +49,14 @@ test.describe('Tiếng Anh (HB-312)', () => {
   test('chọn ngôn ngữ chuyển qua lại, giữ đường dẫn và tham số', async ({ page }) => {
     await page.goto('/stays/da-lat?from=test');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ga Đà Lạt');
+    // Chọn sau khi hydrate: trước đó <select> chưa có onChange dù chữ SSR đã hiện.
+    await page.waitForLoadState('networkidle');
     await page.getByTestId('language-select').selectOption('en');
     await expect(page).toHaveURL(/\/en\/stays\/da-lat\?from=test$/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Da Lat Station');
+    await page.waitForLoadState('networkidle');
     await page.getByTestId('language-select').selectOption('vi');
-    await expect(page).toHaveURL(/\/stays\/da-lat\?from=test$/);
+    await expect(page).toHaveURL(/^https?:\/\/[^/]+\/stays\/da-lat\?from=test$/);
     await expect(page.locator('html')).toHaveAttribute('lang', 'vi');
   });
 

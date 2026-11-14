@@ -1,6 +1,7 @@
 /**
  * Khoá tiếng Anh cần người duyệt trước ngày phát hành công khai (quyết định Q6, kế hoạch giao diện §2):
  * câu về huỷ, hoàn, cọc, thanh toán và chính sách. Bản demo dùng bản dịch do frontend soạn.
+ * Cùng danh sách áp cho bản zh-CN, ja, ko, ru (HB-313).
  * Test `catalogs.spec.ts` bảo đảm mọi khoá ở đây có thật trong danh mục.
  */
 import type { AccountMessageKey, CustomerMessageKey, PaymentMessageKey } from '../index';
