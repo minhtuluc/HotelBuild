@@ -2,6 +2,8 @@
 
 **Lập:** 02/10/2026 bởi lead Opus, để dự án đi tiếp khi lead hiện tại không còn. Đọc theo thứ tự: [AGENTS.md](../../AGENTS.md) → [quy trình](README.md) → [lộ trình đến deploy](lo-trinh-den-deploy.md) → trang này.
 
+**Ảnh chụp trạng thái gần nhất (bàn giao 15/11/2026):** [bàn giao vai lead](ban-giao-role-lead.md) — hàng đợi PR đang mở, thứ tự merge, các lỗi CI đã gặp và cách xử lý, việc còn chờ chủ dự án.
+
 ## 1. Ai thay vai lead
 
 Từ [QĐ-04](../05-ke-hoach/nhat-ky/QD-04-quan-tri-tu-chu.md): mọi agent báo cáo **chỉ** cho lead; lead xét cuối và merge.
