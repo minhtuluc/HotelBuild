@@ -33,8 +33,15 @@ export interface FrontDeskSpy {
   readonly urls: string[];
 }
 
+/**
+ * Phạm vi `GET /properties` phải chứa cơ sở mà phiên nhân viên thật (BFF → `fake-api/core/auth.ts`,
+ * `propertyIds: ['journey-standard']`) được cấp: màn hình mở theo cơ sở đang làm việc của phiên
+ * (QĐ-03 quyết định 9) và coi cơ sở ngoài danh sách là `E_AUTH_OUT_OF_SCOPE` (HB-315).
+ */
+const PROPERTY_ID = 'journey-standard';
+
 const PROPERTY = {
-  id: 'p1',
+  id: PROPERTY_ID,
   name: 'Pine Hill synthetic',
   status: 'ACTIVE',
   activeRoomCount: 20,
@@ -46,7 +53,7 @@ const PROPERTY = {
 
 const ROOM_TYPE = {
   id: 'rt1',
-  propertyId: 'p1',
+  propertyId: PROPERTY_ID,
   code: 'DOR',
   capacityAdults: 4,
   capacityChildren: 0,
@@ -61,7 +68,7 @@ const ROOM_TYPE = {
 const ROOMS = [
   {
     id: 'r1',
-    propertyId: 'p1',
+    propertyId: PROPERTY_ID,
     roomTypeId: 'rt1',
     code: '201',
     floor: 2,
@@ -71,7 +78,7 @@ const ROOMS = [
   },
   {
     id: 'r2',
-    propertyId: 'p1',
+    propertyId: PROPERTY_ID,
     roomTypeId: 'rt1',
     code: '202',
     floor: 2,
@@ -95,7 +102,7 @@ function booking(
     seq: 1,
     status,
     guestId: `g-${id}`,
-    propertyId: 'p1',
+    propertyId: PROPERTY_ID,
     roomTypeId: 'rt1',
     ratePlanId: 'FLEX7',
     channelId: 'c1',
@@ -362,7 +369,7 @@ export async function installFrontDeskApi(
               code: 'PH-261224-WLKIN',
               status: 'CONFIRMED',
               guestId: 'g-walkin',
-              propertyId: body.propertyId ?? 'p1',
+              propertyId: body.propertyId ?? PROPERTY_ID,
               roomTypeId: body.roomTypeId ?? 'rt1',
               ratePlanId: body.ratePlanCode ?? 'FLEX7',
               channelId: 'c-walkin',
