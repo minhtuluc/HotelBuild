@@ -1072,6 +1072,22 @@
     grid-column: 1 / -1;
   }
 
+  /* HB-309: ngày đã chọn theo locale ngay dưới ô ngày gốc; giữ chỗ cao để ô không nhảy khi xoá ngày. */
+  .ph-date-line {
+    display: block;
+    min-height: 1.35em;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.35;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-textMuted, #5a4640);
+  }
+
+  .ph-tfield .ph-date-line {
+    color: var(--color-primary, #1b3a82);
+    opacity: 0.85;
+  }
+
   .ph-tfield-label {
     font-size: 11px;
     font-weight: 700;

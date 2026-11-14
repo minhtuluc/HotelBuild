@@ -4,10 +4,10 @@
 import type { ReactElement } from 'react';
 import { formatDateTimeVn, formatMoney } from '@pinehill/ui-web';
 import type { Quote } from '@pinehill/contracts';
-import { t } from '../../../../lib/i18n';
+import { useLocale, useT } from '../../../../i18n/client';
 import { nightRows } from './quote-model';
 import { calendarDay, Denomination } from '../../../../components/stamps';
-import { formatCalendarDate } from '../../bookings/stay-format';
+import { calendarDate } from '../../../../i18n/format';
 
 /** Tem vẽ tối đa trên dải; kỳ dài hơn vẫn đầy đủ trong bảng giá từng đêm ngay dưới. */
 const MAX_PRICE_STAMPS = 7;
@@ -17,6 +17,8 @@ const MAX_PRICE_STAMPS = 7;
  * khung đứt (hình thức, không chỉ màu). Bảng `nights-table` bên dưới vẫn là nguồn đọc đầy đủ.
  */
 export function PriceStrip({ quote }: { quote: Quote }): ReactElement {
+  const locale = useLocale();
+  const t = useT();
   const rows = nightRows(quote);
   const shown = rows.slice(0, MAX_PRICE_STAMPS);
   const hasClamped = rows.some((row) => row.clamped);
@@ -25,7 +27,7 @@ export function PriceStrip({ quote }: { quote: Quote }): ReactElement {
       <div className="ph-price-strip" aria-hidden="true">
         <div className="ph-stamp-lift" style={{ display: 'flex', flexWrap: 'wrap' }}>
           {shown.map((row, index) => {
-            const day = calendarDay(row.date);
+            const day = calendarDay(row.date, locale);
             return (
               <div
                 key={row.date}
@@ -58,6 +60,8 @@ export function PriceStrip({ quote }: { quote: Quote }): ReactElement {
 }
 
 export function NightsTable({ quote }: { quote: Quote }): ReactElement {
+  const locale = useLocale();
+  const t = useT();
   return (
     <div style={{ display: 'grid', gap: 10 }}>
       <div className="ph-table-wrap">
@@ -80,7 +84,7 @@ export function NightsTable({ quote }: { quote: Quote }): ReactElement {
           <tbody>
             {nightRows(quote).map((row) => (
               <tr key={row.date} data-testid={`night-row-${row.date}`}>
-                <td className="ph-tabular">{formatCalendarDate(row.date)}</td>
+                <td className="ph-tabular">{calendarDate(row.date, locale)}</td>
                 <td className="ph-tabular">{formatMoney(row.basePrice)}</td>
                 <td className="ph-tabular" style={{ fontWeight: 600 }}>
                   {formatMoney(row.nightlyPrice)}
@@ -99,6 +103,7 @@ export function NightsTable({ quote }: { quote: Quote }): ReactElement {
 }
 
 export function QuoteSummary({ quote }: { quote: Quote }): ReactElement {
+  const t = useT();
   const rows: readonly (readonly [string, string])[] = [
     [t('guest.rooms.summary.subtotal'), formatMoney(quote.subtotal)],
     [t('guest.rooms.summary.discount'), formatMoney(quote.discountAmount)],

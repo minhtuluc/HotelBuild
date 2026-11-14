@@ -21,13 +21,14 @@ import {
   TextField,
   useFocusFirstIssue,
 } from './form-parts';
-import { accountText as text } from './messages';
+import { useAccountText } from '../../../i18n/client';
 
 type Field = 'fullName' | 'phone' | 'email' | 'password';
 const ORDER: readonly Field[] = ['fullName', 'phone', 'email', 'password'];
 const EMPTY: RegisterForm = { fullName: '', phone: '', email: '', password: '', consent: false };
 
 export function RegisterScreen({ contact }: { contact: string | null }): ReactElement {
+  const text = useAccountText();
   const router = useRouter();
   const next = safeNext(useSearchParams().get('next'));
   const [form, setForm] = useState<RegisterForm>(EMPTY);
@@ -136,7 +137,7 @@ export function RegisterScreen({ contact }: { contact: string | null }): ReactEl
         <Notice
           tone="error"
           testId="register-failure"
-          lines={failureLines(failure, 'register', contact)}
+          lines={failureLines(text, failure, 'register', contact)}
         />
       )}
       {notSignedIn ? (

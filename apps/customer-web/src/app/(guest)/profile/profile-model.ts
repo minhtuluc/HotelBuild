@@ -6,7 +6,7 @@
  * tương ứng (xem PR). Mọi con số điểm/hạng đều là nguyên văn máy chủ trả (UC-CRM-02).
  */
 import type { GuestLoyalty, GuestSummary, LoyaltyTier } from '@pinehill/contracts';
-import type { CustomerMessageKey } from '../../../lib/i18n';
+import type { CustomerMessageKey } from '../../../i18n/catalogs';
 
 export const TIER_KEYS: Readonly<Record<LoyaltyTier, CustomerMessageKey>> = {
   GUEST: 'guest.profile.tier.GUEST',

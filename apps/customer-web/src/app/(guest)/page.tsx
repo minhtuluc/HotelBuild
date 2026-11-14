@@ -1,18 +1,10 @@
 import type { ReactElement } from 'react';
 import Link from 'next/link';
-import { formatMoney } from '@pinehill/ui-web';
 import { webEnv } from '../../config';
-import { t } from '../../lib/i18n';
-import {
-  BOOKING_STEPS,
-  CABIN_CLASSES,
-  FAQ,
-  FARE_FACTORS,
-  FARE_PLANS,
-  SAMPLE_TICKET,
-  STATIONS,
-  type FarePlan,
-} from '../../content/landing-content';
+import { serverTranslators } from '../../i18n/server';
+import { money } from '../../i18n/format';
+import type { Locale } from '../../i18n/locales';
+import { landingContent, type FarePlan } from '../../content/landing-content';
 import { POSTERS } from '../../components/station-posters';
 import { Photo } from '../../components/photo';
 import { ALL_PHOTO_SLOTS, slotById } from '../../content/photo-slots';
@@ -24,6 +16,7 @@ import { SearchBlock } from './search/search-block';
 export const dynamic = 'force-dynamic';
 
 function HeroIntro(): ReactElement {
+  const { t } = serverTranslators();
   return (
     <div className="ph-hero-copy">
       <h1 className="ph-hero-title">
@@ -37,9 +30,11 @@ function HeroIntro(): ReactElement {
 
 /** Sơ đồ tuyến: ba ga trên một đường, độ cao ghi cạnh mỗi ga. */
 function RouteMap(): ReactElement {
+  const { t, locale } = serverTranslators();
+  const content = landingContent(locale);
   return (
     <ol className="ph-route" aria-label={t('guest.route.title')}>
-      {STATIONS.map((station) => (
+      {content.stations.map((station) => (
         <li key={station.code} className="ph-route-stop">
           <a href={`#ga-${station.code}`}>
             <span className="ph-route-dot" aria-hidden="true" />
@@ -57,12 +52,14 @@ function RouteMap(): ReactElement {
 interface PhotoContext {
   readonly found: Readonly<Record<string, string>>;
   readonly preview: boolean;
+  readonly locale: Locale;
 }
 
 function slotPhoto(ctx: PhotoContext, id: string, fallback?: ReactElement, className?: string) {
   return (
     <Photo
       slot={slotById(id)}
+      locale={ctx.locale}
       src={ctx.found[id]}
       preview={ctx.preview}
       fallback={fallback}
@@ -76,6 +73,8 @@ function hasPhoto(ctx: PhotoContext, ...ids: readonly string[]): boolean {
 }
 
 function Stations({ photos }: { photos: PhotoContext }): ReactElement {
+  const { t, locale } = serverTranslators();
+  const content = landingContent(locale);
   return (
     <section className="ph-band ph-band-paper" aria-labelledby="route-title" id="tuyen">
       <div className="ph-band-inner">
@@ -85,7 +84,7 @@ function Stations({ photos }: { photos: PhotoContext }): ReactElement {
         </header>
         <RouteMap />
         <div className="ph-stations">
-          {STATIONS.map((station, index) => {
+          {content.stations.map((station, index) => {
             const Poster = POSTERS[station.code];
             return (
               <article
@@ -147,6 +146,8 @@ function Stations({ photos }: { photos: PhotoContext }): ReactElement {
 }
 
 function Classes({ photos }: { photos: PhotoContext }): ReactElement {
+  const { t, locale } = serverTranslators();
+  const content = landingContent(locale);
   return (
     <section className="ph-band ph-band-ticket" aria-labelledby="classes-title" id="hang-phong">
       <div className="ph-band-inner">
@@ -155,7 +156,7 @@ function Classes({ photos }: { photos: PhotoContext }): ReactElement {
           <p>{t('guest.classes.lede')}</p>
         </header>
         <ul className="ph-classes">
-          {CABIN_CLASSES.map((cabin) => (
+          {content.cabinClasses.map((cabin) => (
             <li key={cabin.code} className="ph-class">
               <span className="ph-class-media">
                 {slotPhoto(photos, `hang-${cabin.code}`)}
@@ -179,6 +180,8 @@ function Classes({ photos }: { photos: PhotoContext }): ReactElement {
 }
 
 function Fare(): ReactElement {
+  const { t, locale } = serverTranslators();
+  const content = landingContent(locale);
   return (
     <section className="ph-band ph-band-paper" aria-labelledby="fare-title" id="gia">
       <div className="ph-band-inner ph-fare">
@@ -188,7 +191,7 @@ function Fare(): ReactElement {
             <p>{t('guest.fare.lede')}</p>
           </header>
           <ol className="ph-factors">
-            {FARE_FACTORS.map((factor) => (
+            {content.fareFactors.map((factor) => (
               <li key={factor.label}>
                 <strong>{factor.label}</strong>
                 <span>{factor.hint}</span>
@@ -200,19 +203,20 @@ function Fare(): ReactElement {
           <div className="ph-sample-head">
             <span>{t('guest.fare.sampleTitle')}</span>
             <span>
-              {SAMPLE_TICKET.room} · {SAMPLE_TICKET.checkIn} → {SAMPLE_TICKET.checkOut}
+              {content.sampleTicket.room} · {content.sampleTicket.checkIn} →{' '}
+              {content.sampleTicket.checkOut}
             </span>
           </div>
           <table className="ph-sample-table">
             <tbody>
-              {SAMPLE_TICKET.nights.map((night, index) => (
+              {content.sampleTicket.nights.map((night, index) => (
                 <tr key={night.date}>
                   <th scope="row">{t('guest.ticket.segment', { n: index + 1 })}</th>
                   <td>
                     {night.weekday} {night.date}
                   </td>
                   <td className="ph-sample-why">{night.why}</td>
-                  <td className="ph-sample-amount">{formatMoney(night.amount)}</td>
+                  <td className="ph-sample-amount">{money(night.amount, locale)}</td>
                 </tr>
               ))}
             </tbody>
@@ -221,7 +225,7 @@ function Fare(): ReactElement {
                 <th scope="row" colSpan={3}>
                   {t('guest.fare.total')}
                 </th>
-                <td className="ph-sample-amount">{formatMoney(SAMPLE_TICKET.total)}</td>
+                <td className="ph-sample-amount">{money(content.sampleTicket.total, locale)}</td>
               </tr>
             </tfoot>
           </table>
@@ -239,6 +243,7 @@ function Fare(): ReactElement {
 
 /** Một gói giá: thanh chia theo mốc giờ, mốc xa nhất bên trái, giờ nhận phòng bên phải. */
 function PlanRow({ plan }: { plan: FarePlan }): ReactElement {
+  const { t } = serverTranslators();
   return (
     <li className="ph-plan">
       <div className="ph-plan-name">
@@ -271,6 +276,8 @@ function PlanRow({ plan }: { plan: FarePlan }): ReactElement {
 }
 
 function Refunds(): ReactElement {
+  const { t, locale } = serverTranslators();
+  const content = landingContent(locale);
   return (
     <section className="ph-band ph-band-board" aria-labelledby="refund-title" id="tra-ve">
       <div className="ph-band-inner">
@@ -279,7 +286,7 @@ function Refunds(): ReactElement {
           <p>{t('guest.refund.lede')}</p>
         </header>
         <ul className="ph-plans">
-          {FARE_PLANS.map((plan) => (
+          {content.farePlans.map((plan) => (
             <PlanRow key={plan.code} plan={plan} />
           ))}
         </ul>
@@ -290,6 +297,8 @@ function Refunds(): ReactElement {
 }
 
 function Steps(): ReactElement {
+  const { t, locale } = serverTranslators();
+  const content = landingContent(locale);
   return (
     <section className="ph-band ph-band-ticket" aria-labelledby="steps-title" id="cach-dat">
       <div className="ph-band-inner">
@@ -297,7 +306,7 @@ function Steps(): ReactElement {
           <h2 id="steps-title">{t('guest.steps.title')}</h2>
         </header>
         <ol className="ph-steps">
-          {BOOKING_STEPS.map((step, index) => (
+          {content.bookingSteps.map((step, index) => (
             <li key={step.title} className="ph-step-card">
               <span className="ph-step-no" aria-hidden="true">
                 {index + 1}
@@ -313,6 +322,8 @@ function Steps(): ReactElement {
 }
 
 function Questions(): ReactElement {
+  const { t, locale } = serverTranslators();
+  const content = landingContent(locale);
   return (
     <section className="ph-band ph-band-paper" aria-labelledby="faq-title" id="hoi-dap">
       <div className="ph-band-inner ph-faq-wrap">
@@ -320,7 +331,7 @@ function Questions(): ReactElement {
           <h2 id="faq-title">{t('guest.faq.title')}</h2>
         </header>
         <div className="ph-faq">
-          {FAQ.map((item) => (
+          {content.faq.map((item) => (
             <details key={item.q}>
               <summary>{item.q}</summary>
               <p>{item.a}</p>
@@ -337,10 +348,12 @@ export default async function GuestHomePage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }): Promise<ReactElement> {
+  const { t, locale } = serverTranslators();
   const query = await searchParams;
   const photos: PhotoContext = {
     found: availablePhotos(ALL_PHOTO_SLOTS.map((slot) => slot.id)),
     preview: query.anh === '1',
+    locale,
   };
   return (
     <>

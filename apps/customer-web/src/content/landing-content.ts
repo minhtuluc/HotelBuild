@@ -10,6 +10,7 @@
  *
  * Không có giá bán, đánh giá hay số liệu kinh doanh nào ở đây.
  */
+import type { Locale } from '../i18n/locales';
 
 export interface Station {
   readonly code: string;
@@ -24,7 +25,7 @@ export interface Station {
 }
 
 /** Ba ga trên tuyến: tên địa phương theo dữ liệu seed (docs/00 §1: 3 cơ sở). */
-export const STATIONS: readonly Station[] = [
+const STATIONS: readonly Station[] = [
   {
     code: 'DL',
     name: 'Đà Lạt',
@@ -69,7 +70,7 @@ export interface CabinClass {
 }
 
 /** Hạng phòng theo seed (apps/api/prisma/seed/reference-data.ts); giá luôn đọc từ báo giá. */
-export const CABIN_CLASSES: readonly CabinClass[] = [
+const CABIN_CLASSES: readonly CabinClass[] = [
   {
     code: 'STD',
     name: 'Standard',
@@ -108,7 +109,7 @@ export const CABIN_CLASSES: readonly CabinClass[] = [
 ] as const;
 
 /** Thứ tự hệ số khi tính giá một đêm (docs/00 §2, BT-2). */
-export const FARE_FACTORS: readonly { readonly label: string; readonly hint: string }[] = [
+const FARE_FACTORS: readonly { readonly label: string; readonly hint: string }[] = [
   { label: 'Giá hạng phòng', hint: 'giá gốc của hạng bạn chọn' },
   { label: '× mùa', hint: 'mùa thấp rẻ hơn, mùa hè và lễ Tết cao hơn' },
   { label: '× cuối tuần', hint: 'đêm thứ Sáu và thứ Bảy' },
@@ -128,7 +129,7 @@ export interface SampleNight {
  * Vé mẫu BK-A trong docs/02-nghiep-vu/chinh-sach-huy-hoan-coc.md §3.3: Deluxe, nhận phòng thứ Sáu 11/12/2026,
  * 3 đêm, mùa thấp, có giảm ở từ 3 đêm. Đây là ví dụ trong tài liệu, không phải giá đang bán.
  */
-export const SAMPLE_TICKET = {
+const SAMPLE_TICKET = {
   room: 'Deluxe (DLX)',
   checkIn: '11/12/2026',
   checkOut: '14/12/2026',
@@ -156,7 +157,7 @@ export interface FarePlan {
 }
 
 /** Bốn gói giá và bậc hoàn (docs/02 §3, bảng CP-*). Hoàn tính trên số tiền đã thực trả. */
-export const FARE_PLANS: readonly FarePlan[] = [
+const FARE_PLANS: readonly FarePlan[] = [
   {
     code: 'FLEX7',
     name: 'Linh hoạt',
@@ -197,7 +198,7 @@ export const FARE_PLANS: readonly FarePlan[] = [
 ] as const;
 
 /** Bốn bước đặt phòng (UC-BOOK-01, BR-BOOK-07, BR-PAY-05). */
-export const BOOKING_STEPS: readonly { readonly title: string; readonly body: string }[] = [
+const BOOKING_STEPS: readonly { readonly title: string; readonly body: string }[] = [
   {
     title: 'Chọn ga và ngày',
     body: 'Chọn cơ sở, ngày nhận, ngày trả và số khách. Chỉ hiện hạng phòng còn trống cho cả kỳ.',
@@ -217,7 +218,7 @@ export const BOOKING_STEPS: readonly { readonly title: string; readonly body: st
 ] as const;
 
 /** Hỏi đáp: mỗi câu trả lời dựa trên một quy tắc nghiệp vụ đã ghi ở docs/02. */
-export const FAQ: readonly { readonly q: string; readonly a: string }[] = [
+const FAQ: readonly { readonly q: string; readonly a: string }[] = [
   {
     q: 'Mốc huỷ tính từ lúc nào?',
     a: 'Tính bằng số giờ trước giờ nhận phòng của cơ sở (thường 14:00, giờ Việt Nam), không tính theo ngày. Huỷ lúc 9 giờ sáng ngày nhận phòng là dưới 24 giờ.',
@@ -239,3 +240,39 @@ export const FAQ: readonly { readonly q: string; readonly a: string }[] = [
     a: 'Bạn được chuyển sang phòng cùng hạng hoặc được nâng hạng miễn phí và giữ nguyên giá đã đặt. Nếu không còn cách nào, bạn được hoàn 100% kèm bồi thường.',
   },
 ] as const;
+
+export interface SampleTicket {
+  readonly room: string;
+  readonly checkIn: string;
+  readonly checkOut: string;
+  readonly nights: readonly SampleNight[];
+  readonly total: number;
+}
+
+/** Toàn bộ nội dung tĩnh trang chủ của một locale. */
+export interface LandingContent {
+  readonly stations: readonly Station[];
+  readonly cabinClasses: readonly CabinClass[];
+  readonly fareFactors: readonly { readonly label: string; readonly hint: string }[];
+  readonly sampleTicket: SampleTicket;
+  readonly farePlans: readonly FarePlan[];
+  readonly bookingSteps: readonly { readonly title: string; readonly body: string }[];
+  readonly faq: readonly { readonly q: string; readonly a: string }[];
+}
+
+const LANDING: Readonly<Record<Locale, LandingContent>> = {
+  vi: {
+    stations: STATIONS,
+    cabinClasses: CABIN_CLASSES,
+    fareFactors: FARE_FACTORS,
+    sampleTicket: SAMPLE_TICKET,
+    farePlans: FARE_PLANS,
+    bookingSteps: BOOKING_STEPS,
+    faq: FAQ,
+  },
+};
+
+/** Nội dung tĩnh trang chủ theo locale (HB-309). Locale mới phải đủ mọi phần. */
+export function landingContent(locale: Locale): LandingContent {
+  return LANDING[locale];
+}

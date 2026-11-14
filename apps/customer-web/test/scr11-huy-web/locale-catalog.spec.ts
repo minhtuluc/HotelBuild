@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
-import { t } from '../../src/lib/i18n';
+import { translatorsFor } from '../../src/i18n/translate';
 import { formatHoursBeforeCheckIn } from '../../src/app/(guest)/bookings/cancel-model';
+
+const { t } = translatorsFor('vi');
 
 /**
  * HB-103 (dư âu HB-186): số giờ huỷ hiển thị theo quy ước `vi-VN` (dấu phẩy thập phân, NFR-LOC-02)
@@ -43,6 +45,6 @@ it('states-client dùng khoá danh mục, không còn nhãn viết cứng', () =
 
 it('metadata của layout lấy mô tả từ danh mục', () => {
   const source = readFileSync(new URL('../../src/app/layout.tsx', import.meta.url), 'utf8');
-  expect(source).toContain("customerCatalog['guest.app.description']");
+  expect(source).toContain("t('guest.app.description')");
   expect(source).not.toContain('Đặt phòng trực tiếp tại chuỗi Pine Hill');
 });

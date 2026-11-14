@@ -3,16 +3,19 @@
  * ở chế độ xem trước (`?anh=1`) thì vẽ khung ô ảnh kèm mã, tỉ lệ, kích thước và việc cần chụp.
  */
 import type { ReactElement, ReactNode } from 'react';
-import type { PhotoSlot } from '../content/photo-slots';
+import { photoAlt, type PhotoSlot } from '../content/photo-slots';
+import type { Locale } from '../i18n/locales';
 
 export function Photo({
   slot,
+  locale,
   src,
   preview,
   fallback,
   className,
 }: {
   slot: PhotoSlot | undefined;
+  locale: Locale;
   src: string | undefined;
   preview: boolean;
   fallback?: ReactNode | undefined;
@@ -24,7 +27,7 @@ export function Photo({
       <img
         className={`ph-photo ${className ?? ''}`}
         src={src}
-        alt={slot.alt}
+        alt={photoAlt(slot, locale)}
         loading="lazy"
         decoding="async"
         style={{ aspectRatio: slot.ratio }}

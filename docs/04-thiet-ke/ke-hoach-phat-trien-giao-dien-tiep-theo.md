@@ -112,6 +112,7 @@ Mỗi màn có unit test cho model, E2E trên API giả và axe.
 
 - URL locale theo quyết định của lead; nút chọn ngôn ngữ là `<select>` có nhãn, không dùng cờ.
 - Thêm `hreflang`, `html lang` theo locale, metadata tiếng Anh.
+- Nối `money(amount, locale)` (`src/i18n/format.ts`) vào các màn còn gọi `formatMoney` mặc định `vi-VN`: HB-309 đã cho hàm nhận locale nhưng chưa đổi từng chỗ gọi vì chỉ có `vi`.
 - Bản demo dùng bản dịch do frontend soạn; câu chữ về huỷ, hoàn tiền và thanh toán được đánh dấu cần duyệt trước ngày phát hành công khai (§2).
 
 ### Đợt 6 — zh-CN, ja, ko, ru
@@ -123,12 +124,13 @@ Mỗi màn có unit test cho model, E2E trên API giả và axe.
 
 | Ticket | Đợt | Nội dung | Trạng thái | Phụ thuộc |
 |---|---|---|---|---|
-| [HB-308](../08-thi-cong/tickets/HB-308-dot-1-back-office-api-moi.md) | 0 + 1 | SCR-23 bảng ngày, SCR-27 sửa/ngừng mùa, SCR-29 sửa/tắt khuyến mãi, TD-44 cho SCR-23/27, gỡ nhãn minh hoạ trang demo | Đang làm | — |
-| HB-309 | 2 | Nền tảng i18n customer web (chỉ `vi`), định dạng theo locale, dòng ngày dưới ô ngày, đổi test khoá SCR-12 | Chưa mở | — |
+| [HB-308](../08-thi-cong/tickets/HB-308-dot-1-back-office-api-moi.md) | 0 + 1 | SCR-23 bảng ngày, SCR-27 sửa/ngừng mùa, SCR-29 sửa/tắt khuyến mãi, TD-44 cho SCR-23/27, gỡ nhãn minh hoạ trang demo | PR [#302](https://github.com/minhtuluc/HotelBuild/pull/302) | — |
+| [HB-309](../08-thi-cong/tickets/HB-309-nen-tang-i18n-customer-web.md) | 2 | Nền tảng i18n customer web (chỉ `vi`), định dạng theo locale, dòng ngày dưới ô ngày, đổi câu phí đổi ngày SCR-12, sửa lỗi phiên khi chạy dev | Đang làm | HB-308 (cùng sửa danh mục khách) |
 | HB-310 | 3 | Trang cơ sở và trang hạng phòng mẫu + mục DESIGN.md mới | Chưa mở | HB-309 |
 | HB-311 | 4 | Nhân nội dung 3 + 5 + 5 trang | Chưa mở | HB-310 |
 | HB-312 | 5 | Locale `en` | Chưa mở | HB-309 |
 | HB-313 | 6 | Locale `zh-CN`, `ja`, `ko`, `ru` + font | Chưa mở | HB-312 |
+| HB-315 | — | E2E SCR-48 bàn tiền sảnh xanh lại sau #298 | PR [#303](https://github.com/minhtuluc/HotelBuild/pull/303) | — |
 | HB-314 | — | TD-44 cho các màn vận hành còn lại (lưới tồn, lịch giá, danh sách booking, báo cáo, kênh, người dùng, hạng phòng, SCR-40/43/47) | Chưa mở | HB-308 |
 
 E2E SCR-07 (P1) được kiểm lại trong HB-308.

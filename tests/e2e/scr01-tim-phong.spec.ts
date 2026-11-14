@@ -4,7 +4,10 @@ import { expect, test, type Page } from '@playwright/test';
 /** SCR-01 chỉ có ở web khách (ADR-018) — ca này chạy trên project customer-web. */
 function customerWebOnly(): void {
   test.beforeEach(({}, testInfo) => {
-    test.skip(!testInfo.project.name.startsWith('customer-web'), 'ca này chỉ chạy trên customer-web');
+    test.skip(
+      !testInfo.project.name.startsWith('customer-web'),
+      'ca này chỉ chạy trên customer-web',
+    );
   });
 }
 
@@ -18,12 +21,17 @@ async function openHome(page: Page): Promise<void> {
 }
 
 test.describe('SCR-01 trang chủ & khối tìm phòng (HB-080)', () => {
-  test('hiện đủ ảnh slot, không còn khung chờ và có ảnh chia sẻ link', async ({ page, request }) => {
+  test('hiện đủ ảnh slot, không còn khung chờ và có ảnh chia sẻ link', async ({
+    page,
+    request,
+  }) => {
     await page.goto('/?anh=1');
     const images = page.locator('img.ph-photo');
     await expect(images).toHaveCount(14);
     await expect(page.locator('[data-testid^="photo-slot-"]')).toHaveCount(0);
-    expect(await images.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('src')))).toEqual(
+    expect(
+      await images.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('src'))),
+    ).toEqual(
       [
         'ga-DL-poster',
         'ga-DL-phong',
@@ -89,6 +97,19 @@ test.describe('SCR-01 trang chủ & khối tìm phòng (HB-080)', () => {
     expect(url.searchParams.get('children')).toBe('1');
   });
 
+  test('dòng ngày dưới ô ngày in thứ + dd/MM/yyyy theo locale, nối bằng aria-describedby (HB-309)', async ({
+    page,
+  }) => {
+    await openHome(page);
+    const checkIn = page.getByRole('textbox', { name: 'Nhận phòng', exact: true });
+    await checkIn.fill('2026-12-24');
+    await page.getByRole('textbox', { name: 'Trả phòng', exact: true }).fill('2027-01-03');
+    await expect(page.getByTestId('search-checkIn-line')).toHaveText('T5, 24/12/2026');
+    await expect(page.getByTestId('search-checkOut-line')).toHaveText('CN, 03/01/2027');
+    await expect(checkIn).toHaveAttribute('aria-describedby', 'search-checkIn-line');
+    await expect(checkIn).toHaveAccessibleDescription('T5, 24/12/2026');
+  });
+
   test('validate tại chỗ chặn gửi khi kỳ không có đêm nào và giữ bản nhập (AC1)', async ({
     page,
   }) => {
@@ -140,9 +161,9 @@ test.describe('SCR-01 trang chủ & khối tìm phòng (HB-080)', () => {
       return element === null ? 0 : element.scrollWidth - element.clientWidth;
     });
     expect(overflow).toBeLessThanOrEqual(1);
-    const capacityHeights = await page.locator('.ph-class-cap').evaluateAll((nodes) =>
-      nodes.map((node) => Math.round(node.getBoundingClientRect().height)),
-    );
+    const capacityHeights = await page
+      .locator('.ph-class-cap')
+      .evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().height)));
     expect(capacityHeights).toHaveLength(5);
     expect(capacityHeights.every((height) => height < 40)).toBe(true);
   });

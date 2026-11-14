@@ -11,7 +11,7 @@ import {
 import { focusFieldByName } from '@pinehill/ui-web';
 import { issueMessage } from './account-copy';
 import type { FieldIssue } from './account-model';
-import { accountText as text } from './messages';
+import { useAccountText } from '../../../i18n/client';
 
 const GAP = '16px';
 const CONTROL = {
@@ -79,6 +79,7 @@ export function TextField({
   disabled: boolean;
   maxLength?: number;
 }): ReactElement {
+  const text = useAccountText();
   const id = useId();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
@@ -109,7 +110,7 @@ export function TextField({
       ) : null}
       {issue ? (
         <span id={errorId} role="alert" style={{ color: 'var(--color-danger, #9E1B32)' }}>
-          {issueMessage(issue)}
+          {issueMessage(text, issue)}
         </span>
       ) : null}
     </div>
@@ -168,6 +169,7 @@ export function SubmitButton({
   label: string;
   testId: string;
 }): ReactElement {
+  const text = useAccountText();
   return (
     <button
       type="submit"
@@ -238,6 +240,7 @@ export function useFocusFirstIssue(
 }
 
 export function SummaryAlert({ count }: { count: number }): ReactElement | null {
+  const text = useAccountText();
   if (count === 0) return null;
   return (
     <Notice

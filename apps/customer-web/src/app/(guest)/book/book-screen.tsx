@@ -5,21 +5,14 @@
  * tổng số bước bắt buộc ≤ 4). Điều khoản huỷ của gói hiển thị **trước** khi xác nhận; máy chủ nghi trùng
  * booking thì hỏi khách (mở booking cũ hay quay lại chỉnh thông tin) thay vì tự tạo thêm.
  */
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type FormEvent,
-  type ReactElement,
-} from 'react';
+import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createSessionClient } from '@pinehill/web-session/client';
+import { useGuestSession } from '../../../components/use-guest-session';
 import Link from 'next/link';
 import { ratePlanCodeSchema } from '@pinehill/contracts';
 import type { BookingSummary, Quote, RatePlanCode, RatePlanPublic } from '@pinehill/contracts';
 import { StateSurface, formatMoney, type ScreenState } from '@pinehill/ui-web';
-import { t } from '../../../lib/i18n';
+import { useT } from '../../../i18n/client';
 import { fetchRatePlans, type StayCriteria } from '../search/journey-api';
 import { criteriaIssue, parseCriteria } from '../search/search-params';
 import { QuoteSummary } from '../rooms/[roomTypeId]/quote-tables';
@@ -41,6 +34,7 @@ function planCodeOf(value: string): RatePlanCode | null {
 }
 
 function TermsPanel({ terms }: { terms: PlanTerms }): ReactElement {
+  const t = useT();
   return (
     <div data-testid="plan-terms" className="ph-muted-box">
       <h2 style={{ margin: 0, fontSize: 'var(--text-h2, 18px)' }}>{t('guest.book.terms.title')}</h2>
@@ -66,6 +60,7 @@ function DuplicatePanel({
   booking: BookingSummary;
   onKeepEditing: () => void;
 }): ReactElement {
+  const t = useT();
   return (
     <div role="alert" data-testid="duplicate-prompt" className="ph-alert-box">
       <p style={{ margin: 0 }}>{t('guest.book.duplicate', { code: booking.code })}</p>
@@ -82,6 +77,7 @@ function DuplicatePanel({
 }
 
 function ErrorPanel({ onRetry }: { onRetry: () => void }): ReactElement {
+  const t = useT();
   return (
     <div role="alert" className="ph-alert-box">
       <p style={{ margin: 0 }}>{t('guest.book.error')}</p>
@@ -103,6 +99,7 @@ function GuestForm({
   onChange: (guest: GuestDraft) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }): ReactElement {
+  const t = useT();
   return (
     <form
       data-testid="guest-form"
@@ -153,6 +150,7 @@ function BookFlow({
   roomTypeId: string;
   wantedPlan: RatePlanCode | null;
 }): ReactElement {
+  const t = useT();
   const router = useRouter();
 
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
@@ -162,7 +160,7 @@ function BookFlow({
   const [guest, setGuest] = useState<GuestDraft>(EMPTY_GUEST);
   const [duplicate, setDuplicate] = useState<BookingSummary | null>(null);
   const [readError, setReadError] = useState<unknown>(null);
-  const session = useMemo(() => createSessionClient({ kind: 'guest' }), []);
+  const session = useGuestSession();
 
   const runQuote = useCallback(
     async (plan: RatePlanCode): Promise<void> => {
@@ -221,8 +219,6 @@ function BookFlow({
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => () => session.dispose(), [session]);
 
   const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
@@ -316,6 +312,7 @@ function BookFlow({
 }
 
 function InvalidPanel({ query }: { query: string }): ReactElement {
+  const t = useT();
   const issue = criteriaIssue(new URLSearchParams(query));
   return (
     <section data-testid="book-screen" className="ph-page-shell">

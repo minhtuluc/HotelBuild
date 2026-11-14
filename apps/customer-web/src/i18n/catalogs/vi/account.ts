@@ -1,10 +1,5 @@
-import { makeTranslate } from '@pinehill/ui-web/messages';
-
-/**
- * Câu chữ SCR-08 (đăng ký/đăng nhập/quên và đặt lại mật khẩu khách). Danh mục chung (`lib/i18n.ts`) nằm
- * ngoài phạm vi ticket nên màn tự khai báo tại chỗ theo mẫu `pay/messages-payment.ts`.
- */
-export const messages = {
+/** Câu chữ tiếng Việt của SCR-08: đăng ký, đăng nhập, quên và đặt lại mật khẩu khách. */
+export const viAccount = {
   navLabel: 'Tài khoản khách',
   statusChecking: 'Đang kiểm tra phiên…',
   statusIn: 'Đã đăng nhập',
@@ -94,4 +89,4 @@ export const messages = {
   signedInAlready: 'Bạn đã đăng nhập.',
 } as const;
 
-export const accountText = makeTranslate(messages);
+export type AccountMessageKey = keyof typeof viAccount;
