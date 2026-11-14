@@ -3,8 +3,7 @@
  * Chỉ trình bày dữ liệu có sẵn (ngày, giá, mã hạng phòng); không tự tính giá hay áp luật nghiệp vụ.
  */
 import type { CSSProperties, ReactElement } from 'react';
-import { formatMoney } from '@pinehill/ui-web';
-import { dayMonth, weekdayShort } from '../i18n/format';
+import { dayMonth, money, weekdayShort } from '../i18n/format';
 import type { Locale } from '../i18n/locales';
 
 export interface CalendarDay {
@@ -36,12 +35,14 @@ export function stayNights(checkIn: string, checkOut: string): readonly string[]
 /** Tem in số tiền: phần số lớn, ký hiệu ₫ nhỏ, chữ số đều để so cột. */
 export function Denomination({
   amount,
+  locale,
   style,
 }: {
   amount: number;
+  locale: Locale;
   style?: CSSProperties;
 }): ReactElement {
-  const text = formatMoney(amount);
+  const text = money(amount, locale);
   const [number, ...rest] = text.split(/\s+/);
   return (
     <span className="ph-denomination" style={style}>

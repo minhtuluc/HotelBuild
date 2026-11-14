@@ -2,9 +2,9 @@
 
 /** Bảng giá từng đêm và tổng hợp của SCR-03 — in nguyên số `POST /quotes` trả (BR-RATE-17). */
 import type { ReactElement } from 'react';
-import { formatDateTimeVn, formatMoney } from '@pinehill/ui-web';
+
 import type { Quote } from '@pinehill/contracts';
-import { useLocale, useT } from '../../../../i18n/client';
+import { useDateTimeVn, useLocale, useMoney, useT } from '../../../../i18n/client';
 import { nightRows } from './quote-model';
 import { calendarDay, Denomination } from '../../../../components/stamps';
 import { calendarDate } from '../../../../i18n/format';
@@ -39,7 +39,7 @@ export function PriceStrip({ quote }: { quote: Quote }): ReactElement {
                   <span style={{ fontSize: 12, fontWeight: 600 }}>
                     {day?.weekday} {day?.dayMonth}
                   </span>
-                  <Denomination amount={row.nightlyPrice} />
+                  <Denomination amount={row.nightlyPrice} locale={locale} />
                 </div>
               </div>
             );
@@ -47,7 +47,7 @@ export function PriceStrip({ quote }: { quote: Quote }): ReactElement {
         </div>
         <div className="ph-price-total">
           <small>{t('guest.rooms.strip.total', { nights: rows.length })}</small>
-          <Denomination amount={quote.subtotal} />
+          <Denomination amount={quote.subtotal} locale={locale} />
         </div>
       </div>
       {hasClamped ? (
@@ -60,6 +60,7 @@ export function PriceStrip({ quote }: { quote: Quote }): ReactElement {
 }
 
 export function NightsTable({ quote }: { quote: Quote }): ReactElement {
+  const fmtMoney = useMoney();
   const locale = useLocale();
   const t = useT();
   return (
@@ -88,14 +89,14 @@ export function NightsTable({ quote }: { quote: Quote }): ReactElement {
                   {calendarDate(row.date, locale)}
                 </td>
                 <td className="ph-tabular" data-label={t('guest.rooms.col.basePrice')}>
-                  {formatMoney(row.basePrice)}
+                  {fmtMoney(row.basePrice)}
                 </td>
                 <td
                   className="ph-tabular"
                   style={{ fontWeight: 600 }}
                   data-label={t('guest.rooms.col.nightlyPrice')}
                 >
-                  {formatMoney(row.nightlyPrice)}
+                  {fmtMoney(row.nightlyPrice)}
                 </td>
                 <td data-label={t('guest.rooms.col.flags')}>
                   {row.clamped ? t('guest.rooms.flag.clamped') : t('guest.rooms.flag.none')}
@@ -113,17 +114,19 @@ export function NightsTable({ quote }: { quote: Quote }): ReactElement {
 }
 
 export function QuoteSummary({ quote }: { quote: Quote }): ReactElement {
+  const fmtTime = useDateTimeVn();
+  const fmtMoney = useMoney();
   const t = useT();
   const rows: readonly (readonly [string, string])[] = [
-    [t('guest.rooms.summary.subtotal'), formatMoney(quote.subtotal)],
-    [t('guest.rooms.summary.discount'), formatMoney(quote.discountAmount)],
-    [t('guest.rooms.summary.total'), formatMoney(quote.total)],
+    [t('guest.rooms.summary.subtotal'), fmtMoney(quote.subtotal)],
+    [t('guest.rooms.summary.discount'), fmtMoney(quote.discountAmount)],
+    [t('guest.rooms.summary.total'), fmtMoney(quote.total)],
     [
       t('guest.rooms.summary.deposit'),
-      `${formatMoney(quote.depositAmount)} (${quote.depositPercent}%)`,
+      `${fmtMoney(quote.depositAmount)} (${quote.depositPercent}%)`,
     ],
-    [t('guest.rooms.summary.quotedAt'), formatDateTimeVn(quote.quotedAt)],
-    [t('guest.rooms.summary.expiresAt'), formatDateTimeVn(quote.expiresAt)],
+    [t('guest.rooms.summary.quotedAt'), fmtTime(quote.quotedAt)],
+    [t('guest.rooms.summary.expiresAt'), fmtTime(quote.expiresAt)],
   ];
   return (
     <div className="ph-card">

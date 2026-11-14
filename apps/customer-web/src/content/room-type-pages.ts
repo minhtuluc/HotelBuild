@@ -58,6 +58,21 @@ const COPY: Readonly<Record<Locale, Partial<Readonly<Record<RoomTypeCode, RoomTy
       illustrative: true,
     },
   },
+  en: {
+    DLX: {
+      summary:
+        'Triple cabin: one room with sleeping places for three adults, so a group of three does not need a second room.',
+      description: [
+        'Deluxe is the class for three people travelling together: a couple with a parent, three friends, or a family with an older child. Everyone gets their own sleeping place in the same room.',
+        'Deluxe is priced night by night and varies with the season, weekends and how many nights you stay. Choose a station and dates in the search to see the price printed on each leg before you hold.',
+      ],
+      suits: 'Groups of three adults, or families with an older child',
+      seoTitle: 'Deluxe class (triple cabin) · Pine Hill',
+      seoDescription:
+        'Pine Hill Deluxe: sleeping places for three adults, available at all three properties in Da Lat, Phan Thiet and Vung Tau. Prices shown night by night once you pick dates.',
+      illustrative: true,
+    },
+  },
 };
 
 export function roomTypePageKey(code: string): RoomTypePageKey | undefined {

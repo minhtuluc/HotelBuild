@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { LocaleLink as Link } from '../../../components/locale-link';
 import { useGuestSession } from '../../../components/use-guest-session';
 import { isApiError } from '@pinehill/api-client';
 import { bookingStatusSchema } from '@pinehill/contracts';
@@ -14,11 +14,10 @@ import type { BookingSummary } from '@pinehill/contracts';
 import {
   AccessDeniedPanel,
   StateSurface,
-  formatMoney,
   formatStatusWithEnum,
   type ScreenState,
 } from '@pinehill/ui-web';
-import { useT, useTranslators } from '../../../i18n/client';
+import { useMoney, useT, useTranslators } from '../../../i18n/client';
 import { fetchMyBookings } from './api';
 import {
   NO_FILTERS,
@@ -32,6 +31,7 @@ import {
   type BookingFilters,
 } from './model';
 import { formatCountdown, holdView } from '../booking/booking-model';
+import { useLocalePath } from '../../../i18n/client';
 
 type BookingStatusValue = BookingFilters['status'];
 
@@ -106,6 +106,7 @@ function FilterForm({
 }
 
 function BookingRow({ booking }: { booking: BookingSummary }): ReactElement {
+  const fmtMoney = useMoney();
   const text = useTranslators();
   const t = useT();
   const hold = holdView(booking, Date.now());
@@ -128,9 +129,9 @@ function BookingRow({ booking }: { booking: BookingSummary }): ReactElement {
       </td>
       <td>{formatStatusWithEnum(t(STATUS_KEYS[booking.status]), booking.status)}</td>
       <td className="ph-tabular">{stayText(text, booking)}</td>
-      <td className="ph-tabular">{formatMoney(booking.totalAmount)}</td>
+      <td className="ph-tabular">{fmtMoney(booking.totalAmount)}</td>
       <td className="ph-tabular" style={{ fontWeight: 500 }}>
-        {formatMoney(booking.balanceDue)}
+        {fmtMoney(booking.balanceDue)}
       </td>
       <td className="ph-tabular">
         {hold.kind === 'active' ? formatCountdown(hold.remainingMs) : t('guest.bookings.noHold')}
@@ -197,6 +198,7 @@ function ReadErrorBlock({ onRetry }: { onRetry: () => void }): ReactElement {
 }
 
 export function BookingsScreen(): ReactElement {
+  const localPath = useLocalePath();
   const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -243,7 +245,7 @@ export function BookingsScreen(): ReactElement {
 
   const applyFilters = (next: BookingFilters): void => {
     const query = filtersToQuery(next);
-    router.push(query === '' ? '/bookings' : `/bookings?${query}`);
+    router.push(localPath(query === '' ? '/bookings' : `/bookings?${query}`));
   };
 
   const empty = bookings.length === 0;

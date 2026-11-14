@@ -3,7 +3,7 @@
  * các hạng khác. Component máy chủ; chỉ gallery chạy ở trình duyệt.
  */
 import type { ReactElement } from 'react';
-import Link from 'next/link';
+import { LocaleLink as Link } from '../../../../components/locale-link';
 import { Breadcrumbs } from '../../../../components/content/breadcrumbs';
 import { GalleryGrid, type GalleryItem } from '../../../../components/content/gallery-grid';
 import { JsonLd, breadcrumbList } from '../../../../components/content/json-ld';
@@ -19,6 +19,7 @@ import {
 import type { Translators } from '../../../../i18n/translate';
 import { availablePhotos } from '../../../../lib/photos';
 import { absoluteUrl } from '../../../../lib/site';
+import { localizePath } from '../../../../i18n/locales';
 
 interface CabinProps {
   readonly pageKey: RoomTypePageKey;
@@ -148,14 +149,14 @@ export function CabinSheet(props: CabinProps): ReactElement {
           '@type': 'HotelRoom',
           name: title,
           description: copy.summary,
-          url: absoluteUrl(path),
+          url: absoluteUrl(localizePath(path, text.locale)),
           occupancy: { '@type': 'QuantitativeValue', maxValue: pageKey.sleeps },
         }}
       />
       <JsonLd
         data={breadcrumbList([
-          { name: t('guest.content.home'), url: absoluteUrl('/') },
-          { name: cabin.name, url: absoluteUrl(path) },
+          { name: t('guest.content.home'), url: absoluteUrl(localizePath('/', text.locale)) },
+          { name: cabin.name, url: absoluteUrl(localizePath(path, text.locale)) },
         ])}
       />
       <div className="ph-page-shell ph-content-shell">

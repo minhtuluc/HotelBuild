@@ -11,7 +11,7 @@
  */
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { LocaleLink as Link } from '../../../../components/locale-link';
 import { useGuestSession } from '../../../../components/use-guest-session';
 import { isApiError } from '@pinehill/api-client';
 import type { BookingStatus, BookingSummary } from '@pinehill/contracts';
@@ -32,6 +32,7 @@ import {
   MoneyTable,
   StayTable,
 } from './booking-result-parts';
+import { useLocalePath } from '../../../../i18n/client';
 
 export { ConfirmationBlock, StayTable };
 
@@ -58,6 +59,7 @@ function ContinueButton({
   hold: HoldView;
   bookingId: string;
 }): ReactElement | null {
+  const localPath = useLocalePath();
   const t = useT();
   const router = useRouter();
   const action = continueAction(booking, hold);
@@ -69,7 +71,7 @@ function ContinueButton({
       className="ph-btn-accent ph-btn-lg"
       disabled={action.kind === 'locked'}
       onClick={() => {
-        router.push(continueHref(bookingId));
+        router.push(localPath(continueHref(bookingId)));
       }}
     >
       {t('guest.booking.continue')}
@@ -185,6 +187,7 @@ function BookingDetails({
 }
 
 function NotFoundBlock(): ReactElement {
+  const localPath = useLocalePath();
   const t = useT();
   return (
     <section role="alert" data-testid="booking-not-found" className="ph-page-shell">
@@ -194,7 +197,7 @@ function NotFoundBlock(): ReactElement {
       <div className="ph-alert-box">
         <p style={{ margin: 0 }}>{t('guest.booking.notFound')}</p>
         <p style={{ margin: 0 }}>{t('guest.booking.notFoundHint')}</p>
-        <Link href="/" className="ph-btn">
+        <Link href={localPath('/')} className="ph-btn">
           {t('guest.results.backHome')}
         </Link>
       </div>

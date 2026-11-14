@@ -1,7 +1,7 @@
 'use client';
 import styles from './payment.module.css';
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import { LocaleLink as Link } from '../../../../../components/locale-link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { createSessionClient } from '@pinehill/web-session/client';
 import { StateSurface } from '@pinehill/ui-web';

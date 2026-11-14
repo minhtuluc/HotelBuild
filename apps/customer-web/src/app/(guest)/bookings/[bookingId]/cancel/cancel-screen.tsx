@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
+import { LocaleLink as Link } from '../../../../../components/locale-link';
 import { createSessionClient } from '@pinehill/web-session/client';
 import { isApiError } from '@pinehill/api-client';
 import type { BookingSummary, CancelPreview, CancelResponse } from '@pinehill/contracts';
@@ -14,13 +14,11 @@ import {
   AccessDeniedPanel,
   StateSurface,
   actionMessageKey,
-  formatDateTimeVn,
-  formatMoney,
   formatStatusWithEnum,
   mapErrorToUiAction,
   type ScreenState,
 } from '@pinehill/ui-web';
-import { useT, useTranslators } from '../../../../../i18n/client';
+import { useDateTimeVn, useMoney, useT, useTranslators } from '../../../../../i18n/client';
 import type { CustomerMessageKey } from '../../../../../i18n/catalogs';
 import { fetchBooking } from '../../../booking/booking-api';
 import { fetchCancelPreview, cancelBooking } from '../../api';
@@ -37,6 +35,7 @@ import {
   type CancelStep,
   type CancellationBreakdown,
 } from '../../cancel-model';
+import { useLocalePath } from '../../../../../i18n/client';
 
 const REFUND_KEYS: Readonly<Record<'paid' | 'requested' | 'penalty' | 'fee', CustomerMessageKey>> =
   {
@@ -47,6 +46,7 @@ const REFUND_KEYS: Readonly<Record<'paid' | 'requested' | 'penalty' | 'fee', Cus
   };
 
 function BreakdownPanel({ breakdown }: { breakdown: CancellationBreakdown }): ReactElement {
+  const fmtMoney = useMoney();
   const t = useT();
   return (
     <section
@@ -75,7 +75,7 @@ function BreakdownPanel({ breakdown }: { breakdown: CancellationBreakdown }): Re
                   className="ph-tabular"
                   style={{ fontWeight: row.key === 'requested' ? 500 : 400 }}
                 >
-                  {formatMoney(row.amount)}
+                  {fmtMoney(row.amount)}
                 </td>
               </tr>
             ))}
@@ -87,6 +87,8 @@ function BreakdownPanel({ breakdown }: { breakdown: CancellationBreakdown }): Re
 }
 
 function CancelResult({ result }: { result: CancelResponse }): ReactElement {
+  const fmtMoney = useMoney();
+  const fmtTime = useDateTimeVn();
   const t = useT();
   return (
     <section
@@ -106,7 +108,7 @@ function CancelResult({ result }: { result: CancelResponse }): ReactElement {
           </strong>
         </li>
         <li>
-          <span>{t('guest.cancel.result.at', { time: formatDateTimeVn(result.cancelledAt) })}</span>
+          <span>{t('guest.cancel.result.at', { time: fmtTime(result.cancelledAt) })}</span>
           <span>
             {t('guest.cancel.result.released', { count: result.releasedAssignmentCount })}
           </span>
@@ -121,7 +123,7 @@ function CancelResult({ result }: { result: CancelResponse }): ReactElement {
               amount:
                 result.refundRequest.approvedAmount === null
                   ? t('guest.cancel.result.refundPending')
-                  : formatMoney(result.refundRequest.approvedAmount),
+                  : fmtMoney(result.refundRequest.approvedAmount),
             })}
       </p>
       <div>
@@ -257,6 +259,7 @@ function CancelMessages({ alert, stale }: { alert: string | null; stale: boolean
 }
 
 export function CancelScreen(): ReactElement {
+  const localPath = useLocalePath();
   const text = useTranslators();
   const t = useT();
   const routeParams = useParams<{ bookingId: string }>();
@@ -368,7 +371,7 @@ export function CancelScreen(): ReactElement {
         </div>
         <div className="ph-alert-box">
           <p style={{ margin: 0 }}>{t('guest.booking.notFound')}</p>
-          <Link href="/bookings" className="ph-btn">
+          <Link href={localPath('/bookings')} className="ph-btn">
             {t('guest.bookings.back')}
           </Link>
         </div>

@@ -4,6 +4,7 @@
  */
 import type { ReactElement } from 'react';
 import type { Station } from '../../content/landing-content';
+import { LocaleLink } from '../locale-link';
 
 export function RouteMap({
   stations,
@@ -20,7 +21,7 @@ export function RouteMap({
     <ol className="ph-route" aria-label={label}>
       {stations.map((station) => (
         <li key={station.code} className="ph-route-stop">
-          <a
+          <LocaleLink
             href={hrefFor(station.code)}
             aria-current={station.code === current ? 'page' : undefined}
           >
@@ -28,7 +29,7 @@ export function RouteMap({
             <span className="ph-route-code">{station.code}</span>
             <span className="ph-route-name">{station.name}</span>
             <span className="ph-route-meta">{station.altitude}</span>
-          </a>
+          </LocaleLink>
         </li>
       ))}
     </ol>

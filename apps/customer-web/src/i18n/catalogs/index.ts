@@ -3,6 +3,9 @@
  * (kiểu `Record<Key, string>` báo thiếu khi biên dịch, test `catalogs.spec.ts` chặn chuỗi rỗng).
  */
 import type { Locale } from '../locales';
+import { enAccount } from './en/account';
+import { enCustomer } from './en/customer';
+import { enPayment } from './en/payment';
 import { viAccount, type AccountMessageKey } from './vi/account';
 import { viCustomer, type CustomerMessageKey } from './vi/customer';
 import { viPayment, type PaymentMessageKey } from './vi/payment';
@@ -21,4 +24,5 @@ export interface LocaleCatalogs {
 
 export const CATALOGS: Readonly<Record<Locale, LocaleCatalogs>> = {
   vi: { customer: viCustomer, account: viAccount, payment: viPayment },
+  en: { customer: enCustomer, account: enAccount, payment: enPayment },
 };

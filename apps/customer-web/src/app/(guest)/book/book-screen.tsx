@@ -8,11 +8,11 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useGuestSession } from '../../../components/use-guest-session';
-import Link from 'next/link';
+import { LocaleLink as Link } from '../../../components/locale-link';
 import { ratePlanCodeSchema } from '@pinehill/contracts';
 import type { BookingSummary, Quote, RatePlanCode, RatePlanPublic } from '@pinehill/contracts';
-import { StateSurface, formatMoney, type ScreenState } from '@pinehill/ui-web';
-import { useT } from '../../../i18n/client';
+import { StateSurface, type ScreenState } from '@pinehill/ui-web';
+import { useMoney, useT } from '../../../i18n/client';
 import { fetchRatePlans, type StayCriteria } from '../search/journey-api';
 import { criteriaIssue, parseCriteria } from '../search/search-params';
 import { QuoteSummary } from '../rooms/[roomTypeId]/quote-tables';
@@ -25,6 +25,7 @@ import {
   type GuestDraft,
   type PlanTerms,
 } from './book-model';
+import { useLocalePath } from '../../../i18n/client';
 
 const EMPTY_GUEST: GuestDraft = { fullName: '', phone: '', note: '' };
 
@@ -99,6 +100,7 @@ function GuestForm({
   onChange: (guest: GuestDraft) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }): ReactElement {
+  const fmtMoney = useMoney();
   const t = useT();
   return (
     <form
@@ -132,7 +134,7 @@ function GuestForm({
         />
       </label>
       <p role="note" style={{ margin: 0, fontSize: 14, color: 'var(--color-textMuted)' }}>
-        {t('guest.book.payNote', { amount: formatMoney(quote.depositAmount) })}
+        {t('guest.book.payNote', { amount: fmtMoney(quote.depositAmount) })}
       </p>
       <button type="submit" className="ph-btn-accent ph-btn-lg">
         {t('guest.book.submit')}
@@ -150,6 +152,7 @@ function BookFlow({
   roomTypeId: string;
   wantedPlan: RatePlanCode | null;
 }): ReactElement {
+  const localPath = useLocalePath();
   const t = useT();
   const router = useRouter();
 
@@ -248,7 +251,7 @@ function BookFlow({
         setDuplicate(booking);
         return;
       }
-      router.push(`/booking/${encodeURIComponent(booking.id)}`);
+      router.push(localPath(`/booking/${encodeURIComponent(booking.id)}`));
     } catch (caught) {
       setReadError(caught);
       setState({ kind: 'ready' });
@@ -312,6 +315,7 @@ function BookFlow({
 }
 
 function InvalidPanel({ query }: { query: string }): ReactElement {
+  const localPath = useLocalePath();
   const t = useT();
   const issue = criteriaIssue(new URLSearchParams(query));
   return (
@@ -323,7 +327,7 @@ function InvalidPanel({ query }: { query: string }): ReactElement {
         <p role="alert" style={{ margin: 0 }}>
           {t('guest.results.invalid', { field: issue.field })}
         </p>
-        <Link href="/" className="ph-btn">
+        <Link href={localPath('/')} className="ph-btn">
           {t('guest.results.backHome')}
         </Link>
       </div>

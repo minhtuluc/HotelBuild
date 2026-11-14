@@ -24,6 +24,7 @@ import { calendarDay, stayNights } from '../../../components/stamps';
 import { DateLine } from '../../../components/date-line';
 import { defaultDraft, searchHref, validateSearch, type SearchDraft } from './search-model';
 import { fetchPublicProperties, initialPropertyId } from './public-properties';
+import { useLocalePath } from '../../../i18n/client';
 
 /** Số chặng in tối đa trên vé; kỳ dài hơn in "+n chặng". */
 const MAX_SEGMENTS = 6;
@@ -190,6 +191,7 @@ export function SearchBlock({
   /** Trang ga dẫn về (`/?ga=<slug>`): chọn sẵn cơ sở có tên chứa chuỗi này. */
   preferredPropertyName?: string | undefined;
 }): ReactElement {
+  const localPath = useLocalePath();
   const t = useT();
   const router = useRouter();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
@@ -235,7 +237,7 @@ export function SearchBlock({
       setState({ kind: 'validationError', details: issues });
       return;
     }
-    router.push(searchHref(draft));
+    router.push(localPath(searchHref(draft)));
   };
 
   const selectedProperty = properties.find((property) => property.id === draft.propertyId);

@@ -6,7 +6,8 @@
 import { createContext, useContext, type ReactElement, type ReactNode } from 'react';
 import { I18nProvider } from '@pinehill/ui-web';
 import { CATALOGS, type PaymentCatalog } from './catalogs';
-import { DEFAULT_LOCALE, type Locale } from './locales';
+import { dateTimeVn, money } from './format';
+import { DEFAULT_LOCALE, localizePath, type Locale } from './locales';
 import {
   translatorsFor,
   type AccountTranslate,
@@ -33,6 +34,24 @@ export function LocaleProvider({
 
 export function useLocale(): Locale {
   return useContext(LocaleContext);
+}
+
+/** Tiền VND theo dấu phân cách của locale đang xem (`1.222.000 ₫` / `1,222,000 ₫`). */
+export function useMoney(): (amountVnd: number) => string {
+  const locale = useLocale();
+  return (amountVnd) => money(amountVnd, locale);
+}
+
+/** Mốc thời gian theo giờ Việt Nam, nhãn giờ theo locale. */
+export function useDateTimeVn(): (isoUtc: string) => string {
+  const { locale, t } = translatorsFor(useLocale());
+  return (isoUtc) => dateTimeVn(isoUtc, locale, t('guest.time.vn'));
+}
+
+/** Hàm thêm tiền tố locale cho đường dẫn nội bộ (`router.push`, `<a href>`, `next` sau đăng nhập). */
+export function useLocalePath(): (href: string) => string {
+  const locale = useLocale();
+  return (href) => localizePath(href, locale);
 }
 
 /** Cả bộ translator + locale, cho hàm phụ cần định dạng ngày và câu chữ cùng lúc. */

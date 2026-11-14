@@ -260,7 +260,7 @@ Không có cỡ dưới 44px. Nút trong cùng một hàng luôn cùng cỡ (kh�
 - Mỗi gói một hàng trên bảng ga; các mốc là ô có thanh trên 6px: xanh = hoàn 100%, hổ phách = 50%, đỏ đứt nét = 0%.
 
 ### Navigation
-- **Khách:** dải bảng ga trên cùng, liên kết chữ hoa cạnh hẹp 17px, hover hổ phách, đồng hồ giờ VN bên phải; dưới 760px liên kết cuộn ngang một hàng.
+- **Khách:** dải bảng ga trên cùng, liên kết chữ hoa cạnh hẹp 17px, hover hổ phách, ô chọn ngôn ngữ (`<select>` viền hổ phách, tên ngôn ngữ viết bằng chính ngôn ngữ đó, không dùng cờ) và đồng hồ giờ VN bên phải; dưới 760px liên kết cuộn ngang một hàng, nhãn chữ của đồng hồ chỉ còn cho trình đọc màn hình để ô ngôn ngữ và giờ vừa một hàng với logo ở 360px.
 - **Back-office:** thanh bên bảng ga, tiêu đề nhóm chữ hoa hổ phách, mục đang mở là tấm vé hồng khuyết mép phải (`aria-current="page"`). Mục điều hướng cao 40px (danh sách dày ~30 mục, cách nhau 1px; vẫn trên mức 24px của WCAG 2.5.8).
 
 ### Photo Slots

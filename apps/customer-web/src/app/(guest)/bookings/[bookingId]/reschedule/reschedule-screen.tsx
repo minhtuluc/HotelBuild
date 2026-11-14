@@ -11,7 +11,7 @@
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
+import { LocaleLink as Link } from '../../../../../components/locale-link';
 import { createSessionClient } from '@pinehill/web-session/client';
 import { isApiError } from '@pinehill/api-client';
 import { ratePlanCodeSchema } from '@pinehill/contracts';
@@ -31,8 +31,10 @@ import { rescheduleBooking } from '../../api';
 import { STATUS_KEYS, stayText } from '../../model';
 import { STAY_ISSUE_KEYS, isSameStay, stayIssue } from '../../reschedule-model';
 import { RescheduleForm, RescheduleOutcome } from './reschedule-parts';
+import { useLocalePath } from '../../../../../i18n/client';
 
 export function RescheduleScreen(): ReactElement {
+  const localPath = useLocalePath();
   const text = useTranslators();
   const t = useT();
   const routeParams = useParams<{ bookingId: string }>();
@@ -162,7 +164,7 @@ export function RescheduleScreen(): ReactElement {
         </div>
         <div className="ph-alert-box">
           <p style={{ margin: 0 }}>{t('guest.booking.notFound')}</p>
-          <Link href="/bookings" className="ph-btn">
+          <Link href={localPath('/bookings')} className="ph-btn">
             {t('guest.bookings.back')}
           </Link>
         </div>

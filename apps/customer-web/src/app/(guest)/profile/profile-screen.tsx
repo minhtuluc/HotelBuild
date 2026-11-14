@@ -11,11 +11,10 @@ import {
   AccessDeniedPanel,
   StateSurface,
   actionMessageKey,
-  formatDateTimeVn,
   mapErrorToUiAction,
   type ScreenState,
 } from '@pinehill/ui-web';
-import { useT } from '../../../i18n/client';
+import { useDateTimeVn, useT } from '../../../i18n/client';
 import type { CustomerMessageKey } from '../../../i18n/catalogs';
 import { fetchMyLoyalty, fetchMyProfile } from './profile-api';
 import {
@@ -43,6 +42,7 @@ const LOYALTY_KEYS: Readonly<Record<LoyaltyRow['key'], CustomerMessageKey>> = {
 };
 
 function ProfileCard({ guest }: { guest: GuestSummary }): ReactElement {
+  const fmtTime = useDateTimeVn();
   const t = useT();
   return (
     <div className="ph-table-wrap">
@@ -63,7 +63,7 @@ function ProfileCard({ guest }: { guest: GuestSummary }): ReactElement {
               <th scope="row">{t(PROFILE_KEYS[row.key])}</th>
               <td className="ph-tabular">
                 {row.key === 'created'
-                  ? formatDateTimeVn(row.value)
+                  ? fmtTime(row.value)
                   : row.key === 'consent'
                     ? t(
                         row.value === 'yes'
