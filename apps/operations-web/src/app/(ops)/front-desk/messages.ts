@@ -37,7 +37,7 @@ const messages = {
   roomEmpty: 'Chưa tải được phòng ACTIVE của loại phòng này.',
   roomIssue: 'Chọn đúng {count} phòng trước khi gửi.',
   earlyCheckIn: 'Nhận phòng sớm',
-  earlyNote: 'Phụ thu nhận sớm (nếu có) do hệ thống tính và hiện sau khi nhận phòng.',
+  earlyNote: 'Phụ thu nhận sớm (nếu có) do máy chủ tính và hiện sau khi nhận phòng.',
   idNumber: 'Số giấy tờ tuỳ thân (tuỳ chọn)',
   note: 'Ghi chú (tuỳ chọn)',
   submitCheckIn: 'Xác nhận nhận phòng',
