@@ -13,6 +13,7 @@ export function Photo({
   preview,
   fallback,
   className,
+  eager,
 }: {
   slot: PhotoSlot | undefined;
   locale: Locale;
@@ -20,6 +21,8 @@ export function Photo({
   preview: boolean;
   fallback?: ReactNode | undefined;
   className?: string | undefined;
+  /** Ảnh LCP (đầu trang ga): tải ngay, ưu tiên cao thay vì `lazy`. */
+  eager?: boolean | undefined;
 }): ReactElement | null {
   if (slot === undefined) return fallback === undefined ? null : <>{fallback}</>;
   if (src !== undefined) {
@@ -28,7 +31,8 @@ export function Photo({
         className={`ph-photo ${className ?? ''}`}
         src={src}
         alt={photoAlt(slot, locale)}
-        loading="lazy"
+        loading={eager === true ? 'eager' : 'lazy'}
+        fetchPriority={eager === true ? 'high' : 'auto'}
         decoding="async"
         style={{ aspectRatio: slot.ratio }}
       />

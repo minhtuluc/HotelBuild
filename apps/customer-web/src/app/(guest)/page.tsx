@@ -9,6 +9,9 @@ import { POSTERS } from '../../components/station-posters';
 import { Photo } from '../../components/photo';
 import { ALL_PHOTO_SLOTS, slotById } from '../../content/photo-slots';
 import { availablePhotos } from '../../lib/photos';
+import { RouteMap } from '../../components/content/route-map';
+import { propertyPageByStation, propertyPageKey } from '../../content/property-pages';
+import { roomTypePageKey } from '../../content/room-type-pages';
 import { ApiProbe } from './api-probe';
 import { SearchBlock } from './search/search-block';
 
@@ -29,22 +32,15 @@ function HeroIntro(): ReactElement {
 }
 
 /** Sơ đồ tuyến: ba ga trên một đường, độ cao ghi cạnh mỗi ga. */
-function RouteMap(): ReactElement {
-  const { t, locale } = serverTranslators();
-  const content = landingContent(locale);
+/** Ga đã có tờ giới thiệu thì thêm link "Đọc thêm"; ga chưa có trang thì không có link (HB-310). */
+function StationMore({ code, name }: { code: string; name: string }): ReactElement | null {
+  const { t } = serverTranslators();
+  const page = propertyPageByStation(code);
+  if (page === undefined) return null;
   return (
-    <ol className="ph-route" aria-label={t('guest.route.title')}>
-      {content.stations.map((station) => (
-        <li key={station.code} className="ph-route-stop">
-          <a href={`#ga-${station.code}`}>
-            <span className="ph-route-dot" aria-hidden="true" />
-            <span className="ph-route-code">{station.code}</span>
-            <span className="ph-route-name">{station.name}</span>
-            <span className="ph-route-meta">{station.altitude}</span>
-          </a>
-        </li>
-      ))}
-    </ol>
+    <Link className="ph-station-more" href={`/stays/${page.slug}`}>
+      {t('guest.station.readMore', { name })} →
+    </Link>
   );
 }
 
@@ -82,7 +78,11 @@ function Stations({ photos }: { photos: PhotoContext }): ReactElement {
           <h2 id="route-title">{t('guest.route.title')}</h2>
           <p>{t('guest.route.lede')}</p>
         </header>
-        <RouteMap />
+        <RouteMap
+          stations={content.stations}
+          label={t('guest.route.title')}
+          hrefFor={(code) => `#ga-${code}`}
+        />
         <div className="ph-stations">
           {content.stations.map((station, index) => {
             const Poster = POSTERS[station.code];
@@ -129,6 +129,7 @@ function Stations({ photos }: { photos: PhotoContext }): ReactElement {
                     </div>
                   </dl>
                   <p className="ph-station-note">{station.note}</p>
+                  <StationMore code={station.code} name={station.name} />
                   {hasPhoto(photos, `ga-${station.code}-phong`, `ga-${station.code}-canh`) ? (
                     <div className="ph-station-shots">
                       {slotPhoto(photos, `ga-${station.code}-phong`)}
@@ -163,7 +164,13 @@ function Classes({ photos }: { photos: PhotoContext }): ReactElement {
                 <span className="ph-class-code">{cabin.code}</span>
               </span>
               <span className="ph-class-title">
-                <span className="ph-class-name">{cabin.name}</span>
+                <span className="ph-class-name">
+                  {roomTypePageKey(cabin.code) === undefined ? (
+                    cabin.name
+                  ) : (
+                    <Link href={`/room-types/${cabin.code}`}>{cabin.name}</Link>
+                  )}
+                </span>
                 <span className="ph-class-cabin">{cabin.cabin}</span>
               </span>
               <span className="ph-class-cap">{cabin.capacity}</span>
@@ -359,7 +366,12 @@ export default async function GuestHomePage({
     <>
       <div className="ph-hero" id="search-anchor">
         <div id="search-block" className="ph-hero-inner" style={{ scrollMarginTop: 16 }}>
-          <SearchBlock intro={<HeroIntro />} />
+          <SearchBlock
+            intro={<HeroIntro />}
+            preferredPropertyName={
+              typeof query.ga === 'string' ? propertyPageKey(query.ga)?.apiNameIncludes : undefined
+            }
+          />
         </div>
       </div>
 

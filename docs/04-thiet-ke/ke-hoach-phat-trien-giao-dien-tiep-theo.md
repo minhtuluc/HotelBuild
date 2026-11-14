@@ -1,6 +1,6 @@
 # Kế hoạch phát triển giao diện frontend sau PR #298
 
-**Trạng thái:** Đã chốt (frontend lead, 13/11/2026); quyết định ở §6 · **Ngày:** 13/11/2026 · **Phạm vi:** `apps/customer-web`, `apps/operations-web`, `packages/ui-web` · **Liên quan:** [Kế hoạch nội dung tĩnh](ke-hoach-noi-dung-web-tinh.md), [Kế hoạch đa ngôn ngữ](ke-hoach-da-ngon-ngu-customer-web.md), [ADR-019](adr/ADR-019-he-thong-thiet-ke-tuyen-pine-hill.md), [DESIGN.md](../../DESIGN.md), [Sổ nợ kỹ thuật](../07-ban-giao/no-ky-thuat.md), [Ảnh trang khách](anh-trang-khach.md)
+**Trạng thái:** Đã chốt (frontend lead, 13/11/2026); quyết định ở §6; đánh giá báo cáo góp ý UI/UX ở §8 (14/11/2026) · **Ngày:** 13/11/2026 · **Phạm vi:** `apps/customer-web`, `apps/operations-web`, `packages/ui-web` · **Liên quan:** [Kế hoạch nội dung tĩnh](ke-hoach-noi-dung-web-tinh.md), [Kế hoạch đa ngôn ngữ](ke-hoach-da-ngon-ngu-customer-web.md), [ADR-019](adr/ADR-019-he-thong-thiet-ke-tuyen-pine-hill.md), [DESIGN.md](../../DESIGN.md), [Sổ nợ kỹ thuật](../07-ban-giao/no-ky-thuat.md), [Ảnh trang khách](anh-trang-khach.md)
 
 Tài liệu này ghép hai hướng PR #298 đã đặt ra (nội dung tĩnh, đa ngôn ngữ) với các việc frontend mà backend vừa mở khoá trên `main`, rồi xếp thành các đợt có thứ tự phụ thuộc.
 
@@ -45,6 +45,9 @@ Trong lúc demo, mọi dữ liệu minh hoạ vẫn mang cờ (`illustrative`, `
 | P1 | E2E SCR-07 (3 ca) đỏ khi chạy trên dev server: API trả 401 ngay sau khi tạo booking thành công | Chạy lại bằng cấu hình chuẩn (build + `next start`) ở đợt 1; lỗi thật thì sửa trong đợt |
 | P2 | E2E SCR-12 khoá câu "hợp đồng chưa có trường này…", câu kỹ thuật hiện thẳng cho khách | Đổi ở đợt 2 khi chuyển câu chữ sang catalog: ticket HB-309 ghi rõ việc đổi assertion và lý do, test khoá mới được ghim lại theo quy trình của AGENTS.md |
 | P3 | Ticket HB-300 và HB-305 trên `main` vẫn mô tả hướng Lyon/Amanoi Editorial | Không sửa đặc tả cũ; ticket mới (HB-308+) dẫn chiếu ADR-019 và DESIGN.md |
+| P4 | Trang `/dining`: Pine Hill không có dịch vụ ăn uống trong nghiệp vụ (§8.3) | **Chờ chủ dự án:** đổi thành trang "Quanh ga" hay bỏ |
+| P5 | Khối "Vé gồm / Chưa gồm", dịch vụ tại ga: chưa có điều khoản (Q12) | **Chờ chủ dự án** đưa điều khoản vào `docs/02` |
+| P6 | Nút "giữ chỗ qua email" khi lỗi mạng mở kênh đặt phòng ngoài hệ thống (§8.3) | **Chờ chủ dự án:** đề xuất chỉ hiện liên hệ lễ tân |
 
 ## 3. Thứ tự đề xuất và lý do
 
@@ -104,9 +107,12 @@ Mỗi màn có unit test cho model, E2E trên API giả và axe.
 
 ### Đợt 4 — Nhân nội dung
 
-- 3 trang cơ sở, 5 trang hạng phòng dùng chung, 5 trang cấp chuỗi (gallery, dining, experiences, offers, getting-here).
-- Header thêm nhóm "Khám phá" (Ga, Hạng phòng, Ưu đãi); trên điện thoại gộp vào một menu.
-- Nội dung chưa có nguồn thật đánh dấu `illustrative: true` và hiện ghi chú; không đưa số liệu, giải thưởng hay tiện nghi bịa.
+- Tách làm hai ticket (§8.4):
+  - **HB-311:** 3 trang ga + 5 trang hạng. Chờ `slug` trong `GET /public/properties` (TD-82).
+  - **HB-311b:** trang cấp chuỗi getting-here, experiences, offers, gallery + menu "Khám phá" (trên điện thoại là ngăn kéo).
+- Trang `/dining` chưa làm: Pine Hill không có dịch vụ ăn uống trong nghiệp vụ (§8.3, chờ chủ dự án P4).
+- Nội dung chưa có nguồn thật đánh dấu `illustrative: true` (trang không hiện nhãn, quyết định Q1).
+- Không đưa số liệu, giải thưởng, tiện nghi, dịch vụ hay điều khoản "giá đã gồm" khi chưa có nguồn.
 
 ### Đợt 5 — Tiếng Anh
 
@@ -125,9 +131,12 @@ Mỗi màn có unit test cho model, E2E trên API giả và axe.
 | Ticket | Đợt | Nội dung | Trạng thái | Phụ thuộc |
 |---|---|---|---|---|
 | [HB-308](../08-thi-cong/tickets/HB-308-dot-1-back-office-api-moi.md) | 0 + 1 | SCR-23 bảng ngày, SCR-27 sửa/ngừng mùa, SCR-29 sửa/tắt khuyến mãi, TD-44 cho SCR-23/27, gỡ nhãn minh hoạ trang demo | PR [#302](https://github.com/minhtuluc/HotelBuild/pull/302) | — |
-| [HB-309](../08-thi-cong/tickets/HB-309-nen-tang-i18n-customer-web.md) | 2 | Nền tảng i18n customer web (chỉ `vi`), định dạng theo locale, dòng ngày dưới ô ngày, đổi câu phí đổi ngày SCR-12, sửa lỗi phiên khi chạy dev | Đang làm | HB-308 (cùng sửa danh mục khách) |
-| HB-310 | 3 | Trang cơ sở và trang hạng phòng mẫu + mục DESIGN.md mới | Chưa mở | HB-309 |
-| HB-311 | 4 | Nhân nội dung 3 + 5 + 5 trang | Chưa mở | HB-310 |
+| [HB-309](../08-thi-cong/tickets/HB-309-nen-tang-i18n-customer-web.md) | 2 | Nền tảng i18n customer web (chỉ `vi`), định dạng theo locale, dòng ngày dưới ô ngày, đổi câu phí đổi ngày SCR-12, sửa lỗi phiên khi chạy dev | PR [#304](https://github.com/minhtuluc/HotelBuild/pull/304) | HB-308 (cùng sửa danh mục khách) |
+| [HB-310](../08-thi-cong/tickets/HB-310-trang-noi-dung-mau.md) | 3 | Trang cơ sở và trang hạng phòng mẫu + mục DESIGN.md mới | PR [#305](https://github.com/minhtuluc/HotelBuild/pull/305) | HB-309 |
+| HB-316 | — | Góp ý UI/UX gói B: bảng giá mobile (UX-01), cỡ chữ theo khung (UX-04), lightbox chạm (UX-08), token và bộ chuyển động ANIM-01…06 | Chưa mở | — |
+| HB-311 | 4 | 3 trang ga + 5 trang hạng: CONT-01/02, UX-03 bản có nguồn, bảng chặng đường (UX-05) | Chưa mở | HB-310, TD-82 |
+| HB-311b | 4 | getting-here, experiences, offers, gallery + menu "Khám phá" (CONT-03/05/06/07/08) | Chưa mở | HB-311 |
+| HB-317 | — | Góp ý UI/UX gói C: giữ ngữ cảnh ga/ngày (FEAT-01), lịch mùa điền sẵn ngày (FEAT-02), nút chọn nhanh số đêm (FEAT-03), sao chép link + in A4 (FEAT-06) | Chưa mở | HB-311 |
 | HB-312 | 5 | Locale `en` | Chưa mở | HB-309 |
 | HB-313 | 6 | Locale `zh-CN`, `ja`, `ko`, `ru` + font | Chưa mở | HB-312 |
 | HB-315 | — | E2E SCR-48 bàn tiền sảnh xanh lại sau #298 | PR [#303](https://github.com/minhtuluc/HotelBuild/pull/303) | — |
@@ -154,6 +163,12 @@ Việc cần backend, đề xuất gửi song song qua [YEU-CAU-API-TU-FRONTEND.
 | Q8 | Ô ngày theo locale | Giữ ô ngày gốc + dòng ngày đã định dạng bên dưới | Bộ chọn ngày tự viết khó đạt a11y và trải nghiệm điện thoại bằng bộ chọn gốc |
 | Q9 | Font CJK, Cyrillic | Dùng font hệ thống (Noto Sans CJK, Hiragino, Malgun Gothic) làm fallback, chưa đóng gói | Đủ cho demo, tránh tăng dung lượng; đóng gói nếu QA thấy lỗi hiển thị |
 | Q10 | Thứ tự | Đợt 1 → 2 → 3 → 4, tiếng Anh (đợt 5) làm ngay sau đợt 2 song song với nội dung | Đợt 1 không phụ thuộc gì; i18n trước nội dung để không viết lại trang |
+| Q11 | Báo cáo góp ý UI/UX (14/11/2026) | Nhận phần UX/animation; phần nội dung chỉ nhận thứ có nguồn hoặc thuần mô tả (§8) | Nội dung minh hoạ được phép cho demo (Q1), điều khoản bán hàng thì không: trang nội dung không được nói khác báo giá |
+| Q12 | "Vé gồm / chưa gồm", dịch vụ tại ga, giờ phục vụ | Không làm đến khi có điều khoản trong `docs/02` | Là điều khoản thương mại; AGENTS.md cấm đưa policy vào frontend |
+| Q13 | Mốc huỷ quy ra ngày giờ (FEAT-04) | Không tính ở frontend; chỉ hiện khi API trả mốc tuyệt đối (yêu cầu API §7) | Tự cộng trừ giờ là tự áp chính sách huỷ |
+| Q14 | Nhãn mùa "thấp/cao điểm" trên lịch mùa | Không in | Mùa giá là cấu hình theo cơ sở (SCR-27), nhãn tĩnh có thể lệch báo giá |
+| Q15 | So sánh "đặt web lợi hơn trung gian" ở `/offers` | Không in | Quy tắc cân bằng giá kênh (BR-RATE-09) |
+| Q16 | Thứ tự sau đợt 3 | HB-316 và HB-312 làm ngay (song song); HB-311 sau TD-82; HB-311b, HB-317 sau HB-311 | HB-316 độc lập; dịch trước khi nhân nội dung để không dịch lại; trang ga cần slug thật |
 
 ## 7. Tiêu chí chung cho mọi đợt
 
@@ -162,3 +177,45 @@ Việc cần backend, đề xuất gửi song song qua [YEU-CAU-API-TU-FRONTEND.
 - Typecheck, lint, unit test, E2E liên quan, axe (WCAG 2.1 AA) và `impeccable detect` 0 lỗi trên trang đã đổi.
 - Không cuộn ngang ở 360 px; vùng chạm ≥ 44 px.
 - Operations web và hai app Android không đổi hành vi khi `customer-web` thêm locale.
+
+## 8. Đánh giá báo cáo góp ý UI/UX và nội dung (14/11/2026)
+
+Nguồn: [báo cáo góp ý cải tiến UI/UX và nội dung customer web](bao-cao-gop-y-cai-tien-ui-ux-va-noi-dung-customer-web.md). Đã đối chiếu với `docs/01-yeu-cau`, `docs/02-nghiep-vu` và hợp đồng API: không có ăn sáng, phòng tắm chung, wifi, gửi hành lý; "đưa đón" chỉ xuất hiện ở điều chuyển khi quá tải.
+
+### 8.1. Nhận gần như nguyên
+
+| Mã | Ticket | Ghi chú |
+|---|---|---|
+| UX-01 | HB-316 | Lỗi thật: `.ph-sample-why` đang bị ẩn dưới 760 px |
+| UX-04, UX-08 | HB-316 | Không đụng nghiệp vụ |
+| UX-06, UX-07 | HB-311 / HB-311b | Mục lục bám cuộn chỉ cho trang dài; gallery nhiều tỉ lệ khi ≥ 6 ảnh |
+| ANIM-01…06 | HB-316 | Không `opacity: 0` trước JS, không chạm vùng LCP, tắt hết khi `prefers-reduced-motion` |
+| CONT-07, CONT-08 | HB-311b | Đã có trong đợt 4 |
+| FEAT-01 | HB-317 | Ngữ cảnh nằm trong URL; `sessionStorage` chỉ là dự phòng |
+| FEAT-03 | HB-317 | Nhãn trung tính (2 / 3 / 5 đêm), không hứa mức giảm |
+| FEAT-06 (sao chép link, in A4) | HB-317 | |
+
+### 8.2. Nhận có điều chỉnh
+
+| Mã | Điều chỉnh |
+|---|---|
+| UX-02 | Sơ đồ ga ↔ thẻ ga: được. Mặt cắt 5 khoang chỉ vẽ số chỗ ngủ (seed `bedCount`) và việc Dorm bán theo giường, không vẽ cách kê giường |
+| UX-03 | Chỉ ghi điều có nguồn: Dorm bán theo giường trong phòng chung; giá đổi theo đêm; tiền hoàn tính trên số đã trả; ba cơ sở cách nhau 160–300 km nên không điều chuyển chéo. Màu dùng token `world-ticketLight` (#F7E5DE), không thêm #F6DCD3 |
+| CONT-01, CONT-02 | "Một ngày tại ga", bố cục khoang: mô tả, gắn `illustrative`. Không có tiện ích, dịch vụ, giờ phục vụ |
+| CONT-03 | Thời gian đi đường là ước lượng, gắn `illustrative`; không ghi mã chuyến tàu hay giờ chạy; e-Visa chỉ đặt link tới cổng chính thức |
+| CONT-05 | Hoạt động quanh ga: được. Lịch sự kiện có ngày cụ thể: không |
+| CONT-06 | Chỉ trình bày quy tắc có trong `docs/02` (giảm theo số đêm, 4 gói hoàn); bỏ so sánh với trung gian (Q15) |
+| FEAT-02 | Điền sẵn ngày: được; nhiệt độ/mưa gắn `illustrative`; không nhãn mùa giá (Q14) |
+
+### 8.3. Không nhận (chờ chủ dự án quyết)
+
+| Mã | Lý do | Việc chờ |
+|---|---|---|
+| CONT-04 `/dining` | Không có dịch vụ ăn uống trong nghiệp vụ; "đã gồm trong giá" là điều khoản | P4: đổi thành trang "Quanh ga" (quán gần ga, minh hoạ, không hứa dịch vụ) hay bỏ |
+| UX-03 khối "Vé gồm / Chưa gồm" | Điều khoản thương mại chưa có (Q12) | P5: chủ dự án đưa điều khoản vào `docs/02` |
+| FEAT-04 trên trang tĩnh | Tự áp chính sách huỷ (Q13) | Yêu cầu API §7 |
+| FEAT-06 "giữ chỗ qua email" | Mở kênh đặt phòng ngoài hệ thống: không giữ chỗ, không chống gửi trùng | P6: đề xuất chỉ hiện liên hệ lễ tân (`NEXT_PUBLIC_FRONT_DESK_CONTACT`) |
+
+### 8.4. Phân kỳ
+
+Gói A của báo cáo (13 trang + CONT-01…08) quá một PR. Tách như bảng §5: HB-316 (gói B), HB-311 + HB-311b (gói A), HB-317 (gói C). Danh sách kiểm thu §9 của báo cáo áp cho cả bốn ticket, thêm `impeccable detect` 0 lỗi.

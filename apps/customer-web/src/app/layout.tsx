@@ -3,17 +3,21 @@ import type { Metadata } from 'next';
 import { tokensToCssVariables } from '@pinehill/ui-web';
 import { photoAlt, SHARE_PHOTO } from '../content/photo-slots';
 import { photoSrc } from '../lib/photos';
+import { siteOrigin } from '../lib/site';
 import { GuestFooter, GuestHeader } from '../components/guest-shell';
 import { LocaleProvider } from '../i18n/client';
 import { LOCALE_META } from '../i18n/locales';
 import { requestLocale, serverTranslators } from '../i18n/server';
 import './globals.css';
+import './content-pages.css';
 
 /** Tiêu đề, mô tả và ảnh chia sẻ link (ô ảnh `chia-se`, dùng khi đã có file) theo locale của request. */
 export function generateMetadata(): Metadata {
   const { locale, t } = serverTranslators();
   const share = photoSrc(SHARE_PHOTO.id);
+  const origin = siteOrigin();
   return {
+    ...(origin === null ? {} : { metadataBase: new URL(origin) }),
     title: t('guest.app.title'),
     description: t('guest.app.description'),
     ...(share === null
