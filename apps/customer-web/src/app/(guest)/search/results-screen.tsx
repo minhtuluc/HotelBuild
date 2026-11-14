@@ -14,6 +14,7 @@ import { useLocale, useT } from '../../../i18n/client';
 import { fetchAvailability, type StayCriteria } from './journey-api';
 import { criteriaIssue, detailHref, parseCriteria } from './search-params';
 import { RoomCodeStamp } from '../../../components/stamps';
+import { TableSkeleton } from '../../../components/table-skeleton';
 import { calendarDate } from '../../../i18n/format';
 
 function AvailabilityTable({
@@ -181,6 +182,12 @@ export function SearchResultsScreen({
           })}
         </p>
       </div>
+      <TableSkeleton
+        active={state.kind === 'loading'}
+        rows={3}
+        columns={4}
+        testId="results-skeleton"
+      />
       <StateSurface state={state}>
         {readError === null ? null : (
           <div role="alert" className="ph-alert-box">

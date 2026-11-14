@@ -130,16 +130,16 @@ Mỗi màn có unit test cho model, E2E trên API giả và axe.
 
 | Ticket | Đợt | Nội dung | Trạng thái | Phụ thuộc |
 |---|---|---|---|---|
-| [HB-308](../08-thi-cong/tickets/HB-308-dot-1-back-office-api-moi.md) | 0 + 1 | SCR-23 bảng ngày, SCR-27 sửa/ngừng mùa, SCR-29 sửa/tắt khuyến mãi, TD-44 cho SCR-23/27, gỡ nhãn minh hoạ trang demo | PR [#302](https://github.com/minhtuluc/HotelBuild/pull/302) | — |
-| [HB-309](../08-thi-cong/tickets/HB-309-nen-tang-i18n-customer-web.md) | 2 | Nền tảng i18n customer web (chỉ `vi`), định dạng theo locale, dòng ngày dưới ô ngày, đổi câu phí đổi ngày SCR-12, sửa lỗi phiên khi chạy dev | PR [#304](https://github.com/minhtuluc/HotelBuild/pull/304) | HB-308 (cùng sửa danh mục khách) |
+| [HB-308](../08-thi-cong/tickets/HB-308-dot-1-back-office-api-moi.md) | 0 + 1 | SCR-23 bảng ngày, SCR-27 sửa/ngừng mùa, SCR-29 sửa/tắt khuyến mãi, TD-44 cho SCR-23/27, gỡ nhãn minh hoạ trang demo | Đã merge ([#302](https://github.com/minhtuluc/HotelBuild/pull/302)) | — |
+| [HB-309](../08-thi-cong/tickets/HB-309-nen-tang-i18n-customer-web.md) | 2 | Nền tảng i18n customer web (chỉ `vi`), định dạng theo locale, dòng ngày dưới ô ngày, đổi câu phí đổi ngày SCR-12, sửa lỗi phiên khi chạy dev | Đã merge ([#306](https://github.com/minhtuluc/HotelBuild/pull/306)) | HB-308 (cùng sửa danh mục khách) |
 | [HB-310](../08-thi-cong/tickets/HB-310-trang-noi-dung-mau.md) | 3 | Trang cơ sở và trang hạng phòng mẫu + mục DESIGN.md mới | PR [#305](https://github.com/minhtuluc/HotelBuild/pull/305) | HB-309 |
-| HB-316 | — | Góp ý UI/UX gói B: bảng giá mobile (UX-01), cỡ chữ theo khung (UX-04), lightbox chạm (UX-08), token và bộ chuyển động ANIM-01…06 | Chưa mở | — |
+| [HB-316](../08-thi-cong/tickets/HB-316-gop-y-ux-chuyen-dong.md) | — | Góp ý UI/UX gói B: bảng giá mobile (UX-01), cỡ chữ theo khung (UX-04), lightbox chạm (UX-08), token và bộ chuyển động ANIM-01…06 | Đang làm | — |
 | HB-311 | 4 | 3 trang ga + 5 trang hạng: CONT-01/02, UX-03 bản có nguồn, bảng chặng đường (UX-05) | Chưa mở | HB-310, TD-82 |
 | HB-311b | 4 | getting-here, experiences, offers, gallery + menu "Khám phá" (CONT-03/05/06/07/08) | Chưa mở | HB-311 |
 | HB-317 | — | Góp ý UI/UX gói C: giữ ngữ cảnh ga/ngày (FEAT-01), lịch mùa điền sẵn ngày (FEAT-02), nút chọn nhanh số đêm (FEAT-03), sao chép link + in A4 (FEAT-06) | Chưa mở | HB-311 |
 | HB-312 | 5 | Locale `en` | Chưa mở | HB-309 |
 | HB-313 | 6 | Locale `zh-CN`, `ja`, `ko`, `ru` + font | Chưa mở | HB-312 |
-| HB-315 | — | E2E SCR-48 bàn tiền sảnh xanh lại sau #298 | PR [#303](https://github.com/minhtuluc/HotelBuild/pull/303) | — |
+| HB-315 | — | E2E SCR-48 bàn tiền sảnh xanh lại sau #298 | Đã merge ([#303](https://github.com/minhtuluc/HotelBuild/pull/303)) | — |
 | HB-314 | — | TD-44 cho các màn vận hành còn lại (lưới tồn, lịch giá, danh sách booking, báo cáo, kênh, người dùng, hạng phòng, SCR-40/43/47) | Chưa mở | HB-308 |
 
 E2E SCR-07 (P1) được kiểm lại trong HB-308.

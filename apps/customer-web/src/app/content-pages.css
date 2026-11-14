@@ -51,7 +51,9 @@
     align-items: center;
   }
 
+  /* UX-04: cỡ tiêu đề theo bề rộng cột chứa (cqi), không theo cả màn hình. */
   .ph-content-head-copy {
+    container-type: inline-size;
     display: grid;
     gap: 14px;
     justify-items: start;
@@ -70,7 +72,7 @@
   .ph-content-title {
     margin: 0;
     font-family: var(--font-display, 'Barlow Condensed', sans-serif);
-    font-size: clamp(2.6rem, 5.4vw, 4.6rem);
+    font-size: clamp(2.6rem, 11cqi, 4.6rem);
     font-weight: 600;
     line-height: 0.98;
     text-wrap: balance;
@@ -344,7 +346,10 @@
     right: 8px;
   }
 
+  /* Vuốt ngang để đổi ảnh: chặn kéo ảnh gốc và cuộn ngang của trình duyệt trên khung ảnh. */
   .ph-lightbox-figure {
+    touch-action: pan-y;
+    user-select: none;
     display: grid;
     gap: 10px;
     margin: 0;

@@ -63,13 +63,21 @@ export function StationTimetable({
       <dl>
         <div>
           <dt>{t('guest.station.checkIn')}</dt>
-          <dd className="ph-timetable-time" data-testid="station-check-in">
+          <dd
+            key={times.kind}
+            className={times.kind === 'ready' ? 'ph-timetable-time ph-tick' : 'ph-timetable-time'}
+            data-testid="station-check-in"
+          >
             {time('checkIn')}
           </dd>
         </div>
         <div>
           <dt>{t('guest.station.checkOut')}</dt>
-          <dd className="ph-timetable-time" data-testid="station-check-out">
+          <dd
+            key={times.kind}
+            className={times.kind === 'ready' ? 'ph-timetable-time ph-tick' : 'ph-timetable-time'}
+            data-testid="station-check-out"
+          >
             {time('checkOut')}
           </dd>
         </div>

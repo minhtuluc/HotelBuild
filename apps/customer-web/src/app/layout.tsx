@@ -5,11 +5,13 @@ import { photoAlt, SHARE_PHOTO } from '../content/photo-slots';
 import { photoSrc } from '../lib/photos';
 import { siteOrigin } from '../lib/site';
 import { GuestFooter, GuestHeader } from '../components/guest-shell';
+import { ScrollReveal } from '../components/scroll-reveal';
 import { LocaleProvider } from '../i18n/client';
 import { LOCALE_META } from '../i18n/locales';
 import { requestLocale, serverTranslators } from '../i18n/server';
 import './globals.css';
 import './content-pages.css';
+import './motion.css';
 
 /** Tiêu đề, mô tả và ảnh chia sẻ link (ô ảnh `chia-se`, dùng khi đã có file) theo locale của request. */
 export function generateMetadata(): Metadata {
@@ -46,6 +48,7 @@ export default function GuestLayout({ children }: { children: ReactNode }): Reac
           <GuestHeader />
           <main id="main">{children}</main>
           <GuestFooter />
+          <ScrollReveal />
         </LocaleProvider>
       </body>
     </html>
