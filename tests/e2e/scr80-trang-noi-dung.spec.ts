@@ -19,8 +19,20 @@ customerWebOnly();
 const JOURNEY_PUBLIC_PROPERTIES = '**/api/session/journey/public/properties';
 
 const PROPERTIES = [
-  { id: 'p-vt', name: 'Pine Hill Vũng Tàu', checkInTime: '14:00', checkOutTime: '12:00' },
-  { id: 'p-dl', name: 'Pine Hill Đà Lạt', checkInTime: '13:30', checkOutTime: '11:30' },
+  {
+    id: 'p-vt',
+    name: 'Pine Hill Vũng Tàu',
+    slug: 'vung-tau',
+    checkInTime: '14:00',
+    checkOutTime: '12:00',
+  },
+  {
+    id: 'p-dl',
+    name: 'Pine Hill Đà Lạt',
+    slug: 'da-lat',
+    checkInTime: '13:30',
+    checkOutTime: '11:30',
+  },
 ];
 
 async function mockProperties(page: Page, status = 200): Promise<void> {

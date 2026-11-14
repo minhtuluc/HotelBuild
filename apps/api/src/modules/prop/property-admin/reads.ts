@@ -41,7 +41,7 @@ export class PropertyReads {
           orderBy: { id: 'asc' },
           take: q.limit + 1,
         });
-        return page(rows, total, q, actor ? propertyView : publicView);
+        return actor ? page(rows, total, q, propertyView) : page(rows, total, q, publicView);
       },
       { isolationLevel: 'RepeatableRead' },
     );

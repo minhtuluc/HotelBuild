@@ -17,12 +17,16 @@ export const propertySummarySchema = z.object({
 });
 
 /**
- * `GET /api/v1/public/properties` cho journey khách: **chỉ** trường công khai (mã, tên, giờ nhận/trả).
+ * `GET /api/v1/public/properties` cho journey khách: **chỉ** trường công khai (mã, tên, slug, giờ nhận/trả).
  * Không lộ số phòng, trần bán vượt, phiên bản hay cấu hình nội bộ (BR-PROP-01,02; api.md §2.14).
  */
 export const propertyPublicSummarySchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(120),
+  /** Định danh URL công khai, duy nhất, kebab-case không dấu (vd. `da-lat`) — trang ga `/stays/[slug]` (HB-317). */
+  slug: z
+    .string()
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'Slug phải là chữ thường không dấu nối bằng gạch ngang'),
   checkInTime: clockTime,
   checkOutTime: clockTime,
 });

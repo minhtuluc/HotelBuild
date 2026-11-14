@@ -39,8 +39,10 @@ test('public properties expose only public metadata and active rows without auth
   const p = listResponseSchema(propertyPublicSummarySchema).parse(r.body);
   expect(p.meta.total).toBe(3);
   expect(Object.keys(rawPage(r.body).data[0]!).sort()).toEqual(
-    ['id', 'name', 'checkInTime', 'checkOutTime'].sort(),
+    ['id', 'name', 'slug', 'checkInTime', 'checkOutTime'].sort(),
   );
+  // HB-317 (TD-82): slug seed ổn định cho trang ga `/stays/[slug]`.
+  expect(p.data.map((x) => x.slug).sort()).toEqual(['da-lat', 'phan-thiet', 'vung-tau']);
 });
 test('room types use actual active selling units: CS01=34, DOR6bed, STD2bed', async () => {
   const r = await read('room-types', await login(), { propertyId: propId });

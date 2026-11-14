@@ -11,6 +11,7 @@ export const publicProperties = [
   {
     id: 'synthetic-property',
     name: 'Synthetic Pine Hill',
+    slug: 'synthetic',
     checkInTime: '14:00',
     checkOutTime: '12:00',
   },
