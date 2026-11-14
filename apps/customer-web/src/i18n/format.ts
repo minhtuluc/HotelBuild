@@ -5,7 +5,7 @@
  * nguyên như trước HB-309 (`dd/MM/yyyy`, thứ `CN`/`T2`…), dựng bằng chuỗi; locale khác dùng `Intl` ở múi
  * giờ UTC trên chính ngày lịch đó nên cũng không lệch ngày.
  */
-import { formatMoney } from '@pinehill/ui-web';
+import { formatDateTimeVn, formatMoney } from '@pinehill/ui-web';
 import { LOCALE_META, type Locale } from './locales';
 
 const CALENDAR_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -73,4 +73,29 @@ export function dateLine(iso: string, locale: Locale): string | null {
   const weekday = weekdayShort(iso, locale);
   if (weekday === null) return null;
   return `${weekday}, ${calendarDate(iso, locale)}`;
+}
+
+const VN_TIME_ZONE = 'Asia/Ho_Chi_Minh';
+
+/**
+ * `12/11/2026 14:00 (giờ VN)` — mốc thời gian UTC hiện theo giờ Việt Nam, ngày trước tháng, 24 giờ. Với `vi`
+ * dùng đúng `formatDateTimeVn` của `ui-web` (đầu ra không đổi); locale khác dựng cùng thứ tự bằng `Intl` và
+ * nhãn giờ lấy từ danh mục (`suffix`).
+ */
+export function dateTimeVn(isoUtc: string, locale: Locale, suffix: string): string {
+  if (locale === 'vi') return formatDateTimeVn(isoUtc);
+  const at = new Date(isoUtc);
+  if (Number.isNaN(at.getTime())) throw new RangeError(`Invalid timestamp: ${isoUtc}`);
+  const parts = new Intl.DateTimeFormat(LOCALE_META[locale].intl, {
+    timeZone: VN_TIME_ZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(at);
+  const part = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((item) => item.type === type)?.value ?? '';
+  return `${part('day')}/${part('month')}/${part('year')} ${part('hour')}:${part('minute')} ${suffix}`;
 }

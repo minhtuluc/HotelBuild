@@ -15,11 +15,13 @@ import {
   useFocusFirstIssue,
 } from './form-parts';
 import { useAccountText } from '../../../i18n/client';
+import { useLocalePath } from '../../../i18n/client';
 
 type Field = 'phone' | 'password';
 const ORDER: readonly Field[] = ['phone', 'password'];
 
 export function LoginScreen({ contact }: { contact: string | null }): ReactElement {
+  const localPath = useLocalePath();
   const text = useAccountText();
   const router = useRouter();
   const params = useSearchParams();
@@ -41,7 +43,7 @@ export function LoginScreen({ contact }: { contact: string | null }): ReactEleme
     setBusy(false);
     setIssues(outcome.kind === 'issues' ? outcome.issues : {});
     if (outcome.kind === 'failed') setFailure(outcome.failure);
-    if (outcome.kind === 'done') router.replace(next);
+    if (outcome.kind === 'done') router.replace(localPath(next));
   }
 
   return (
@@ -92,7 +94,7 @@ export function LoginScreen({ contact }: { contact: string | null }): ReactEleme
       <SubmitButton busy={busy} label={text('submitLogin')} testId="login-submit" />
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
         <a
-          href="/account/forgot-password"
+          href={localPath('/account/forgot-password')}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -105,7 +107,7 @@ export function LoginScreen({ contact }: { contact: string | null }): ReactEleme
           {text('toForgot')}
         </a>
         <a
-          href="/account/register"
+          href={localPath('/account/register')}
           style={{
             display: 'inline-flex',
             alignItems: 'center',

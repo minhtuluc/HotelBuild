@@ -14,8 +14,10 @@ import {
   useFocusFirstIssue,
 } from './form-parts';
 import { useAccountText } from '../../../i18n/client';
+import { useLocalePath } from '../../../i18n/client';
 
 export function ForgotScreen({ contact }: { contact: string | null }): ReactElement {
+  const localPath = useLocalePath();
   const text = useAccountText();
   const [phone, setPhone] = useState('');
   const [issues, setIssues] = useState<Issues<'phone'>>({});
@@ -71,7 +73,7 @@ export function ForgotScreen({ contact }: { contact: string | null }): ReactElem
         {contact === null ? text('contactGeneric') : text('contactLine', { contact })}
       </p>
       <a
-        href="/account/login"
+        href={localPath('/account/login')}
         style={{
           display: 'inline-flex',
           alignItems: 'center',

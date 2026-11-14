@@ -2,10 +2,10 @@
 
 /** Phần trình bày của SCR-12 (HB-104): bảng chênh lệch, biểu mẫu kỳ mới, kết quả đổi ngày. */
 import type { ReactElement } from 'react';
-import Link from 'next/link';
+import { LocaleLink as Link } from '../../../../../components/locale-link';
 import type { BookingSummary, Quote } from '@pinehill/contracts';
-import { formatMoney, formatStatusWithEnum } from '@pinehill/ui-web';
-import { useT, useTranslators } from '../../../../../i18n/client';
+import { formatStatusWithEnum } from '@pinehill/ui-web';
+import { useMoney, useT, useTranslators } from '../../../../../i18n/client';
 import type { CustomerMessageKey } from '../../../../../i18n/catalogs';
 import { STATUS_KEYS, stayText } from '../../model';
 import { nightsBetween, stayDifference } from '../../reschedule-model';
@@ -29,6 +29,7 @@ function QuoteDiff({
   checkIn: string;
   checkOut: string;
 }): ReactElement {
+  const fmtMoney = useMoney();
   const text = useTranslators();
   const t = useT();
   const nights = nightsBetween(checkIn, checkOut) ?? 0;
@@ -48,17 +49,15 @@ function QuoteDiff({
           <span>{formatStayNights(text, checkIn, checkOut, nights)}</span>
         </li>
         <li data-testid="reschedule-new-total">
-          <span>{t('guest.reschedule.diff.newTotal', { amount: formatMoney(quote.total) })}</span>
+          <span>{t('guest.reschedule.diff.newTotal', { amount: fmtMoney(quote.total) })}</span>
         </li>
         <li>
           <span>
-            {t('guest.reschedule.diff.currentTotal', { amount: formatMoney(booking.totalAmount) })}
+            {t('guest.reschedule.diff.currentTotal', { amount: fmtMoney(booking.totalAmount) })}
           </span>
         </li>
         <li data-testid="reschedule-difference">
-          <strong>
-            {t(DIFF_KEYS[difference.kind], { amount: formatMoney(difference.amount) })}
-          </strong>
+          <strong>{t(DIFF_KEYS[difference.kind], { amount: fmtMoney(difference.amount) })}</strong>
         </li>
       </ul>
       <p
@@ -78,6 +77,7 @@ function RescheduleResult({
   previousStatus: string;
   booking: BookingSummary;
 }): ReactElement {
+  const fmtMoney = useMoney();
   const text = useTranslators();
   const t = useT();
   return (
@@ -108,7 +108,7 @@ function RescheduleResult({
         </li>
         <li>
           <span>
-            {t('guest.reschedule.result.total', { amount: formatMoney(booking.totalAmount) })}
+            {t('guest.reschedule.result.total', { amount: fmtMoney(booking.totalAmount) })}
           </span>
         </li>
         <li data-testid="reschedule-result-count">

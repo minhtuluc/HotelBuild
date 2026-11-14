@@ -4,7 +4,7 @@
  * CTA nằm ở đầu và cuối trang nên dải này ẩn.
  */
 import type { ReactElement } from 'react';
-import Link from 'next/link';
+import { LocaleLink as Link } from '../locale-link';
 
 export function StickyBookingStub({
   title,

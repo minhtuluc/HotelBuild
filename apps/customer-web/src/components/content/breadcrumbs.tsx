@@ -3,7 +3,7 @@
  * tại không là liên kết và có `aria-current="page"`. Dấu "›" chỉ để nhìn (`aria-hidden`).
  */
 import type { ReactElement } from 'react';
-import Link from 'next/link';
+import { LocaleLink as Link } from '../locale-link';
 
 export interface Crumb {
   readonly label: string;
