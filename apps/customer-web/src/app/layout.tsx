@@ -16,6 +16,7 @@ import './content-pages.css';
 import './motion.css';
 import './locale-type.css';
 import './journey.css';
+import './chain-pages.css';
 
 /**
  * Tiêu đề, mô tả, ảnh chia sẻ, canonical và `hreflang` theo locale của request (HB-312). Trang con có

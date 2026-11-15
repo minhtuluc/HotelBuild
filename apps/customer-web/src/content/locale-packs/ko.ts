@@ -1,6 +1,7 @@
 /** Gói nội dung tiếng Hàn (HB-313). Xem ranh giới minh hoạ / chính sách ở `types.ts`. */
 import type { LocaleContentPack } from './types';
 import { KO_PAGES } from './ko-pages';
+import { KO_CHAIN } from './ko-chain';
 
 export const KO_PACK: LocaleContentPack = {
   landing: {
@@ -176,6 +177,7 @@ export const KO_PACK: LocaleContentPack = {
     ],
   },
   ...KO_PAGES,
+  chain: KO_CHAIN,
   photoAlts: {
     'ga-DL-poster': '나무가 우거진 정원의 수영장 옆 목조 빌라',
     'ga-DL-phong': '더블 침대와 휴식 공간이 있는 넓은 목조 침실',

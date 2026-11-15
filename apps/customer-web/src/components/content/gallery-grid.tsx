@@ -15,12 +15,20 @@ import {
   type ReactElement,
 } from 'react';
 import { useT } from '../../i18n/client';
+import { LocaleLink } from '../locale-link';
 
 export interface GalleryItem {
   readonly id: string;
   readonly src: string;
   readonly alt: string;
+  /** Lưới nhiều tỉ lệ (UX-07, HB-311b): ô dọc hai hàng hoặc ô ngang hai cột. */
+  readonly shape?: 'tall' | 'wide' | null;
+  /** Trang của ga hoặc hạng trong ảnh, hiện trong lightbox. */
+  readonly link?: { readonly href: string; readonly label: string };
 }
+
+/** Từ 6 ảnh trở lên mới xếp nhiều tỉ lệ; ít hơn thì giữ bố cục ảnh lớn đầu tiên. */
+export const DENSE_FROM = 6;
 
 function wrap(index: number, length: number): number {
   return (index + length) % length;
@@ -96,6 +104,15 @@ function Lightbox({
             <span className="ph-lightbox-count" data-testid="gallery-position">
               {position}
             </span>
+            {item.link === undefined ? null : (
+              <LocaleLink
+                href={item.link.href}
+                className="ph-lightbox-link"
+                data-testid="gallery-link"
+              >
+                {item.link.label} <span aria-hidden="true">→</span>
+              </LocaleLink>
+            )}
           </figcaption>
         </figure>
       )}
@@ -121,7 +138,14 @@ function Lightbox({
   );
 }
 
-export function GalleryGrid({ items }: { items: readonly GalleryItem[] }): ReactElement | null {
+export function GalleryGrid({
+  items,
+  dense = false,
+}: {
+  items: readonly GalleryItem[];
+  /** Lưới nhiều tỉ lệ khi đủ ảnh (thư viện ảnh toàn chuỗi). */
+  dense?: boolean;
+}): ReactElement | null {
   const t = useT();
   const [open, setOpen] = useState<number | null>(null);
   const opener = useRef<number | null>(null);
@@ -134,9 +158,14 @@ export function GalleryGrid({ items }: { items: readonly GalleryItem[] }): React
   };
   return (
     <>
-      <ul className="ph-gallery" data-count={items.length} data-testid="gallery">
+      <ul
+        className="ph-gallery"
+        data-count={items.length}
+        data-dense={dense && items.length >= DENSE_FROM ? 'true' : undefined}
+        data-testid="gallery"
+      >
         {items.map((item, index) => (
-          <li key={item.id}>
+          <li key={item.id} data-shape={item.shape ?? undefined}>
             <button
               type="button"
               ref={(node) => {

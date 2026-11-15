@@ -1,6 +1,7 @@
 /** Gói nội dung tiếng Nhật (HB-313). Xem ranh giới minh hoạ / chính sách ở `types.ts`. */
 import type { LocaleContentPack } from './types';
 import { JA_PAGES } from './ja-pages';
+import { JA_CHAIN } from './ja-chain';
 
 export const JA_PACK: LocaleContentPack = {
   landing: {
@@ -176,6 +177,7 @@ export const JA_PACK: LocaleContentPack = {
     ],
   },
   ...JA_PAGES,
+  chain: JA_CHAIN,
   photoAlts: {
     'ga-DL-poster': '緑の庭のプールサイドに建つ木造のヴィラ',
     'ga-DL-phong': 'ダブルベッドとくつろぎスペースのある広い木の寝室',

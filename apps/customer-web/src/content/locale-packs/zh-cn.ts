@@ -1,6 +1,7 @@
 /** Gói nội dung 简体中文 (HB-313). Xem ranh giới minh hoạ / chính sách ở `types.ts`. */
 import type { LocaleContentPack } from './types';
 import { ZH_CN_PAGES } from './zh-cn-pages';
+import { ZH_CN_CHAIN } from './zh-cn-chain';
 
 export const ZH_CN_PACK: LocaleContentPack = {
   landing: {
@@ -176,6 +177,7 @@ export const ZH_CN_PACK: LocaleContentPack = {
     ],
   },
   ...ZH_CN_PAGES,
+  chain: ZH_CN_CHAIN,
   photoAlts: {
     'ga-DL-poster': '绿树花园中泳池旁的木质别墅',
     'ga-DL-phong': '宽敞的木质卧室，有双人床和休息区',
