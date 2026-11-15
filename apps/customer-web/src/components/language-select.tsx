@@ -6,7 +6,35 @@
  */
 import type { ChangeEvent, ReactElement } from 'react';
 import { useLocale } from '../i18n/client';
-import { LOCALES, LOCALE_META, isLocale, localizePath, splitLocale } from '../i18n/locales';
+import {
+  LOCALES,
+  LOCALE_META,
+  isLocale,
+  localizePath,
+  splitLocale,
+  type Locale,
+} from '../i18n/locales';
+
+function encodeQuery(search: string): string {
+  const pairs = Array.from(new URLSearchParams(search).entries()).map(
+    ([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`,
+  );
+  return pairs.length === 0 ? '' : `?${pairs.join('&')}`;
+}
+
+function safeSwitchPath(
+  pathname: string,
+  search: string,
+  hash: string,
+  next: Locale,
+): string | null {
+  const bare = splitLocale(pathname).path;
+  const nextPath = localizePath(bare.startsWith('/') && !bare.startsWith('//') ? bare : '/', next);
+  const rawHash = hash.startsWith('#') ? hash.slice(1) : hash;
+  const safeHash = rawHash === '' ? '' : `#${encodeURIComponent(rawHash)}`;
+  const target = `${nextPath}${encodeQuery(search)}${safeHash}`;
+  return target.startsWith('/') && !target.startsWith('//') ? target : null;
+}
 
 export function LanguageSelect(): ReactElement {
   const locale = useLocale();
@@ -14,7 +42,8 @@ export function LanguageSelect(): ReactElement {
     const next = event.target.value;
     if (!isLocale(next) || next === locale) return;
     const { pathname, search, hash } = window.location;
-    window.location.assign(localizePath(`${splitLocale(pathname).path}${search}${hash}`, next));
+    const target = safeSwitchPath(pathname, search, hash, next);
+    if (target !== null) window.location.assign(target);
   };
   return (
     <label className="ph-lang">
