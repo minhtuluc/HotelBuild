@@ -33,7 +33,7 @@ unlock:
    - Đánh dấu mùa hiện tại (giờ VN) và nút "Chọn cuối tuần gần nhất" → `/?ga=<slug>&checkIn=<thứ Sáu>&checkOut=<Chủ nhật>#search-block`. Ngày tính ở trình duyệt sau khi tải (trang dựng tĩnh); trước đó nút về khối tìm phòng với ga chọn sẵn.
 4. **CONT-01 — trang hạng:**
    - Khối "Trong khoang": một đoạn tả bố cục theo số chỗ ngủ (seed `bedCount`), gắn `illustrative`. Không diện tích, view, tiện nghi.
-   - Khối "Nói thẳng": chỉ điều có nguồn (§8.2 UX-03) — giá đổi theo đêm; tiền hoàn tính trên số đã trả; mỗi cơ sở bán phòng riêng, không chuyển chéo; Dorm bán theo giường trong phòng chung.
+   - Khối "Nói thẳng": chỉ điều có nguồn (§8.2 UX-03) — giá đổi theo đêm; tiền hoàn tính trên số đã trả; mỗi ga bán phòng riêng (giá, phòng trống, giờ nhận phòng của ga đó); Dorm bán theo giường trong phòng chung.
 5. Đủ sáu ngôn ngữ; câu chữ mới của zh-CN, ja, ko, ru cần người bản ngữ duyệt (Q6).
 
 ## Tiêu chí nghiệm thu

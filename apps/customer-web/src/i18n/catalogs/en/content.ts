@@ -17,6 +17,17 @@ export const enContent: Readonly<Record<keyof typeof viContent, string>> = {
   'guest.station.storyTitle': 'About this station',
   'guest.station.arrivalTitle': 'Getting here',
   'guest.station.galleryTitle': 'Photos from the station',
+  'guest.station.legsTime': 'Time',
+  'guest.station.legsRoute': 'Leg',
+  'guest.station.dayTitle': 'A day at the station',
+  'guest.station.day.morning': 'Early morning',
+  'guest.station.day.midday': 'Midday',
+  'guest.station.day.evening': 'Evening',
+  'guest.station.seasonsTitle': 'Seasons in {name}',
+  'guest.station.seasonsNote':
+    'Weather figures are a rough guide, not price seasons. Nightly prices are printed on the ticket when you pick dates.',
+  'guest.station.season.now': 'This season',
+  'guest.station.season.cta': 'Pick the next weekend in this season',
   'guest.station.roomsTitle': 'Room classes at {name}',
   'guest.station.readMore': 'More about {name} Station',
   'guest.cabin.title': '{name} class',
@@ -33,6 +44,15 @@ export const enContent: Readonly<Record<keyof typeof viContent, string>> = {
   'guest.cabin.spec.refundValue': 'Follows the rate plan you choose when holding',
   'guest.cabin.stationsTitle': 'Available at',
   'guest.cabin.otherTitle': 'Other classes',
+  'guest.cabin.layoutTitle': 'Inside the cabin',
+  'guest.cabin.honestTitle': 'Straight talk',
+  'guest.cabin.honest.nightly':
+    'Prices change night by night: weekends and high season can cost more. The ticket prints each night before you hold.',
+  'guest.cabin.honest.refund':
+    'Refunds on cancellation are based on what you have paid, under the refund plan of your booking.',
+  'guest.cabin.honest.property':
+    'Each station sells its own rooms: prices, availability and check-in times are those of the station you book.',
+  'guest.cabin.honest.dorm': 'The Dorm is a shared room: you book one bed, not the whole room.',
   'guest.cabin.cta': 'See nightly prices',
   'guest.cabin.readMore': 'See {name} class',
   'guest.gallery.open': 'View photo {n}/{total}: {alt}',

@@ -27,6 +27,8 @@ export interface RoomTypePageCopy {
   readonly summary: string;
   readonly description: readonly string[];
   readonly suits: string;
+  /** Bố cục khoang theo số chỗ ngủ (HB-322, CONT-01); không diện tích, view hay tiện nghi. */
+  readonly layout: string;
   readonly seoTitle: string;
   readonly seoDescription: string;
   readonly illustrative: true;
@@ -81,6 +83,8 @@ const COPY: Readonly<Record<Locale, Partial<Readonly<Record<RoomTypeCode, RoomTy
         'Giá Deluxe tính theo từng đêm và thay đổi theo mùa, ngày cuối tuần và số đêm bạn ở. Chọn ga và ngày ở bước tìm phòng để thấy giá in trên từng chặng trước khi giữ chỗ.',
       ],
       suits: 'Nhóm ba người lớn, hoặc gia đình có con lớn',
+      layout:
+        'Ba chỗ ngủ trong cùng một khoang: người thứ ba có chỗ nằm riêng, không phải ghép giường hay đặt thêm phòng.',
       seoTitle: 'Hạng Deluxe (khoang ba) · Pine Hill',
       seoDescription:
         'Hạng Deluxe của Pine Hill: chỗ ngủ cho ba người lớn, có ở cả ba cơ sở Đà Lạt, Phan Thiết, Vũng Tàu. Giá in theo từng đêm khi chọn ngày.',
@@ -93,6 +97,8 @@ const COPY: Readonly<Record<Locale, Partial<Readonly<Record<RoomTypeCode, RoomTy
         'Giá Standard tính theo từng đêm và thay đổi theo mùa, ngày cuối tuần và số đêm bạn ở. Chọn ga và ngày ở bước tìm phòng để thấy giá in trên từng chặng trước khi giữ chỗ.',
       ],
       suits: 'Cặp đôi hoặc hai người bạn đi ngắn ngày',
+      layout:
+        'Hai chỗ ngủ trong một khoang gọn. Đủ chỗ đặt hai vali và đi lại thoải mái; hợp với chuyến một, hai đêm.',
       seoTitle: 'Hạng Standard (khoang đôi) · Pine Hill',
       seoDescription:
         'Hạng Standard của Pine Hill: phòng cho hai người lớn, có ở cả ba cơ sở Đà Lạt, Phan Thiết, Vũng Tàu. Giá in theo từng đêm khi chọn ngày.',
@@ -105,6 +111,8 @@ const COPY: Readonly<Record<Locale, Partial<Readonly<Record<RoomTypeCode, RoomTy
         'Giá Superior tính theo từng đêm và thay đổi theo mùa, ngày cuối tuần và số đêm bạn ở; ở từ ba đêm có hệ số giảm theo độ dài kỳ ở. Chọn ga và ngày để thấy giá từng chặng.',
       ],
       suits: 'Hai người ở từ ba đêm trở lên',
+      layout:
+        'Hai chỗ ngủ như Standard nhưng khoang rộng hơn, thêm khoảng trống để ngồi và bày đồ cho kỳ ở dài.',
       seoTitle: 'Hạng Superior (khoang đôi rộng) · Pine Hill',
       seoDescription:
         'Hạng Superior của Pine Hill: phòng rộng cho hai người lớn, có ở cả ba cơ sở. Giá in theo từng đêm khi chọn ngày.',
@@ -118,6 +126,8 @@ const COPY: Readonly<Record<Locale, Partial<Readonly<Record<RoomTypeCode, RoomTy
         'Giá Family tính theo từng đêm và thay đổi theo mùa, ngày cuối tuần và số đêm bạn ở. Nhóm bốn người muốn ăn sáng cùng giờ thì báo trước cho ga.',
       ],
       suits: 'Gia đình hoặc nhóm bốn người lớn',
+      layout:
+        'Bốn chỗ ngủ trong cùng một khoang: cả nhóm ở chung một cửa, không phải chia hai phòng.',
       seoTitle: 'Hạng Family (khoang bốn) · Pine Hill',
       seoDescription:
         'Hạng Family của Pine Hill: chỗ ngủ cho bốn người lớn trong một phòng, có ở cả ba cơ sở. Giá in theo từng đêm khi chọn ngày.',
@@ -131,6 +141,8 @@ const COPY: Readonly<Record<Locale, Partial<Readonly<Record<RoomTypeCode, RoomTy
         'Giá Dorm tính theo giường và theo từng đêm. Phòng có sáu giường nên bạn ở cùng khách khác; nhóm đông có thể đặt nhiều giường trong cùng một lần đặt.',
       ],
       suits: 'Người đi một mình hoặc nhóm nhỏ tiết kiệm',
+      layout:
+        'Sáu giường trong một phòng chung. Bạn đặt từng giường; người cùng phòng có thể là khách khác.',
       seoTitle: 'Hạng Dorm (khoang sáu giường) · Pine Hill',
       seoDescription:
         'Hạng Dorm của Pine Hill: giường trong phòng sáu giường, có rèm, đèn và tủ khoá riêng; có ở cả ba cơ sở. Giá in theo từng đêm khi chọn ngày.',
@@ -146,6 +158,8 @@ const COPY: Readonly<Record<Locale, Partial<Readonly<Record<RoomTypeCode, RoomTy
         'Deluxe is priced night by night and varies with the season, weekends and how many nights you stay. Choose a station and dates in the search to see the price printed on each leg before you hold.',
       ],
       suits: 'Groups of three adults, or families with an older child',
+      layout:
+        'Three sleeping places in one cabin: the third guest has a place of their own, with no sharing a bed and no second room.',
       seoTitle: 'Deluxe class (triple cabin) · Pine Hill',
       seoDescription:
         'Pine Hill Deluxe: sleeping places for three adults, available at all three properties in Da Lat, Phan Thiet and Vung Tau. Prices shown night by night once you pick dates.',
@@ -158,6 +172,8 @@ const COPY: Readonly<Record<Locale, Partial<Readonly<Record<RoomTypeCode, RoomTy
         'Standard is priced night by night and varies with the season, weekends and how many nights you stay. Choose a station and dates in the search to see the price printed on each leg before you hold.',
       ],
       suits: 'Couples or two friends on a short trip',
+      layout:
+        'Two sleeping places in a compact cabin, with room for two suitcases and space to move around; suits a stay of one or two nights.',
       seoTitle: 'Standard class (double cabin) · Pine Hill',
       seoDescription:
         'Pine Hill Standard: a room for two adults, available at all three properties in Da Lat, Phan Thiet and Vung Tau. Prices shown night by night once you pick dates.',
@@ -170,6 +186,8 @@ const COPY: Readonly<Record<Locale, Partial<Readonly<Record<RoomTypeCode, RoomTy
         'Superior is priced night by night and varies with the season, weekends and how many nights you stay; from three nights a length-of-stay factor lowers the price. Choose a station and dates to see each leg.',
       ],
       suits: 'Two people staying three nights or more',
+      layout:
+        'Two sleeping places like the Standard, in a larger cabin with extra space to sit and unpack for a longer stay.',
       seoTitle: 'Superior class (large double cabin) · Pine Hill',
       seoDescription:
         'Pine Hill Superior: a larger room for two adults, available at all three properties. Prices shown night by night once you pick dates.',
@@ -183,6 +201,8 @@ const COPY: Readonly<Record<Locale, Partial<Readonly<Record<RoomTypeCode, RoomTy
         'Family is priced night by night and varies with the season, weekends and how many nights you stay. Groups of four who want breakfast together should let the station know ahead.',
       ],
       suits: 'Families or groups of four adults',
+      layout:
+        'Four sleeping places in one cabin: the whole group behind one door, with no need to split across two rooms.',
       seoTitle: 'Family class (four-berth cabin) · Pine Hill',
       seoDescription:
         'Pine Hill Family: sleeping places for four adults in one room, available at all three properties. Prices shown night by night once you pick dates.',
@@ -195,6 +215,7 @@ const COPY: Readonly<Record<Locale, Partial<Readonly<Record<RoomTypeCode, RoomTy
         'Dorm is priced per bed, night by night. The room has six beds, so you share it with other guests; a larger group can book several beds in one booking.',
       ],
       suits: 'Solo travellers or small groups on a budget',
+      layout: 'Six beds in a shared room. You book by the bed; your roommates may be other guests.',
       seoTitle: 'Dorm class (six-berth cabin) · Pine Hill',
       seoDescription:
         'Pine Hill Dorm: a bed in a six-bed room with its own curtain, light and locker, available at all three properties. Prices shown night by night once you pick dates.',

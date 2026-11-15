@@ -12,6 +12,8 @@ import { RouteMap } from '../../../../components/content/route-map';
 import { StationTimetable } from '../../../../components/content/station-timetable';
 import { StickyBookingStub } from '../../../../components/content/sticky-booking-stub';
 import { JourneyCta } from '../../../../components/content/journey-cta';
+import { SeasonAlmanac, type AlmanacSeason } from '../../../../components/content/season-almanac';
+import { monthRange } from '../../../../i18n/format';
 import { Photo } from '../../../../components/photo';
 import { POSTERS } from '../../../../components/station-posters';
 import { landingContent, type Station } from '../../../../content/landing-content';
@@ -140,6 +142,46 @@ function RoomsAtStation({ pageKey, station, text, ctaHref }: SheetProps): ReactE
   );
 }
 
+const DAY_PARTS = ['morning', 'midday', 'evening'] as const;
+
+/** "Một ngày tại ga" (HB-322, CONT-02): ba buổi, tả không khí; không giờ phục vụ hay dịch vụ. */
+function DayRhythm({ copy, text }: Pick<SheetProps, 'copy' | 'text'>): ReactElement {
+  const { t } = text;
+  return (
+    <div className="ph-band-inner ph-day" data-testid="station-day">
+      <h2 id="station-day">{t('guest.station.dayTitle')}</h2>
+      <ol className="ph-day-parts" aria-labelledby="station-day">
+        {DAY_PARTS.map((part, index) => (
+          <li key={part} className="ph-day-part">
+            <h3>{t(`guest.station.day.${part}`)}</h3>
+            <p>{copy.day[index]}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/** Lịch mùa (HB-322, FEAT-02): tháng định dạng ở máy chủ, mùa hiện tại và link cuối tuần ở trình duyệt. */
+function Seasons({ pageKey, copy, station, text }: SheetProps): ReactElement {
+  const { t } = text;
+  const seasons: AlmanacSeason[] = copy.seasons.map((season, index) => {
+    const months = pageKey.seasonMonths[index] ?? [];
+    return { ...season, months, label: monthRange(months, text.locale) };
+  });
+  return (
+    <section data-reveal className="ph-band ph-band-board" aria-labelledby="station-seasons">
+      <div className="ph-band-inner">
+        <header className="ph-section-head">
+          <h2 id="station-seasons">{t('guest.station.seasonsTitle', { name: station.name })}</h2>
+          <p>{t('guest.station.seasonsNote')}</p>
+        </header>
+        <SeasonAlmanac slug={pageKey.slug} seasons={seasons} />
+      </div>
+    </section>
+  );
+}
+
 export function StationSheet(props: SheetProps): ReactElement {
   const { pageKey, copy, station, text, ctaHref } = props;
   const { t } = text;
@@ -197,13 +239,28 @@ export function StationSheet(props: SheetProps): ReactElement {
           </div>
           <aside className="ph-arrival" aria-labelledby="station-arrival">
             <h2 id="station-arrival">{t('guest.station.arrivalTitle')}</h2>
-            <ul>
-              {copy.arrival.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
+            <table className="ph-legs" data-testid="arrival-legs">
+              <thead>
+                <tr>
+                  <th scope="col">{t('guest.station.legsTime')}</th>
+                  <th scope="col">{t('guest.station.legsRoute')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {copy.legs.map((leg) => (
+                  <tr key={leg.route}>
+                    <th scope="row" className="ph-legs-time">
+                      {leg.time}
+                    </th>
+                    <td>{leg.route}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="ph-legs-note">{copy.arrivalNote}</p>
           </aside>
         </div>
+        <DayRhythm copy={copy} text={text} />
         {gallery.length === 0 ? null : (
           <div className="ph-band-inner ph-content-gallery">
             <h2 id="station-gallery">{t('guest.station.galleryTitle')}</h2>
@@ -214,6 +271,7 @@ export function StationSheet(props: SheetProps): ReactElement {
           <PriceIncludes text={text} showDorm linkDining />
         </div>
       </section>
+      <Seasons {...props} />
       <RoomsAtStation {...props} />
       <StickyBookingStub
         title={t('guest.station.title', { name: station.name })}

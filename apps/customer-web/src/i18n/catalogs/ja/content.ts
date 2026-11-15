@@ -17,6 +17,17 @@ export const jaContent: Readonly<Record<keyof typeof viContent, string>> = {
   'guest.station.storyTitle': 'この駅について',
   'guest.station.arrivalTitle': 'アクセス',
   'guest.station.galleryTitle': '駅の写真',
+  'guest.station.legsTime': '所要時間',
+  'guest.station.legsRoute': '区間',
+  'guest.station.dayTitle': '駅での一日',
+  'guest.station.day.morning': '早朝',
+  'guest.station.day.midday': '日中',
+  'guest.station.day.evening': '夕方から夜',
+  'guest.station.seasonsTitle': '{name}の季節',
+  'guest.station.seasonsNote':
+    '天気の数値は目安で、料金の季節ではありません。一泊ごとの料金は日程を選ぶと切符に印字されます。',
+  'guest.station.season.now': 'いまの季節',
+  'guest.station.season.cta': 'この季節のいちばん近い週末を選ぶ',
   'guest.station.roomsTitle': '{name}の客室クラス',
   'guest.station.readMore': '{name}駅について詳しく',
   'guest.cabin.title': '{name}クラス',
@@ -33,6 +44,16 @@ export const jaContent: Readonly<Record<keyof typeof viContent, string>> = {
   'guest.cabin.spec.refundValue': '仮押さえ時に選んだ料金プランに従います',
   'guest.cabin.stationsTitle': '利用できる駅',
   'guest.cabin.otherTitle': 'ほかのクラス',
+  'guest.cabin.layoutTitle': '客室のなか',
+  'guest.cabin.honestTitle': '正直に言うと',
+  'guest.cabin.honest.nightly':
+    '料金は一泊ごとに変わり、週末や繁忙期は高くなることがあります。仮押さえの前に一泊ごとの料金が切符に印字されます。',
+  'guest.cabin.honest.refund':
+    'キャンセル時の返金は、予約の返金プランに沿って支払い済みの額をもとに計算します。',
+  'guest.cabin.honest.property':
+    '各駅はそれぞれの客室を販売しています。料金、空室、チェックイン時刻は予約した駅のものです。',
+  'guest.cabin.honest.dorm':
+    'ドミトリーは相部屋です。予約するのはベッド一台で、部屋全体ではありません。',
   'guest.cabin.cta': '一泊ごとの料金を見る',
   'guest.cabin.readMore': '{name}クラスを見る',
   'guest.gallery.open': '写真 {n}/{total} を表示：{alt}',

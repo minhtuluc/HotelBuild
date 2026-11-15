@@ -44,7 +44,7 @@ describe('trang ga', () => {
         const copy = propertyPageCopy(page.slug, locale);
         expect(copy?.summary.trim(), `${page.slug}/${locale}`).toBeTruthy();
         expect(copy?.story.length).toBeGreaterThan(0);
-        expect(copy?.arrival.length).toBeGreaterThan(0);
+        expect(copy?.legs.length).toBeGreaterThan(0);
         const codes = landingContent(locale).stations.map((station) => station.code);
         expect(codes).toContain(page.stationCode);
       }

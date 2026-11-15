@@ -747,6 +747,231 @@
     margin: 4px 0 0;
   }
 
+  /* ——— Bảng chặng đến ga (HB-322, UX-05): cột thời gian cố định, chữ số thẳng hàng ——— */
+  .ph-legs {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  /* Bỏ kiểu bảng dữ liệu chung (nền xám, không xuống dòng, tô khi rê chuột): đây là giấy vé. */
+  .ph-legs th,
+  .ph-legs td,
+  .ph-legs tbody tr:hover td {
+    border-bottom: 0;
+    background: transparent;
+    white-space: normal;
+  }
+
+  .ph-legs thead th {
+    padding: 0 10px 6px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-align: left;
+    text-transform: uppercase;
+    color: var(--color-textMuted, #6b2f22);
+  }
+
+  .ph-legs tbody th,
+  .ph-legs tbody td {
+    padding: 10px;
+    border-top: 1px dashed var(--color-world-ticketMuted, #6b2f22);
+    vertical-align: top;
+    text-align: left;
+  }
+
+  .ph-legs thead th:first-child {
+    width: 36%;
+  }
+
+  .ph-legs tbody .ph-legs-time {
+    font-family: var(--font-display, 'Barlow Condensed', sans-serif);
+    font-size: 19px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.25;
+  }
+
+  .ph-legs-note {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-textMuted, #6b2f22);
+  }
+
+  /* ——— Một ngày tại ga (HB-322, CONT-02): ba buổi nối bằng đường kẻ tuyến ——— */
+  .ph-day {
+    display: grid;
+    gap: 18px;
+  }
+
+  .ph-day h2 {
+    margin: 0;
+    font-family: var(--font-display, 'Barlow Condensed', sans-serif);
+    font-size: clamp(1.9rem, 3.2vw, 2.6rem);
+    font-weight: 600;
+    line-height: 1.05;
+  }
+
+  .ph-day-parts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(16px, 3vw, 32px);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ph-day-part {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 3px solid var(--color-primary, #1b3a82);
+  }
+
+  .ph-day-part h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  .ph-day-part p {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  /* ——— Lịch mùa (HB-322, FEAT-02): bảng giờ tàu đen, bốn ô mùa ——— */
+  .ph-almanac {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ph-almanac-season {
+    display: grid;
+    grid-template-rows: auto auto auto 1fr auto;
+    gap: 10px;
+    padding: 20px clamp(14px, 2vw, 20px);
+    border-top: 3px solid var(--color-darkTextMuted, #a9b3ac);
+    background: color-mix(in srgb, var(--color-darkText, #f4efe6) 4%, transparent);
+  }
+
+  .ph-almanac-season[data-current='true'] {
+    border-top-color: var(--color-world-signal, #f2b632);
+  }
+
+  .ph-almanac-months {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-darkTextMuted, #a9b3ac);
+  }
+
+  .ph-almanac-now {
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: var(--color-world-signal, #f2b632);
+    color: var(--color-dark, #121614);
+    letter-spacing: 0.04em;
+  }
+
+  .ph-almanac-name {
+    margin: 0;
+    font-family: var(--font-display, 'Barlow Condensed', sans-serif);
+    font-size: clamp(1.4rem, 2.2vw, 1.75rem);
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--color-darkText, #f4efe6);
+  }
+
+  .ph-almanac-weather {
+    margin: 0;
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-darkText, #f4efe6);
+  }
+
+  .ph-almanac-tip {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--color-darkTextMuted, #a9b3ac);
+  }
+
+  .ph-almanac-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    font-weight: 600;
+    color: var(--color-world-signal, #f2b632);
+    text-underline-offset: 4px;
+  }
+
+  .ph-almanac-cta:focus-visible {
+    outline: 2px solid var(--color-world-signal, #f2b632);
+    outline-offset: 3px;
+  }
+
+  /* ——— Nói thẳng (HB-322, CONT-01): giấy vé, kẻ đôi đầu khối như `.ph-arrival` ——— */
+  .ph-honest {
+    display: grid;
+    gap: 12px;
+    padding: 22px clamp(18px, 3vw, 28px) 24px;
+    border-radius: 6px;
+    background: var(--color-world-ticketLight, #f7e5de);
+  }
+
+  .ph-honest h2 {
+    margin: 0;
+    padding-bottom: 10px;
+    border-bottom: 3px double var(--color-primary, #1b3a82);
+    font-family: var(--font-display, 'Barlow Condensed', sans-serif);
+    font-size: clamp(1.6rem, 2.6vw, 2.1rem);
+    font-weight: 600;
+    line-height: 1.05;
+  }
+
+  .ph-honest ul {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding-left: 1.1em;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  .ph-cabin-layout-title {
+    margin-top: 12px;
+  }
+
+  @media (max-width: 900px) {
+    .ph-almanac {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .ph-day-parts,
+    .ph-almanac {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .ph-content-poster,
     .ph-cabin-stamp {
