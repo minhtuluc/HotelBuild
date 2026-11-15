@@ -157,6 +157,10 @@ const ROUTES: Record<string, (request: Recorded) => Outcome> = {
     status: 200,
     body: { data: [BOOKING], meta: { limit: 20, nextCursor: null, hasMore: false, total: 1 } },
   }),
+  'GET /api/v1/bookings?limit=20&statuses=CONFIRMED%2CCHECKED_IN': () => ({
+    status: 200,
+    body: { data: [BOOKING], meta: { limit: 20, nextCursor: null, hasMore: false, total: 1 } },
+  }),
   'GET /api/v1/bookings/b1': () => ({ status: 200, body: BOOKING }),
   'POST /api/v1/bookings/b1/confirm': () => ({
     status: 200,
@@ -251,6 +255,15 @@ describe('hợp đồng F4 qua HTTP thật', () => {
     const confirmed = await api.confirm('b1', { paymentId: 'pay1' });
     expect(confirmed.data.status).toBe('CONFIRMED');
     expect(recorded(3).url).toBe('/api/v1/bookings/b1/confirm');
+  });
+
+  it('HB-243: statuses gửi một tham số phân tách dấu phẩy', async () => {
+    const list = await createBookingApi(client()).list({
+      limit: 20,
+      statuses: ['CONFIRMED', 'CHECKED_IN'],
+    });
+    expect(recorded(0).url).toBe('/api/v1/bookings?limit=20&statuses=CONFIRMED%2CCHECKED_IN');
+    expect(list.data.data[0]?.id).toBe('b1');
   });
 
   it('giữ chỗ và giải phóng hold gửi lý do qua query', async () => {

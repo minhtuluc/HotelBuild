@@ -88,9 +88,21 @@ export const bookingSummarySchema = z.object({
 });
 
 /** Bộ lọc `GET /bookings`: khách chỉ thấy booking của mình, nhân viên lọc theo phạm vi cơ sở (§6.3). */
+const BOOKING_STATUS_LIST = new RegExp(
+  `^(${bookingStatusSchema.options.join('|')})(,(${bookingStatusSchema.options.join('|')}))*$`,
+);
+
 export const bookingsQuerySchema = listQuerySchema.extend({
   propertyId: z.string().min(1).optional(),
   status: bookingStatusSchema.optional(),
+  /**
+   * HB-243: lọc **nhiều** trạng thái trong một lần gọi, phân tách dấu phẩy (vd. `CONFIRMED,CHECKED_IN`).
+   * Không dùng cùng `status` (400). Giữ `status` đơn để không phá client cũ.
+   */
+  statuses: z
+    .string()
+    .regex(BOOKING_STATUS_LIST, 'Danh sách trạng thái phân tách dấu phẩy')
+    .optional(),
   channelCode: channelCodeSchema.optional(),
 });
 

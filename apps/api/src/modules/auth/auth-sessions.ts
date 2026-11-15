@@ -34,11 +34,13 @@ export class AuthSessions {
     now: Date,
   ): Promise<TokenPairResponse> {
     const scope = await this.prisma.user_property_scopes.findMany({ where: { user_id: user.id } });
+    const role = userRoleSchema.parse(user.role);
+    const propertyScope = scope.map((row) => row.property_id);
     const { token } = await signAccessToken(
       {
         userId: user.id,
-        role: userRoleSchema.parse(user.role),
-        propertyScope: scope.map((row) => row.property_id),
+        role,
+        propertyScope,
         sessionId: session.id,
       },
       this.config.JWT_ACCESS_SECRET,
@@ -54,6 +56,9 @@ export class AuthSessions {
         Math.ceil((session.expires_at.getTime() - now.getTime()) / 1000),
       ),
       mustChangePassword: user.must_change_password,
+      // HB-243: cùng giá trị vừa ký vào access token.
+      role,
+      propertyScope,
     };
   }
 

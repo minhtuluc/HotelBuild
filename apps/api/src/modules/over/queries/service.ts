@@ -44,6 +44,7 @@ export interface CaseSummaryView {
   readonly resolutionSource: 'USER' | 'SYSTEM' | null;
   readonly delayReason: string | null;
   readonly affectedBookingIds: readonly string[];
+  readonly affectedBookingCodes: readonly string[];
   readonly ladderPreview: readonly LadderRung[];
   readonly version: number;
 }
@@ -164,6 +165,7 @@ export class OverbookingQueries {
       type === undefined
         ? { candidates: [], affectedBookingIds: [], ladderPreview: fallbackLadder() }
         : await candidatesForCase(this.db, facts, type, row.date, Number(row.shortage_count), now);
+    const affectedBookingCodes = await this.bookingCodes(detail.affectedBookingIds);
     return {
       view: {
         id: row.id,
@@ -183,11 +185,23 @@ export class OverbookingQueries {
         resolutionSource: row.resolution_source,
         delayReason: row.delay_reason,
         affectedBookingIds: detail.affectedBookingIds,
+        affectedBookingCodes,
         ladderPreview: detail.ladderPreview,
         version: Number(row.version),
       },
       candidates: detail.candidates,
     };
+  }
+
+  /** HB-243: mã booking theo đúng thứ tự `ids` (một truy vấn cho cả ca). */
+  private async bookingCodes(ids: readonly string[]): Promise<readonly string[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.db.bookings.findMany({
+      where: { id: { in: [...ids] } },
+      select: { id: true, code: true },
+    });
+    const codes = new Map(rows.map((row) => [row.id, row.code]));
+    return ids.map((id) => codes.get(id) ?? id);
   }
 
   private scopeFor(actor: AuthorizedActor): Prisma.overbooking_casesWhereInput {
