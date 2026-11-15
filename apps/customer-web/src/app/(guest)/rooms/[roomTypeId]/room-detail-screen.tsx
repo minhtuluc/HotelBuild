@@ -17,6 +17,7 @@ import { criteriaIssue, parseCriteria } from '../../search/search-params';
 import { isExpired } from './quote-model';
 import { NightsTable, PriceStrip, QuoteSummary, QuoteWarnings } from './quote-tables';
 import { calendarDate } from '../../../../i18n/format';
+import { TableSkeleton } from '../../../../components/table-skeleton';
 
 function planCodeOf(value: string): RatePlanCode | null {
   const parsed = ratePlanCodeSchema.safeParse(value);
@@ -184,6 +185,12 @@ export function RoomDetailScreen(): ReactElement {
           setPlanCode(next);
           void runQuote(next);
         }}
+      />
+      <TableSkeleton
+        active={state.kind === 'loading'}
+        rows={3}
+        columns={4}
+        testId="nights-skeleton"
       />
       <StateSurface state={state}>
         {readError === null ? null : (

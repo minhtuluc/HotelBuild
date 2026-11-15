@@ -2564,9 +2564,117 @@
       transform: none;
       padding: 18px 16px;
     }
+  }
 
-    .ph-sample-why {
-      display: none;
+  /* UX-01 (HB-316): vé mẫu và bảng giá từng đêm thành thẻ trên điện thoại; lý do giá không bị ẩn. */
+  @media (max-width: 639px) {
+    .ph-sample-table,
+    .ph-sample-table tbody,
+    .ph-sample-table tfoot {
+      display: block;
+      width: 100%;
+    }
+
+    .ph-sample-table tfoot tr {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding-top: 8px;
+      border-top: 2px solid var(--color-primary, #1b3a82);
+    }
+
+    .ph-sample-table tfoot th,
+    .ph-sample-table tfoot td {
+      border-top: 0;
+    }
+
+    .ph-sample-table tbody tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'seg amount'
+        'date amount'
+        'why why';
+      column-gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1.5px dashed rgb(27 58 130 / 0.45);
+    }
+
+    .ph-sample-table tbody th,
+    .ph-sample-table tbody td {
+      display: block;
+      padding: 0;
+      border-bottom: 0;
+    }
+
+    .ph-sample-seg {
+      grid-area: seg;
+    }
+
+    .ph-sample-date {
+      grid-area: date;
+    }
+
+    .ph-sample-table tbody .ph-sample-amount {
+      grid-area: amount;
+      align-self: center;
+    }
+
+    .ph-sample-table tbody .ph-sample-why {
+      grid-area: why;
+      margin-top: 6px;
+    }
+
+    .ph-nights-table caption {
+      text-align: left;
+    }
+
+    .ph-nights-table thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    .ph-nights-table tbody,
+    .ph-nights-table tr,
+    .ph-nights-table td {
+      display: block;
+    }
+
+    .ph-nights-table tr {
+      padding: 10px 16px;
+      border-bottom: 1.5px dashed var(--color-border, #d9d2cc);
+    }
+
+    .ph-nights-table td {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 4px 0;
+      border: 0;
+      white-space: normal;
+    }
+
+    .ph-nights-table td[data-label]::before {
+      content: attr(data-label);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-textMuted, #5a4640);
+    }
+
+    .ph-nights-table td:first-child {
+      font-family: var(--font-display, 'Barlow Condensed', sans-serif);
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .ph-nights-table td:first-child::before {
+      align-self: center;
     }
   }
 

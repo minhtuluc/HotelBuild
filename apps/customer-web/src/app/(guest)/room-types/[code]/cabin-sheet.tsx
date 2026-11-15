@@ -100,7 +100,7 @@ function OtherClasses({ pageKey, text }: CabinProps): ReactElement {
     (cabin) => cabin.code !== pageKey.code,
   );
   return (
-    <section className="ph-band ph-band-ticket" aria-labelledby="cabin-others">
+    <section data-reveal className="ph-band ph-band-ticket" aria-labelledby="cabin-others">
       <div className="ph-band-inner">
         <header className="ph-section-head">
           <h2 id="cabin-others">{t('guest.cabin.otherTitle')}</h2>
@@ -119,7 +119,10 @@ function OtherClasses({ pageKey, text }: CabinProps): ReactElement {
               <span className="ph-class-detail">{cabin.detail}</span>
               {roomTypePageKey(cabin.code) === undefined ? null : (
                 <Link className="ph-class-price" href={`/room-types/${cabin.code}`}>
-                  {t('guest.cabin.readMore', { name: cabin.name })} →
+                  {t('guest.cabin.readMore', { name: cabin.name })}{' '}
+                  <span className="ph-arrow" aria-hidden="true">
+                    →
+                  </span>
                 </Link>
               )}
             </li>

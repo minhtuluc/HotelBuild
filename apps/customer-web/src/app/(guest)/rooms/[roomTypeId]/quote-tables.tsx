@@ -65,7 +65,7 @@ export function NightsTable({ quote }: { quote: Quote }): ReactElement {
   return (
     <div style={{ display: 'grid', gap: 10 }}>
       <div className="ph-table-wrap">
-        <table data-testid="nights-table">
+        <table data-testid="nights-table" className="ph-nights-table">
           <caption>{t('guest.rooms.nights.title')}</caption>
           <thead>
             <tr>
@@ -84,12 +84,22 @@ export function NightsTable({ quote }: { quote: Quote }): ReactElement {
           <tbody>
             {nightRows(quote).map((row) => (
               <tr key={row.date} data-testid={`night-row-${row.date}`}>
-                <td className="ph-tabular">{calendarDate(row.date, locale)}</td>
-                <td className="ph-tabular">{formatMoney(row.basePrice)}</td>
-                <td className="ph-tabular" style={{ fontWeight: 600 }}>
+                <td className="ph-tabular" data-label={t('guest.rooms.col.date')}>
+                  {calendarDate(row.date, locale)}
+                </td>
+                <td className="ph-tabular" data-label={t('guest.rooms.col.basePrice')}>
+                  {formatMoney(row.basePrice)}
+                </td>
+                <td
+                  className="ph-tabular"
+                  style={{ fontWeight: 600 }}
+                  data-label={t('guest.rooms.col.nightlyPrice')}
+                >
                   {formatMoney(row.nightlyPrice)}
                 </td>
-                <td>{row.clamped ? t('guest.rooms.flag.clamped') : t('guest.rooms.flag.none')}</td>
+                <td data-label={t('guest.rooms.col.flags')}>
+                  {row.clamped ? t('guest.rooms.flag.clamped') : t('guest.rooms.flag.none')}
+                </td>
               </tr>
             ))}
           </tbody>

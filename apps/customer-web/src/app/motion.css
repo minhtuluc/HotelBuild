@@ -1,0 +1,142 @@
+/*
+ * Chuyển động của customer-web (HB-316, DESIGN.md › Motion). Chỉ animate `transform` và `opacity`;
+ * không ẩn nội dung trong HTML máy chủ; không animate vùng LCP; mọi thứ tắt khi giảm chuyển động.
+ */
+:root {
+  --ph-ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ph-ease-snap: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ph-dur-fast: 180ms;
+  --ph-dur-med: 380ms;
+  --ph-dur-reveal: 560ms;
+}
+
+@layer components {
+  /* ANIM-01 — bảng ga "lạch cạch": ô vừa có dữ liệu hoặc vừa được chọn lật nhẹ một lần. */
+  .ph-tick {
+    transform-origin: 50% 40%;
+    animation: ph-tick var(--ph-dur-med) var(--ph-ease-snap) both;
+  }
+
+  @keyframes ph-tick {
+    from {
+      transform: perspective(300px) rotateX(-55deg);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  /* ANIM-02 — đóng dấu tem mã hạng một lần khi tải. Kết thúc ở đúng góc nghiêng của tem. */
+  .ph-cabin-stamp {
+    animation: ph-thump 260ms var(--ph-ease-snap) 120ms both;
+  }
+
+  @keyframes ph-thump {
+    from {
+      transform: scale(1.22) rotate(-5deg);
+    }
+    to {
+      transform: rotate(-2deg);
+    }
+  }
+
+  /* ANIM-03 — mũi tên dẫn của link khám phá dịch 4px khi hover/focus. */
+  .ph-arrow {
+    display: inline-block;
+    margin-left: 0.25em;
+    transition: transform 220ms var(--ph-ease-out);
+  }
+
+  a:hover > .ph-arrow,
+  a:focus-visible > .ph-arrow {
+    transform: translateX(4px);
+  }
+
+  /*
+   * ANIM-04 — trượt khi cuộn tới (lớp chờ chỉ do JS gắn cho phần tử đang ở dưới màn hình). Chỉ dịch vị
+   * trí, không làm mờ: chữ luôn đủ tương phản kể cả khi chưa cuộn tới (axe/Lighthouse đo theo opacity).
+   */
+  [data-reveal] {
+    transition: transform var(--ph-dur-reveal) var(--ph-ease-out);
+  }
+
+  .ph-reveal-pending {
+    transform: translateY(18px);
+  }
+
+  /* Ảnh gallery phóng nhẹ trong khung cố định: không đổi kích thước khung, không giật bố cục. */
+  .ph-gallery button {
+    overflow: hidden;
+  }
+
+  .ph-gallery img {
+    transition: transform 750ms var(--ph-ease-out);
+  }
+
+  .ph-gallery button:hover img,
+  .ph-gallery button:focus-visible img {
+    transform: scale(1.035);
+  }
+
+  /* ANIM-05 — khung chờ dạng bảng. */
+  .ph-skeleton {
+    display: grid;
+    gap: 10px;
+    padding: 6px 0;
+  }
+
+  .ph-skeleton-row {
+    display: grid;
+    gap: 12px;
+    min-height: 44px;
+    align-items: center;
+    border-bottom: 1px dashed var(--color-border, #d9d2cc);
+  }
+
+  .ph-skeleton-bar {
+    display: block;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--color-surfaceMuted, #e9e5df);
+    animation: ph-skeleton 1.2s ease-in-out infinite alternate;
+  }
+
+  .ph-skeleton-bar:first-child {
+    width: 70%;
+  }
+
+  @keyframes ph-skeleton {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0.45;
+    }
+  }
+
+  /* ANIM-06 — giảm chuyển động: tắt hết, kể cả trạng thái chờ trượt (phòng khi JS cũ còn gắn). */
+  @media (prefers-reduced-motion: reduce) {
+    .ph-tick,
+    .ph-cabin-stamp,
+    .ph-skeleton-bar {
+      animation: none;
+    }
+
+    .ph-arrow,
+    [data-reveal],
+    .ph-gallery img {
+      transition: none;
+    }
+
+    a:hover > .ph-arrow,
+    a:focus-visible > .ph-arrow,
+    .ph-gallery button:hover img,
+    .ph-gallery button:focus-visible img {
+      transform: none;
+    }
+
+    .ph-reveal-pending {
+      transform: none;
+    }
+  }
+}

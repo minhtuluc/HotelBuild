@@ -291,6 +291,26 @@ Trang nội dung (`/stays/[slug]`, `/room-types/[code]`) dùng đúng ba vật l
 - Chỉ dưới 760px: dải giấy vé hồng cao 52px dính đáy màn (+ `env(safe-area-inset-bottom)`), mép trên là đường xé nét đứt mực xanh, bên trái tên ga/hạng chữ cạnh hẹp, bên phải nút dấu bấm đậm "Xem phòng trống". Trang cộng thêm đệm đáy bằng chiều cao dải để không che nội dung cuối. Trên 760px không dính: nút nằm ở đầu trang và cuối trang.
 - **CTA:** chưa có ngày thì về khối tìm phòng trang chủ với ga chọn sẵn (`/?ga={slug}#search-block`); không tự bịa ngày hay tồn phòng.
 
+## Motion
+
+Chuyển động kể lại cơ khí của nhà ga: bảng lật, con dấu, cuống vé. Nhẹ, một lần, không giật bố cục (`apps/customer-web/src/app/motion.css`, HB-316).
+
+**Token:** `--ph-ease-out` (0.22, 0.61, 0.36, 1) cho trượt và hover; `--ph-ease-snap` (0.34, 1.56, 0.64, 1) cho lật và đóng dấu; `--ph-dur-fast` 180ms, `--ph-dur-med` 380ms, `--ph-dur-reveal` 560ms.
+
+- **Lật bảng ga** (`.ph-flap` khi tải, `.ph-tick` khi dữ liệu về hoặc khi chọn ga): `rotateX` một lần.
+- **Đóng dấu** (`.ph-cabin-stamp`): `scale(1.22) rotate(-5deg)` → góc nghiêng của tem, một lần khi tải.
+- **Mũi tên dẫn** (`.ph-arrow`, `aria-hidden`): dịch 4px khi hover/focus link.
+- **Trượt khi cuộn** (`[data-reveal]`): chỉ dịch 18px, không làm mờ; JS chỉ gắn trạng thái chờ cho phần tử đang ở dưới màn hình.
+- **Ảnh gallery:** phóng 3,5% trong khung cố định khi hover/focus.
+- **Khung chờ dạng bảng** (`TableSkeleton`): giữ chỗ cao của bảng khi đang tải, `aria-hidden`.
+
+### Named Rules
+**The Visible-First Rule.** HTML máy chủ không ẩn gì (không `opacity: 0`, không `visibility: hidden` chờ JS). Chuyển động chỉ thêm vào sau khi trang đã đọc được.
+
+**The Still Fold Rule.** Không animate vùng LCP (đầu trang, tấm vé, áp phích ga). Không làm mờ chữ để tạo hiệu ứng: trình quét tương phản đo theo opacity.
+
+**The Reduced Motion Rule.** `prefers-reduced-motion: reduce` tắt mọi hoạt ảnh và chuyển tiếp mới; trượt khi cuộn không kích hoạt.
+
 ## Do's and Don'ts
 
 ### Do:

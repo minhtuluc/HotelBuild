@@ -94,7 +94,7 @@ function RoomsAtStation({ pageKey, station, text, ctaHref }: SheetProps): ReactE
     pageKey.featuredRoomCodes.some((code) => code === cabin.code),
   );
   return (
-    <section className="ph-band ph-band-ticket" aria-labelledby="station-rooms">
+    <section data-reveal className="ph-band ph-band-ticket" aria-labelledby="station-rooms">
       <div className="ph-band-inner">
         <header className="ph-section-head">
           <h2 id="station-rooms">{t('guest.station.roomsTitle', { name: station.name })}</h2>
@@ -113,7 +113,10 @@ function RoomsAtStation({ pageKey, station, text, ctaHref }: SheetProps): ReactE
               <span className="ph-class-detail">{cabin.detail}</span>
               {roomTypePageKey(cabin.code) === undefined ? null : (
                 <Link className="ph-class-price" href={`/room-types/${cabin.code}`}>
-                  {t('guest.cabin.readMore', { name: cabin.name })} →
+                  {t('guest.cabin.readMore', { name: cabin.name })}{' '}
+                  <span className="ph-arrow" aria-hidden="true">
+                    →
+                  </span>
                 </Link>
               )}
             </li>
@@ -175,7 +178,7 @@ export function StationSheet(props: SheetProps): ReactElement {
           current={station.code}
         />
       </div>
-      <section className="ph-band ph-band-paper" aria-labelledby="station-story">
+      <section data-reveal className="ph-band ph-band-paper" aria-labelledby="station-story">
         <div className="ph-band-inner ph-content-columns">
           <div className="ph-content-prose">
             <h2 id="station-story">{t('guest.station.storyTitle')}</h2>

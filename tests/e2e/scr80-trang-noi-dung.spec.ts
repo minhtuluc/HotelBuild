@@ -107,11 +107,11 @@ test.describe('Tờ giới thiệu ga Đà Lạt (HB-310)', () => {
   test('trang chủ có link sang tờ giới thiệu ga và trang hạng đã có', async ({ page }) => {
     await mockProperties(page);
     await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Đọc thêm về ga Đà Lạt →' })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: 'Đọc thêm về ga Đà Lạt', exact: true })).toHaveAttribute(
       'href',
       '/stays/da-lat',
     );
-    await expect(page.getByRole('link', { name: 'Đọc thêm về ga Phan Thiết →' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Đọc thêm về ga Phan Thiết' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Deluxe', exact: true })).toHaveAttribute(
       'href',
       '/room-types/DLX',

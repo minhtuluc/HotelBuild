@@ -73,7 +73,11 @@ function DepartureBoard({
                 const selected = property.id === selectedId;
                 return (
                   <tr key={property.id} data-selected={selected ? 'true' : 'false'}>
-                    <td className="ph-flap" style={{ animationDelay: `${index * 90}ms` }}>
+                    <td
+                      key={selected ? 'picked' : 'idle'}
+                      className={selected ? 'ph-flap ph-tick' : 'ph-flap'}
+                      style={{ animationDelay: `${index * 90}ms` }}
+                    >
                       {property.name}
                     </td>
                     <td className="ph-flap" style={{ animationDelay: `${index * 90 + 40}ms` }}>

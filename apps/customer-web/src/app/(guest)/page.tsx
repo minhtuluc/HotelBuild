@@ -10,7 +10,8 @@ import { Photo } from '../../components/photo';
 import { ALL_PHOTO_SLOTS, slotById } from '../../content/photo-slots';
 import { availablePhotos } from '../../lib/photos';
 import { RouteMap } from '../../components/content/route-map';
-import { propertyPageByStation, propertyPageKey } from '../../content/property-pages';
+import { propertyPageKey } from '../../content/property-pages';
+import { StationMore } from '../../components/content/station-more';
 import { roomTypePageKey } from '../../content/room-type-pages';
 import { ApiProbe } from './api-probe';
 import { SearchBlock } from './search/search-block';
@@ -32,18 +33,6 @@ function HeroIntro(): ReactElement {
 }
 
 /** Sơ đồ tuyến: ba ga trên một đường, độ cao ghi cạnh mỗi ga. */
-/** Ga đã có tờ giới thiệu thì thêm link "Đọc thêm"; ga chưa có trang thì không có link (HB-310). */
-function StationMore({ code, name }: { code: string; name: string }): ReactElement | null {
-  const { t } = serverTranslators();
-  const page = propertyPageByStation(code);
-  if (page === undefined) return null;
-  return (
-    <Link className="ph-station-more" href={`/stays/${page.slug}`}>
-      {t('guest.station.readMore', { name })} →
-    </Link>
-  );
-}
-
 /** Ảnh đang có (mã ô → đường dẫn) và cờ xem trước khung ô ảnh. */
 interface PhotoContext {
   readonly found: Readonly<Record<string, string>>;
@@ -72,7 +61,7 @@ function Stations({ photos }: { photos: PhotoContext }): ReactElement {
   const { t, locale } = serverTranslators();
   const content = landingContent(locale);
   return (
-    <section className="ph-band ph-band-paper" aria-labelledby="route-title" id="tuyen">
+    <section data-reveal className="ph-band ph-band-paper" aria-labelledby="route-title" id="tuyen">
       <div className="ph-band-inner">
         <header className="ph-section-head">
           <h2 id="route-title">{t('guest.route.title')}</h2>
@@ -150,7 +139,12 @@ function Classes({ photos }: { photos: PhotoContext }): ReactElement {
   const { t, locale } = serverTranslators();
   const content = landingContent(locale);
   return (
-    <section className="ph-band ph-band-ticket" aria-labelledby="classes-title" id="hang-phong">
+    <section
+      data-reveal
+      className="ph-band ph-band-ticket"
+      aria-labelledby="classes-title"
+      id="hang-phong"
+    >
       <div className="ph-band-inner">
         <header className="ph-section-head">
           <h2 id="classes-title">{t('guest.classes.title')}</h2>
@@ -176,7 +170,10 @@ function Classes({ photos }: { photos: PhotoContext }): ReactElement {
               <span className="ph-class-cap">{cabin.capacity}</span>
               <span className="ph-class-detail">{cabin.detail}</span>
               <a className="ph-class-price" href="#search-block">
-                {t('guest.classes.price')} →
+                {t('guest.classes.price')}{' '}
+                <span className="ph-arrow" aria-hidden="true">
+                  →
+                </span>
               </a>
             </li>
           ))}
@@ -190,7 +187,7 @@ function Fare(): ReactElement {
   const { t, locale } = serverTranslators();
   const content = landingContent(locale);
   return (
-    <section className="ph-band ph-band-paper" aria-labelledby="fare-title" id="gia">
+    <section data-reveal className="ph-band ph-band-paper" aria-labelledby="fare-title" id="gia">
       <div className="ph-band-inner ph-fare">
         <div>
           <header className="ph-section-head">
@@ -218,8 +215,10 @@ function Fare(): ReactElement {
             <tbody>
               {content.sampleTicket.nights.map((night, index) => (
                 <tr key={night.date}>
-                  <th scope="row">{t('guest.ticket.segment', { n: index + 1 })}</th>
-                  <td>
+                  <th scope="row" className="ph-sample-seg">
+                    {t('guest.ticket.segment', { n: index + 1 })}
+                  </th>
+                  <td className="ph-sample-date">
                     {night.weekday} {night.date}
                   </td>
                   <td className="ph-sample-why">{night.why}</td>
@@ -286,7 +285,12 @@ function Refunds(): ReactElement {
   const { t, locale } = serverTranslators();
   const content = landingContent(locale);
   return (
-    <section className="ph-band ph-band-board" aria-labelledby="refund-title" id="tra-ve">
+    <section
+      data-reveal
+      className="ph-band ph-band-board"
+      aria-labelledby="refund-title"
+      id="tra-ve"
+    >
       <div className="ph-band-inner">
         <header className="ph-section-head">
           <h2 id="refund-title">{t('guest.refund.title')}</h2>
@@ -307,7 +311,12 @@ function Steps(): ReactElement {
   const { t, locale } = serverTranslators();
   const content = landingContent(locale);
   return (
-    <section className="ph-band ph-band-ticket" aria-labelledby="steps-title" id="cach-dat">
+    <section
+      data-reveal
+      className="ph-band ph-band-ticket"
+      aria-labelledby="steps-title"
+      id="cach-dat"
+    >
       <div className="ph-band-inner">
         <header className="ph-section-head">
           <h2 id="steps-title">{t('guest.steps.title')}</h2>
@@ -332,7 +341,7 @@ function Questions(): ReactElement {
   const { t, locale } = serverTranslators();
   const content = landingContent(locale);
   return (
-    <section className="ph-band ph-band-paper" aria-labelledby="faq-title" id="hoi-dap">
+    <section data-reveal className="ph-band ph-band-paper" aria-labelledby="faq-title" id="hoi-dap">
       <div className="ph-band-inner ph-faq-wrap">
         <header className="ph-section-head">
           <h2 id="faq-title">{t('guest.faq.title')}</h2>
