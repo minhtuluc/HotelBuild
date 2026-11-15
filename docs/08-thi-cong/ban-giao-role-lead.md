@@ -8,10 +8,10 @@ Tài liệu này là **ảnh chụp trạng thái lúc bàn giao**, dành cho ng
 
 | Mục | Giá trị |
 |---|---|
-| `main` | `6fcb6b4` — feat(HB-310): trang nội dung mẫu (#305) |
+| `main` | `14b125f` — fix(HB-321): chín ca E2E operations-web đỏ trên main xanh lại (#317) |
 | CI trên `main` | xanh (Quality gate + Backend integration) |
 | Secret scan / Documentation quality | xanh |
-| Security (CodeQL, Audit, Trivy) | xanh tại `1c6dbae`; có lượt dispatch tay trên `6fcb6b4` — kiểm lại trước khi merge tiếp |
+| Security (CodeQL, Audit, Trivy) | xanh tại `6fcb6b4` (hai lượt: tự động + dispatch tay) — sau mỗi đợt merge có mã thì dispatch tay lại: `gh workflow run security.yml --ref main` |
 | E2E nightly (web) | hay bị `cancelled` (giới hạn runner) — không coi là tín hiệu đỏ |
 | Sổ nợ kỹ thuật | 80 dòng TD, **43 còn Mở**, 3 BLOCKED (TD-75/76/78) |
 | Hàng đợi PR | 10 PR mở, xếp chồng theo 4 nhánh (mục 2) |
@@ -38,7 +38,11 @@ Bốn nhánh độc lập. **Luôn merge nhánh cha trước, rồi rebase nhán
 
 Lưu ý thứ tự migration: **#301** và **#314** cùng đặt số `0013` (`0013_public_photos` vs `0013_property_slug`). Ai merge trước giữ `0013`, người sau **phải đánh số lại** thành `0014` (tên thư mục migration cũng phải đổi theo).
 
-### 2.1. Alert CodeQL đang chặn #308
+### 2.1. PR có thể xuất hiện sau khi bàn giao
+
+Hàng đợi trên đây là ảnh chụp lúc 15/11/2026, **không phải danh sách đóng**. Trong lúc viết tài liệu này đã có thêm **#317** (HB-321 — chín ca E2E operations-web đỏ trên `main` do fixture E2E lệch hợp đồng sau HB-220; CI xanh, độc lập, đã merge). Luôn chạy `gh pr list --state open` trước khi lên kế hoạch.
+
+### 2.2. Alert CodeQL đang chặn #308
 
 `js/xss` (high) tại `apps/customer-web/src/components/language-select.tsx:17` — alert số 64, phát sinh trong phần code PR này. Phải **sửa code**, không dismiss: `check:imports` cũng cấm đọc `process.env` ngoài `apps/*/src/config`, nên giá trị phải đi qua đường cấu hình của app.
 
@@ -91,6 +95,10 @@ gh pr view <số-PR> --json state,mergedAt,mergeCommit
 
 Migration mới phải khớp `docs/04-thiet-ke/csdl.md` §3 (đây là oracle của test catalog) và `pnpm db:drift` phải không lệch. Hai PR mở cùng lúc đặt trùng số migration thì xem mục 2.
 
+### 3.9. Đổi hợp đồng ⇒ E2E fake-api phải sửa theo, không chỉ fixture unit
+
+#317: HB-220 đổi `meta.scan` và hình dạng ứng viên chi tiết ca; fixture **unit** được sửa nhưng fixture **E2E** (`tests/e2e/fake-api/**`) thì không, nên **chín ca E2E operations-web đỏ trên `main` vốn CI xanh**. Khi một PR đổi hợp đồng đã phát hành, phải rà cả `tests/e2e/fake-api/` và các spec E2E dùng nó — nếu không, `main` xanh CI nhưng E2E đỏ.
+
 ## 4. Luật chơi của vai lead (giữ nguyên khi nhận vai)
 
 1. **Chỉ merge qua `pnpm pr:merge <số-PR>`** (`scripts/merge-pr.mjs`). Không dùng `gh pr merge` trực tiếp: script từ chối PR nháp, PR xung đột, check chưa xanh, và **thiếu một trong ba check bắt buộc** (`Quality gate (typecheck, lint, test, build)`, `docs-and-embedded`, `postgres16`).
@@ -115,14 +123,15 @@ Migration mới phải khớp `docs/04-thiet-ke/csdl.md` §3 (đây là oracle c
 
 ## 6. Việc nên làm trong 1–2 ngày đầu
 
-1. Đọc [sổ tay lead](so-tay-lead.md) và tài liệu này; xem `gh pr list --state open`.
+1. Đọc [sổ tay lead](so-tay-lead.md) và tài liệu này; xem `gh pr list --state open` (danh sách ở mục 2 có thể đã cũ).
 2. Xử lý hàng đợi theo mục 2: **#309 → #316 → #314 → #300** trước (bốn PR đều base `main`), rồi rebase từng nhánh con theo thứ tự cha–con.
 3. Đóng **#310** (trùng #303).
 4. Sửa alert XSS của **#308** (`apps/customer-web/src/components/language-select.tsx:17`) — sửa code, không dismiss.
 5. Sau mỗi lần merge: kiểm CI trên `main`; nếu job bị cancel thì rerun (mục 3.5). Nếu CI đỏ do lỗi thật thì sửa ngay, không để `main` đỏ.
-6. Cập nhật sổ nợ: mỗi TD mà PR đóng cần dòng đúng trạng thái; đếm lại (mục 1) để người nhận vai sau có số liệu.
-7. Dispatch `Security` tay sau khi merge có mã: `gh workflow run security.yml --ref main` (workflow không tự chạy trên push vào `main`).
-8. Sửa [bang-chung-a11y.md](../07-ban-giao/bang-chung-a11y.md) và [bang-chung-i18n.md](../07-ban-giao/bang-chung-i18n.md) nếu có màn mới (F6/F7 đã có màn).
+6. **Chạy E2E hai web** (`pnpm test:e2e`) sau mỗi đợt merge lớn — CI không bắt được ca E2E hỏng (mục 3.9); #317 là ví dụ: CI xanh mà chín ca E2E đỏ trên `main`.
+7. Cập nhật sổ nợ: mỗi TD mà PR đóng cần dòng đúng trạng thái; đếm lại (mục 1) để người nhận vai sau có số liệu.
+8. Dispatch `Security` tay sau khi merge có mã: `gh workflow run security.yml --ref main` (workflow không tự chạy trên push vào `main`).
+9. Sửa [bang-chung-a11y.md](../07-ban-giao/bang-chung-a11y.md) và [bang-chung-i18n.md](../07-ban-giao/bang-chung-i18n.md) nếu có màn mới (F6/F7 đã có màn).
 
 ## 7. Lệnh thường dùng
 
