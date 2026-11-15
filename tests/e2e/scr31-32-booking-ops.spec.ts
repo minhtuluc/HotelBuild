@@ -20,6 +20,19 @@ test.beforeEach(async ({ page, request }) => {
 /** Regex (không phải glob) vì đường dẫn chi tiết/xoá có thêm `/` — glob `*` không vượt qua dấu `/`. */
 const LIST = /\/api\/session\/sys\/bookings/;
 
+function property(id: string, name: string): Record<string, unknown> {
+  return {
+    id,
+    name,
+    status: 'ACTIVE',
+    activeRoomCount: 10,
+    overbookLimitPct: 5,
+    checkInTime: '14:00',
+    checkOutTime: '12:00',
+    version: 1,
+  };
+}
+
 function booking(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: 'b1',
@@ -152,6 +165,60 @@ test.describe('SCR-31/SCR-32 danh sách & chi tiết booking (HB-106)', () => {
     await expect
       .poll(() => queries.some((query) => query.includes('status=HELD') && query.includes('q=0912345678')))
       .toBe(true);
+  });
+
+  test('ô "Cơ sở" chọn trong danh sách máy chủ trả, mặc định theo cơ sở đang làm việc (HB-320)', async ({
+    page,
+  }) => {
+    const spy = await stubBookings(page);
+    // Hai cơ sở trong phạm vi: cổng phiên hỏi cơ sở đang làm việc, chọn Đà Lạt (`journey-standard`).
+    await page.route(/\/api\/session\/sys\/properties/, (route) =>
+      fulfillJson(
+        route,
+        200,
+        listBody([
+          property('journey-standard', 'Pine Hill Đà Lạt'),
+          property('p-vt', 'Pine Hill Vũng Tàu'),
+        ]),
+      ),
+    );
+    const picker = page.getByRole('combobox', { name: 'Cơ sở', exact: true });
+
+    await page.goto('/bookings');
+    await page.getByRole('radio', { name: 'Pine Hill Đà Lạt' }).check();
+    await page.getByRole('button', { name: 'Tiếp tục' }).click();
+    await page.goto('/bookings');
+    await expect(page.getByTestId('booking-row-PH-2601-00001')).toBeVisible();
+    await expect(picker.locator('option')).toHaveText([
+      'Tất cả cơ sở',
+      'Pine Hill Đà Lạt',
+      'Pine Hill Vũng Tàu',
+    ]);
+    await expect(picker).toHaveValue('journey-standard');
+    await expect.poll(() => spy.listQueries.at(-1)).toContain('propertyId=journey-standard');
+
+    // Đổi cơ sở đang làm việc trên thanh đầu trang: danh sách (không có `propertyId` trên URL) đi theo.
+    await page.getByTestId('staff-property-select').selectOption('p-vt');
+    await expect(picker).toHaveValue('p-vt');
+    await expect.poll(() => spy.listQueries.at(-1)).toContain('propertyId=p-vt');
+    await page.getByTestId('staff-property-select').selectOption('journey-standard');
+    await expect(picker).toHaveValue('journey-standard');
+
+    await picker.selectOption('p-vt');
+    await page.getByRole('button', { name: 'Lọc', exact: true }).click();
+    await expect(page).toHaveURL(/propertyId=p-vt/);
+    await expect.poll(() => spy.listQueries.at(-1)).toContain('propertyId=p-vt');
+
+    await page.getByRole('combobox', { name: 'Cơ sở', exact: true }).selectOption('all');
+    await page.getByRole('button', { name: 'Lọc', exact: true }).click();
+    await expect(page).toHaveURL(/propertyId=all/);
+    await expect.poll(() => spy.listQueries.at(-1)).not.toContain('propertyId');
+
+    // Id không có trong danh sách máy chủ trả bị bỏ qua: về cơ sở đang làm việc.
+    await page.goto('/bookings?propertyId=p-ngoai-pham-vi');
+    await expect(picker).toHaveValue('journey-standard');
+    await expect.poll(() => spy.listQueries.at(-1)).toContain('propertyId=journey-standard');
+    expect(spy.listQueries.some((query) => query.includes('p-ngoai-pham-vi'))).toBe(false);
   });
 
   test('lối xoá cứng chỉ hiện với DRAFT/HELD và gửi kèm lý do (AC1)', async ({ page }) => {

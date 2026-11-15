@@ -5,7 +5,7 @@ import Link from 'next/link';
 import type { ReactElement } from 'react';
 import { formatMoney, formatStatusWithEnum, space } from '@pinehill/ui-web';
 import { bookingStatusSchema } from '@pinehill/contracts';
-import type { BookingStatus, BookingSummary } from '@pinehill/contracts';
+import type { BookingStatus, BookingSummary, PropertySummary } from '@pinehill/contracts';
 import {
   OPS_COMPACT_BTN_STYLE,
   OPS_FIELD_LABEL_STYLE,
@@ -16,6 +16,7 @@ import {
 } from '../../../components/editorial-styles';
 import { t } from '../../../lib/i18n';
 import {
+  ALL_PROPERTIES,
   STATUS_KEYS,
   balanceRows,
   canHardDelete,
@@ -29,9 +30,15 @@ export function statusLabel(status: BookingStatus): string {
 
 export function FilterForm({
   current,
+  properties,
+  property,
   onApply,
 }: {
   current: BookingFilters;
+  /** Cơ sở máy chủ trả cho phiên (HB-320); rỗng thì chỉ còn "Tất cả cơ sở". */
+  properties: readonly PropertySummary[];
+  /** Cơ sở đang lọc (`bookingPropertyFilter`), hoặc `ALL_PROPERTIES`. */
+  property: string;
   onApply: (filters: BookingFilters) => void;
 }): ReactElement {
   const submit = (event: React.FormEvent<HTMLFormElement>): void => {
@@ -56,7 +63,14 @@ export function FilterForm({
     >
       <label style={OPS_FIELD_LABEL_STYLE}>
         {t('ops.bookings.filter.propertyId')}
-        <input name="propertyId" defaultValue={current.propertyId} />
+        <select name="propertyId" defaultValue={property}>
+          <option value={ALL_PROPERTIES}>{t('ops.bookings.filter.allProperties')}</option>
+          {properties.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
       </label>
       <label style={OPS_FIELD_LABEL_STYLE}>
         {t('ops.bookings.filter.status')}

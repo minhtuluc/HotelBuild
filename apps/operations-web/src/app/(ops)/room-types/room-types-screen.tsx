@@ -5,7 +5,7 @@
  * Đọc `GET /room-types` (lọc theo cơ sở) và tạo mới bằng `POST /room-types`.
  * Cảnh báo sàn–trần ở giao diện chỉ để nhắc; máy chủ vẫn là nơi chặn (BR-RATE-03, BR-RATE-04).
  */
-import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type ReactElement } from 'react';
 import type { RoomTypeSummary } from '@pinehill/contracts';
 import { StateSurface, color, formatMoney, space } from '@pinehill/ui-web';
 import {
@@ -20,6 +20,9 @@ import {
   opsNoticeStyle,
 } from '../../../components/editorial-styles';
 import { useForcedState } from '../../../components/forced-state';
+import { useFollowWorkingProperty } from '../../../components/use-follow-working-property';
+import { workingIfAvailable } from '../../../lib/working-property';
+import { useWorkingPropertyId } from '../../../session/staff-session';
 import { t } from '../../../lib/i18n';
 import { roomTypePriceWarnings, type RoomTypePriceWarning } from '../../../lib/room-type-warnings';
 import { RoomTypeForm } from './room-type-form';
@@ -106,7 +109,19 @@ function useRoomTypeEditor(enabled: boolean) {
   useEffect(() => {
     if (state.receipt?.kind === 'room-type-create') setDraft(null);
   }, [state.receipt]);
-  const properties = state.data?.properties ?? [];
+  const properties = useMemo(() => state.data?.properties ?? [], [state.data]);
+  // Form tạo mở với cơ sở đang làm việc chọn sẵn và đổi theo khi form đang mở (TD-44, HB-320).
+  const working = useWorkingPropertyId();
+  const followers = useMemo(
+    () => [
+      (update: (current: RoomTypeDraft) => RoomTypeDraft) =>
+        setDraft((current) => (current === null ? current : update(current))),
+    ],
+    [],
+  );
+  useFollowWorkingProperty(working, followers, properties);
+  const open = () =>
+    setDraft({ ...EMPTY_ROOM_TYPE_DRAFT, propertyId: workingIfAvailable(properties, working) });
   const rows = state.data?.roomTypes ?? [];
   const created = state.receipt?.kind === 'room-type-create' ? state.receipt.data.code : null;
   const submit = async () => {
@@ -118,7 +133,7 @@ function useRoomTypeEditor(enabled: boolean) {
     }
     await controller.save({ kind: 'room-type-create', body: parsed.input });
   };
-  return { controller, state, draft, setDraft, properties, rows, created, submit };
+  return { controller, state, draft, setDraft, open, properties, rows, created, submit };
 }
 type RoomTypeModel = ReturnType<typeof useRoomTypeEditor>;
 function RoomTypeBody({ model }: { model: RoomTypeModel }): ReactElement {
@@ -157,7 +172,7 @@ function RoomTypeBody({ model }: { model: RoomTypeModel }): ReactElement {
 export function RoomTypesScreen(): ReactElement {
   const forced = useForcedState();
   const model = useRoomTypeEditor(forced === undefined);
-  const { state, controller, setDraft } = model;
+  const { state, controller, open } = model;
   if (forced !== undefined)
     return (
       <StateSurface state={forced}>
@@ -187,7 +202,7 @@ export function RoomTypesScreen(): ReactElement {
               disabled={!controller?.canStart()}
               onClick={() => {
                 controller?.clearValidation();
-                setDraft(EMPTY_ROOM_TYPE_DRAFT);
+                open();
               }}
               className="ph-btn-primary"
               style={OPS_COMPACT_BTN_STYLE}

@@ -6,7 +6,14 @@
  * Sửa mặc định toàn chuỗi bằng `PATCH` + `If-Match`; ghi đè theo cơ sở gửi **dòng mới** có
  * `effectiveFrom` rồi đọc lại chi tiết. Cảnh báo chỉ để nhắc — máy chủ (HB-055) là nơi chặn.
  */
-import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+  type ReactElement,
+} from 'react';
 import { createPropertyApi, createRateApi, isApiError } from '@pinehill/api-client';
 import type {
   ChannelDetail,
@@ -17,6 +24,9 @@ import type {
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
 import { ScreenAlert } from '../../../components/screen-alert';
 import { useForcedState } from '../../../components/forced-state';
+import { useFollowWorkingProperty } from '../../../components/use-follow-working-property';
+import { workingIfAvailable } from '../../../lib/working-property';
+import { useWorkingPropertyId } from '../../../session/staff-session';
 import { useOpsSession } from '../../../lib/ops-session';
 import { t } from '../../../lib/i18n';
 import {
@@ -56,6 +66,10 @@ export function ChannelsScreen(): ReactElement {
   const session = useOpsSession(['/channels', '/properties'], {
     onExpired: () => setState({ kind: 'forbidden' }),
   });
+  // Ghi đè theo cơ sở mở với cơ sở đang làm việc chọn sẵn và đổi theo thanh ngữ cảnh (TD-44, HB-320).
+  const working = useWorkingPropertyId();
+  const followers = useMemo(() => [setOverride], []);
+  useFollowWorkingProperty(working, followers, properties);
 
   const load = useCallback(
     async (channelId: string | null): Promise<void> => {
@@ -144,7 +158,10 @@ export function ChannelsScreen(): ReactElement {
             selectedId={selected?.id ?? null}
             onEdit={(channel) => {
               setSaved(false);
-              setOverride(EMPTY_OVERRIDE_DRAFT);
+              setOverride({
+                ...EMPTY_OVERRIDE_DRAFT,
+                propertyId: workingIfAvailable(properties, working),
+              });
               void load(channel.id);
             }}
           />

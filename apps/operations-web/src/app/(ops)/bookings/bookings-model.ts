@@ -20,6 +20,29 @@ export interface BookingFilters {
   readonly to: string;
 }
 
+/**
+ * Giá trị `propertyId` trên URL nghĩa là "tất cả cơ sở trong phạm vi" (HB-320). Không có `propertyId`
+ * trên URL thì danh sách lọc theo cơ sở đang làm việc.
+ */
+export const ALL_PROPERTIES = 'all';
+
+/**
+ * Cơ sở lọc danh sách (TD-44, HB-320). Thứ tự: lựa chọn trên URL > cơ sở đang làm việc > tất cả.
+ * - Chỉ nhận id có trong danh sách máy chủ trả; id lạ bị bỏ qua.
+ * - Trả `ALL_PROPERTIES` khi không lọc theo cơ sở; phạm vi thật vẫn do máy chủ giới hạn theo phiên.
+ */
+export function bookingPropertyFilter(
+  requested: string,
+  available: readonly { readonly id: string }[],
+  working: string,
+): string {
+  if (requested === ALL_PROPERTIES) return ALL_PROPERTIES;
+  const listed = (id: string): boolean => id !== '' && available.some((item) => item.id === id);
+  if (listed(requested)) return requested;
+  if (listed(working)) return working;
+  return ALL_PROPERTIES;
+}
+
 export const NO_FILTERS: BookingFilters = {
   propertyId: '',
   status: '',

@@ -48,6 +48,8 @@ import {
   toggleChannel,
 } from '../../../lib/multi-channel-quote';
 import { readFailureState } from '../../../lib/screen-state';
+import { chooseProperty } from '../../../lib/working-property';
+import { useWorkingPropertyId } from '../../../session/staff-session';
 
 interface Options {
   properties: readonly PropertySummary[];
@@ -55,10 +57,11 @@ interface Options {
   propertyId: string;
 }
 
-async function fetchOptions(client: ApiClient): Promise<Options> {
+/** Mở ở cơ sở đang làm việc nếu có trong danh sách máy chủ trả, không thì cơ sở đầu (TD-44, HB-320). */
+async function fetchOptions(client: ApiClient, preferred: string): Promise<Options> {
   const api = createPropertyApi(client);
   const properties = (await api.list()).data.data;
-  const propertyId = properties[0]?.id ?? '';
+  const propertyId = chooseProperty(properties, '', preferred);
   const roomTypes = propertyId === '' ? [] : (await api.listRoomTypes({ propertyId })).data.data;
   return { properties, roomTypes, propertyId };
 }
@@ -136,12 +139,19 @@ export function MultiChannelQuoteScreen(): ReactElement {
   const session = useOpsSession(['/properties', '/room-types', '/quotes'], {
     onExpired: () => setState({ kind: 'forbidden' }),
   });
+  const working = useWorkingPropertyId();
 
   const load = useCallback(async (): Promise<void> => {
     setReadError(null);
     try {
-      const loaded = await fetchOptions(session.client);
+      const loaded = await fetchOptions(session.client, working);
       setOptions(loaded);
+      // Báo giá cũ thuộc cơ sở trước (khi đổi cơ sở đang làm việc) thì bỏ.
+      setQuote((current) =>
+        current !== null && loaded.roomTypes.some((type) => type.id === current.roomTypeId)
+          ? current
+          : null,
+      );
       setRoomTypeId((current) =>
         loaded.roomTypes.some((type) => type.id === current)
           ? current
@@ -157,7 +167,7 @@ export function MultiChannelQuoteScreen(): ReactElement {
       setReadError(caught);
       setState({ kind: 'ready' });
     }
-  }, [session]);
+  }, [session, working]);
 
   useEffect(() => {
     if (forced !== undefined) return;
