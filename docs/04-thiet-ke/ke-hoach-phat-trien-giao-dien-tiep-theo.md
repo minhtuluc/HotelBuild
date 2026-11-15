@@ -47,7 +47,7 @@ Trong lúc demo, mọi dữ liệu minh hoạ vẫn mang cờ (`illustrative`, `
 | P3 | Ticket HB-300 và HB-305 trên `main` vẫn mô tả hướng Lyon/Amanoi Editorial | Không sửa đặc tả cũ; ticket mới (HB-308+) dẫn chiếu ADR-019 và DESIGN.md |
 | P4 | Trang `/dining`: Pine Hill không có dịch vụ ăn uống trong nghiệp vụ (§8.3) | **Chủ dự án quyết (15/11/2026):** giữ trang, nội dung minh hoạ. Làm ở [HB-318](../08-thi-cong/tickets/HB-318-am-thuc-va-gia-da-gom.md) |
 | P5 | Khối "Vé gồm / Chưa gồm", dịch vụ tại ga: chưa có điều khoản (Q12) | **Chủ dự án quyết (15/11/2026):** giá đã gồm tiện nghi cơ bản. Điều khoản ở [tien-nghi-trong-gia.md](../02-nghiep-vu/tien-nghi-trong-gia.md); khối "Giá đã gồm" làm ở HB-318 |
-| P6 | Nút "giữ chỗ qua email" khi lỗi mạng mở kênh đặt phòng ngoài hệ thống (§8.3) | **Chờ chủ dự án:** đề xuất chỉ hiện liên hệ lễ tân |
+| P6 | Nút "giữ chỗ qua email" khi lỗi mạng mở kênh đặt phòng ngoài hệ thống (§8.3) | **Chủ dự án quyết (15/11/2026):** chỉ hiện liên hệ lễ tân (`NEXT_PUBLIC_FRONT_DESK_CONTACT`), không `mailto:`; làm ở HB-323 |
 
 ## 3. Thứ tự đề xuất và lý do
 
@@ -137,6 +137,7 @@ Mỗi màn có unit test cho model, E2E trên API giả và axe.
 | [HB-311](../08-thi-cong/tickets/HB-311-nhan-trang-ga-va-hang.md) | 4 | 3 trang ga + 5 trang hạng, khớp theo `slug` (UX-03 có nguồn đã làm ở HB-318) | Đang làm | HB-310, HB-319 |
 | [HB-322](../08-thi-cong/tickets/HB-322-trang-ga-va-hang-sau-hon.md) | 4 | Trang ga/hạng sâu hơn: CONT-02 (thông số ga, "Một ngày tại ga", lịch mùa điền sẵn ngày FEAT-02), CONT-01 (bố cục khoang, ảnh nhiều góc), bảng chặng đường (UX-05) | Đang làm | HB-317 |
 | [HB-311b](../08-thi-cong/tickets/HB-311b-trang-toan-chuoi.md) | 4 | getting-here, experiences, offers, gallery + menu "Khám phá" (CONT-03/05/06/07/08) | Đang làm | HB-322 |
+| [HB-323](../08-thi-cong/tickets/HB-323-so-sanh-so-do-muc-luc-le-tan.md) | — | So sánh năm hạng (FEAT-05), sơ đồ hai chiều + mặt cắt khoang (UX-02), mục lục trang ga (UX-06), nhịp nền (UX-07), liên hệ lễ tân khi lỗi mạng (P6) | Đang làm | HB-311b |
 | [HB-317](../08-thi-cong/tickets/HB-317-giu-ngu-canh-va-tien-ich.md) | — | Góp ý UI/UX gói C: giữ ngữ cảnh ga/ngày (FEAT-01), nút chọn nhanh số đêm (FEAT-03), sao chép link + in A4 (FEAT-06). FEAT-02 (lịch mùa) chuyển sang HB-322 | Đang làm | HB-311 |
 | [HB-312](../08-thi-cong/tickets/HB-312-locale-en.md) | 5 | Locale `en` | Đã merge ([#308](https://github.com/minhtuluc/HotelBuild/pull/308)) | HB-309 |
 | [HB-313](../08-thi-cong/tickets/HB-313-locale-zh-ja-ko-ru.md) | 6 | Locale `zh-CN`, `ja`, `ko`, `ru` + font | Đã merge ([#311](https://github.com/minhtuluc/HotelBuild/pull/311)) | HB-312 |
