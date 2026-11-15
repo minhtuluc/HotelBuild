@@ -597,6 +597,7 @@ model properties {
   created_at                                         DateTime                    @default(now()) @db.Timestamptz(6)
   updated_at                                         DateTime                    @default(now()) @db.Timestamptz(6)
   version                                            BigInt                      @default(1)
+  slug                                               String                      @unique
   bookings                                           bookings[]
   channel_property_settings                          channel_property_settings[]
   occupancy_snapshots                                occupancy_snapshots[]

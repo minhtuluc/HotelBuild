@@ -1648,6 +1648,38 @@ ALTER TABLE room_moves
 ALTER TABLE room_moves ADD CONSTRAINT ck_room_moves_consent_object
   CHECK (consent_json IS NULL OR jsonb_typeof(consent_json) = 'object');
 
+-- Migration 0013 (HB-319, TD-82): `properties.slug` — định danh URL công khai của cơ sở, trả trong
+-- `GET /public/properties` (trang ga `/stays/[slug]`). Kebab-case, duy nhất; lệnh chèn không ghi slug thì
+-- trigger điền từ `code` (dòng cũ được điền cùng quy tắc khi migrate). Đổi `code` không đổi slug.
+CREATE FUNCTION fn_property_slug_base(p_code text) RETURNS text
+LANGUAGE sql IMMUTABLE AS $$
+  SELECT coalesce(
+    nullif(trim(both '-' FROM regexp_replace(lower(p_code), '[^a-z0-9]+', '-', 'g')), ''),
+    'co-so-' || substr(md5(p_code), 1, 8)
+  )
+$$;
+CREATE FUNCTION fn_property_slug_default() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE
+  v_slug text;
+BEGIN
+  IF NEW.slug IS NULL THEN
+    v_slug := fn_property_slug_base(NEW.code);
+    IF EXISTS (SELECT 1 FROM properties WHERE slug = v_slug) THEN
+      v_slug := v_slug || '-' || substr(md5(NEW.code), 1, 8);
+    END IF;
+    NEW.slug := v_slug;
+  END IF;
+  RETURN NEW;
+END $$;
+ALTER TABLE properties ADD COLUMN slug text NOT NULL;
+ALTER TABLE properties ADD CONSTRAINT properties_slug_key UNIQUE (slug);
+ALTER TABLE properties ADD CONSTRAINT ck_properties_slug_format
+  CHECK (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$');
+CREATE TRIGGER trg_properties_slug_default
+  BEFORE INSERT ON properties
+  FOR EACH ROW EXECUTE FUNCTION fn_property_slug_default();
+
 CREATE FUNCTION fn_immutable_record() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   -- Cascade chỉ khi parent đã qua guard xoá DRAFT/HELD và lưu bằng chứng vào AuditLog.
@@ -2528,6 +2560,7 @@ Lưu trữ: nhật ký giữ **5 năm**, booking/thanh toán **10 năm** (BR-SYS
 | 0002 | `0002_auth_sessions` | Hai cột users và 5 bảng credential/phiên/PIN/grant/reset; CHECK/FK/hash UNIQUE/index/updated-at trigger; §3 hiện có 47 bảng | HB-010, QĐ-03; không sửa baseline0001 |
 | 0003 | `0003_f6_chan_over` | Cột `version` + trigger cho `channel_mappings`, `overbooking_cases` (§3.3) | HB-121 AC7 |
 | 0009 | `0009_f6_chan_over` | Gap F6: D01 connecting, D04 duyệt có điều kiện, D06 `payments.room_move_id`, D07 `resolution_source`; cờ nghi trùng, watermark/tombstone OTA, provenance đóng bán, metadata lượt quét (§3.2.9, §10.5) | HB-121, D01/D04/D06/D07 |
+| 0013 | `0013_property_slug` | `properties.slug` (kebab-case, UNIQUE, CHECK) + trigger điền từ `code` khi chèn không ghi slug; `GET /public/properties` trả `slug` | HB-319, TD-82 |
 | Sau baseline | Migration tiến mới | Mỗi thay đổi schema có file migration mới **và** cập nhật §3 trong cùng PR; Prisma Migrate áp SQL và ghi lịch sử, `schema.prisma` sinh bằng `prisma db pull` | QĐ-02 mục 2–3 |
 
 Seed dữ liệu tham chiếu thuộc HB-018; phân mảnh `audit_logs` là công việc tương lai, không nằm trong baseline.

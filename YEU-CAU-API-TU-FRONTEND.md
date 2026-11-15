@@ -67,6 +67,7 @@ Tài liệu này ghi nhận các thay đổi/bổ sung hợp đồng API hoặc 
 - **Đề xuất cho Backend:**
   - Thêm `slug: string` (không phá vỡ; duy nhất; chữ thường không dấu, ví dụ `da-lat`) vào `propertyPublicSummarySchema` và seed.
 - **Trạng thái tạm trên Frontend:** khớp theo tên; không khớp thì in "--:--" kèm lời dẫn sang bước tìm phòng. Cần có trước HB-311 (nhân trang ga).
+- **Backend đã đáp ứng (HB-319):** `slug` có trong `propertyPublicSummarySchema` và `GET /public/properties`; migration `0013_property_slug` (UNIQUE, CHECK kebab-case); seed `da-lat`, `vung-tau`, `phan-thiet`. **Còn lại phía frontend:** bỏ `apiNameIncludes`, khớp theo `slug`.
 
 ---
 

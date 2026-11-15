@@ -21,8 +21,20 @@ import { LOCALES } from '../../src/i18n/locales';
 /** HB-310 — nội dung trang ga và trang hạng: đủ locale, ảnh có thật, thông số khớp nội dung trang chủ. */
 
 const PROPERTIES = [
-  { id: 'p-vt', name: 'Pine Hill Vũng Tàu', checkInTime: '14:00', checkOutTime: '12:00' },
-  { id: 'p-dl', name: 'Pine Hill Đà Lạt', checkInTime: '14:00', checkOutTime: '12:00' },
+  {
+    id: 'p-vt',
+    name: 'Pine Hill Vũng Tàu',
+    slug: 'vung-tau',
+    checkInTime: '14:00',
+    checkOutTime: '12:00',
+  },
+  {
+    id: 'p-dl',
+    name: 'Pine Hill Đà Lạt',
+    slug: 'da-lat',
+    checkInTime: '14:00',
+    checkOutTime: '12:00',
+  },
 ];
 
 describe('trang ga', () => {
