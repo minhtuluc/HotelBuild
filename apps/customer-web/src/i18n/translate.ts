@@ -1,40 +1,26 @@
 /**
- * Translator theo locale, thuần (không React) để server component, metadata, hàm phụ và client component
- * dùng chung. Không có translator toàn cục: nơi gọi luôn nói rõ locale (HB-309).
+ * Translator theo locale, thuần (không React) cho server component, metadata và hàm phụ phía máy chủ. Không
+ * có translator toàn cục: nơi gọi luôn nói rõ locale (HB-309). Client đọc translator qua hook ở `client.tsx`
+ * (chỉ có danh mục của locale đang xem, HB-313).
  */
-import { makeTranslate } from '@pinehill/ui-web/messages';
-import {
-  CATALOGS,
-  type AccountMessageKey,
-  type CustomerMessageKey,
-  type PaymentMessageKey,
-} from './catalogs';
+import { CATALOGS } from './catalogs';
 import type { Locale } from './locales';
+import { makeTranslators, type Translators } from './translators';
 
-export type MessageVars = Readonly<Record<string, string | number>>;
-export type CustomerTranslate = (key: CustomerMessageKey, vars?: MessageVars) => string;
-export type AccountTranslate = (key: AccountMessageKey, vars?: MessageVars) => string;
-export type PaymentTranslate = (key: PaymentMessageKey, vars?: MessageVars) => string;
-
-export interface Translators {
-  readonly locale: Locale;
-  readonly t: CustomerTranslate;
-  readonly account: AccountTranslate;
-  readonly payment: PaymentTranslate;
-}
+export type {
+  AccountTranslate,
+  CustomerTranslate,
+  MessageVars,
+  PaymentTranslate,
+  Translators,
+} from './translators';
 
 const cache = new Map<Locale, Translators>();
 
 export function translatorsFor(locale: Locale): Translators {
   const cached = cache.get(locale);
   if (cached !== undefined) return cached;
-  const catalogs = CATALOGS[locale];
-  const made: Translators = {
-    locale,
-    t: makeTranslate(catalogs.customer),
-    account: makeTranslate(catalogs.account),
-    payment: makeTranslate(catalogs.payment),
-  };
+  const made = makeTranslators(locale, CATALOGS[locale]);
   cache.set(locale, made);
   return made;
 }

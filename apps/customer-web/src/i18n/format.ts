@@ -70,6 +70,16 @@ export function dayMonth(iso: string, locale: Locale): string | null {
  * đã chọn, dù trình duyệt hiển thị ô theo `mm/dd/yyyy`. Chuỗi rỗng / không hợp lệ trả `null`.
  */
 export function dateLine(iso: string, locale: Locale): string | null {
+  if (locale !== 'vi' && locale !== 'en') {
+    // zh-CN/ja/ko/ru: để `Intl` xếp thứ và ngày theo thói quen của ngôn ngữ (2026/12/24周四, 24.12.2026, чт).
+    const parts = calendarParts(iso);
+    if (parts === null) return null;
+    return intlDate(
+      locale,
+      { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' },
+      parts.utc,
+    );
+  }
   const weekday = weekdayShort(iso, locale);
   if (weekday === null) return null;
   return `${weekday}, ${calendarDate(iso, locale)}`;
@@ -79,8 +89,8 @@ const VN_TIME_ZONE = 'Asia/Ho_Chi_Minh';
 
 /**
  * `12/11/2026 14:00 (giờ VN)` — mốc thời gian UTC hiện theo giờ Việt Nam, ngày trước tháng, 24 giờ. Với `vi`
- * dùng đúng `formatDateTimeVn` của `ui-web` (đầu ra không đổi); locale khác dựng cùng thứ tự bằng `Intl` và
- * nhãn giờ lấy từ danh mục (`suffix`).
+ * dùng đúng `formatDateTimeVn` của `ui-web` (đầu ra không đổi); `en` dựng cùng thứ tự bằng `Intl`; locale khác
+ * để `Intl` xếp ngày theo ngôn ngữ đó. Nhãn giờ lấy từ danh mục (`suffix`).
  */
 export function dateTimeVn(isoUtc: string, locale: Locale, suffix: string): string {
   if (locale === 'vi') return formatDateTimeVn(isoUtc);
@@ -97,5 +107,14 @@ export function dateTimeVn(isoUtc: string, locale: Locale, suffix: string): stri
   }).formatToParts(at);
   const part = (type: Intl.DateTimeFormatPartTypes): string =>
     parts.find((item) => item.type === type)?.value ?? '';
-  return `${part('day')}/${part('month')}/${part('year')} ${part('hour')}:${part('minute')} ${suffix}`;
+  const time = `${part('hour')}:${part('minute')}`;
+  if (locale === 'en') return `${part('day')}/${part('month')}/${part('year')} ${time} ${suffix}`;
+  // zh-CN/ja/ko/ru: ngày theo thứ tự của ngôn ngữ (2026/11/12, 2026. 11. 12., 12.11.2026), giờ 24h.
+  const date = new Intl.DateTimeFormat(LOCALE_META[locale].intl, {
+    timeZone: VN_TIME_ZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(at);
+  return `${date} ${time} ${suffix}`;
 }

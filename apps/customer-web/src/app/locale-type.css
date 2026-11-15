@@ -1,0 +1,67 @@
+/*
+ * Chữ theo ngôn ngữ (HB-313, DESIGN.md › Typography › Scripts).
+ *
+ * Be Vietnam Pro và Barlow Condensed chỉ đóng gói bộ Latin + tiếng Việt (unicode-range), nên chữ số, mã gói
+ * và tên Latin vẫn dùng font thương hiệu; chữ Hán, Kana, Hangul, Cyrillic rơi xuống font hệ thống của từng
+ * nền tảng theo thứ tự dưới đây. Không tải font CJK từ CDN (NFR-LOC-01) và không đóng gói (mỗi bộ vài MB).
+ *
+ * `html lang` lấy từ `LOCALE_META[locale].htmlLang`, nên `:lang()` khớp đúng trang đang hiển thị.
+ */
+:root:lang(zh-CN) {
+  --font-sans:
+    'Be Vietnam Pro', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC',
+    'Noto Sans CJK SC', 'Source Han Sans SC', system-ui, sans-serif;
+  --font-display:
+    'Barlow Condensed', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC',
+    system-ui, sans-serif;
+}
+
+:root:lang(ja) {
+  --font-sans:
+    'Be Vietnam Pro', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic',
+    Meiryo, 'Noto Sans JP', 'Noto Sans CJK JP', system-ui, sans-serif;
+  --font-display:
+    'Barlow Condensed', 'Hiragino Sans', 'Yu Gothic UI', 'Yu Gothic', Meiryo, 'Noto Sans JP',
+    'Noto Sans CJK JP', system-ui, sans-serif;
+}
+
+:root:lang(ko) {
+  --font-sans:
+    'Be Vietnam Pro', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', 'Noto Sans CJK KR',
+    system-ui, sans-serif;
+  --font-display:
+    'Barlow Condensed', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', 'Noto Sans CJK KR',
+    system-ui, sans-serif;
+}
+
+/* Barlow Condensed không có Cyrillic: chữ hẹp hệ thống trước, rồi chữ không chân thường. */
+:root:lang(ru) {
+  --font-display:
+    'Barlow Condensed', 'Roboto Condensed', 'Arial Narrow', 'Segoe UI', system-ui, sans-serif;
+}
+
+/*
+ * CJK: giãn chữ (tracking) làm rời nét chữ vuông, và dòng 0.98–1 cắt dấu và nét của chữ Hán/Hangul. Trả
+ * tracking về mặc định và mở dòng cho tiêu đề; thân bài thoáng hơn một chút.
+ */
+:root:is(:lang(zh-CN), :lang(ja), :lang(ko)) * {
+  letter-spacing: normal;
+}
+
+:root:is(:lang(zh-CN), :lang(ja), :lang(ko)) body {
+  line-height: 1.7;
+}
+
+:root:is(:lang(zh-CN), :lang(ja), :lang(ko)) :is(h1, h2, h3, h4) {
+  line-height: 1.3;
+}
+
+/* Ngắt dòng theo quy tắc của từng chữ: tiếng Nhật/Trung không để dấu câu đầu dòng; tiếng Hàn ngắt theo từ. */
+:root:is(:lang(zh-CN), :lang(ja)) body {
+  line-break: strict;
+}
+
+:root:lang(ko) body {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}

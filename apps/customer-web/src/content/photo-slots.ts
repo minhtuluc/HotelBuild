@@ -6,9 +6,13 @@
  * Brief chụp chi tiết: docs/04-thiet-ke/anh-trang-khach.md.
  */
 import type { Locale } from '../i18n/locales';
+import { CONTENT_PACKS } from './locale-packs';
 
-/** Câu chữ theo locale (alt ảnh): locale mới phải có đủ. */
-export type Localized = Readonly<Record<Locale, string>>;
+/**
+ * Alt ảnh viết tại chỗ cho `vi` và `en`; locale thêm sau (HB-313) lấy theo mã ô ảnh từ gói nội dung
+ * (`locale-packs/`), test `locale-packs.spec.ts` bắt đủ mọi ô.
+ */
+export type Localized = Readonly<Record<'vi' | 'en', string>>;
 
 export type PhotoRatio = '3/4' | '4/3' | '3/2' | '1200/630';
 
@@ -190,5 +194,6 @@ export function slotById(id: string): PhotoSlot | undefined {
 
 /** Văn bản thay thế của ô ảnh theo locale. */
 export function photoAlt(slot: PhotoSlot, locale: Locale): string {
-  return slot.alt[locale];
+  if (locale === 'vi' || locale === 'en') return slot.alt[locale];
+  return CONTENT_PACKS[locale].photoAlts[slot.id] ?? slot.alt.en;
 }

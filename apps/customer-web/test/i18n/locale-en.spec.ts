@@ -32,10 +32,18 @@ describe('đường dẫn theo locale', () => {
     );
   });
 
-  it('hreflang đủ vi, en, x-default; canonical theo locale', () => {
+  it('hreflang đủ mọi locale và x-default; canonical theo locale', () => {
     expect(localeAlternates('/stays/da-lat', 'en')).toEqual({
       canonical: '/en/stays/da-lat',
-      languages: { vi: '/stays/da-lat', en: '/en/stays/da-lat', 'x-default': '/stays/da-lat' },
+      languages: {
+        vi: '/stays/da-lat',
+        en: '/en/stays/da-lat',
+        'zh-CN': '/zh-cn/stays/da-lat',
+        ja: '/ja/stays/da-lat',
+        ko: '/ko/stays/da-lat',
+        ru: '/ru/stays/da-lat',
+        'x-default': '/stays/da-lat',
+      },
     });
   });
 });

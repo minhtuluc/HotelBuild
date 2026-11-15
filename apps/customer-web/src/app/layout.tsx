@@ -7,12 +7,14 @@ import { siteOrigin } from '../lib/site';
 import { GuestFooter, GuestHeader } from '../components/guest-shell';
 import { ScrollReveal } from '../components/scroll-reveal';
 import { LocaleProvider } from '../i18n/client';
+import { CATALOGS } from '../i18n/catalogs';
 import { LOCALE_META } from '../i18n/locales';
 import { localeAlternates } from '../i18n/seo';
 import { requestLocale, requestPath, serverTranslators } from '../i18n/server';
 import './globals.css';
 import './content-pages.css';
 import './motion.css';
+import './locale-type.css';
 
 /**
  * Tiêu đề, mô tả, ảnh chia sẻ, canonical và `hreflang` theo locale của request (HB-312). Trang con có
@@ -51,7 +53,7 @@ export default async function GuestLayout({
         <style>{tokensToCssVariables()}</style>
       </head>
       <body>
-        <LocaleProvider locale={locale}>
+        <LocaleProvider locale={locale} catalogs={CATALOGS[locale]}>
           <a href="#main" className="ph-skip-link">
             {t('common.skipToContent')}
           </a>

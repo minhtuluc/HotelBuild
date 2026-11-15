@@ -138,7 +138,7 @@ Mỗi màn có unit test cho model, E2E trên API giả và axe.
 | HB-311b | 4 | getting-here, experiences, offers, gallery + menu "Khám phá" (CONT-03/05/06/07/08) | Chưa mở | HB-311 |
 | HB-317 | — | Góp ý UI/UX gói C: giữ ngữ cảnh ga/ngày (FEAT-01), lịch mùa điền sẵn ngày (FEAT-02), nút chọn nhanh số đêm (FEAT-03), sao chép link + in A4 (FEAT-06) | Chưa mở | HB-311 |
 | [HB-312](../08-thi-cong/tickets/HB-312-locale-en.md) | 5 | Locale `en` | Đang làm | HB-309 |
-| HB-313 | 6 | Locale `zh-CN`, `ja`, `ko`, `ru` + font | Chưa mở | HB-312 |
+| [HB-313](../08-thi-cong/tickets/HB-313-locale-zh-ja-ko-ru.md) | 6 | Locale `zh-CN`, `ja`, `ko`, `ru` + font | Đang làm | HB-312 |
 | HB-315 | — | E2E SCR-48 bàn tiền sảnh xanh lại sau #298 | Đã merge ([#303](https://github.com/minhtuluc/HotelBuild/pull/303)) | — |
 | [HB-314](../08-thi-cong/tickets/HB-314-co-so-dang-lam-viec.md) | — | TD-44 cho các màn vận hành còn lại (lưới tồn, lịch giá, danh sách booking, báo cáo, kênh, người dùng, hạng phòng, SCR-40/43/47) | Đã merge ([#309](https://github.com/minhtuluc/HotelBuild/pull/309)) (phần 2) | HB-308 |
 | [HB-320](../08-thi-cong/tickets/HB-320-co-so-dang-lam-viec-phan-3.md) | — | TD-44 phần 3: danh sách booking (ô chọn cơ sở), form tạo hạng phòng, ghi đè kênh, đối soát, khoá phòng, báo giá đa kênh, khách thân thiết — TD-44 đã trả | Đang làm | HB-314 |

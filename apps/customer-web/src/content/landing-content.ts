@@ -12,6 +12,7 @@
  */
 import type { Locale } from '../i18n/locales';
 import { LANDING_EN } from './landing-content-en';
+import { CONTENT_PACKS } from './locale-packs';
 
 export interface Station {
   readonly code: string;
@@ -272,6 +273,10 @@ const LANDING: Readonly<Record<Locale, LandingContent>> = {
     faq: FAQ,
   },
   en: LANDING_EN,
+  'zh-CN': CONTENT_PACKS['zh-CN'].landing,
+  ja: CONTENT_PACKS.ja.landing,
+  ko: CONTENT_PACKS.ko.landing,
+  ru: CONTENT_PACKS.ru.landing,
 };
 
 /** Nội dung tĩnh trang chủ theo locale (HB-309). Locale mới phải đủ mọi phần. */
