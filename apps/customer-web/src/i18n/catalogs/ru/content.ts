@@ -40,4 +40,22 @@ export const ruContent: Readonly<Record<keyof typeof viContent, string>> = {
   'guest.gallery.close': 'Закрыть',
   'guest.gallery.prev': 'Предыдущее фото',
   'guest.gallery.next': 'Следующее фото',
+  'guest.nav.dining': 'Еда',
+  'guest.dining.title': 'Еда на станции',
+  'guest.dining.servicesTitle': 'День на станции: когда и где поесть',
+  'guest.dining.hours': 'Часы',
+  'guest.dining.status.included': 'Входит в стоимость номера',
+  'guest.dining.status.extra': 'Заказ и оплата у стойки',
+  'guest.dining.status.none': 'На станции не подают',
+  'guest.dining.nearbyTitle': 'Рядом со станцией',
+  'guest.dining.notesTitle': 'Предупредите станцию заранее',
+  'guest.dining.illustrative':
+    'Часы работы, блюда и места рядом приведены для примера; ресепшен подтвердит их по приезде.',
+  'guest.includes.title': 'В цену входит',
+  'guest.includes.all': 'Все категории',
+  'guest.includes.dorm': 'Дополнительно в дорме',
+  'guest.includes.excluded': 'Не входит',
+  'guest.includes.note':
+    'То, что не входит в цену, если станция это продаёт, оплачивается у стойки и не проходит через систему бронирования.',
+  'guest.includes.more': 'Еда на станции',
 };
