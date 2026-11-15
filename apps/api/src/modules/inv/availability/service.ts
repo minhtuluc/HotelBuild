@@ -35,6 +35,8 @@ interface RoomTypeRow {
   readonly code: string;
   readonly name: string;
   readonly capacity_adults: number;
+  /** HB-244: ảnh của đúng loại phòng (cùng truy vấn, không thêm round-trip). */
+  readonly room_type_photos: readonly { url: string; alt: string; width: number; height: number }[];
 }
 
 export class AvailabilityService {
@@ -99,7 +101,16 @@ export class AvailabilityService {
         ...(input.roomTypeId === undefined ? {} : { id: input.roomTypeId }),
       },
       orderBy: [{ code: 'asc' }, { id: 'asc' }],
-      select: { id: true, code: true, name: true, capacity_adults: true },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        capacity_adults: true,
+        room_type_photos: {
+          orderBy: { position: 'asc' },
+          select: { url: true, alt: true, width: true, height: true },
+        },
+      },
     });
     if (types.length === 0) throw missing();
     return types;
@@ -172,6 +183,12 @@ export class AvailabilityService {
         channelCode: channelActive ? channelCode : directChannel,
         // Cùng một mốc cho mọi loại phòng trong phản hồi (xem `StayPriceQuery.now`).
         now,
+      })),
+      photos: type.room_type_photos.map(({ url, alt, width, height }) => ({
+        url,
+        alt,
+        width,
+        height,
       })),
     };
   }

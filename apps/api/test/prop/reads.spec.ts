@@ -39,7 +39,8 @@ test('public properties expose only public metadata and active rows without auth
   const p = listResponseSchema(propertyPublicSummarySchema).parse(r.body);
   expect(p.meta.total).toBe(3);
   expect(Object.keys(rawPage(r.body).data[0]!).sort()).toEqual(
-    ['id', 'name', 'slug', 'checkInTime', 'checkOutTime'].sort(),
+    // HB-244: `photos` là trường công khai có chủ đích; mọi trường nội bộ khác vẫn bị cấm.
+    ['id', 'name', 'slug', 'checkInTime', 'checkOutTime', 'photos'].sort(),
   );
   // HB-319 (TD-82): slug seed ổn định cho trang ga `/stays/[slug]`.
   expect(p.data.map((x) => x.slug).sort()).toEqual(['da-lat', 'phan-thiet', 'vung-tau']);

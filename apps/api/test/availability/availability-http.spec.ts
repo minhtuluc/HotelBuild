@@ -1,7 +1,7 @@
 import pg from 'pg';
 import { z } from 'zod';
 import { expect, test, beforeAll } from 'vitest';
-import { availabilitySchema, errorBodySchema } from '@pinehill/contracts';
+import { availabilitySchema, errorBodySchema, publicPhotoSchema } from '@pinehill/contracts';
 import { seedReferenceData } from '../../prisma/seed/index.js';
 import type { SeedSummary } from '../../prisma/seed/index.js';
 import { databaseUrl } from '../idempotency/database.js';
@@ -41,6 +41,8 @@ const publicItemSchema = z.strictObject({
   maxNights: z.number().int().min(1),
   nightlyFrom: z.number().int().positive(),
   totalFrom: z.number().int().positive(),
+  // HB-244: ảnh công khai của loại phòng là trường hợp đồng (không phải số tồn nội bộ).
+  photos: z.array(publicPhotoSchema.strict()),
 });
 const publicBodySchema = z.strictObject({
   checkIn: z.string(),
