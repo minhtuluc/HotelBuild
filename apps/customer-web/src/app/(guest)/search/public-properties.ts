@@ -21,14 +21,21 @@ export async function fetchPublicProperties(
   return page.data.data;
 }
 
-/** Cơ sở mặc định trên vé: cơ sở có `slug` khớp trang ga (`?ga=`), không có thì cơ sở đầu (HB-311). */
+/**
+ * Cơ sở mặc định trên vé: `propertyId` của ngữ cảnh hành trình nếu có trong danh sách (HB-317), rồi cơ sở
+ * có `slug` khớp trang ga (`?ga=`, HB-311), không có thì cơ sở đầu. Id ngoài danh sách bị bỏ qua.
+ */
 export function initialPropertyId(
   properties: readonly PropertyPublicSummary[],
   preferredSlug: string | undefined,
+  preferredId?: string,
 ): string {
+  const byId =
+    preferredId === undefined ? undefined : properties.find((item) => item.id === preferredId);
   const preferred =
-    preferredSlug === undefined
+    byId ??
+    (preferredSlug === undefined
       ? undefined
-      : properties.find((property) => property.slug === preferredSlug);
+      : properties.find((property) => property.slug === preferredSlug));
   return (preferred ?? properties[0])?.id ?? '';
 }

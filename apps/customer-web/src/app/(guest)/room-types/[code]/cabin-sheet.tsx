@@ -9,6 +9,7 @@ import { Breadcrumbs } from '../../../../components/content/breadcrumbs';
 import { GalleryGrid, type GalleryItem } from '../../../../components/content/gallery-grid';
 import { JsonLd, breadcrumbList } from '../../../../components/content/json-ld';
 import { StickyBookingStub } from '../../../../components/content/sticky-booking-stub';
+import { JourneyCta } from '../../../../components/content/journey-cta';
 import { landingContent, type CabinClass } from '../../../../content/landing-content';
 import { photoAlt, slotById } from '../../../../content/photo-slots';
 import { propertyPageByStation, searchCtaHref } from '../../../../content/property-pages';
@@ -184,9 +185,14 @@ export function CabinSheet(props: CabinProps): ReactElement {
               </div>
             </div>
             <p className="ph-content-lede">{copy.summary}</p>
-            <Link href={ctaHref} className="ph-btn ph-btn-accent ph-btn-lg" data-testid="cabin-cta">
-              {t('guest.cabin.cta')}
-            </Link>
+            <JourneyCta
+              page={{ kind: 'cabin', code: pageKey.code }}
+              fallbackHref={ctaHref}
+              label={t('guest.cabin.cta')}
+              className="ph-btn ph-btn-accent ph-btn-lg"
+              testId="cabin-cta"
+              summary
+            />
           </div>
           <SpecSheet {...props} />
         </header>
@@ -206,7 +212,12 @@ export function CabinSheet(props: CabinProps): ReactElement {
         )}
       </div>
       <OtherClasses {...props} />
-      <StickyBookingStub title={title} href={ctaHref} cta={t('guest.cabin.cta')} />
+      <StickyBookingStub
+        title={title}
+        page={{ kind: 'cabin', code: pageKey.code }}
+        href={ctaHref}
+        cta={t('guest.cabin.cta')}
+      />
     </div>
   );
 }

@@ -9,9 +9,9 @@
 import type { Locale } from '../i18n/locales';
 import { CONTENT_PACKS } from './locale-packs';
 
-export type RoomTypeCode = 'STD' | 'SUP' | 'DLX' | 'FAM' | 'DOR';
+import { ROOM_TYPE_CODES, type RoomTypeCode } from './room-type-codes';
 
-export const ROOM_TYPE_CODES: readonly RoomTypeCode[] = ['STD', 'SUP', 'DLX', 'FAM', 'DOR'];
+export { ROOM_TYPE_CODES, type RoomTypeCode };
 
 export interface RoomTypePageKey {
   readonly code: RoomTypeCode;

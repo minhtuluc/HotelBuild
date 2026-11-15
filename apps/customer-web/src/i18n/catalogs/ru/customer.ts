@@ -33,6 +33,15 @@ export const ruCustomer: Readonly<Record<CustomerMessageKey, string>> = {
   'guest.search.submit': 'Найти',
   'guest.search.error': 'Не удалось загрузить список отелей. Повторите попытку.',
   'guest.search.retry': 'Повторить',
+  'guest.search.quickNights': 'Быстрый выбор: число ночей',
+  'guest.search.quickNight': 'Ночей: {nights}',
+  'guest.journey.cta': 'Свободные номера на эти даты',
+  'guest.rooms.copyLink': 'Скопировать ссылку на расчёт',
+  'guest.rooms.copyLink.ok':
+    'Ссылка скопирована. Тот, кто её откроет, увидит цену на момент открытия.',
+  'guest.rooms.copyLink.failed':
+    'Не удалось скопировать автоматически — выделите и скопируйте адрес в строке браузера.',
+  'guest.rooms.print': 'Печать / сохранить расчёт',
   'guest.results.title': 'Результаты поиска',
   'guest.results.criteria': 'Проживание {from} → {to} · ночей: {nights}',
   'guest.results.invalid':

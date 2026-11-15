@@ -4,7 +4,10 @@ import { expect, test } from '@playwright/test';
 /** SCR-02/SCR-03 chỉ có ở web khách (ADR-018). */
 function customerWebOnly(): void {
   test.beforeEach(({}, testInfo) => {
-    test.skip(!testInfo.project.name.startsWith('customer-web'), 'ca này chỉ chạy trên customer-web');
+    test.skip(
+      !testInfo.project.name.startsWith('customer-web'),
+      'ca này chỉ chạy trên customer-web',
+    );
   });
 }
 
@@ -32,7 +35,8 @@ test.describe('SCR-02/SCR-03 kết quả tìm phòng & giá từng đêm (HB-081
         ),
       )
       .toBe(true);
-    await expect(row.getByRole('link')).toHaveAttribute(
+    // HB-317: dòng có thêm link phụ "Xem hạng …"; kiểm đúng link sang SCR-03.
+    await expect(row.getByRole('link', { name: 'Xem chi tiết & giá từng đêm' })).toHaveAttribute(
       'href',
       `/rooms/synthetic-room?propertyId=synthetic-property&${STAY}&roomCount=1`,
     );

@@ -19,6 +19,7 @@ import { NightsTable, PriceStrip, QuoteSummary, QuoteWarnings } from './quote-ta
 import { calendarDate } from '../../../../i18n/format';
 import { TableSkeleton } from '../../../../components/table-skeleton';
 import { useLocalePath } from '../../../../i18n/client';
+import { QuoteShare } from './quote-share';
 
 function planCodeOf(value: string): RatePlanCode | null {
   const parsed = ratePlanCodeSchema.safeParse(value);
@@ -129,7 +130,15 @@ export function RoomDetailScreen(): ReactElement {
     try {
       const loaded = await fetchRatePlans(current);
       setPlans(loaded);
-      const first = loaded[0] === undefined ? null : planCodeOf(loaded[0].code);
+      // Link chia sẻ (HB-317) mang `ratePlanCode`: chỉ nhận gói có trong danh sách máy chủ trả.
+      const requested = planCodeOf(new URLSearchParams(query).get('ratePlanCode') ?? '');
+      const shared = loaded.find((plan) => plan.code === requested);
+      const first =
+        shared === undefined
+          ? loaded[0] === undefined
+            ? null
+            : planCodeOf(loaded[0].code)
+          : planCodeOf(shared.code);
       if (first === null) {
         setState({ kind: 'empty', reason: 'noData', canCreate: false });
         return;
@@ -234,9 +243,11 @@ export function RoomDetailScreen(): ReactElement {
                   href={bookHref(criteria, roomTypeId, planCode)}
                   className="ph-btn-accent ph-btn-lg"
                   style={{ width: '100%' }}
+                  data-print="hide"
                 >
                   {t('guest.rooms.continue')}
                 </Link>
+                <QuoteShare criteria={criteria} planCode={planCode} />
               </div>
             </div>
           </div>

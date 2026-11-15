@@ -12,7 +12,8 @@ import { StateSurface, type ScreenState } from '@pinehill/ui-web';
 import type { Availability } from '@pinehill/contracts';
 import { useLocale, useMoney, useT } from '../../../i18n/client';
 import { fetchAvailability, type StayCriteria } from './journey-api';
-import { criteriaIssue, detailHref, parseCriteria } from './search-params';
+import { classHref, criteriaIssue, detailHref, parseCriteria } from './search-params';
+import { isRoomTypeCode } from '../../../content/room-type-codes';
 import { RoomCodeStamp } from '../../../components/stamps';
 import { TableSkeleton } from '../../../components/table-skeleton';
 import { calendarDate } from '../../../i18n/format';
@@ -103,6 +104,15 @@ function AvailabilityTable({
                 <Link href={detailHref(criteria, item.roomTypeId)} className="ph-btn-accent">
                   {t('guest.results.openDetail')}
                 </Link>
+                {isRoomTypeCode(item.roomTypeCode) ? (
+                  <Link
+                    href={classHref(criteria, item.roomTypeCode)}
+                    className="ph-availability-class-link"
+                    data-testid={`class-link-${item.roomTypeCode}`}
+                  >
+                    {t('guest.cabin.readMore', { name: item.roomTypeName })}
+                  </Link>
+                ) : null}
               </td>
             </tr>
           ))}

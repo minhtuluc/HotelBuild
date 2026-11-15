@@ -31,6 +31,15 @@ export const koCustomer: Readonly<Record<CustomerMessageKey, string>> = {
   'guest.search.submit': '검색',
   'guest.search.error': '숙소 목록을 불러오지 못했습니다. 다시 시도해 주세요.',
   'guest.search.retry': '다시 시도',
+  'guest.search.quickNights': '박 수 빠르게 선택',
+  'guest.search.quickNight': '{nights}박',
+  'guest.journey.cta': '이 일정의 빈 객실 보기',
+  'guest.rooms.copyLink': '견적 링크 복사',
+  'guest.rooms.copyLink.ok':
+    '링크를 복사했습니다. 받는 사람이 링크를 여는 시점의 요금이 표시됩니다.',
+  'guest.rooms.copyLink.failed':
+    '자동으로 복사하지 못했습니다. 브라우저 주소창의 주소를 선택해 복사하세요.',
+  'guest.rooms.print': '견적 인쇄 / 저장',
   'guest.results.title': '검색 결과',
   'guest.results.criteria': '숙박 {from} → {to} · {nights}박',
   'guest.results.invalid': '검색 정보가 부족합니다({field}). 홈에서 다시 선택해 주세요.',

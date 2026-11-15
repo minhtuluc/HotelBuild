@@ -11,6 +11,7 @@ import { JsonLd, breadcrumbList } from '../../../../components/content/json-ld';
 import { RouteMap } from '../../../../components/content/route-map';
 import { StationTimetable } from '../../../../components/content/station-timetable';
 import { StickyBookingStub } from '../../../../components/content/sticky-booking-stub';
+import { JourneyCta } from '../../../../components/content/journey-cta';
 import { Photo } from '../../../../components/photo';
 import { POSTERS } from '../../../../components/station-posters';
 import { landingContent, type Station } from '../../../../content/landing-content';
@@ -71,9 +72,14 @@ function SheetHead({ pageKey, copy, station, text, ctaHref }: SheetProps): React
         <h1 className="ph-content-title">{t('guest.station.title', { name: station.name })}</h1>
         <p className="ph-content-kind">{station.kind}</p>
         <p className="ph-content-lede">{copy.summary}</p>
-        <Link href={ctaHref} className="ph-btn ph-btn-accent ph-btn-lg" data-testid="station-cta">
-          {t('guest.station.cta')}
-        </Link>
+        <JourneyCta
+          page={{ kind: 'station', slug: pageKey.slug }}
+          fallbackHref={ctaHref}
+          label={t('guest.station.cta')}
+          className="ph-btn ph-btn-accent ph-btn-lg"
+          testId="station-cta"
+          summary
+        />
       </div>
       <figure className="ph-poster ph-content-poster">
         <Photo
@@ -211,6 +217,7 @@ export function StationSheet(props: SheetProps): ReactElement {
       <RoomsAtStation {...props} />
       <StickyBookingStub
         title={t('guest.station.title', { name: station.name })}
+        page={{ kind: 'station', slug: pageKey.slug }}
         href={ctaHref}
         cta={t('guest.station.cta')}
       />

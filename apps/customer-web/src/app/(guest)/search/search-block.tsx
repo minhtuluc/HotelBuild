@@ -24,6 +24,8 @@ import { calendarDay, stayNights } from '../../../components/stamps';
 import { DateLine } from '../../../components/date-line';
 import { defaultDraft, searchHref, validateSearch, type SearchDraft } from './search-model';
 import { fetchPublicProperties, initialPropertyId } from './public-properties';
+import { mergeDraft, type DraftFromUrl } from './journey-context';
+import { QuickNights } from './quick-nights';
 import { useLocalePath } from '../../../i18n/client';
 
 /** Số chặng in tối đa trên vé; kỳ dài hơn in "+n chặng". */
@@ -186,8 +188,11 @@ function Field({
 export function SearchBlock({
   intro,
   preferredPropertySlug,
+  initialDraft = {},
 }: {
   intro?: ReactNode;
+  /** Ngữ cảnh hành trình đọc từ URL ở máy chủ (HB-317, FEAT-01): ngày, số khách, cơ sở gợi ý. */
+  initialDraft?: DraftFromUrl;
   /** Trang ga dẫn về (`/?ga=<slug>`): chọn sẵn cơ sở có `slug` này (HB-311). */
   preferredPropertySlug?: string | undefined;
 }): ReactElement {
@@ -196,7 +201,10 @@ export function SearchBlock({
   const router = useRouter();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [properties, setProperties] = useState<readonly PropertyPublicSummary[]>([]);
-  const [draft, setDraft] = useState<SearchDraft>(() => defaultDraft(new Date()));
+  const [draft, setDraft] = useState<SearchDraft>(() =>
+    mergeDraft(defaultDraft(new Date()), initialDraft),
+  );
+  const preferredId = initialDraft.propertyId;
   const [readError, setReadError] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
 
@@ -209,7 +217,10 @@ export function SearchBlock({
       setProperties(loaded);
       setDraft((current) =>
         current.propertyId === ''
-          ? { ...current, propertyId: initialPropertyId(loaded, preferredPropertySlug) }
+          ? {
+              ...current,
+              propertyId: initialPropertyId(loaded, preferredPropertySlug, preferredId),
+            }
           : current,
       );
       setState(
@@ -224,7 +235,7 @@ export function SearchBlock({
     } finally {
       setLoading(false);
     }
-  }, [preferredPropertySlug]);
+  }, [preferredPropertySlug, preferredId]);
 
   useEffect(() => {
     void load();
@@ -306,6 +317,7 @@ export function SearchBlock({
                   />
                   <DateLine id="search-checkOut-line" iso={draft.checkOut} />
                 </Field>
+                <QuickNights draft={draft} onPick={setDraft} />
                 <Field label={t('guest.search.adults')}>
                   <input
                     type="number"

@@ -31,6 +31,15 @@ export const enCustomer: Readonly<Record<CustomerMessageKey, string>> = {
   'guest.search.submit': 'Search',
   'guest.search.error': 'Could not load the list of properties. Please try again.',
   'guest.search.retry': 'Try again',
+  'guest.search.quickNights': 'Quick pick: number of nights',
+  'guest.search.quickNight': '{nights} nights',
+  'guest.journey.cta': 'See available rooms for these dates',
+  'guest.rooms.copyLink': 'Copy quote link',
+  'guest.rooms.copyLink.ok':
+    'Link copied. Whoever opens it sees the price at the time they open it.',
+  'guest.rooms.copyLink.failed':
+    'Could not copy automatically — select and copy the address in the browser bar.',
+  'guest.rooms.print': 'Print / save quote',
   'guest.results.title': 'Search results',
   'guest.results.criteria': 'Stay {from} → {to} · {nights} nights',
   'guest.results.invalid':
