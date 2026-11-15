@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { createGridWorkspace } from './api';
 import { GridController, type GridState } from './controller';
 import { defaultRange } from '../../../lib/inventory-grid';
-export function useGrid(enabled: boolean) {
+/** `workingPropertyId`: đổi cơ sở trên thanh ngữ cảnh thì dựng lại lưới ở cơ sở mới (TD-44). */
+export function useGrid(enabled: boolean, workingPropertyId = '') {
   const [controller, setController] = useState<GridController | null>(null);
   const [state, setState] = useState<GridState>(() => ({
     phase: 'loading',
@@ -16,7 +17,7 @@ export function useGrid(enabled: boolean) {
   const initial = useRef(state.range);
   useEffect(() => {
     if (!enabled) return;
-    const workspace = createGridWorkspace(initial.current);
+    const workspace = createGridWorkspace(initial.current, workingPropertyId);
     setController(workspace.controller);
     setState(workspace.controller.state);
     const unsubscribe = workspace.controller.subscribe(() => setState(workspace.controller.state));
@@ -25,6 +26,6 @@ export function useGrid(enabled: boolean) {
       unsubscribe();
       workspace.dispose();
     };
-  }, [enabled]);
+  }, [enabled, workingPropertyId]);
   return { controller, state };
 }

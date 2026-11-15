@@ -19,19 +19,36 @@ export const NOTI_OK = {
   createdAt: OLD,
 };
 
-/** Lần thử gần nhất mới đây (1 phút trước) → chưa đủ 5 phút nên không gửi lại được. */
-export const NOTI_TOO_SOON = {
-  id: 'n2',
-  bookingId: 'b2',
-  channel: 'SMS' as const,
-  template: 'CHECKIN_REMINDER',
-  status: 'SENT' as const,
-  recipientMasked: '+8491****02',
-  retryCount: 1,
-  errorMessage: null,
-  sentAt: new Date(Date.now() - 60_000).toISOString(),
-  createdAt: OLD,
-};
+/**
+ * Lần thử gần nhất mới đây (1 phút trước) → chưa đủ 5 phút nên không gửi lại được. Mốc tính lúc trả
+ * request, không lúc nạp module: worker Playwright sống lâu trong lượt chạy dài (> 4 phút) sẽ làm mốc
+ * nạp sẵn vượt 5 phút và nút gửi lại bật sai (HB-321).
+ */
+export function notiTooSoon(now: number = Date.now()): {
+  readonly id: string;
+  readonly bookingId: string;
+  readonly channel: 'SMS';
+  readonly template: string;
+  readonly status: 'SENT';
+  readonly recipientMasked: string;
+  readonly retryCount: number;
+  readonly errorMessage: null;
+  readonly sentAt: string;
+  readonly createdAt: string;
+} {
+  return {
+    id: 'n2',
+    bookingId: 'b2',
+    channel: 'SMS',
+    template: 'CHECKIN_REMINDER',
+    status: 'SENT',
+    recipientMasked: '+8491****02',
+    retryCount: 1,
+    errorMessage: null,
+    sentAt: new Date(now - 60_000).toISOString(),
+    createdAt: OLD,
+  };
+}
 
 export const NOTI_MAX_RETRIES = {
   id: 'n3',
@@ -81,7 +98,7 @@ export function installNotiApi(page: Page, options: NotiApiOptions = {}): NotiAp
       resendBodies.push(request.postData() ?? '');
       return json(route, 200, JSON.stringify({ ...NOTI_OK, retryCount: 1 }));
     }
-    return json(route, 200, listBody([NOTI_OK, NOTI_TOO_SOON, NOTI_MAX_RETRIES]));
+    return json(route, 200, listBody([NOTI_OK, notiTooSoon(), NOTI_MAX_RETRIES]));
   });
 
   return { resendBodies: () => resendBodies, urls: () => urls };

@@ -5,6 +5,7 @@ import {
   type ApiClient,
 } from '@pinehill/api-client';
 import { checkBoard, projectDayBoard, type DayData } from './model';
+import { chooseProperty } from '../../../lib/working-property';
 
 export function dayApi(client: ApiClient) {
   const properties = createPropertyApi(client),
@@ -61,14 +62,4 @@ async function loadBoard(
     if (error instanceof ApiError && error.status === 401) throw error;
     return { board: null, boardError: error };
   }
-}
-
-function chooseProperty(
-  available: readonly { id: string }[],
-  propertyId: string,
-  preferred: string,
-): string {
-  if (propertyId) return propertyId;
-  if (available.some((item) => item.id === preferred)) return preferred;
-  return available[0]?.id ?? '';
 }

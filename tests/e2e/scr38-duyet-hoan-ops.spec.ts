@@ -5,6 +5,8 @@ import { seedRefund, loginRefundStaff, verifyRefundPin, seedApprovedRefund, prep
 import { fixtureOrigin, logoutCollectionStaff } from './operations-web/collect-fixture';
 const DEMO_STATES = ['ready', 'loading', 'refreshing', 'empty', 'validation-error', 'forbidden', 'conflict', 'expired', 'unknown-outcome', 'success'] as const;
 operationsWebOnly();
+/** Origin của app đang kiểm (lấy từ baseURL của project), để phản hồi giả qua được CORS ở mọi cổng. */
+const appOrigin = (): string => new URL(String(test.info().project.use.baseURL)).origin;
 test('maker sees server gross/fee/net/reservation and cannot see approve', async ({ page, request }) => {
   const { booking, refund } = await seedRefund(page, request);
   await page.goto(`/bookings/${booking.id}/refunds`);
@@ -170,7 +172,7 @@ test('approval PIN preflight rejection keeps entered decision and allows fresh P
   await loginRefundStaff(page, request, 'MANAGER');
   await page.route(/\/api\/v1\/refund-requests\/[^/]+\/approve$/, async (route) => {
     if (route.request().method() !== 'POST') return route.continue();
-    await route.fulfill({ status: 401, contentType: 'application/json', headers: { 'access-control-allow-origin': 'http://127.0.0.1:' + (process.env.E2E_OPERATIONS_WEB_PORT ?? '3002') }, body: JSON.stringify({ code: 'E_AUTH_PIN_REQUIRED', traceId: 'synthetic-pin-preflight', message: 'Synthetic', timestamp: new Date().toISOString(), path: '/api/v1/refund-requests/synthetic/approve' }) });
+    await route.fulfill({ status: 401, contentType: 'application/json', headers: { 'access-control-allow-origin': appOrigin() }, body: JSON.stringify({ code: 'E_AUTH_PIN_REQUIRED', traceId: 'synthetic-pin-preflight', message: 'Synthetic', timestamp: new Date().toISOString(), path: '/api/v1/refund-requests/synthetic/approve' }) });
   });
   await page.goto(`/bookings/${booking.id}/refunds`);
   await page.getByTestId('refund-action-approve').click(); await verifyRefundPin(page);
@@ -197,7 +199,7 @@ for (const failure of ['wrong', 'locked', 'unavailable', 'denied']) test(`PIN ${
   if (['unavailable', 'denied'].includes(failure)) await page.route(/\/api\/v1\/auth\/pin\/verify$/, async (route) => {
     if (route.request().method() !== 'POST') return route.continue();
     if (failure === 'unavailable') return route.abort('failed');
-    return route.fulfill({ status: 403, contentType: 'application/json', headers: { 'access-control-allow-origin': 'http://127.0.0.1:' + (process.env.E2E_OPERATIONS_WEB_PORT ?? '3002') }, body: JSON.stringify({ code: 'E_RBAC_FORBIDDEN', traceId: 'synthetic-denial', message: 'Synthetic', timestamp: new Date().toISOString(), path: '/api/v1/auth/pin/verify' }) });
+    return route.fulfill({ status: 403, contentType: 'application/json', headers: { 'access-control-allow-origin': appOrigin() }, body: JSON.stringify({ code: 'E_RBAC_FORBIDDEN', traceId: 'synthetic-denial', message: 'Synthetic', timestamp: new Date().toISOString(), path: '/api/v1/auth/pin/verify' }) });
   });
   await page.goto(`/bookings/${booking.id}/refunds`);
   await page.getByTestId('refund-action-approve').click();
@@ -338,10 +340,10 @@ test('late read denial hides old money even if another parallel read failed firs
   await page.goto(`/bookings/${booking.id}/refunds`);
   await expect(page.getByTestId('refund-detail')).toBeVisible();
   const denial = (path: string, code: string) => ({ code, traceId: 'synthetic-denial', message: 'Synthetic', timestamp: new Date().toISOString(), path });
-  await page.route(/\/api\/v1\/bookings\/[^/]+\/balance$/, async (route) => route.fulfill({ status: 400, headers: { 'access-control-allow-origin': `http://127.0.0.1:${process.env.E2E_OPERATIONS_WEB_PORT ?? '3002'}` }, json: denial(new URL(route.request().url()).pathname, 'E_GEN_VALIDATION_FAILED') }));
+  await page.route(/\/api\/v1\/bookings\/[^/]+\/balance$/, async (route) => route.fulfill({ status: 400, headers: { 'access-control-allow-origin': appOrigin() }, json: denial(new URL(route.request().url()).pathname, 'E_GEN_VALIDATION_FAILED') }));
   await page.route(/\/api\/v1\/refund-requests\?/, async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 250));
-    await route.fulfill({ status: 403, headers: { 'access-control-allow-origin': `http://127.0.0.1:${process.env.E2E_OPERATIONS_WEB_PORT ?? '3002'}` }, json: denial('/api/v1/refund-requests', 'E_RBAC_FORBIDDEN') });
+    await route.fulfill({ status: 403, headers: { 'access-control-allow-origin': appOrigin() }, json: denial('/api/v1/refund-requests', 'E_RBAC_FORBIDDEN') });
   });
   await page.getByTestId('refund-reload').click();
   await expect(page.getByTestId('refund-detail')).toHaveCount(0);

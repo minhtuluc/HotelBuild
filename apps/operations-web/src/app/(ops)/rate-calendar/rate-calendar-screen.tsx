@@ -35,6 +35,8 @@ import {
 } from '../../../lib/rate-calendar';
 import { VERSION_UNKNOWN, readFailureState, writeFailureState } from '../../../lib/screen-state';
 import { RateCalendarTable, type RateDay } from './rate-calendar-table';
+import { chooseProperty } from '../../../lib/working-property';
+import { useWorkingPropertyId } from '../../../session/staff-session';
 
 interface Filters {
   propertyId: string;
@@ -60,10 +62,14 @@ function initialFilters(): Filters {
  * Đọc cơ sở, loại phòng và lịch giá trong một khoảng. Không chọn gì thì chốt cơ sở/loại phòng đầu
  * tiên để màn hình luôn có dữ liệu xem được; số chọn được trả lại để bộ lọc khớp với dữ liệu đã tải.
  */
-async function fetchCalendar(client: ApiClient, target: Filters): Promise<LoadedCalendar> {
+async function fetchCalendar(
+  client: ApiClient,
+  target: Filters,
+  preferred: string,
+): Promise<LoadedCalendar> {
   const propertyPage = await createPropertyApi(client).list();
   const properties = propertyPage.data.data;
-  const propertyId = target.propertyId === '' ? (properties[0]?.id ?? '') : target.propertyId;
+  const propertyId = chooseProperty(properties, target.propertyId, preferred);
   if (propertyId === '') {
     return {
       properties,
@@ -100,6 +106,7 @@ async function fetchCalendar(client: ApiClient, target: Filters): Promise<Loaded
 
 export function RateCalendarScreen(): ReactElement {
   const forced = useForcedState();
+  const working = useWorkingPropertyId();
   const [state, setState] = useState<ScreenState>({ kind: 'loading' });
   const [properties, setProperties] = useState<readonly PropertySummary[]>([]);
   const [roomTypes, setRoomTypes] = useState<readonly RoomTypeSummary[]>([]);
@@ -125,7 +132,7 @@ export function RateCalendarScreen(): ReactElement {
         return;
       }
       try {
-        const loaded = await fetchCalendar(session.client, target);
+        const loaded = await fetchCalendar(session.client, target, working);
         setProperties(loaded.properties);
         setRoomTypes(loaded.roomTypes);
         // Chỉ điền lựa chọn còn trống; không ghi đè khoảng ngày người dùng đang gõ.
@@ -153,8 +160,16 @@ export function RateCalendarScreen(): ReactElement {
         setState({ kind: 'ready' });
       }
     },
-    [session],
+    [session, working],
   );
+
+  // Đổi cơ sở trên thanh ngữ cảnh: bỏ lựa chọn cơ sở/loại phòng trên màn để mở ở cơ sở mới (TD-44).
+  useEffect(() => {
+    const clear = (current: Filters): Filters =>
+      current.propertyId === '' ? current : { ...current, propertyId: '', roomTypeId: '' };
+    setApplied(clear);
+    setFilters(clear);
+  }, [working]);
 
   useEffect(() => {
     if (forced !== undefined) return;

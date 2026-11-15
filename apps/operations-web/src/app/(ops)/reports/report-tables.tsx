@@ -46,7 +46,14 @@ function Table({
   children: ReactElement;
 }): ReactElement {
   return (
-    <div className="ph-card" style={OPS_TABLE_WRAP_STYLE}>
+    // Vùng cuộn ngang phải tới được bằng bàn phím và có tên (axe `scrollable-region-focusable`).
+    <div
+      className="ph-card"
+      role="region"
+      aria-label={title}
+      tabIndex={0}
+      style={OPS_TABLE_WRAP_STYLE}
+    >
       <table data-testid={testId} style={{ width: '100%', borderCollapse: 'collapse' }}>
         <caption style={{ textAlign: 'start', padding: 'var(--space-s2, 8px) 0', fontWeight: 600 }}>
           {title}

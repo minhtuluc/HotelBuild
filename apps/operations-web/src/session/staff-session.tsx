@@ -52,6 +52,14 @@ export function useOptionalStaffSession(): StaffSessionValue | null {
   return useContext(StaffSessionContext);
 }
 
+/**
+ * Cơ sở đang làm việc nếu màn nằm trong phiên nhân viên; ngoài phiên (test, trạng thái ép) thì `''`.
+ * Dùng làm `preferred` cho `chooseProperty` (TD-44, HB-314).
+ */
+export function useWorkingPropertyId(): string {
+  return useOptionalStaffSession()?.propertyId ?? '';
+}
+
 /** Hook chung cho các màn: cơ sở đang làm việc để truyền làm `propertyId` (QĐ-03 quyết định 9). */
 export function useWorkingProperty(): {
   propertyId: string | null;

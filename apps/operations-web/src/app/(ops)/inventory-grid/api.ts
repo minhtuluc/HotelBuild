@@ -11,6 +11,7 @@ import { createSessionClient } from '@pinehill/web-session/client';
 import { GridController, type GridPort } from './controller';
 import { projectGrid } from './model';
 import { defaultRange } from '../../../lib/inventory-grid';
+import { chooseProperty } from '../../../lib/working-property';
 function complete(count: number, total: number): void {
   if (count !== total) throw new ApiError({ kind: 'protocol', message: 'Incomplete catalogue' });
 }
@@ -53,7 +54,8 @@ async function catalogue<T extends { id: string }>(
     cursor = next;
   }
 }
-export function gridPort(client: ApiClient): GridPort {
+/** `preferred`: cơ sở đang làm việc của phiên — mở lưới ở cơ sở đó nếu có trong danh sách (TD-44). */
+export function gridPort(client: ApiClient, preferred = ''): GridPort {
   return async (propertyId, range, signal) => {
     const properties = await catalogue(
       client,
@@ -61,7 +63,7 @@ export function gridPort(client: ApiClient): GridPort {
       listResponseSchema(propertySummarySchema),
       signal,
     );
-    const chosen = propertyId || properties[0]?.id || '';
+    const chosen = chooseProperty(properties, propertyId, preferred);
     const names = properties.map((p) => ({ id: p.id, name: p.name }));
     if (!chosen) return { propertyId: '', range, properties: names, rows: [], capturedAt: null };
     const types = await catalogue(
@@ -86,7 +88,7 @@ export function gridPort(client: ApiClient): GridPort {
     return { ...projectGrid(chosen, range, types, grid), properties: names };
   };
 }
-export function createGridWorkspace(range = defaultRange(new Date())) {
+export function createGridWorkspace(range = defaultRange(new Date()), preferred = '') {
   let active = true,
     lastToken: string | undefined;
   const session = createSessionClient({
@@ -112,7 +114,7 @@ export function createGridWorkspace(range = defaultRange(new Date())) {
     },
     maxAttempts: 1,
   });
-  const controller = new GridController(gridPort(client), range);
+  const controller = new GridController(gridPort(client, preferred), range);
   return {
     controller,
     dispose: () => {

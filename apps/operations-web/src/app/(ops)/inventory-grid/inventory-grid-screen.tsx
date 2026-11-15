@@ -22,6 +22,7 @@ import {
 } from '../../../lib/inventory-grid';
 import { GridLegend, GridTable } from './grid-table';
 import { useGrid } from './use-grid';
+import { useWorkingPropertyId } from '../../../session/staff-session';
 import type { GridState, GridData } from './controller';
 import { gridText } from './messages-session';
 
@@ -43,7 +44,7 @@ function surface(state: GridState): ScreenState {
 
 export function InventoryGridScreen(): ReactElement {
   const forced = useForcedState();
-  const { controller, state } = useGrid(forced === undefined);
+  const { controller, state } = useGrid(forced === undefined, useWorkingPropertyId());
   const [propertyId, setPropertyId] = useState('');
   const [pending, setPending] = useState<GridRange>(() => defaultRange(new Date()));
   const [focus, setFocus] = useState<CellPosition>({ row: 0, col: 0 });

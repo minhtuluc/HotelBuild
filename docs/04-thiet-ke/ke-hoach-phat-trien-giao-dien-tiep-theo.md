@@ -140,7 +140,7 @@ Mỗi màn có unit test cho model, E2E trên API giả và axe.
 | HB-312 | 5 | Locale `en` | Chưa mở | HB-309 |
 | HB-313 | 6 | Locale `zh-CN`, `ja`, `ko`, `ru` + font | Chưa mở | HB-312 |
 | HB-315 | — | E2E SCR-48 bàn tiền sảnh xanh lại sau #298 | Đã merge ([#303](https://github.com/minhtuluc/HotelBuild/pull/303)) | — |
-| HB-314 | — | TD-44 cho các màn vận hành còn lại (lưới tồn, lịch giá, danh sách booking, báo cáo, kênh, người dùng, hạng phòng, SCR-40/43/47) | Chưa mở | HB-308 |
+| [HB-314](../08-thi-cong/tickets/HB-314-co-so-dang-lam-viec.md) | — | TD-44 cho các màn vận hành còn lại (lưới tồn, lịch giá, danh sách booking, báo cáo, kênh, người dùng, hạng phòng, SCR-40/43/47) | Đã merge ([#309](https://github.com/minhtuluc/HotelBuild/pull/309)) (phần 2) | HB-308 |
 
 E2E SCR-07 (P1) được kiểm lại trong HB-308.
 
