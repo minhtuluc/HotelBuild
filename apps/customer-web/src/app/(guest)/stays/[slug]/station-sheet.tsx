@@ -166,7 +166,7 @@ export function StationSheet(props: SheetProps): ReactElement {
         <SheetHead {...props} />
         <StationTimetable
           title={t('guest.station.timetable', { name: station.name })}
-          apiNameIncludes={pageKey.apiNameIncludes}
+          slug={pageKey.slug}
           facts={[
             { label: t('guest.route.altitude'), value: station.altitude },
             { label: t('guest.route.climate'), value: station.climate },

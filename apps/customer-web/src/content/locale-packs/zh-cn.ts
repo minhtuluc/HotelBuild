@@ -1,5 +1,6 @@
 /** Gói nội dung 简体中文 (HB-313). Xem ranh giới minh hoạ / chính sách ở `types.ts`. */
 import type { LocaleContentPack } from './types';
+import { ZH_CN_PAGES } from './zh-cn-pages';
 
 export const ZH_CN_PACK: LocaleContentPack = {
   landing: {
@@ -174,39 +175,7 @@ export const ZH_CN_PACK: LocaleContentPack = {
       },
     ],
   },
-  properties: {
-    'da-lat': {
-      summary:
-        '线路的第一站，在高原上。来大叻就是为了慢下来：清晨有雾，中午阳光温和，晚上凉得需要外套。',
-      story: [
-        '酒店坐落在松林山丘间，离市中心有一段距离，安静得能听见风声。晨雾低垂，九点前散去；傍晚气温下降很快，从平原上来的客人请带一件保暖的衣服。',
-        '大叻适合住上几晚：第一晚旅途后休息，之后几天散步、绕湖骑车，或者干脆坐着不动。每一晚的价格单独印在票上，哪晚是周末、哪晚是旺季一目了然。',
-      ],
-      arrival: [
-        '飞到连姜机场，再乘出租车或机场接驳车约 30 公里。',
-        '从胡志明市乘卧铺大巴约 7 小时；很多班次夜间发车，清晨到达，早于入住时间。',
-        '早于入住时间到达时，可把行李寄存在前台；入住和退房时间见上方时刻表。',
-      ],
-      seoTitle: '大叻站 · Pine Hill',
-      seoDescription:
-        'Pine Hill 大叻高原酒店：入住和退房时间、交通、房型和照片。选好日期即可查看每晚价格。',
-      illustrative: true,
-    },
-  },
-  roomTypes: {
-    DLX: {
-      summary: '三人车厢：一间房有三位成人的床位，三人同行无需再订第二间房。',
-      description: [
-        'Deluxe 是为三人同行准备的房型：情侣带一位父母、三位朋友，或带着大孩子的一家人。每人在同一间房里都有自己的床位。',
-        'Deluxe 按晚计价，随季节、周末和住宿晚数变化。在搜索中选择车站和日期，即可在预留前看到印在每一段上的价格。',
-      ],
-      suits: '三位成人同行，或带大孩子的家庭',
-      seoTitle: 'Deluxe 房型（三人车厢）· Pine Hill',
-      seoDescription:
-        'Pine Hill Deluxe：可住三位成人，大叻、藩切、头顿三家酒店均有。选好日期后按晚显示价格。',
-      illustrative: true,
-    },
-  },
+  ...ZH_CN_PAGES,
   photoAlts: {
     'ga-DL-poster': '绿树花园中泳池旁的木质别墅',
     'ga-DL-phong': '宽敞的木质卧室，有双人床和休息区',

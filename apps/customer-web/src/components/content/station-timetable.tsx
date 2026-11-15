@@ -14,8 +14,8 @@ type Times =
   | { readonly kind: 'ready'; readonly checkIn: string; readonly checkOut: string }
   | { readonly kind: 'unavailable' };
 
-function timesFor(properties: readonly PropertyPublicSummary[], apiNameIncludes: string): Times {
-  const property = properties.find((item) => item.name.includes(apiNameIncludes));
+function timesFor(properties: readonly PropertyPublicSummary[], slug: string): Times {
+  const property = properties.find((item) => item.slug === slug);
   return property === undefined
     ? { kind: 'unavailable' }
     : { kind: 'ready', checkIn: property.checkInTime, checkOut: property.checkOutTime };
@@ -28,11 +28,12 @@ export interface TimetableFact {
 
 export function StationTimetable({
   title,
-  apiNameIncludes,
+  slug,
   facts,
 }: {
   title: string;
-  apiNameIncludes: string;
+  /** Slug của trang ga, khớp `slug` của cơ sở do API công khai trả (HB-311). */
+  slug: string;
   facts: readonly TimetableFact[];
 }): ReactElement {
   const t = useT();
@@ -41,7 +42,7 @@ export function StationTimetable({
     let live = true;
     fetchPublicProperties(window.location.origin).then(
       (properties) => {
-        if (live) setTimes(timesFor(properties, apiNameIncludes));
+        if (live) setTimes(timesFor(properties, slug));
       },
       () => {
         if (live) setTimes({ kind: 'unavailable' });
@@ -50,7 +51,7 @@ export function StationTimetable({
     return () => {
       live = false;
     };
-  }, [apiNameIncludes]);
+  }, [slug]);
   const time = (pick: 'checkIn' | 'checkOut'): string => {
     if (times.kind === 'ready') return times[pick];
     return t('guest.station.timePending');

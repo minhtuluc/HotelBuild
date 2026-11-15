@@ -14,6 +14,9 @@ import type { RoomTypeCode, RoomTypePageCopy } from '../room-type-pages';
 
 export type PackLocale = Exclude<Locale, 'vi' | 'en'>;
 
+/** Phần trang ga + trang hạng của gói, ở tệp `<locale>-pages.ts` riêng (HB-311). */
+export type LocalePagesCopy = Pick<LocaleContentPack, 'properties' | 'roomTypes'>;
+
 export interface LocaleContentPack {
   readonly landing: LandingContent;
   /** Theo slug trang ga. */
