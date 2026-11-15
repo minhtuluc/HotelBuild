@@ -11,6 +11,8 @@ import { Photo } from '../../components/photo';
 import { ALL_PHOTO_SLOTS, slotById } from '../../content/photo-slots';
 import { availablePhotos } from '../../lib/photos';
 import { RouteMap } from '../../components/content/route-map';
+import { SyncHighlight } from '../../components/content/sync-highlight';
+import { CabinDiagram } from '../../components/content/cabin-diagram';
 import { propertyPageKey } from '../../content/property-pages';
 import { StationMore } from '../../components/content/station-more';
 import { roomTypePageKey } from '../../content/room-type-pages';
@@ -73,7 +75,9 @@ async function Stations({ photos }: { photos: PhotoContext }): Promise<ReactElem
           stations={content.stations}
           label={t('guest.route.title')}
           hrefFor={(code) => `#ga-${code}`}
+          sync
         />
+        <SyncHighlight group="station" />
         <div className="ph-stations">
           {content.stations.map((station, index) => {
             const Poster = POSTERS[station.code];
@@ -83,6 +87,8 @@ async function Stations({ photos }: { photos: PhotoContext }): Promise<ReactElem
                 id={`ga-${station.code}`}
                 className="ph-station"
                 data-flip={index % 2 === 1 ? 'true' : 'false'}
+                data-sync="station"
+                data-code={station.code}
               >
                 <figure className="ph-poster">
                   {slotPhoto(
@@ -152,9 +158,28 @@ async function Classes({ photos }: { photos: PhotoContext }): Promise<ReactEleme
           <h2 id="classes-title">{t('guest.classes.title')}</h2>
           <p>{t('guest.classes.lede')}</p>
         </header>
+        <CabinDiagram
+          label={t('guest.classes.diagramLabel')}
+          hint={t('guest.classes.diagramHint')}
+          cabins={content.cabinClasses.flatMap((cabin) => {
+            const sleeps = roomTypePageKey(cabin.code)?.sleeps;
+            if (sleeps === undefined) return [];
+            const vars = { name: cabin.name, cabin: cabin.cabin, n: sleeps };
+            return [
+              {
+                code: cabin.code,
+                sleeps,
+                summary:
+                  cabin.code === 'DOR'
+                    ? t('guest.classes.diagramDorm', vars)
+                    : t('guest.classes.diagramSummary', vars),
+              },
+            ];
+          })}
+        />
         <ul className="ph-classes">
           {content.cabinClasses.map((cabin) => (
-            <li key={cabin.code} className="ph-class">
+            <li key={cabin.code} className="ph-class" data-sync="class" data-code={cabin.code}>
               <span className="ph-class-media">
                 {slotPhoto(photos, `hang-${cabin.code}`)}
                 <span className="ph-class-code">{cabin.code}</span>

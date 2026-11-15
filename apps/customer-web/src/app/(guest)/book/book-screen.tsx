@@ -5,6 +5,7 @@
  * tổng số bước bắt buộc ≤ 4). Điều khoản huỷ của gói hiển thị **trước** khi xác nhận; máy chủ nghi trùng
  * booking thì hỏi khách (mở booking cũ hay quay lại chỉnh thông tin) thay vì tự tạo thêm.
  */
+import { FrontDeskLine } from '../../../components/front-desk-line';
 import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useGuestSession } from '../../../components/use-guest-session';
@@ -77,7 +78,13 @@ function DuplicatePanel({
   );
 }
 
-function ErrorPanel({ onRetry }: { onRetry: () => void }): ReactElement {
+function ErrorPanel({
+  onRetry,
+  contact,
+}: {
+  onRetry: () => void;
+  contact: string | null;
+}): ReactElement {
   const t = useT();
   return (
     <div role="alert" className="ph-alert-box">
@@ -85,6 +92,7 @@ function ErrorPanel({ onRetry }: { onRetry: () => void }): ReactElement {
       <button type="button" className="ph-btn" onClick={onRetry}>
         {t('guest.results.retry')}
       </button>
+      <FrontDeskLine contact={contact} />
     </div>
   );
 }
@@ -147,10 +155,12 @@ function BookFlow({
   query,
   roomTypeId,
   wantedPlan,
+  contact,
 }: {
   query: string;
   roomTypeId: string;
   wantedPlan: RatePlanCode | null;
+  contact: string | null;
 }): ReactElement {
   const localPath = useLocalePath();
   const t = useT();
@@ -291,7 +301,7 @@ function BookFlow({
         </label>
       </div>
       <StateSurface state={state}>
-        {readError === null ? null : <ErrorPanel onRetry={() => void load()} />}
+        {readError === null ? null : <ErrorPanel onRetry={() => void load()} contact={contact} />}
         <div className="ph-two-col">
           <div style={{ display: 'grid', gap: 20 }}>
             {selected === null ? null : <TermsPanel terms={planTerms(selected)} />}
@@ -335,7 +345,8 @@ function InvalidPanel({ query }: { query: string }): ReactElement {
   );
 }
 
-export function BookScreen(): ReactElement {
+/** `contact`: số lễ tân từ cấu hình (P6, HB-323); `null` thì hiện lời hướng dẫn chung. */
+export function BookScreen({ contact }: { contact: string | null }): ReactElement {
   const searchParams = useSearchParams();
   const query = searchParams.toString();
   const roomTypeId = searchParams.get('roomTypeId')?.trim() ?? '';
@@ -346,6 +357,7 @@ export function BookScreen(): ReactElement {
       query={query}
       roomTypeId={roomTypeId}
       wantedPlan={planCodeOf(searchParams.get('ratePlanCode') ?? '')}
+      contact={contact}
     />
   );
 }

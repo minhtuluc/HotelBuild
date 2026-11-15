@@ -46,6 +46,9 @@ export const koCustomer: Readonly<Record<CustomerMessageKey, string>> = {
   'guest.results.backHome': '홈으로 돌아가기',
   'guest.results.error': '검색 결과를 불러오지 못했습니다. 다시 시도해 주세요.',
   'guest.results.retry': '다시 시도',
+  'guest.contact.frontDesk': '그래도 안 되나요? 프런트에 전화해 도움을 받으세요: {contact}',
+  'guest.contact.frontDeskGeneric':
+    '그래도 안 되나요? 몇 분 뒤 다시 시도하거나, 가실 역의 프런트에 전화하세요.',
   'guest.results.table': '숙박 기간 내내 빈 객실이 있는 등급',
   'guest.results.col.room': '객실 등급',
   'guest.results.col.capacity': '정원(성인)',

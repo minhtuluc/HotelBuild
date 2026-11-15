@@ -43,6 +43,8 @@ export const zhCustomer: Readonly<Record<CustomerMessageKey, string>> = {
   'guest.results.backHome': '返回首页',
   'guest.results.error': '无法加载搜索结果，请重试。',
   'guest.results.retry': '重试',
+  'guest.contact.frontDesk': '还是不行？请致电前台寻求帮助：{contact}',
+  'guest.contact.frontDeskGeneric': '还是不行？请几分钟后再试，或致电您要前往的车站前台。',
   'guest.results.table': '整段住宿都有空房的房型',
   'guest.results.col.room': '房型',
   'guest.results.col.capacity': '可住（成人）',

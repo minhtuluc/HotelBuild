@@ -10,14 +10,11 @@ import { GalleryGrid, type GalleryItem } from '../../../../components/content/ga
 import { JsonLd, breadcrumbList } from '../../../../components/content/json-ld';
 import { StickyBookingStub } from '../../../../components/content/sticky-booking-stub';
 import { JourneyCta } from '../../../../components/content/journey-cta';
+import { ClassCompare } from '../../../../components/content/class-compare';
 import { landingContent, type CabinClass } from '../../../../content/landing-content';
 import { photoAlt, slotById } from '../../../../content/photo-slots';
 import { propertyPageByStation, searchCtaHref } from '../../../../content/property-pages';
-import {
-  roomTypePageKey,
-  type RoomTypePageCopy,
-  type RoomTypePageKey,
-} from '../../../../content/room-type-pages';
+import { type RoomTypePageCopy, type RoomTypePageKey } from '../../../../content/room-type-pages';
 import type { Translators } from '../../../../i18n/translate';
 import { availablePhotos } from '../../../../lib/photos';
 import { absoluteUrl } from '../../../../lib/site';
@@ -93,45 +90,6 @@ function StationsServed({ pageKey, text }: CabinProps): ReactElement {
           );
         })}
       </ul>
-    </section>
-  );
-}
-
-function OtherClasses({ pageKey, text }: CabinProps): ReactElement {
-  const { t } = text;
-  const others = landingContent(text.locale).cabinClasses.filter(
-    (cabin) => cabin.code !== pageKey.code,
-  );
-  return (
-    <section data-reveal className="ph-band ph-band-ticket" aria-labelledby="cabin-others">
-      <div className="ph-band-inner">
-        <header className="ph-section-head">
-          <h2 id="cabin-others">{t('guest.cabin.otherTitle')}</h2>
-        </header>
-        <ul className="ph-classes">
-          {others.map((cabin) => (
-            <li key={cabin.code} className="ph-class">
-              <span className="ph-class-media">
-                <span className="ph-class-code">{cabin.code}</span>
-              </span>
-              <span className="ph-class-title">
-                <span className="ph-class-name">{cabin.name}</span>
-                <span className="ph-class-cabin">{cabin.cabin}</span>
-              </span>
-              <span className="ph-class-cap">{cabin.capacity}</span>
-              <span className="ph-class-detail">{cabin.detail}</span>
-              {roomTypePageKey(cabin.code) === undefined ? null : (
-                <Link className="ph-class-price" href={`/room-types/${cabin.code}`}>
-                  {t('guest.cabin.readMore', { name: cabin.name })}{' '}
-                  <span className="ph-arrow" aria-hidden="true">
-                    →
-                  </span>
-                </Link>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
     </section>
   );
 }
@@ -240,7 +198,7 @@ export function CabinSheet(props: CabinProps): ReactElement {
           </div>
         )}
       </div>
-      <OtherClasses {...props} />
+      <ClassCompare current={pageKey.code} text={text} />
       <StickyBookingStub
         title={title}
         page={{ kind: 'cabin', code: pageKey.code }}

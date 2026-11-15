@@ -13,6 +13,7 @@ import { StationTimetable } from '../../../../components/content/station-timetab
 import { StickyBookingStub } from '../../../../components/content/sticky-booking-stub';
 import { JourneyCta } from '../../../../components/content/journey-cta';
 import { LegsTable } from '../../../../components/content/legs-table';
+import { PageToc } from '../../../../components/content/page-toc';
 import { SeasonAlmanac, type AlmanacSeason } from '../../../../components/content/season-almanac';
 import { monthRange } from '../../../../i18n/format';
 import { Photo } from '../../../../components/photo';
@@ -105,7 +106,15 @@ function RoomsAtStation({ pageKey, station, text, ctaHref }: SheetProps): ReactE
     pageKey.featuredRoomCodes.some((code) => code === cabin.code),
   );
   return (
-    <section data-reveal className="ph-band ph-band-ticket" aria-labelledby="station-rooms">
+    <section
+      data-reveal
+      className="ph-band ph-band-ticket"
+      aria-labelledby="station-rooms"
+      id="hang-phong"
+    >
+      <div className="ph-band-inner ph-content-includes">
+        <PriceIncludes text={text} showDorm linkDining />
+      </div>
       <div className="ph-band-inner">
         <header className="ph-section-head">
           <h2 id="station-rooms">{t('guest.station.roomsTitle', { name: station.name })}</h2>
@@ -171,7 +180,12 @@ function Seasons({ pageKey, copy, station, text }: SheetProps): ReactElement {
     return { ...season, months, label: monthRange(months, text.locale) };
   });
   return (
-    <section data-reveal className="ph-band ph-band-board" aria-labelledby="station-seasons">
+    <section
+      data-reveal
+      className="ph-band ph-band-board"
+      aria-labelledby="station-seasons"
+      id="lich-mua"
+    >
       <div className="ph-band-inner">
         <header className="ph-section-head">
           <h2 id="station-seasons">{t('guest.station.seasonsTitle', { name: station.name })}</h2>
@@ -229,7 +243,22 @@ export function StationSheet(props: SheetProps): ReactElement {
           current={station.code}
         />
       </div>
-      <section data-reveal className="ph-band ph-band-paper" aria-labelledby="station-story">
+      <PageToc
+        label={t('guest.station.tocLabel')}
+        items={[
+          { id: 've-ga', label: t('guest.station.storyTitle') },
+          { id: 'station-arrival', label: t('guest.station.arrivalTitle') },
+          { id: 'lich-mua', label: t('guest.station.seasonsTitle', { name: station.name }) },
+          { id: 'mot-ngay', label: t('guest.station.dayTitle') },
+          { id: 'hang-phong', label: t('guest.station.roomsTitle', { name: station.name }) },
+        ]}
+      />
+      <section
+        data-reveal
+        className="ph-band ph-band-paper"
+        aria-labelledby="station-story"
+        id="ve-ga"
+      >
         <div className="ph-band-inner ph-content-columns">
           <div className="ph-content-prose">
             <h2 id="station-story">{t('guest.station.storyTitle')}</h2>
@@ -244,6 +273,14 @@ export function StationSheet(props: SheetProps): ReactElement {
             <p className="ph-legs-note">{copy.arrivalNote}</p>
           </aside>
         </div>
+      </section>
+      <Seasons {...props} />
+      <section
+        data-reveal
+        className="ph-band ph-band-paper"
+        aria-labelledby="station-day"
+        id="mot-ngay"
+      >
         <DayRhythm copy={copy} text={text} />
         {gallery.length === 0 ? null : (
           <div className="ph-band-inner ph-content-gallery">
@@ -251,11 +288,7 @@ export function StationSheet(props: SheetProps): ReactElement {
             <GalleryGrid items={gallery} />
           </div>
         )}
-        <div className="ph-band-inner ph-content-includes">
-          <PriceIncludes text={text} showDorm linkDining />
-        </div>
       </section>
-      <Seasons {...props} />
       <RoomsAtStation {...props} />
       <StickyBookingStub
         title={t('guest.station.title', { name: station.name })}

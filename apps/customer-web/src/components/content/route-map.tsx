@@ -11,16 +11,24 @@ export function RouteMap({
   label,
   hrefFor,
   current,
+  sync = false,
 }: {
   stations: readonly Station[];
   label: string;
   hrefFor: (code: string) => string;
   current?: string | undefined;
+  /** Gắn `data-sync="station"` để nổi viền cùng thẻ ga (UX-02, HB-323). */
+  sync?: boolean;
 }): ReactElement {
   return (
     <ol className="ph-route" aria-label={label}>
       {stations.map((station) => (
-        <li key={station.code} className="ph-route-stop">
+        <li
+          key={station.code}
+          className="ph-route-stop"
+          data-sync={sync ? 'station' : undefined}
+          data-code={sync ? station.code : undefined}
+        >
           <LocaleLink
             href={hrefFor(station.code)}
             aria-current={station.code === current ? 'page' : undefined}

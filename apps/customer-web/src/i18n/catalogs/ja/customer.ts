@@ -47,6 +47,9 @@ export const jaCustomer: Readonly<Record<CustomerMessageKey, string>> = {
   'guest.results.backHome': 'トップへ戻る',
   'guest.results.error': '検索結果を読み込めませんでした。もう一度お試しください。',
   'guest.results.retry': 'もう一度試す',
+  'guest.contact.frontDesk': 'それでもうまくいかない場合は、フロントにお電話ください：{contact}',
+  'guest.contact.frontDeskGeneric':
+    'それでもうまくいかない場合は、数分後にもう一度お試しいただくか、お越しになる駅のフロントにお電話ください。',
   'guest.results.table': '滞在期間すべてで空きのある客室クラス',
   'guest.results.col.room': '客室クラス',
   'guest.results.col.capacity': '定員（大人）',
