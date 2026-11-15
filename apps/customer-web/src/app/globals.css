@@ -776,6 +776,37 @@
     outline-color: var(--color-world-signal, #f2b632);
   }
 
+  /* HB-312: chọn ngôn ngữ cạnh đồng hồ, cùng chất liệu bảng ga. */
+  .ph-header-tools {
+    display: inline-flex;
+    align-items: center;
+    justify-self: end;
+    gap: 16px;
+  }
+
+  .ph-lang select {
+    width: auto;
+    min-width: 0;
+    min-height: 36px;
+    padding: 4px 28px 4px 10px;
+    border: 1px solid var(--color-world-signal, #f2b632);
+    border-radius: 2px;
+    background-color: transparent;
+    color: var(--color-world-signal, #f2b632);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .ph-lang select:focus-visible {
+    outline: 2px solid var(--color-world-signal, #f2b632);
+    outline-offset: 2px;
+  }
+
+  .ph-lang option {
+    color: var(--color-text, #1a1716);
+    background: var(--color-surface, #fbfaf7);
+  }
+
   .ph-clock {
     display: inline-flex;
     align-items: baseline;
@@ -2378,6 +2409,27 @@
 
     .ph-clock {
       justify-self: end;
+    }
+
+    /* HB-312: chọn ngôn ngữ + đồng hồ phải vừa một hàng với logo ở 360px. Nhãn chữ của đồng hồ chỉ ẩn khỏi
+       mắt (kiểu sr-only), trình đọc màn hình vẫn đọc. */
+    .ph-header-tools {
+      gap: 10px;
+    }
+
+    .ph-clock-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    .ph-lang select {
+      min-height: 32px;
+      padding: 2px 24px 2px 8px;
+      font-size: 13px;
     }
 
     .ph-nav {

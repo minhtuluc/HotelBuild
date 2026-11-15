@@ -1,4 +1,5 @@
 import { Suspense, type ReactElement } from 'react';
+import type { Metadata } from 'next';
 import { frontDeskContact } from '../../../../config';
 import { serverTranslators } from '../../../../i18n/server';
 import { ForgotScreen } from '../forgot-screen';
@@ -6,7 +7,9 @@ import { ForgotScreen } from '../forgot-screen';
 /** Tuyến động: thông tin liên hệ lễ tân đọc từ cấu hình ở thời điểm gọi (kiến trúc §7.5). */
 export const dynamic = 'force-dynamic';
 
-export const metadata = { title: serverTranslators().account('forgotTitle') } as const;
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await serverTranslators()).account('forgotTitle') };
+}
 
 export default function Page(): ReactElement {
   return (

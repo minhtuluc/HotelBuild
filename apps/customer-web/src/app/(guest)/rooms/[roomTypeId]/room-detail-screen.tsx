@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { LocaleLink as Link } from '../../../../components/locale-link';
 import { ratePlanCodeSchema } from '@pinehill/contracts';
 import type { Quote, RatePlanCode, RatePlanPublic } from '@pinehill/contracts';
 import { StateSurface, type ScreenState } from '@pinehill/ui-web';
@@ -18,6 +18,7 @@ import { isExpired } from './quote-model';
 import { NightsTable, PriceStrip, QuoteSummary, QuoteWarnings } from './quote-tables';
 import { calendarDate } from '../../../../i18n/format';
 import { TableSkeleton } from '../../../../components/table-skeleton';
+import { useLocalePath } from '../../../../i18n/client';
 
 function planCodeOf(value: string): RatePlanCode | null {
   const parsed = ratePlanCodeSchema.safeParse(value);
@@ -74,6 +75,7 @@ function RoomPlanHeader({
 }
 
 export function RoomDetailScreen(): ReactElement {
+  const localPath = useLocalePath();
   const locale = useLocale();
   const t = useT();
   const routeParams = useParams<{ roomTypeId: string }>();
@@ -156,7 +158,7 @@ export function RoomDetailScreen(): ReactElement {
           <p role="alert" style={{ margin: 0 }}>
             {t('guest.results.invalid', { field: issue.field })}
           </p>
-          <Link href="/" className="ph-btn">
+          <Link href={localPath('/')} className="ph-btn">
             {t('guest.results.backHome')}
           </Link>
         </div>

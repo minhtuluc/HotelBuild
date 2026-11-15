@@ -55,6 +55,8 @@ Lý do:
 
 Mặc định `/` chuyển về `/vi` hoặc render tiếng Việt tại `/` và chỉ dùng tiền tố cho locale khác. Cần chốt một trong hai để tránh hai URL cùng nội dung.
 
+**Đã chốt (Q2, làm ở HB-312):** `/` là tiếng Việt, locale khác có tiền tố. `apps/customer-web/src/middleware.ts` ghi đè `/en/...` về route hiện có và gắn locale vào header; không dời cây route, không tự chuyển theo `Accept-Language` (§3.2 hoãn), không nhớ lựa chọn bằng cookie.
+
 ### 3.2. Phát hiện và ghi nhớ locale
 
 - `Accept-Language` quyết định locale lần đầu.

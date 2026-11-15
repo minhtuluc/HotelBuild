@@ -7,15 +7,16 @@
  */
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { formatMoney, StateSurface, type ScreenState } from '@pinehill/ui-web';
+import { LocaleLink as Link } from '../../../components/locale-link';
+import { StateSurface, type ScreenState } from '@pinehill/ui-web';
 import type { Availability } from '@pinehill/contracts';
-import { useLocale, useT } from '../../../i18n/client';
+import { useLocale, useMoney, useT } from '../../../i18n/client';
 import { fetchAvailability, type StayCriteria } from './journey-api';
 import { criteriaIssue, detailHref, parseCriteria } from './search-params';
 import { RoomCodeStamp } from '../../../components/stamps';
 import { TableSkeleton } from '../../../components/table-skeleton';
 import { calendarDate } from '../../../i18n/format';
+import { useLocalePath } from '../../../i18n/client';
 
 function AvailabilityTable({
   availability,
@@ -26,6 +27,7 @@ function AvailabilityTable({
   criteria: StayCriteria;
   photos: Readonly<Record<string, string>>;
 }): ReactElement {
+  const fmtMoney = useMoney();
   const t = useT();
   return (
     <div className="ph-table-wrap ph-availability-wrap">
@@ -88,14 +90,14 @@ function AvailabilityTable({
                 {t('guest.results.nightsRange', { min: item.minNights, max: item.maxNights })}
               </td>
               <td className="ph-tabular" data-label={t('guest.results.col.nightlyFrom')}>
-                {formatMoney(item.nightlyFrom)}
+                {fmtMoney(item.nightlyFrom)}
               </td>
               <td
                 className="ph-tabular"
                 data-label={t('guest.results.col.totalFrom')}
                 style={{ fontWeight: 600 }}
               >
-                {formatMoney(item.totalFrom)}
+                {fmtMoney(item.totalFrom)}
               </td>
               <td className="ph-availability-action">
                 <Link href={detailHref(criteria, item.roomTypeId)} className="ph-btn-accent">
@@ -116,6 +118,7 @@ export function SearchResultsScreen({
   /** Ảnh hạng phòng đang có (mã ô `hang-<CODE>` → đường dẫn), do trang máy chủ đọc từ `public/`. */
   photos?: Readonly<Record<string, string>>;
 }): ReactElement {
+  const localPath = useLocalePath();
   const locale = useLocale();
   const t = useT();
   const params = useSearchParams();
@@ -162,7 +165,7 @@ export function SearchResultsScreen({
           <p role="alert" style={{ margin: 0 }}>
             {t('guest.results.invalid', { field: issue.field })}
           </p>
-          <Link href="/" className="ph-btn">
+          <Link href={localPath('/')} className="ph-btn">
             {t('guest.results.backHome')}
           </Link>
         </div>

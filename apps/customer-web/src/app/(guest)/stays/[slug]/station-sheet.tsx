@@ -3,7 +3,7 @@
  * trình duyệt. Thông số ga lấy từ nội dung trang chủ để hai nơi nói cùng một câu.
  */
 import type { ReactElement } from 'react';
-import Link from 'next/link';
+import { LocaleLink as Link } from '../../../../components/locale-link';
 import { Breadcrumbs } from '../../../../components/content/breadcrumbs';
 import { GalleryGrid, type GalleryItem } from '../../../../components/content/gallery-grid';
 import { JsonLd, breadcrumbList } from '../../../../components/content/json-ld';
@@ -23,6 +23,7 @@ import { roomTypePageKey } from '../../../../content/room-type-pages';
 import type { Translators } from '../../../../i18n/translate';
 import { availablePhotos } from '../../../../lib/photos';
 import { absoluteUrl } from '../../../../lib/site';
+import { localizePath } from '../../../../i18n/locales';
 
 interface SheetProps {
   readonly pageKey: PropertyPageKey;
@@ -146,7 +147,7 @@ export function StationSheet(props: SheetProps): ReactElement {
           '@type': 'Hotel',
           name: t('guest.station.title', { name: station.name }),
           description: copy.summary,
-          url: absoluteUrl(path),
+          url: absoluteUrl(localizePath(path, text.locale)),
           address: {
             '@type': 'PostalAddress',
             addressLocality: station.name,
@@ -156,8 +157,8 @@ export function StationSheet(props: SheetProps): ReactElement {
       />
       <JsonLd
         data={breadcrumbList([
-          { name: t('guest.content.home'), url: absoluteUrl('/') },
-          { name: station.name, url: absoluteUrl(path) },
+          { name: t('guest.content.home'), url: absoluteUrl(localizePath('/', text.locale)) },
+          { name: station.name, url: absoluteUrl(localizePath(path, text.locale)) },
         ])}
       />
       <div className="ph-page-shell ph-content-shell">

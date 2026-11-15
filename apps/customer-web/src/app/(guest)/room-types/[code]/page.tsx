@@ -15,7 +15,9 @@ import {
   roomTypePageKey,
 } from '../../../../content/room-type-pages';
 import { serverTranslators } from '../../../../i18n/server';
-import { absoluteUrl, openGraphImage } from '../../../../lib/site';
+import { openGraphImage } from '../../../../lib/site';
+import { LOCALE_META } from '../../../../i18n/locales';
+import { localeAlternates } from '../../../../i18n/seo';
 import { CabinSheet } from './cabin-sheet';
 
 export const dynamicParams = false;
@@ -28,7 +30,7 @@ type Params = Promise<{ code: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { code } = await params;
-  const { locale } = serverTranslators();
+  const { locale } = await serverTranslators();
   const key = roomTypePageKey(code);
   const copy = key === undefined ? undefined : roomTypePageCopy(key.code, locale);
   if (key === undefined || copy === undefined) return {};
@@ -37,11 +39,12 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     title: copy.seoTitle,
     description: copy.seoDescription,
-    alternates: { canonical: absoluteUrl(path) },
+    alternates: localeAlternates(path, locale),
     openGraph: {
       title: copy.seoTitle,
       description: copy.seoDescription,
-      url: absoluteUrl(path),
+      url: localeAlternates(path, locale).canonical,
+      locale: LOCALE_META[locale].ogLocale,
       images: photo === undefined ? [] : openGraphImage(photo.id, photoAlt(photo, locale)),
     },
   };
@@ -49,7 +52,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function CabinPage({ params }: { params: Params }): Promise<ReactElement> {
   const { code } = await params;
-  const text = serverTranslators();
+  const text = await serverTranslators();
   const key = roomTypePageKey(code);
   const copy = key === undefined ? undefined : roomTypePageCopy(key.code, text.locale);
   const cabin = landingContent(text.locale).cabinClasses.find((item) => item.code === key?.code);

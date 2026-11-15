@@ -6,24 +6,23 @@
  */
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
+import { LocaleLink as Link } from '../../../../components/locale-link';
 import { useGuestSession } from '../../../../components/use-guest-session';
 import { isApiError } from '@pinehill/api-client';
 import type { BookingBalance, BookingSummary } from '@pinehill/contracts';
 import {
   AccessDeniedPanel,
   StateSurface,
-  formatDateTimeVn,
-  formatMoney,
   formatStatusWithEnum,
   type ScreenState,
 } from '@pinehill/ui-web';
 import type { CustomerMessageKey } from '../../../../i18n/catalogs';
-import { useT, useTranslators } from '../../../../i18n/client';
+import { useDateTimeVn, useMoney, useT, useTranslators } from '../../../../i18n/client';
 import { fetchBookingBalance } from '../api';
 import { fetchBooking } from '../../booking/booking-api';
 import { STATUS_KEYS, balanceRows, stayText, type BalanceRow } from '../model';
 import { formatCountdown, holdView, type HoldView } from '../../booking/booking-model';
+import { useLocalePath } from '../../../../i18n/client';
 
 const BALANCE_KEYS: Readonly<Record<BalanceRow['key'], CustomerMessageKey>> = {
   total: 'guest.bookings.balance.total',
@@ -34,6 +33,7 @@ const BALANCE_KEYS: Readonly<Record<BalanceRow['key'], CustomerMessageKey>> = {
 };
 
 function BalancePanel({ balance }: { balance: BookingBalance }): ReactElement {
+  const fmtMoney = useMoney();
   const t = useT();
   return (
     <div className="ph-table-wrap">
@@ -53,7 +53,7 @@ function BalancePanel({ balance }: { balance: BookingBalance }): ReactElement {
             <tr key={row.key}>
               <th scope="row">{t(BALANCE_KEYS[row.key])}</th>
               <td className="ph-tabular" style={{ fontWeight: row.key === 'due' ? 500 : 400 }}>
-                {formatMoney(row.amount)}
+                {fmtMoney(row.amount)}
               </td>
             </tr>
           ))}
@@ -71,6 +71,7 @@ export function StayPanel({
   booking: BookingSummary;
   hold: HoldView | null;
 }): ReactElement {
+  const fmtTime = useDateTimeVn();
   const text = useTranslators();
   const t = useT();
   return (
@@ -97,7 +98,7 @@ export function StayPanel({
           </tr>
           <tr>
             <th scope="row">{t('guest.booking.created')}</th>
-            <td className="ph-tabular">{formatDateTimeVn(booking.createdAt)}</td>
+            <td className="ph-tabular">{fmtTime(booking.createdAt)}</td>
           </tr>
           {hold === null || hold.kind !== 'active' ? null : (
             <tr>
@@ -134,6 +135,7 @@ function DetailActions({ bookingId }: { bookingId: string }): ReactElement {
 }
 
 export function BookingDetailScreen(): ReactElement {
+  const localPath = useLocalePath();
   const t = useT();
   const routeParams = useParams<{ bookingId: string }>();
   const bookingId = typeof routeParams.bookingId === 'string' ? routeParams.bookingId : '';
@@ -192,7 +194,7 @@ export function BookingDetailScreen(): ReactElement {
         </div>
         <div className="ph-alert-box">
           <p style={{ margin: 0 }}>{t('guest.booking.notFound')}</p>
-          <Link href="/bookings" className="ph-btn">
+          <Link href={localPath('/bookings')} className="ph-btn">
             {t('guest.bookings.back')}
           </Link>
         </div>
@@ -223,7 +225,7 @@ export function BookingDetailScreen(): ReactElement {
         ) : null}
         {booking === null ? (
           <div>
-            <Link href="/bookings" className="ph-btn">
+            <Link href={localPath('/bookings')} className="ph-btn">
               {t('guest.bookings.back')}
             </Link>
           </div>

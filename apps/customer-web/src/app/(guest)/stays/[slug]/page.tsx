@@ -16,7 +16,9 @@ import {
 import { landingContent } from '../../../../content/landing-content';
 import { photoAlt, slotById } from '../../../../content/photo-slots';
 import { serverTranslators } from '../../../../i18n/server';
-import { absoluteUrl, openGraphImage } from '../../../../lib/site';
+import { openGraphImage } from '../../../../lib/site';
+import { LOCALE_META } from '../../../../i18n/locales';
+import { localeAlternates } from '../../../../i18n/seo';
 import { StationSheet } from './station-sheet';
 
 /** Chỉ các slug có nội dung; slug khác trả 404 thay vì dựng trang rỗng. */
@@ -30,7 +32,7 @@ type Params = Promise<{ slug: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
-  const { locale } = serverTranslators();
+  const { locale } = await serverTranslators();
   const key = propertyPageKey(slug);
   const copy = propertyPageCopy(slug, locale);
   if (key === undefined || copy === undefined) return {};
@@ -39,11 +41,12 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     title: copy.seoTitle,
     description: copy.seoDescription,
-    alternates: { canonical: absoluteUrl(path) },
+    alternates: localeAlternates(path, locale),
     openGraph: {
       title: copy.seoTitle,
       description: copy.seoDescription,
-      url: absoluteUrl(path),
+      url: localeAlternates(path, locale).canonical,
+      locale: LOCALE_META[locale].ogLocale,
       images: poster === undefined ? [] : openGraphImage(poster.id, photoAlt(poster, locale)),
     },
   };
@@ -51,7 +54,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function StationPage({ params }: { params: Params }): Promise<ReactElement> {
   const { slug } = await params;
-  const text = serverTranslators();
+  const text = await serverTranslators();
   const key = propertyPageKey(slug);
   const copy = propertyPageCopy(slug, text.locale);
   const station = landingContent(text.locale).stations.find(

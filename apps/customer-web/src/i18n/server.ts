@@ -1,16 +1,31 @@
 /**
- * Locale và translator cho server component, route và metadata.
+ * Locale và translator cho server component, route và metadata (HB-312).
  *
- * Đợt 2 (HB-309) chỉ có `vi` nên `requestLocale()` trả locale mặc định. Đợt 5 (HB-312) đọc locale từ
- * đoạn URL; mọi nơi gọi đã đi qua hàm này nên chỉ phải sửa một chỗ.
+ * `middleware.ts` gắn locale và đường dẫn gốc (bỏ tiền tố) vào header của mọi request trang. Thiếu header
+ * (ví dụ khi dựng tĩnh lúc build) thì về locale mặc định.
  */
-import { DEFAULT_LOCALE, type Locale } from './locales';
+import { headers } from 'next/headers';
+import { DEFAULT_LOCALE, isLocale, localizePath, type Locale } from './locales';
 import { translatorsFor, type Translators } from './translate';
 
-export function requestLocale(): Locale {
-  return DEFAULT_LOCALE;
+const LOCALE_HEADER = 'x-ph-locale';
+const PATH_HEADER = 'x-ph-path';
+
+export async function requestLocale(): Promise<Locale> {
+  const value = (await headers()).get(LOCALE_HEADER);
+  return value !== null && isLocale(value) ? value : DEFAULT_LOCALE;
 }
 
-export function serverTranslators(locale: Locale = requestLocale()): Translators {
-  return translatorsFor(locale);
+/** Đường dẫn của trang đang dựng, không có tiền tố locale (cho hreflang/canonical). */
+export async function requestPath(): Promise<string> {
+  return (await headers()).get(PATH_HEADER) ?? '/';
+}
+
+export async function serverTranslators(locale?: Locale): Promise<Translators> {
+  return translatorsFor(locale ?? (await requestLocale()));
+}
+
+/** `href` nội bộ theo locale của request. */
+export async function serverHref(href: string): Promise<string> {
+  return localizePath(href, await requestLocale());
 }

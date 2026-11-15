@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import Link from 'next/link';
+import { LocaleLink as Link } from '../../components/locale-link';
 import { webEnv } from '../../config';
 import { serverTranslators } from '../../i18n/server';
 import { money } from '../../i18n/format';
@@ -19,8 +19,8 @@ import { SearchBlock } from './search/search-block';
 /** Trang chủ là tuyến động vì đọc cấu hình API ở thời điểm gọi (kiến trúc §7.5). */
 export const dynamic = 'force-dynamic';
 
-function HeroIntro(): ReactElement {
-  const { t } = serverTranslators();
+async function HeroIntro(): Promise<ReactElement> {
+  const { t } = await serverTranslators();
   return (
     <div className="ph-hero-copy">
       <h1 className="ph-hero-title">
@@ -57,8 +57,8 @@ function hasPhoto(ctx: PhotoContext, ...ids: readonly string[]): boolean {
   return ctx.preview || ids.some((id) => ctx.found[id] !== undefined);
 }
 
-function Stations({ photos }: { photos: PhotoContext }): ReactElement {
-  const { t, locale } = serverTranslators();
+async function Stations({ photos }: { photos: PhotoContext }): Promise<ReactElement> {
+  const { t, locale } = await serverTranslators();
   const content = landingContent(locale);
   return (
     <section data-reveal className="ph-band ph-band-paper" aria-labelledby="route-title" id="tuyen">
@@ -135,8 +135,8 @@ function Stations({ photos }: { photos: PhotoContext }): ReactElement {
   );
 }
 
-function Classes({ photos }: { photos: PhotoContext }): ReactElement {
-  const { t, locale } = serverTranslators();
+async function Classes({ photos }: { photos: PhotoContext }): Promise<ReactElement> {
+  const { t, locale } = await serverTranslators();
   const content = landingContent(locale);
   return (
     <section
@@ -183,8 +183,8 @@ function Classes({ photos }: { photos: PhotoContext }): ReactElement {
   );
 }
 
-function Fare(): ReactElement {
-  const { t, locale } = serverTranslators();
+async function Fare(): Promise<ReactElement> {
+  const { t, locale } = await serverTranslators();
   const content = landingContent(locale);
   return (
     <section data-reveal className="ph-band ph-band-paper" aria-labelledby="fare-title" id="gia">
@@ -248,8 +248,8 @@ function Fare(): ReactElement {
 }
 
 /** Một gói giá: thanh chia theo mốc giờ, mốc xa nhất bên trái, giờ nhận phòng bên phải. */
-function PlanRow({ plan }: { plan: FarePlan }): ReactElement {
-  const { t } = serverTranslators();
+async function PlanRow({ plan }: { plan: FarePlan }): Promise<ReactElement> {
+  const { t } = await serverTranslators();
   return (
     <li className="ph-plan">
       <div className="ph-plan-name">
@@ -281,8 +281,8 @@ function PlanRow({ plan }: { plan: FarePlan }): ReactElement {
   );
 }
 
-function Refunds(): ReactElement {
-  const { t, locale } = serverTranslators();
+async function Refunds(): Promise<ReactElement> {
+  const { t, locale } = await serverTranslators();
   const content = landingContent(locale);
   return (
     <section
@@ -307,8 +307,8 @@ function Refunds(): ReactElement {
   );
 }
 
-function Steps(): ReactElement {
-  const { t, locale } = serverTranslators();
+async function Steps(): Promise<ReactElement> {
+  const { t, locale } = await serverTranslators();
   const content = landingContent(locale);
   return (
     <section
@@ -337,8 +337,8 @@ function Steps(): ReactElement {
   );
 }
 
-function Questions(): ReactElement {
-  const { t, locale } = serverTranslators();
+async function Questions(): Promise<ReactElement> {
+  const { t, locale } = await serverTranslators();
   const content = landingContent(locale);
   return (
     <section data-reveal className="ph-band ph-band-paper" aria-labelledby="faq-title" id="hoi-dap">
@@ -364,7 +364,7 @@ export default async function GuestHomePage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }): Promise<ReactElement> {
-  const { t, locale } = serverTranslators();
+  const { t, locale } = await serverTranslators();
   const query = await searchParams;
   const photos: PhotoContext = {
     found: availablePhotos(ALL_PHOTO_SLOTS.map((slot) => slot.id)),
