@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/server.ts",
     "./server": "./src/server.ts",
-    "./client": "./src/client.ts"
+    "./client": "./src/client.ts",
+    "./hint": "./src/hint.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

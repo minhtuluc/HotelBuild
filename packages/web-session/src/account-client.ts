@@ -9,7 +9,6 @@ import type { GuestRegisterRequest } from '@pinehill/contracts';
 import { httpFailure } from './http-failure.js';
 
 const TIMEOUT_MS = 15000;
-const SIGNED_HINT = 'pinehill_guest_signed';
 
 export interface AccountTransport {
   fetchImpl?: typeof fetch;
@@ -67,11 +66,4 @@ export function confirmPasswordReset(
   return send('password-reset/confirm', { token, newPassword }, transport);
 }
 
-/**
- * Có cookie gợi ý "có thể đã đăng nhập" không (TD-42). `false` thì trang khỏi gọi làm mới phiên; `true` chỉ
- * là gợi ý, trạng thái thật vẫn phải hỏi BFF. Gọi được cả khi dựng ở máy chủ (trả `false`).
- */
-export function guestSignedHint(cookie?: string): boolean {
-  const source = cookie ?? (typeof document === 'undefined' ? '' : document.cookie);
-  return source.split(';').some((part) => part.trim() === `${SIGNED_HINT}=1`);
-}
+export { guestSignedHint } from './hint.js';

@@ -10,7 +10,7 @@ import { GALLERY_GROUPS, galleryEntries } from '../../../content/gallery-entries
 import { landingContent } from '../../../content/landing-content';
 import { photoAlt, slotById } from '../../../content/photo-slots';
 import { serverTranslators } from '../../../i18n/server';
-import { availablePhotos } from '../../../lib/photos';
+import { availablePhotos, photoSrcSet } from '../../../lib/photos';
 import { GalleryBrowser, type BrowserItem } from './gallery-browser';
 
 const PATH = '/gallery';
@@ -47,6 +47,7 @@ export default async function GalleryPage(): Promise<ReactElement> {
       {
         id: entry.id,
         src,
+        srcSet: photoSrcSet(src),
         alt: photoAlt(slot, locale),
         shape: entry.shape,
         group: entry.group,

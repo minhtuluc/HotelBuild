@@ -15,6 +15,13 @@ const nextConfig = {
     '@pinehill/ui-web',
     '@pinehill/web-session',
   ],
+  // HB-325: `@pinehill/ui-web` là barrel `export *`; một import `I18nProvider`/`formatMoney` ở layout kéo cả
+  // `errors.ts` → `@pinehill/contracts` (mọi schema zod, ~95 KB gzip) vào mọi trang, chen vào đường vẽ ảnh đầu
+  // trang trên điện thoại. Next đổi import qua barrel thành import thẳng file con, nên chỉ trang nào thật sự dùng
+  // schema mới tải chúng.
+  experimental: {
+    optimizePackageImports: ['@pinehill/ui-web', '@pinehill/contracts', '@pinehill/api-client'],
+  },
   eslint: { ignoreDuringBuilds: true },
   // `next build` chỉ kiểm kiểu mã app; test (có import fixture ngoài app như `tests/e2e/fake-api`) vẫn được
   // typecheck đầy đủ bởi `pnpm typecheck` trong CI. Cần để build image không chép `tests/` (HB-175).

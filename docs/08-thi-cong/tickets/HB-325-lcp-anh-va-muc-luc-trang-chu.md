@@ -9,6 +9,11 @@ allow:
   - apps/customer-web/test/**
   - apps/customer-web/public/images/pine-hill/**
   - apps/customer-web/scripts/**
+  - apps/customer-web/public/fonts/**
+  - apps/customer-web/next.config.mjs
+  - packages/web-session/src/**
+  - packages/web-session/package.json
+  - docs/07-ban-giao/no-ky-thuat.md
   - tests/e2e/scr90-lcp-va-muc-luc-trang-chu.spec.ts
   - docs/04-thiet-ke/ke-hoach-phat-trien-giao-dien-tiep-theo.md
   - docs/04-thiet-ke/do-lighthouse-trang-noi-dung.md

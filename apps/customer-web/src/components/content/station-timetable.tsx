@@ -3,11 +3,13 @@
  * Bảng giờ ở tờ giới thiệu ga (DESIGN.md › Content Pages › Station Sheet): giờ nhận/trả phòng **lấy từ
  * API** công khai; độ cao, khí hậu, mùa đẹp từ nội dung tĩnh. Chưa có giờ (đang tải, lỗi, không khớp cơ
  * sở) thì in "--:--"; lỗi hoặc không khớp thêm một dòng dẫn sang bước tìm phòng: không đoán giờ.
+ *
+ * HB-325: phần gọi API (client hành trình, schema hợp đồng ~95 KB gzip) nạp động trong effect, sau khi trang
+ * đã vẽ, để không tranh băng thông và luồng chính với ảnh đầu trang (LCP).
  */
 import { useEffect, useState, type ReactElement } from 'react';
 import type { PropertyPublicSummary } from '@pinehill/contracts';
 import { useT } from '../../i18n/client';
-import { fetchPublicProperties } from '../../app/(guest)/search/public-properties';
 
 type Times =
   | { readonly kind: 'loading' }
@@ -40,16 +42,24 @@ export function StationTimetable({
   const [times, setTimes] = useState<Times>({ kind: 'loading' });
   useEffect(() => {
     let live = true;
-    fetchPublicProperties(window.location.origin).then(
-      (properties) => {
-        if (live) setTimes(timesFor(properties, slug));
-      },
-      () => {
-        if (live) setTimes({ kind: 'unavailable' });
-      },
-    );
+    const load = (): void => {
+      import('../../app/(guest)/search/public-properties')
+        .then(({ fetchPublicProperties }) => fetchPublicProperties(window.location.origin))
+        .then(
+          (properties) => {
+            if (live) setTimes(timesFor(properties, slug));
+          },
+          () => {
+            if (live) setTimes({ kind: 'unavailable' });
+          },
+        );
+    };
+    // Sau sự kiện `load`: giờ nhận/trả là phần phụ của đầu trang, không được tranh với ảnh đầu trang (HB-325).
+    if (document.readyState === 'complete') load();
+    else window.addEventListener('load', load, { once: true });
     return () => {
       live = false;
+      window.removeEventListener('load', load);
     };
   }, [slug]);
   const time = (pick: 'checkIn' | 'checkOut'): string => {

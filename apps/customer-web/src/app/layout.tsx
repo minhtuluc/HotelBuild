@@ -43,6 +43,18 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+/**
+ * Font của màn đầu (tiêu đề, điều hướng, nhãn vé: độ đậm 600, phân đoạn latin + vietnamese) — HB-325. Tải
+ * cùng lúc với tài liệu để kịp trước lần vẽ đầu; không tải kịp thì chữ đổi font sau khi vẽ và xô lệch bố
+ * cục (CLS). Các độ đậm khác vẫn tải theo nhu cầu.
+ */
+const CRITICAL_FONTS = [
+  '/fonts/barlow-condensed-600-latin.woff2',
+  '/fonts/barlow-condensed-600-vietnamese.woff2',
+  '/fonts/be-vietnam-pro-600-latin.woff2',
+  '/fonts/be-vietnam-pro-600-vietnamese.woff2',
+] as const;
+
 export default async function GuestLayout({
   children,
 }: {
@@ -54,6 +66,16 @@ export default async function GuestLayout({
     <html lang={LOCALE_META[locale].htmlLang}>
       <head>
         <style>{tokensToCssVariables()}</style>
+        {CRITICAL_FONTS.map((href) => (
+          <link
+            key={href}
+            rel="preload"
+            href={href}
+            as="font"
+            type="font/woff2"
+            crossOrigin="anonymous"
+          />
+        ))}
       </head>
       <body>
         <LocaleProvider locale={locale} catalogs={CATALOGS[locale]}>

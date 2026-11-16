@@ -281,3 +281,27 @@
     opacity: 0.75;
   }
 }
+
+/* HB-325 (UX-06): mục lục trang chủ; đích neo sau dải mục lục không nằm dưới dải dính. */
+@layer components {
+  .ph-toc ~ section[id],
+  .ph-toc ~ section [id] {
+    scroll-margin-top: 64px;
+  }
+}
+
+/*
+ * HB-325: lưới ảnh ngoài màn hình thì trình duyệt bỏ qua dựng hình, nên ảnh `lazy` trong lưới chưa tải và không
+ * chen băng thông với ảnh đầu trang (LCP) trên mạng điện thoại. `auto` trong `contain-intrinsic-block-size` giữ chiều
+   * cao thật sau lần dựng đầu nên cuộn không giật.
+ *
+ * Chỉ áp cho lưới ảnh (nút ảnh mang nhãn ẩn, không có chữ hiển thị), không áp cho cả dải: phần chưa dựng hình
+ * không đo được màu nền, công cụ trợ năng (axe) sẽ báo sai tương phản cho chữ trong dải.
+ */
+@layer components {
+  /* Chỉ ước lượng chiều cao: chiều ngang theo khung chứa (đặt cả hai chiều thì lưới chưa dựng rộng 600px). */
+  .ph-gallery {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 600px;
+  }
+}

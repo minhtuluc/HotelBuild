@@ -1,7 +1,7 @@
 # Font đóng gói cục bộ
 
 Hai họ chữ dưới đây được phát hành theo SIL Open Font License 1.1 (https://openfontlicense.org).
-Tệp `.woff2` là các phân đoạn `latin`, `latin-ext`, `vietnamese` do Google Fonts phục vụ (tải 13/11/2026),
+Tệp `.woff2` là các phân đoạn `latin`, `vietnamese` do Google Fonts phục vụ (tải 13/11/2026; bỏ `latin-ext` ở HB-325),
 khai báo bằng `@font-face` + `unicode-range` trong `src/app/globals.css`.
 
 | Họ chữ | Độ đậm | Bản quyền | Nguồn |
