@@ -15,6 +15,7 @@ import { previewFingerprint, previewTag } from './anchor.js';
 import type { PreviewBreakdown } from './anchor.js';
 import { readFacts } from './context.js';
 import type { CancelDecision, CancelFacts, DecisionInput } from './context.js';
+import { OTA_CHANNEL_CODES } from '../bookings/refund-deadlines.js';
 import { decide } from './engine.js';
 import { forceMajeureForbidden, missing, notAllowed, previewAnchor, stale } from './validation.js';
 import {
@@ -31,7 +32,7 @@ import {
 
 const cancellableStates = ['HELD', 'PENDING_PAYMENT', 'CONFIRMED'] as const;
 /** BR-CHAN-04: chỉ ba kênh OTA đã đăng ký mới huỷ theo chính sách kênh. */
-const otaChannels = ['OTA_BOOKING', 'OTA_AGODA', 'OTA_AIRBNB'] as const;
+const otaChannels = OTA_CHANNEL_CODES;
 const forceMajeureRoles = ['MANAGER', 'OWNER'];
 /** BR-CANCEL-13: bất khả kháng cần lý do trong `note` ≥ 20 ký tự. */
 const forceMajeureNote = 20;

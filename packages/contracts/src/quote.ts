@@ -1,6 +1,7 @@
 /** Hợp đồng QUOTE — api.md §2.4 (`POST /quotes`), §3.1; csdl §3 (quotes, price_snapshots). */
 import { z } from 'zod';
 import { businessDateSchema, isoUtcTimestampSchema } from './common.js';
+import { refundDeadlineSchema } from './cancellation-policy.js';
 import { channelCodeSchema, ratePlanCodeSchema } from './enums.js';
 
 /** Hệ số một đêm theo đúng thứ tự pipeline động giá §2 (0,10–5,00). */
@@ -64,6 +65,11 @@ export const quoteSchema = z.object({
   engineVersion: z.string().min(1),
   quotedAt: isoUtcTimestampSchema,
   expiresAt: isoUtcTimestampSchema,
+  /**
+   * HB-245: mốc huỷ tuyệt đối theo chính sách **hiện hành** của gói giá. Booking chốt bản riêng lúc đặt
+   * (`BookingSummary.refundDeadlines`). Vắng ở kênh OTA: hoàn theo hợp đồng kênh (BR-CHAN-04).
+   */
+  refundDeadlines: z.array(refundDeadlineSchema).optional(),
 });
 
 export type Quote = z.infer<typeof quoteSchema>;

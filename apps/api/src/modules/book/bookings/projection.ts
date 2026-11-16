@@ -16,6 +16,7 @@ import type { BookingSummary, BookingsQuery, ListPage } from '@pinehill/contract
 import { normalizePhone } from '../../crm/guests/phone.js';
 import { civilDay, dateOnly, isCivilDate } from '../../rate/calendar/support.js';
 import type { BookingCaller } from './principal.js';
+import { bookingDeadlines } from './refund-deadlines.js';
 import { scopedPropertyIds } from './principal.js';
 import { invalid } from './validation.js';
 
@@ -53,6 +54,13 @@ export const bookingSelect = {
   created_by: true,
   created_at: true,
   version: true,
+  // HB-245: mã kênh + snapshot mới nhất (cùng bản lệnh huỷ đọc) để tính `refundDeadlines`.
+  channels: { select: { code: true } },
+  price_snapshots: {
+    orderBy: { seq: 'desc' },
+    take: 1,
+    select: { policy_snapshot_json: true, payload_json: true },
+  },
 } satisfies Prisma.bookingsSelect;
 
 export type BookingRow = Prisma.bookingsGetPayload<{ select: typeof bookingSelect }>;
@@ -94,6 +102,16 @@ export function project(row: BookingRow): BookingSummary {
     createdBy: row.created_by ?? row.guest_id,
     createdAt: row.created_at.toISOString(),
     version: Number(row.version),
+    refundDeadlines: bookingDeadlines({
+      status: row.status,
+      checkIn,
+      channelCode: row.channels.code,
+      channelPolicyCode: row.channel_policy_code,
+      snapshot: row.price_snapshots.map((snapshot) => ({
+        policy: snapshot.policy_snapshot_json,
+        payload: snapshot.payload_json,
+      }))[0],
+    }),
   });
 }
 

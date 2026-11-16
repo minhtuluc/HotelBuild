@@ -4,6 +4,7 @@
  */
 import { z } from 'zod';
 import { businessDateSchema, isoUtcTimestampSchema, listQuerySchema } from './common.js';
+import { refundDeadlineSchema } from './cancellation-policy.js';
 import { paymentSchema } from './payment.js';
 import {
   bookingStatusSchema,
@@ -85,6 +86,12 @@ export const bookingSummarySchema = z.object({
   version: z.number().int().min(0).optional(),
   /** Chứng từ do server trả ở chi tiết; optional để client vẫn đọc phản hồi cũ. */
   payments: z.array(paymentSchema).optional(),
+  /**
+   * HB-245: mốc huỷ tuyệt đối từ snapshot chính sách đã chốt lúc đặt (cùng nguồn lệnh huỷ dùng). Chỉ có
+   * khi booking còn huỷ được (`HELD`, `PENDING_PAYMENT`, `CONFIRMED`) và không phải booking OTA hoàn
+   * theo hợp đồng kênh. Trước xác nhận, huỷ vẫn hoàn 100% tiền đã thu; mốc áp từ khi `CONFIRMED`.
+   */
+  refundDeadlines: z.array(refundDeadlineSchema).optional(),
 });
 
 /** Bộ lọc `GET /bookings`: khách chỉ thấy booking của mình, nhân viên lọc theo phạm vi cơ sở (§6.3). */

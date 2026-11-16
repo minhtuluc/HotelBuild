@@ -1,5 +1,6 @@
 /** Hợp đồng gói giá & chính sách huỷ — api.md §2.4; ADR-015 (snapshot bất biến). */
 import { z } from 'zod';
+import { isoUtcTimestampSchema } from './common.js';
 
 const percent = z.number().min(0).max(100);
 
@@ -32,6 +33,18 @@ export const cancellationPolicyUpdateRequestSchema = z.strictObject({
   reason: z.string().min(1).max(500),
 });
 
+/**
+ * HB-245: một bậc huỷ quy ra **mốc tuyệt đối** theo giờ nhận phòng của cơ sở. Huỷ tới hết `until`
+ * (tính cả, ISO UTC) thì áp `refundPercent`/`chargeFirstNight`; `until = null` là bậc áp **sau** mốc
+ * cuối cùng. Mảng xếp theo thời gian tăng dần; do máy chủ tính bằng cùng luật với lệnh huỷ.
+ */
+export const refundDeadlineSchema = z.object({
+  until: isoUtcTimestampSchema.nullable(),
+  refundPercent: z.number().int().min(0).max(100),
+  chargeFirstNight: z.boolean(),
+});
+
+export type RefundDeadline = z.infer<typeof refundDeadlineSchema>;
 export type CancellationTier = z.infer<typeof cancellationTierSchema>;
 export type CancellationPolicy = z.infer<typeof cancellationPolicySchema>;
 export type CancellationPolicyUpdateRequest = z.infer<typeof cancellationPolicyUpdateRequestSchema>;

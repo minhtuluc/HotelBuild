@@ -60,5 +60,6 @@ export interface PreconfirmationCancellationDecision extends Omit<
 }
 export type CancellationResult = CancellationDecision | PreconfirmationCancellationDecision;
 export { allocatePayment } from './allocation.js';
-export { resolveTier } from './policy.js';
+export { refundDeadlines, resolveTier } from './policy.js';
+export type { RefundDeadline } from './policy.js';
 export { calculateCancellation } from './calculate.js';
