@@ -1,0 +1,269 @@
+/*
+ * HB-323: bảng so sánh năm hạng (FEAT-05), nổi viền hai chiều tuyến ↔ ga và mặt cắt khoang (UX-02), mục lục
+ * bám cuộn trang ga (UX-06), dòng liên hệ lễ tân khi lỗi mạng (P6). Token sẵn có của globals.css.
+ */
+@layer components {
+  /* ——— UX-02: nổi viền khi rê/focus hoặc chọn khoang ——— */
+  .ph-station,
+  .ph-class {
+    transition: box-shadow 160ms ease;
+  }
+
+  .ph-station[data-sync-active='true'] {
+    box-shadow: 0 0 0 3px var(--color-primary, #1b3a82);
+    border-radius: 6px;
+  }
+
+  .ph-route-stop[data-sync-active='true'] .ph-route-name {
+    color: var(--color-primary, #1b3a82);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .ph-route-stop[data-sync-active='true'] .ph-route-dot {
+    box-shadow: 0 0 0 4px var(--color-world-signal, #f2b632);
+  }
+
+  .ph-class[data-sync-active='true'] {
+    box-shadow: inset 0 0 0 3px var(--color-primary, #1b3a82);
+  }
+
+  .ph-cabin-diagram {
+    display: grid;
+    gap: 12px;
+    margin-bottom: clamp(24px, 3vw, 36px);
+  }
+
+  .ph-cabin-train {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    padding-bottom: 10px;
+    border-bottom: 3px double var(--color-primary, #1b3a82);
+  }
+
+  .ph-cabin-car {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 10px 6px 8px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background: var(--color-world-ticketLight, #f7e5de);
+    color: var(--color-primary, #1b3a82);
+    cursor: pointer;
+  }
+
+  .ph-cabin-car[aria-checked='true'] {
+    border-color: var(--color-primary, #1b3a82);
+    background: var(--color-surface, #fbfaf7);
+  }
+
+  .ph-cabin-car:focus-visible {
+    outline: 3px solid var(--color-primary, #1b3a82);
+    outline-offset: 2px;
+  }
+
+  .ph-cabin-car-art {
+    width: 100%;
+    max-width: 96px;
+    height: auto;
+  }
+
+  .ph-cabin-car-body {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+  }
+
+  .ph-cabin-berth {
+    fill: currentColor;
+  }
+
+  .ph-cabin-car-code {
+    font-family: var(--font-display, 'Barlow Condensed', sans-serif);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+
+  .ph-cabin-summary {
+    min-height: 1.5em;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  /* ——— FEAT-05: bảng so sánh; dưới 640 px mỗi hàng thành thẻ ——— */
+  .ph-compare {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .ph-compare th,
+  .ph-compare td,
+  .ph-compare tbody tr:hover td {
+    padding: 12px;
+    border-bottom: 1px dashed var(--color-world-ticketMuted, #6b2f22);
+    background: transparent;
+    text-align: left;
+    vertical-align: top;
+    white-space: normal;
+  }
+
+  .ph-compare thead th {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-world-ticketMuted, #6b2f22);
+  }
+
+  .ph-compare tbody th {
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  .ph-compare tr[aria-current='true'] th,
+  .ph-compare tr[aria-current='true'] td {
+    background: var(--color-world-ticketLight, #f7e5de);
+  }
+
+  .ph-compare-code {
+    font-family: var(--font-display, 'Barlow Condensed', sans-serif);
+    letter-spacing: 0.06em;
+    color: var(--color-world-ticketPunch, #962a16);
+  }
+
+  .ph-compare-current {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: var(--color-primary, #1b3a82);
+    color: var(--color-surface, #fbfaf7);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+
+  .ph-compare-num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 640px) {
+    .ph-compare thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    .ph-compare tbody tr {
+      display: grid;
+      gap: 4px;
+      padding: 12px 0;
+      border-bottom: 1px dashed var(--color-world-ticketMuted, #6b2f22);
+    }
+
+    .ph-compare tbody th,
+    .ph-compare tbody td {
+      display: grid;
+      grid-template-columns: 7.5rem minmax(0, 1fr);
+      gap: 8px;
+      padding: 2px 12px;
+      border-bottom: 0;
+    }
+
+    .ph-compare tbody th {
+      display: block;
+    }
+
+    .ph-compare tbody td::before {
+      content: attr(data-label);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-world-ticketMuted, #6b2f22);
+    }
+
+    .ph-cabin-train {
+      gap: 4px;
+    }
+
+    .ph-cabin-car {
+      padding-inline: 2px;
+    }
+  }
+
+  /* ——— UX-06: mục lục bám cuộn ——— */
+  .ph-toc {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--color-dark, #121614);
+    border-bottom: 1px solid #2b322e;
+  }
+
+  .ph-toc ol {
+    display: flex;
+    gap: 4px;
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 0 clamp(16px, 4vw, 40px);
+    overflow-x: auto;
+    list-style: none;
+    scrollbar-width: none;
+  }
+
+  .ph-toc a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 10px;
+    border-bottom: 3px solid transparent;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-darkTextMuted, #a9b3ac);
+    text-decoration: none;
+  }
+
+  .ph-toc a:hover,
+  .ph-toc a:focus-visible {
+    color: var(--color-darkText, #f4efe6);
+  }
+
+  .ph-toc a[aria-current='true'] {
+    border-bottom-color: var(--color-world-signal, #f2b632);
+    color: var(--color-world-signal, #f2b632);
+  }
+
+  /* Đích neo không nằm dưới dải mục lục (44px + viền). */
+  .ph-has-stub [id] {
+    scroll-margin-top: 64px;
+  }
+
+  .ph-band-ticket > .ph-content-includes:first-child {
+    margin-top: 0;
+    margin-bottom: clamp(32px, 4vw, 48px);
+  }
+
+  /* ——— P6: dòng liên hệ lễ tân cạnh "Thử lại" ——— */
+  .ph-front-desk-line {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ph-station,
+    .ph-class {
+      transition: none;
+    }
+  }
+}

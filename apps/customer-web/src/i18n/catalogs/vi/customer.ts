@@ -42,6 +42,9 @@ export const viCustomer = {
   'guest.results.backHome': 'Về trang chủ',
   'guest.results.error': 'Không tải được kết quả tìm phòng. Vui lòng thử lại.',
   'guest.results.retry': 'Thử lại',
+  'guest.contact.frontDesk': 'Vẫn chưa được? Gọi lễ tân để được hỗ trợ: {contact}',
+  'guest.contact.frontDeskGeneric':
+    'Vẫn chưa được? Thử lại sau ít phút, hoặc gọi lễ tân của ga bạn định đến.',
   'guest.results.table': 'Loại phòng còn chỗ cho cả kỳ',
   'guest.results.col.room': 'Loại phòng',
   'guest.results.col.capacity': 'Sức chứa (người lớn)',

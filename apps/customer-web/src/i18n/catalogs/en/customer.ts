@@ -47,6 +47,9 @@ export const enCustomer: Readonly<Record<CustomerMessageKey, string>> = {
   'guest.results.backHome': 'Back to home',
   'guest.results.error': 'Could not load search results. Please try again.',
   'guest.results.retry': 'Try again',
+  'guest.contact.frontDesk': 'Still not working? Call reception for help: {contact}',
+  'guest.contact.frontDeskGeneric':
+    'Still not working? Try again in a few minutes, or call reception at the station you plan to visit.',
   'guest.results.table': 'Room classes available for the whole stay',
   'guest.results.col.room': 'Room class',
   'guest.results.col.capacity': 'Capacity (adults)',

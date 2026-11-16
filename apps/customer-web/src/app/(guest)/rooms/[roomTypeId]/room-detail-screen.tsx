@@ -5,6 +5,7 @@
  * `POST /quotes` và **in nguyên** bảng đêm/tổng hợp máy chủ trả. Báo giá hết hạn thì hướng dẫn lấy giá
  * mới bằng thao tác rõ ràng; màn hình **không** tự tính lại hay tự cập nhật giá.
  */
+import { FrontDeskLine } from '../../../../components/front-desk-line';
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { LocaleLink as Link } from '../../../../components/locale-link';
@@ -75,7 +76,8 @@ function RoomPlanHeader({
   );
 }
 
-export function RoomDetailScreen(): ReactElement {
+/** `contact`: số lễ tân từ cấu hình (P6, HB-323); `null` thì hiện lời hướng dẫn chung. */
+export function RoomDetailScreen({ contact }: { contact: string | null }): ReactElement {
   const localPath = useLocalePath();
   const locale = useLocale();
   const t = useT();
@@ -210,6 +212,7 @@ export function RoomDetailScreen(): ReactElement {
             <button type="button" className="ph-btn" onClick={() => void load()}>
               {t('guest.results.retry')}
             </button>
+            <FrontDeskLine contact={contact} />
           </div>
         )}
         {quote === null ? null : (

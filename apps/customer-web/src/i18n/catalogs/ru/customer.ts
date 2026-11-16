@@ -49,6 +49,9 @@ export const ruCustomer: Readonly<Record<CustomerMessageKey, string>> = {
   'guest.results.backHome': 'На главную',
   'guest.results.error': 'Не удалось загрузить результаты поиска. Повторите попытку.',
   'guest.results.retry': 'Повторить',
+  'guest.contact.frontDesk': 'Всё ещё не получается? Позвоните на ресепшен: {contact}',
+  'guest.contact.frontDeskGeneric':
+    'Всё ещё не получается? Попробуйте через несколько минут или позвоните на ресепшен станции, куда вы едете.',
   'guest.results.table': 'Категории, свободные на весь срок',
   'guest.results.col.room': 'Категория',
   'guest.results.col.capacity': 'Вместимость (взрослые)',
