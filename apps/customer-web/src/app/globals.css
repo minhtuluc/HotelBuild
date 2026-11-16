@@ -2401,6 +2401,61 @@
     }
   }
 
+  /*
+   * Trả vé trên màn hẹp: tên gói ở trên, mỗi mốc một hàng gọn (mốc bên trái, % hoàn bên phải, phụ thu xuống
+   * dòng). Thanh màu chuyển sang viền trái để 11 mốc không thành 11 khối cao chồng nhau, và không còn ô mốc
+   * hẹp 110px làm chữ vỡ dòng ở khoảng 761–900px.
+   */
+  @media (max-width: 900px) {
+    .ph-plan {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .ph-plan-steps {
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .ph-plan-step {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: baseline;
+      column-gap: 16px;
+      padding: 10px 14px;
+      border-top: 0;
+      border-left: 6px solid #6f625c;
+    }
+
+    .ph-plan-step[data-level='full'] {
+      border-left-color: var(--color-world-signalGo, #7cd08a);
+    }
+
+    .ph-plan-step[data-level='half'] {
+      border-left-color: var(--color-world-signal, #f2b632);
+    }
+
+    .ph-plan-step[data-level='none'] {
+      border-left-color: #d0563c;
+      border-left-style: dashed;
+    }
+
+    .ph-plan-when {
+      font-size: 18px;
+      line-height: 1.2;
+    }
+
+    .ph-plan-refund {
+      font-size: 15px;
+      font-weight: 600;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .ph-plan-charge {
+      grid-column: 1 / -1;
+    }
+  }
+
   @media (max-width: 760px) {
     .ph-header-inner {
       grid-template-columns: auto auto;
