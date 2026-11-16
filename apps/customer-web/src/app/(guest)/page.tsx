@@ -17,6 +17,7 @@ import { RouteMap } from '../../components/content/route-map';
 import { SyncHighlight } from '../../components/content/sync-highlight';
 import { CabinDiagram } from '../../components/content/cabin-diagram';
 import { PageToc } from '../../components/content/page-toc';
+import { ScrollRails } from '../../components/content/scroll-rails';
 import { HOME_TOC } from './home-toc';
 import { propertyPageKey } from '../../content/property-pages';
 import { StationMore } from '../../components/content/station-more';
@@ -372,6 +373,7 @@ export default async function GuestHomePage({
     preview: query.anh === '1',
     locale,
   };
+  const toc = HOME_TOC.map((item) => ({ id: item.id, label: t(item.key) }));
   return (
     <>
       <div className="ph-hero" id="search-anchor">
@@ -396,10 +398,8 @@ export default async function GuestHomePage({
         </div>
       </section>
 
-      <PageToc
-        label={t('guest.station.tocLabel')}
-        items={HOME_TOC.map((item) => ({ id: item.id, label: t(item.key) }))}
-      />
+      <ScrollRails label={t('guest.station.tocLabel')} items={toc} />
+      <PageToc label={t('guest.station.tocLabel')} items={toc} />
       <Stations photos={photos} />
       <Classes photos={photos} />
       <Fare />
