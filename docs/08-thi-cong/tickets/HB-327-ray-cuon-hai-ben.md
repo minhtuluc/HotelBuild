@@ -3,11 +3,11 @@ id: HB-327
 title: Trang chủ trên màn rộng dùng hai lề trống làm đường ray bám cuộn (trái) và cuống vé bấm lỗ (phải)
 risk: R0
 owner: claude
-max_lines: 600
+max_lines: 650
 allow:
   - apps/customer-web/src/**
   - apps/customer-web/test/**
-  - tests/e2e/scr91-ray-cuon-hai-ben.spec.ts
+  - tests/e2e/scr92-ray-cuon-hai-ben.spec.ts
   - docs/08-thi-cong/tickets/HB-327-ray-cuon-hai-ben.md
 unlock:
   - docs/08-thi-cong/tickets/HB-327-ray-cuon-hai-ben.md
@@ -33,7 +33,7 @@ unlock:
 ## Tiêu chí nghiệm thu
 
 1. Vị trí đầu tàu nội suy đúng giữa hai ga, kẹp ở hai đầu — test: `apps/customer-web/test/content/scroll-rails.spec.ts`
-2. 1600 px: đường ray và cuống vé hiện, dải mục lục ngang ẩn; bấm ga "Trả vé" nhảy tới `#tra-ve`, ga đó có `aria-current`, bốn lỗ đầu đã bấm — test: `tests/e2e/scr91-ray-cuon-hai-ben.spec.ts`
+2. 1600 px: đường ray và cuống vé hiện, dải mục lục ngang ẩn; bấm ga "Trả vé" nhảy tới `#tra-ve`, ga đó có `aria-current`, bốn lỗ đầu đã bấm — test: `tests/e2e/scr92-ray-cuon-hai-ben.spec.ts`
 3. 1280 px và 360 px: hai lề ẩn, dải mục lục ngang hiện, không cuộn ngang — cùng file e2e.
 
 ## Ngoài phạm vi

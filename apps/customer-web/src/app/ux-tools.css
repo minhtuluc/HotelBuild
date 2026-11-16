@@ -341,3 +341,310 @@
     margin-bottom: 4px;
   }
 }
+
+/*
+ * HB-327: hai lề trang chủ trên màn rộng. Trái là đường ray bảng ga (mục lục + đầu tàu bám cuộn), phải là cuống
+ * vé hồng có lỗ bấm. Chỉ từ 1520 px, khi mỗi lề còn từ 140 px; hẹp hơn thì ẩn hẳn, dải mục lục ngang làm thay.
+ * Hai lề dùng chung hình học rãnh (`--rail-top`, `--rail-bottom`) để lỗ vé thẳng hàng với ga.
+ */
+@layer components {
+  .ph-rails {
+    display: none;
+    --rail-top: 176px;
+    --rail-bottom: 76px;
+    --rail-pos: 0;
+  }
+
+  @media (min-width: 1520px) {
+    .ph-rails {
+      display: block;
+    }
+
+    /* Đã có đường ray thì không cần dải mục lục ngang thứ hai. */
+    .ph-rails ~ .ph-toc {
+      display: none;
+    }
+  }
+
+  @media print {
+    .ph-rails {
+      display: none;
+    }
+  }
+
+  .ph-rail,
+  .ph-stub {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    z-index: 15;
+  }
+
+  /* ——— Trái: đường ray ——— */
+  .ph-rail {
+    left: 0;
+    width: 120px;
+    background: var(--color-dark, #121614);
+    border-right: 1px solid #2b322e;
+    box-shadow: inset -3px 0 0 #1c221f;
+    color: var(--color-darkTextMuted, #a9b3ac);
+  }
+
+  .ph-rail-readout {
+    position: absolute;
+    top: 24px;
+    left: 16px;
+    right: 12px;
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #2b322e;
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  }
+
+  .ph-rail-count {
+    font-size: 44px;
+    font-weight: 600;
+    line-height: 0.9;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-world-signal, #f2b632);
+  }
+
+  .ph-rail-count small {
+    margin-left: 2px;
+    font-size: 18px;
+    color: var(--color-darkTextMuted, #a9b3ac);
+  }
+
+  .ph-rail-now {
+    min-height: 2.2em;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--color-darkText, #f4efe6);
+  }
+
+  .ph-rail-track {
+    position: absolute;
+    top: var(--rail-top);
+    bottom: var(--rail-bottom);
+    left: 0;
+    right: 0;
+  }
+
+  /* Hai thanh ray và tà vẹt (bậc) chạy suốt rãnh. */
+  .ph-rail-track::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    bottom: -20px;
+    left: 18px;
+    width: 22px;
+    border-inline: 2px solid #4a544e;
+    background: repeating-linear-gradient(to bottom, #2b322e 0 3px, transparent 3px 12px);
+  }
+
+  /* Đoạn đã đi qua: tà vẹt sáng màu tín hiệu tới đúng chỗ đầu tàu. */
+  .ph-rail-track::after {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: 18px;
+    width: 22px;
+    height: calc(var(--rail-pos) * 100% + 20px);
+    border-inline: 2px solid rgb(242 182 50 / 0.55);
+    background: repeating-linear-gradient(
+      to bottom,
+      rgb(242 182 50 / 0.28) 0 3px,
+      transparent 3px 12px
+    );
+    transition: height 0.18s ease-out;
+  }
+
+  .ph-rails[data-started='false'] .ph-rail-track::after {
+    height: 0;
+  }
+
+  .ph-rail-train {
+    position: absolute;
+    z-index: 1;
+    top: calc(var(--rail-pos) * 100%);
+    left: 21px;
+    width: 16px;
+    height: 26px;
+    border-radius: 5px 5px 3px 3px;
+    background: var(--color-world-signal, #f2b632);
+    box-shadow:
+      0 0 0 3px var(--color-dark, #121614),
+      0 0 14px rgb(242 182 50 / 0.45);
+    transform: translateY(-50%);
+    transition:
+      top 0.18s ease-out,
+      opacity 0.2s;
+  }
+
+  /* Kính lái đầu tàu. */
+  .ph-rail-train::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 4px;
+    width: 8px;
+    height: 6px;
+    border-radius: 1px;
+    background: var(--color-dark, #121614);
+  }
+
+  .ph-rails[data-started='false'] .ph-rail-train {
+    opacity: 0.45;
+  }
+
+  .ph-rail ol {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* `top` của ga và lỗ vé đặt inline theo thứ tự ga. */
+  .ph-rail li {
+    position: absolute;
+    left: 0;
+    right: 0;
+    transform: translateY(-50%);
+  }
+
+  .ph-rail a {
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 4px 8px 4px 18px;
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--color-darkTextMuted, #a9b3ac);
+    text-decoration: none;
+  }
+
+  .ph-rail-dot {
+    justify-self: center;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #6f7a73;
+    border-radius: 50%;
+    background: var(--color-dark, #121614);
+    transition:
+      border-color 0.2s,
+      background-color 0.2s;
+  }
+
+  .ph-rail li[data-passed='true'] .ph-rail-dot {
+    border-color: var(--color-world-signal, #f2b632);
+  }
+
+  .ph-rail a:hover,
+  .ph-rail a:focus-visible {
+    color: var(--color-darkText, #f4efe6);
+  }
+
+  .ph-rail a:focus-visible {
+    outline: 2px solid var(--color-world-signal, #f2b632);
+    outline-offset: -2px;
+  }
+
+  .ph-rail a[aria-current='true'] {
+    color: var(--color-world-signal, #f2b632);
+  }
+
+  .ph-rail a[aria-current='true'] .ph-rail-dot {
+    background: var(--color-world-signal, #f2b632);
+  }
+
+  /* ——— Phải: cuống vé ——— */
+  .ph-stub {
+    right: 0;
+    width: 48px;
+    background: var(--color-world-ticket, #f0c2b3);
+    color: var(--color-world-ticketMuted, #6b2f22);
+    /* Mép khuyết tròn dọc cạnh trong, như đường xé của cuống vé. */
+    -webkit-mask: radial-gradient(circle at 0 7px, transparent 4px, #000 4.5px) 0 0 / 100% 14px;
+    mask: radial-gradient(circle at 0 7px, transparent 4px, #000 4.5px) 0 0 / 100% 14px;
+  }
+
+  .ph-stub-brand {
+    position: absolute;
+    top: 28px;
+    left: 50%;
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    writing-mode: vertical-rl;
+    transform: translateX(-50%);
+  }
+
+  .ph-stub-track {
+    position: absolute;
+    top: var(--rail-top);
+    bottom: var(--rail-bottom);
+    left: 0;
+    right: 0;
+    background: linear-gradient(
+        to bottom,
+        transparent,
+        rgb(107 47 34 / 0.35) 4%,
+        rgb(107 47 34 / 0.35) 96%,
+        transparent
+      )
+      center / 1px 100% no-repeat;
+  }
+
+  .ph-stub-hole {
+    position: absolute;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    border: 1.5px dashed rgb(107 47 34 / 0.6);
+    border-radius: 50%;
+    background: var(--color-world-ticket, #f0c2b3);
+    transform: translate(-50%, -50%);
+    transition:
+      background-color 0.2s,
+      border-color 0.2s,
+      transform 0.2s;
+  }
+
+  /* Lỗ đã bấm: thấy bảng ga đen phía sau, viền đỏ dấu bấm. */
+  .ph-stub-hole[data-punched='true'] {
+    border: 2px solid var(--color-world-ticketPunch, #962a16);
+    background: var(--color-dark, #121614);
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+
+  .ph-stub-count {
+    position: absolute;
+    bottom: 26px;
+    left: 0;
+    right: 0;
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ph-rail-train,
+    .ph-rail-track::after,
+    .ph-rail-dot,
+    .ph-stub-hole {
+      transition: none;
+    }
+  }
+}
