@@ -6,7 +6,7 @@
 
 - **Đạt** khi đo bằng giới hạn mạng và CPU thật (`throttlingMethod: devtools`): trung vị LCP mọi trang nội dung dưới 2,5 s. Trang có ảnh đầu trang (ba trang ga) ở 2,28–2,41 s.
 - **Chưa đạt** với cách ước tính mặc định của Lighthouse (`simulate`) ở ba trang ga: 3,61–3,94 s. 11 trang còn lại đạt (1,06 s).
-- **Mức sàn khoảng 3,3–3,9 s của `simulate` không nằm ở ảnh:** Phan Thiết với ảnh áp phích chỉ 37 KB vẫn 3,3–3,8 s. Phần còn lại là tài liệu HTML, CSS, JS lõi của React/Next (khoảng 100 KB gzip) và font của màn đầu, đều tải trước lần vẽ đầu. `simulate` dựng mô hình mạng 4G chậm (1,6 Mbps, RTT 150 ms) và tính mọi yêu cầu bắt đầu trước lần vẽ đó. Hạ tiếp cần quyết định thiết kế (bớt độ đậm font) hoặc đổi cách nạp script của Next; ghi ở TD-83.
+- **Mức sàn khoảng 3,3–3,9 s của `simulate` không nằm ở ảnh:** Phan Thiết với ảnh áp phích chỉ 37 KB vẫn 3,3–3,8 s. Phần còn lại là tài liệu HTML, CSS, JS lõi của React/Next (khoảng 100 KB gzip) và font của màn đầu, đều tải trước lần vẽ đầu. `simulate` dựng mô hình mạng 4G chậm (1,6 Mbps, RTT 150 ms) và tính mọi yêu cầu bắt đầu trước lần vẽ đó. Hạ tiếp chỉ còn hướng đổi cách nạp script của Next; chủ dự án đã quyết **giữ nguyên bộ font** (16/11/2026), không bỏ độ đậm 500. Ghi ở TD-83.
 
 ## Cách đo
 
