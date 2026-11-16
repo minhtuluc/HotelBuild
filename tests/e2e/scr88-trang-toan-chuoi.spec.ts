@@ -87,11 +87,13 @@ test.describe('Trang toàn chuỗi và menu Khám phá (HB-311b)', () => {
   test('thư viện ảnh: lọc theo ga, lightbox có link sang trang ga', async ({ page }) => {
     await page.goto('/gallery');
     const gallery = page.getByTestId('gallery');
-    await expect(gallery.getByRole('listitem')).toHaveCount(14);
+    // HB-326: 9 ảnh ga + 15 ảnh hạng (3 mỗi hạng) + 9 ảnh hoạt động quanh ga.
+    await expect(gallery.getByRole('listitem')).toHaveCount(33);
     await expect(gallery).toHaveAttribute('data-dense', 'true');
     await page.getByTestId('gallery-filter-station').getByRole('button', { name: 'Phan Thiết' }).click();
-    await expect(page.getByTestId('gallery').getByRole('listitem')).toHaveCount(3);
-    await expect(page.getByTestId('gallery-count')).toHaveText('3 ảnh');
+    // 3 ảnh ga Phan Thiết + 3 ảnh hoạt động quanh ga (HB-326); ảnh hạng không thuộc ga nào.
+    await expect(page.getByTestId('gallery').getByRole('listitem')).toHaveCount(6);
+    await expect(page.getByTestId('gallery-count')).toHaveText('6 ảnh');
     await page.getByTestId('gallery').getByRole('button').first().click();
     const link = page.getByTestId('gallery-lightbox').getByTestId('gallery-link');
     await expect(link).toHaveAttribute('href', '/stays/phan-thiet');

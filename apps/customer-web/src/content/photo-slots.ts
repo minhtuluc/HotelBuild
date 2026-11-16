@@ -7,6 +7,7 @@
  */
 import type { Locale } from '../i18n/locales';
 import { CONTENT_PACKS } from './locale-packs';
+import { EXTRA_PHOTOS } from './photo-slots-extra';
 
 /**
  * Alt ảnh viết tại chỗ cho `vi` và `en`; locale thêm sau (HB-313) lấy theo mã ô ảnh từ gói nội dung
@@ -185,6 +186,7 @@ export const SHARE_PHOTO: PhotoSlot = {
 export const ALL_PHOTO_SLOTS: readonly PhotoSlot[] = [
   ...STATION_PHOTOS,
   ...CLASS_PHOTOS,
+  ...EXTRA_PHOTOS,
   SHARE_PHOTO,
 ];
 

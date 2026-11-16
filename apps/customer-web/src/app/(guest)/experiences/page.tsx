@@ -8,6 +8,7 @@ import type { Metadata } from 'next';
 import type { ReactElement } from 'react';
 import { ChainPageHead, chainMetadata } from '../../../components/content/chain-page';
 import { LocaleLink as Link } from '../../../components/locale-link';
+import { SlotImage } from '../../../components/content/slot-image';
 import { EXPERIENCES, chainPagesCopy } from '../../../content/chain-pages';
 import { landingContent } from '../../../content/landing-content';
 import { propertyPageByStation, searchCtaHref } from '../../../content/property-pages';
@@ -53,6 +54,12 @@ export default async function ExperiencesPage(): Promise<ReactElement> {
               <ol className="ph-experiences">
                 {items.map((item) => (
                   <li key={item.id} className="ph-experience">
+                    <SlotImage
+                      id={`tn-${item.id}`}
+                      locale={locale}
+                      sizes="(max-width: 900px) calc(100vw - 32px), 33vw"
+                      className="ph-experience-photo"
+                    />
                     <p className="ph-experience-when">
                       {item.months === null
                         ? t('guest.chain.experiences.yearRound')

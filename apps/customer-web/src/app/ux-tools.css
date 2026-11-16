@@ -4,14 +4,32 @@
  */
 @layer components {
   /* ——— UX-02: nổi viền khi rê/focus hoặc chọn khoang ——— */
-  .ph-station,
   .ph-class {
     transition: box-shadow 160ms ease;
   }
 
-  .ph-station[data-sync-active='true'] {
-    box-shadow: 0 0 0 3px var(--color-primary, #1b3a82);
-    border-radius: 6px;
+  /*
+   * Thẻ ga: không vẽ khung quanh thẻ, vì áp phích và ảnh nhỏ cố ý tràn ra ngoài thẻ và nghiêng, nên khung sẽ
+   * đè lên viền ảnh. Thay vào đó mã ga (chữ rỗng) được tô đặc và tên ga gạch chân, cùng kiểu với sơ đồ tuyến.
+   */
+  .ph-station .ph-station-code,
+  .ph-station .ph-station-body h3 {
+    transition:
+      color 160ms ease,
+      opacity 160ms ease;
+  }
+
+  .ph-station[data-sync-active='true'] .ph-station-code {
+    color: var(--color-primary, #1b3a82);
+    opacity: 1;
+  }
+
+  .ph-station[data-sync-active='true'] .ph-station-body h3 {
+    color: var(--color-primary, #1b3a82);
+    text-decoration: underline;
+    text-decoration-color: var(--color-world-signal, #f2b632);
+    text-decoration-thickness: 4px;
+    text-underline-offset: 8px;
   }
 
   .ph-route-stop[data-sync-active='true'] .ph-route-name {
@@ -261,7 +279,8 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .ph-station,
+    .ph-station .ph-station-code,
+    .ph-station .ph-station-body h3,
     .ph-class {
       transition: none;
     }
@@ -303,5 +322,22 @@
   .ph-gallery {
     content-visibility: auto;
     contain-intrinsic-block-size: auto 600px;
+  }
+}
+
+/* HB-326: ảnh minh hoạ trong thẻ hoạt động (/experiences) và mục ăn uống (/dining): khung giấy ảnh 4:3. */
+@layer components {
+  .ph-experience-photo,
+  .ph-dining-photo {
+    border-radius: 3px;
+    box-shadow: 0 8px 18px rgb(18 22 20 / 0.16);
+  }
+
+  .ph-experience-photo {
+    margin-bottom: 6px;
+  }
+
+  .ph-dining-photo {
+    margin-bottom: 4px;
   }
 }

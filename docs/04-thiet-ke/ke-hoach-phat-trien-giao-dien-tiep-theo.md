@@ -224,3 +224,4 @@ Nguồn: [báo cáo góp ý cải tiến UI/UX và nội dung customer web](bao-
 
 Gói A của báo cáo (13 trang + CONT-01…08) quá một PR. Tách như bảng §5: HB-316 (gói B), HB-311 + HB-311b (gói A), HB-317 (gói C). Danh sách kiểm thu §9 của báo cáo áp cho cả bốn ticket, thêm `impeccable detect` 0 lỗi.
 | [HB-325](../08-thi-cong/tickets/HB-325-lcp-anh-va-muc-luc-trang-chu.md) | 3 | Đo Lighthouse mobile 14 trang nội dung ([kết quả](do-lighthouse-trang-noi-dung.md)): ảnh nhiều cỡ, bỏ schema zod khỏi trang không cần, font; mục lục bám cuộn trang chủ (UX-06) | Đang làm | HB-324 |
+| [HB-326](../08-thi-cong/tickets/HB-326-anh-minh-hoa-cho-o-con-trong.md) | — | Ảnh minh hoạ cho các chỗ còn chờ ảnh: ảnh nhiều góc của năm hạng (CONT-01), chín hoạt động ở /experiences, ba dịch vụ ở /dining (22 ảnh Commons/Pexels) | Đang làm | HB-325 |
