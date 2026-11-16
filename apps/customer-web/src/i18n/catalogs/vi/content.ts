@@ -15,6 +15,17 @@ export const viContent = {
   'guest.station.storyTitle': 'Về ga này',
   'guest.station.arrivalTitle': 'Đến ga',
   'guest.station.galleryTitle': 'Ảnh ở ga',
+  'guest.station.legsTime': 'Thời gian',
+  'guest.station.legsRoute': 'Chặng',
+  'guest.station.dayTitle': 'Một ngày tại ga',
+  'guest.station.day.morning': 'Sáng sớm',
+  'guest.station.day.midday': 'Giữa ngày',
+  'guest.station.day.evening': 'Chiều tối',
+  'guest.station.seasonsTitle': 'Lịch mùa ở {name}',
+  'guest.station.seasonsNote':
+    'Thời tiết là số liệu tham khảo, không phải mùa giá. Giá từng đêm in trên vé khi bạn chọn ngày.',
+  'guest.station.season.now': 'Mùa hiện tại',
+  'guest.station.season.cta': 'Chọn cuối tuần gần nhất trong mùa này',
   'guest.station.roomsTitle': 'Hạng phòng ở ga {name}',
   'guest.station.readMore': 'Đọc thêm về ga {name}',
   'guest.cabin.title': 'Hạng {name}',
@@ -31,6 +42,15 @@ export const viContent = {
   'guest.cabin.spec.refundValue': 'Theo gói giá bạn chọn khi giữ chỗ',
   'guest.cabin.stationsTitle': 'Có ở ga',
   'guest.cabin.otherTitle': 'Các hạng khác',
+  'guest.cabin.layoutTitle': 'Trong khoang',
+  'guest.cabin.honestTitle': 'Nói thẳng',
+  'guest.cabin.honest.nightly':
+    'Giá đổi theo từng đêm: cuối tuần và mùa cao điểm có thể cao hơn. Vé in giá từng đêm trước khi bạn giữ chỗ.',
+  'guest.cabin.honest.refund':
+    'Tiền hoàn khi huỷ tính trên số bạn đã trả, theo gói hoàn của đặt phòng.',
+  'guest.cabin.honest.property':
+    'Mỗi ga bán phòng của riêng mình: đặt ở ga nào thì giá, phòng trống và giờ nhận phòng là của ga đó.',
+  'guest.cabin.honest.dorm': 'Dorm là phòng chung: bạn đặt một giường, không phải cả phòng.',
   'guest.cabin.cta': 'Xem giá từng đêm',
   'guest.cabin.readMore': 'Xem hạng {name}',
   'guest.gallery.open': 'Xem ảnh {n}/{total}: {alt}',

@@ -17,6 +17,17 @@ export const ruContent: Readonly<Record<keyof typeof viContent, string>> = {
   'guest.station.storyTitle': 'Об этой станции',
   'guest.station.arrivalTitle': 'Как добраться',
   'guest.station.galleryTitle': 'Фото станции',
+  'guest.station.legsTime': 'Время',
+  'guest.station.legsRoute': 'Участок',
+  'guest.station.dayTitle': 'Один день на станции',
+  'guest.station.day.morning': 'Раннее утро',
+  'guest.station.day.midday': 'Полдень',
+  'guest.station.day.evening': 'Вечер',
+  'guest.station.seasonsTitle': 'Сезоны: {name}',
+  'guest.station.seasonsNote':
+    'Погода указана для ориентира, это не ценовые сезоны. Цена за каждую ночь печатается на билете, когда вы выберете даты.',
+  'guest.station.season.now': 'Сейчас',
+  'guest.station.season.cta': 'Выбрать ближайшие выходные в этом сезоне',
   'guest.station.roomsTitle': 'Категории номеров: {name}',
   'guest.station.readMore': 'Подробнее о станции {name}',
   'guest.cabin.title': 'Категория {name}',
@@ -33,6 +44,15 @@ export const ruContent: Readonly<Record<keyof typeof viContent, string>> = {
   'guest.cabin.spec.refundValue': 'По тарифу, выбранному при бронировании',
   'guest.cabin.stationsTitle': 'Есть на станциях',
   'guest.cabin.otherTitle': 'Другие категории',
+  'guest.cabin.layoutTitle': 'Внутри номера',
+  'guest.cabin.honestTitle': 'Честно',
+  'guest.cabin.honest.nightly':
+    'Цена меняется от ночи к ночи: выходные и высокий сезон могут стоить дороже. Билет показывает цену каждой ночи до бронирования.',
+  'guest.cabin.honest.refund':
+    'Возврат при отмене считается от уже оплаченной суммы по тарифу возврата вашего бронирования.',
+  'guest.cabin.honest.property':
+    'Каждая станция продаёт свои номера: цены, наличие мест и время заселения — той станции, где вы бронируете.',
+  'guest.cabin.honest.dorm': 'Dorm — общая комната: вы бронируете одну кровать, а не всю комнату.',
   'guest.cabin.cta': 'Цены по ночам',
   'guest.cabin.readMore': 'Категория {name}',
   'guest.gallery.open': 'Открыть фото {n}/{total}: {alt}',

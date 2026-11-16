@@ -17,6 +17,17 @@ export const koContent: Readonly<Record<keyof typeof viContent, string>> = {
   'guest.station.storyTitle': '이 역에 대하여',
   'guest.station.arrivalTitle': '오시는 길',
   'guest.station.galleryTitle': '역 사진',
+  'guest.station.legsTime': '소요 시간',
+  'guest.station.legsRoute': '구간',
+  'guest.station.dayTitle': '역에서의 하루',
+  'guest.station.day.morning': '이른 아침',
+  'guest.station.day.midday': '한낮',
+  'guest.station.day.evening': '저녁',
+  'guest.station.seasonsTitle': '{name}의 계절',
+  'guest.station.seasonsNote':
+    '날씨 수치는 참고용이며 요금 시즌이 아닙니다. 1박 요금은 날짜를 고르면 티켓에 인쇄됩니다.',
+  'guest.station.season.now': '지금 계절',
+  'guest.station.season.cta': '이 계절의 가장 가까운 주말 고르기',
   'guest.station.roomsTitle': '{name}의 객실 등급',
   'guest.station.readMore': '{name}역 더 보기',
   'guest.cabin.title': '{name} 등급',
@@ -33,6 +44,15 @@ export const koContent: Readonly<Record<keyof typeof viContent, string>> = {
   'guest.cabin.spec.refundValue': '예약 보류 시 선택한 요금제를 따릅니다',
   'guest.cabin.stationsTitle': '이용 가능한 역',
   'guest.cabin.otherTitle': '다른 등급',
+  'guest.cabin.layoutTitle': '객실 안',
+  'guest.cabin.honestTitle': '솔직하게',
+  'guest.cabin.honest.nightly':
+    '요금은 밤마다 달라지며 주말과 성수기에는 더 비쌀 수 있습니다. 예약 보류 전에 티켓에 1박 요금이 인쇄됩니다.',
+  'guest.cabin.honest.refund':
+    '취소 시 환불은 예약의 환불 플랜에 따라 이미 결제한 금액을 기준으로 계산합니다.',
+  'guest.cabin.honest.property':
+    '각 역은 자기 객실을 판매합니다. 요금, 빈 객실, 체크인 시간은 예약한 역을 기준으로 합니다.',
+  'guest.cabin.honest.dorm': '도미토리는 공용 객실입니다. 방 전체가 아니라 침대 하나를 예약합니다.',
   'guest.cabin.cta': '1박 요금 보기',
   'guest.cabin.readMore': '{name} 등급 보기',
   'guest.gallery.open': '사진 {n}/{total} 보기: {alt}',

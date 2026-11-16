@@ -136,6 +136,30 @@ function OtherClasses({ pageKey, text }: CabinProps): ReactElement {
   );
 }
 
+/**
+ * "Nói thẳng" (HB-322, CONT-01 + UX-03): chỉ điều có nguồn (kế hoạch §8.2) — giá theo đêm, tiền hoàn tính
+ * trên số đã trả, không đổi chỗ chéo giữa ga, Dorm là phòng chung.
+ */
+function Honestly({ pageKey, text }: CabinProps): ReactElement {
+  const { t } = text;
+  const lines = [
+    t('guest.cabin.honest.nightly'),
+    t('guest.cabin.honest.refund'),
+    t('guest.cabin.honest.property'),
+    ...(pageKey.code === 'DOR' ? [t('guest.cabin.honest.dorm')] : []),
+  ];
+  return (
+    <section className="ph-honest" aria-labelledby="cabin-honest" data-testid="cabin-honest">
+      <h2 id="cabin-honest">{t('guest.cabin.honestTitle')}</h2>
+      <ul>
+        {lines.map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function CabinSheet(props: CabinProps): ReactElement {
   const { pageKey, copy, cabin, text } = props;
   const { t } = text;
@@ -201,9 +225,14 @@ export function CabinSheet(props: CabinProps): ReactElement {
             {copy.description.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
             ))}
+            <h2 id="cabin-layout" className="ph-cabin-layout-title">
+              {t('guest.cabin.layoutTitle')}
+            </h2>
+            <p data-testid="cabin-layout">{copy.layout}</p>
           </div>
           <StationsServed {...props} />
         </div>
+        <Honestly {...props} />
         <PriceIncludes text={text} showDorm={pageKey.code === 'DOR'} linkDining />
         {gallery.length === 0 ? null : (
           <div className="ph-content-gallery">

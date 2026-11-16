@@ -118,3 +118,19 @@ export function dateTimeVn(isoUtc: string, locale: Locale, suffix: string): stri
   }).format(at);
   return `${date} ${time} ${suffix}`;
 }
+
+/**
+ * Nhãn tháng của một mùa (HB-322): `Tháng 11 – 12` (vi), `November – December` (en). Tháng ngoài 1–12 bị bỏ.
+ * Chạy ở máy chủ (trang ga dựng tĩnh), nên `Intl` không gây lệch khi hydrate.
+ */
+export function monthRange(months: readonly number[], locale: Locale): string {
+  const valid = months.filter((month) => Number.isInteger(month) && month >= 1 && month <= 12);
+  const first = valid[0];
+  const last = valid[valid.length - 1];
+  if (first === undefined || last === undefined) return '';
+  if (locale === 'vi') return first === last ? `Tháng ${first}` : `Tháng ${first} – ${last}`;
+  const name = (month: number): string =>
+    intlDate(locale, { month: 'long' }, new Date(Date.UTC(2026, month - 1, 1)));
+  const label = first === last ? name(first) : `${name(first)} – ${name(last)}`;
+  return label.charAt(0).toLocaleUpperCase(LOCALE_META[locale].intl) + label.slice(1);
+}
