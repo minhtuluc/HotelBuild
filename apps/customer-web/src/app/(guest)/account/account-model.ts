@@ -165,6 +165,20 @@ const BY_CODE: Readonly<Record<string, AccountFailure>> = {
  * Phân loại lỗi theo `code` (rồi tới lớp HTTP), không theo `message` (design §8.1). Mất mạng/hết giờ/lỗi
  * giao thức của lệnh ghi là **chưa xác định kết quả**, không phải thất bại chắc chắn.
  */
+/**
+ * Số giây phải chờ trước khi thử lại (HB-324, TD-41): chỉ khi bị khoá hoặc bị giới hạn tần suất và máy chủ
+ * gửi `Retry-After`. Không có thì màn hình giữ câu "thử lại sau ít phút".
+ */
+export function waitSecondsOf(caught: unknown): number | undefined {
+  if (!isApiError(caught)) return undefined;
+  const failure = failureOf(caught);
+  if (failure !== 'locked' && failure !== 'rateLimited') return undefined;
+  const wait = caught.retryAfterSeconds;
+  return typeof wait === 'number' && Number.isFinite(wait) && wait > 0
+    ? Math.ceil(wait)
+    : undefined;
+}
+
 export function failureOf(caught: unknown): AccountFailure {
   if (!isApiError(caught)) return 'unknownOutcome';
   const known = caught.code === undefined ? undefined : BY_CODE[caught.code];

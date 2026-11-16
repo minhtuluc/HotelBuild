@@ -285,3 +285,48 @@ test('development cookie flags follow configured loopback public origin behind N
   expect(response.status).toBe(200);
   expect(response.headers.get('set-cookie')).not.toContain('; Secure');
 });
+
+/** HB-324 (TD-42): cookie gợi ý đăng nhập chỉ cho khách, đặt khi có phiên, xoá khi mất phiên. */
+function setCookies(response: Response): string[] {
+  return response.headers.getSetCookie();
+}
+test('guest login and refresh set the readable signed hint after the refresh cookie; staff never', async () => {
+  const guest = await createSessionHandler({ kind: 'guest', baseUrl })(
+    request('login', { phone: '+84912345678', password: 'synthetic-password' }),
+    'login',
+  );
+  const cookies = setCookies(guest);
+  expect(cookies).toHaveLength(2);
+  expect(cookies[0]).toMatch(/^pinehill_guest_refresh=/);
+  expect(cookies[1]).toMatch(/^pinehill_guest_signed=1; Path=\/; SameSite=Strict; Max-Age=604800/);
+  expect(cookies[1]).not.toContain('HttpOnly');
+  expect(cookies[1]).not.toContain(pair.refreshToken);
+  const refreshCookie = cookies[0]?.split(';')[0] ?? '';
+  const refreshed = await createSessionHandler({ kind: 'guest', baseUrl })(
+    request('refresh', undefined, { cookie: refreshCookie }),
+    'refresh',
+  );
+  expect(setCookies(refreshed)[1]).toMatch(/^pinehill_guest_signed=1;/);
+  const staff = await createSessionHandler({ kind: 'staff', baseUrl })(
+    request('login', { username: 'synthetic', password: 'synthetic-password' }),
+    'login',
+  );
+  expect(setCookies(staff).some((value) => value.includes('signed'))).toBe(false);
+});
+test('guest logout and failed refresh clear both the refresh cookie and the signed hint', async () => {
+  status = 204;
+  const out = await createSessionHandler({ kind: 'guest', baseUrl })(
+    request('logout', undefined, { authorization: `Bearer ${pair.accessToken}` }),
+    'logout',
+  );
+  expect(setCookies(out)).toEqual([
+    expect.stringMatching(/^pinehill_guest_refresh=; .*Max-Age=0/),
+    expect.stringMatching(/^pinehill_guest_signed=; Path=\/; SameSite=Strict; Max-Age=0/),
+  ]);
+  const failed = await createSessionHandler({ kind: 'guest', baseUrl })(
+    request('refresh'),
+    'refresh',
+  );
+  expect(failed.status).toBe(401);
+  expect(setCookies(failed)[1]).toMatch(/^pinehill_guest_signed=; .*Max-Age=0/);
+});

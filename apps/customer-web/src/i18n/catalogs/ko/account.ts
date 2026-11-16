@@ -66,6 +66,8 @@ export const koAccount: Readonly<Record<AccountMessageKey, string>> = {
   locked:
     '로그인에 여러 번 실패해 계정이 일시적으로 잠겼습니다. 몇 분 후 다시 시도하거나 "비밀번호 찾기"를 이용하세요.',
   rateLimited: '너무 빠르게 시도하고 있습니다. 몇 분 후 다시 시도하세요.',
+  retryInSeconds: '{n}초 후 다시 시도하세요.',
+  retryInMinutes: '약 {n}분 후 다시 시도하세요.',
   resetTokenInvalid:
     '이 비밀번호 재설정 링크는 유효하지 않거나, 만료되었거나, 이미 사용되었습니다. 새 링크를 요청하세요.',
   validation: '서버가 입력한 정보를 받아들이지 않았습니다. 각 항목을 확인하세요.',

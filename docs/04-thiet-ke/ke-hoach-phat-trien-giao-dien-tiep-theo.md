@@ -13,20 +13,18 @@ Tài liệu này ghép hai hướng PR #298 đã đặt ra (nội dung tĩnh, đ
 - 15 ảnh minh hoạ theo ô ảnh. Cách ghép: 10 ảnh Amanoi, 4 ảnh Wikimedia (CC BY/BY-SA), 1 ảnh Pexels.
 - Operations web đã khoác thế giới vé tàu: thanh bên bảng ga, tờ đăng nhập dạng vé, đồng hồ giờ VN.
 
-**Backend vừa mở khoá, frontend chưa nối**
+**Nợ đã trả (cập nhật 16/11/2026)**
 
-| Nợ | API đã có | Màn chờ nối | Hiện trạng màn |
-|---|---|---|---|
-| TD-09 | `GET /operations/day-board` (HB-242), `api-client.dayBoard` | SCR-23 Bảng điều khiển ngày | Vẫn hiện khối "Các dữ liệu chưa hỗ trợ" cho đến/đi/ở, ca quá tải, kênh suy giảm |
-| TD-06 | `PUT /seasons/{seasonId}` (HB-241), `api-client.updateSeason` | SCR-27 Mùa & hệ số | Chỉ tạo và xem, chưa sửa hoặc ngừng được |
-| TD-08 | `PUT /promotions/{promotionId}` (HB-240), `api-client.updatePromotion` | SCR-29 Khuyến mãi | Chỉ tạo và xem, chưa sửa hoặc ngừng được |
+- TD-09, TD-06, TD-08 (SCR-23, SCR-27, SCR-29 nối API mới): HB-308.
+- TD-44 (cơ sở đang làm việc cho mọi màn ops): HB-314, HB-320.
+- TD-41 (web-session phủ đăng ký, đặt lại mật khẩu, giữ `Retry-After`) và phần header của TD-42 (trạng thái đăng nhập trên mọi trang khách): HB-324.
 
 **Nợ frontend còn mở**
 
-- **TD-44:** các màn ops cũ chưa dùng `useWorkingProperty()` (mới có Bàn tiền sảnh).
-- **TD-42, TD-41:** trạng thái đăng nhập khách chỉ có ở `/account/*`; `web-session` chưa phủ đăng ký và đặt lại mật khẩu.
-- **Ngày trong `<input type="date">`** hiển thị theo locale trình duyệt (`mm/dd/yyyy` trên máy cài tiếng Anh).
+- **TD-42 (phần còn lại):** `consentVersion = 2026-10` chưa có nguồn trong `docs/02`; chờ chủ dự án hoặc nghiệp vụ chốt.
+- **Ngày trong `<input type="date">`** hiển thị theo locale trình duyệt (`mm/dd/yyyy` trên máy cài tiếng Anh); đã có dòng ngày định dạng bên dưới (Q8).
 - **API công khai** chưa có ảnh, mô tả, tiện nghi theo cơ sở và hạng phòng ([YEU-CAU §5](../../YEU-CAU-API-TU-FRONTEND.md)).
+- **Mốc huỷ quy ra ngày giờ (FEAT-04):** chờ API trả mốc tuyệt đối (YEU-CAU §7).
 
 ## 2. Vấn đề còn tồn
 
@@ -138,6 +136,7 @@ Mỗi màn có unit test cho model, E2E trên API giả và axe.
 | [HB-322](../08-thi-cong/tickets/HB-322-trang-ga-va-hang-sau-hon.md) | 4 | Trang ga/hạng sâu hơn: CONT-02 (thông số ga, "Một ngày tại ga", lịch mùa điền sẵn ngày FEAT-02), CONT-01 (bố cục khoang, ảnh nhiều góc), bảng chặng đường (UX-05) | Đang làm | HB-317 |
 | [HB-311b](../08-thi-cong/tickets/HB-311b-trang-toan-chuoi.md) | 4 | getting-here, experiences, offers, gallery + menu "Khám phá" (CONT-03/05/06/07/08) | Đang làm | HB-322 |
 | [HB-323](../08-thi-cong/tickets/HB-323-so-sanh-so-do-muc-luc-le-tan.md) | — | So sánh năm hạng (FEAT-05), sơ đồ hai chiều + mặt cắt khoang (UX-02), mục lục trang ga (UX-06), nhịp nền (UX-07), liên hệ lễ tân khi lỗi mạng (P6) | Đang làm | HB-311b |
+| [HB-324](../08-thi-cong/tickets/HB-324-phien-khach-web-session.md) | — | Phiên khách: web-session phủ đăng ký và đặt lại mật khẩu, giữ Retry-After (TD-41); trạng thái đăng nhập trên header mọi trang khách (TD-42) | Đang làm | HB-323 |
 | [HB-317](../08-thi-cong/tickets/HB-317-giu-ngu-canh-va-tien-ich.md) | — | Góp ý UI/UX gói C: giữ ngữ cảnh ga/ngày (FEAT-01), nút chọn nhanh số đêm (FEAT-03), sao chép link + in A4 (FEAT-06). FEAT-02 (lịch mùa) chuyển sang HB-322 | Đang làm | HB-311 |
 | [HB-312](../08-thi-cong/tickets/HB-312-locale-en.md) | 5 | Locale `en` | Đã merge ([#308](https://github.com/minhtuluc/HotelBuild/pull/308)) | HB-309 |
 | [HB-313](../08-thi-cong/tickets/HB-313-locale-zh-ja-ko-ru.md) | 6 | Locale `zh-CN`, `ja`, `ko`, `ru` + font | Đã merge ([#311](https://github.com/minhtuluc/HotelBuild/pull/311)) | HB-312 |

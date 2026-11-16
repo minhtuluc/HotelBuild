@@ -30,6 +30,7 @@ export function LoginScreen({ contact }: { contact: string | null }): ReactEleme
   const [password, setPassword] = useState('');
   const [issues, setIssues] = useState<Issues<Field>>({});
   const [failure, setFailure] = useState<AccountFailure | null>(null);
+  const [waitSeconds, setWaitSeconds] = useState<number | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   useFocusFirstIssue(issues, ORDER);
   const canonical = normalizePhone(phone);
@@ -42,7 +43,10 @@ export function LoginScreen({ contact }: { contact: string | null }): ReactEleme
     const outcome = await runLogin({ phone, password }, browserDeps);
     setBusy(false);
     setIssues(outcome.kind === 'issues' ? outcome.issues : {});
-    if (outcome.kind === 'failed') setFailure(outcome.failure);
+    if (outcome.kind === 'failed') {
+      setFailure(outcome.failure);
+      setWaitSeconds(outcome.waitSeconds);
+    }
     if (outcome.kind === 'done') router.replace(localPath(next));
   }
 
@@ -88,7 +92,7 @@ export function LoginScreen({ contact }: { contact: string | null }): ReactEleme
         <Notice
           tone="error"
           testId="login-failure"
-          lines={failureLines(text, failure, 'login', contact)}
+          lines={failureLines(text, failure, 'login', contact, waitSeconds)}
         />
       )}
       <SubmitButton busy={busy} label={text('submitLogin')} testId="login-submit" />

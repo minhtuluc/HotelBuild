@@ -6,8 +6,9 @@ import {
   tokenPairSchema,
   type TokenPair,
 } from '@pinehill/contracts';
-import { readRefreshCookie, sessionCookie, type SessionKind } from './cookies.js';
+import { readRefreshCookie, sessionCookie, signedHintCookie, type SessionKind } from './cookies.js';
 import type { PublicSession } from './protocol.js';
+import { InvalidInput, jsonRecord, readJsonBody } from './body.js';
 export type SessionAction = 'login' | 'refresh' | 'logout';
 export interface SessionOptions {
   kind: SessionKind;
@@ -16,38 +17,8 @@ export interface SessionOptions {
   origin?: string;
 }
 
-class InvalidInput extends Error {}
-async function loginBody(request: Request): Promise<unknown> {
-  if (!request.body) throw new InvalidInput();
-  const reader = request.body.getReader();
-  let size = 0;
-  const chunks: Uint8Array[] = [];
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > 16384) throw new InvalidInput();
-      chunks.push(value);
-    }
-    const bytes = new Uint8Array(size);
-    let offset = 0;
-    for (const chunk of chunks) {
-      bytes.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
-    const value: unknown = JSON.parse(new TextDecoder().decode(bytes));
-    return value;
-  } catch {
-    throw new InvalidInput();
-  } finally {
-    await reader.cancel();
-    reader.releaseLock();
-  }
-}
 function credentials(kind: SessionKind, value: unknown) {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new InvalidInput();
-  const input = { ...value, clientSurface: kind === 'staff' ? 'OPS_WEB' : 'GUEST_WEB' };
+  const input = { ...jsonRecord(value), clientSurface: kind === 'staff' ? 'OPS_WEB' : 'GUEST_WEB' };
   const parsed =
     kind === 'staff'
       ? loginRequestSchema.safeParse(input)
@@ -121,7 +92,7 @@ async function execute(
   }
   const prefix = options.kind === 'staff' ? '/auth' : '/guest-auth';
   let body: unknown;
-  if (action === 'login') body = credentials(options.kind, await loginBody(request));
+  if (action === 'login') body = credentials(options.kind, await readJsonBody(request));
   else {
     const refreshToken = readRefreshCookie(options.kind, request.headers.get('cookie'));
     if (!refreshToken)
@@ -139,18 +110,32 @@ async function execute(
     body,
     decoder: tokenPairSchema,
   });
-  return Response.json(publicSession(result.data), {
+  return issued(result.data, request, options);
+}
+/**
+ * Phản hồi khi có phiên mới: chỉ trường công khai, cookie refresh `HttpOnly`; với khách thêm cookie gợi ý
+ * đăng nhập (HB-324, TD-42) **sau** cookie refresh.
+ */
+function issued(pair: TokenPair, request: Request, options: SessionOptions): Response {
+  const url = options.origin ?? request.url;
+  const response = Response.json(publicSession(pair), {
     headers: {
       'cache-control': 'no-store',
       'set-cookie': sessionCookie(
         options.kind,
-        result.data.refreshToken,
-        result.data.refreshExpiresInSeconds,
-        options.origin ?? request.url,
+        pair.refreshToken,
+        pair.refreshExpiresInSeconds,
+        url,
         options.development,
       ),
     },
   });
+  if (options.kind === 'guest')
+    response.headers.append(
+      'set-cookie',
+      signedHintCookie(pair.refreshExpiresInSeconds, url, options.development),
+    );
+  return response;
 }
 export function createSessionHandler(options: SessionOptions) {
   return async (request: Request, action: SessionAction): Promise<Response> => {
@@ -165,13 +150,18 @@ export function createSessionHandler(options: SessionOptions) {
     } catch (error) {
       response = failure(request, error);
     }
-    if (action === 'logout' || (action === 'refresh' && !response.ok))
+    if (action === 'logout' || (action === 'refresh' && !response.ok)) {
+      const url = options.origin ?? request.url;
       response.headers.set(
         'set-cookie',
-        sessionCookie(options.kind, '', 0, options.origin ?? request.url, options.development),
+        sessionCookie(options.kind, '', 0, url, options.development),
       );
+      if (options.kind === 'guest')
+        response.headers.append('set-cookie', signedHintCookie(0, url, options.development));
+    }
     return response;
   };
 }
 
 export { createJourneyHandler, type JourneyOptions } from './journey.js';
+export { createGuestAccountHandler, type GuestAccountOptions } from './account.js';

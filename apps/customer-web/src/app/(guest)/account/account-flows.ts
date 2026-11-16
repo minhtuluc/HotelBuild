@@ -5,6 +5,7 @@
  */
 import {
   failureOf,
+  waitSecondsOf,
   forgotIssues,
   loginIssues,
   normalizePhone,
@@ -26,10 +27,16 @@ export interface FlowDeps {
 
 export type FlowOutcome<K extends string, Extra = never> =
   | { readonly kind: 'issues'; readonly issues: Issues<K> }
-  | { readonly kind: 'failed'; readonly failure: AccountFailure }
+  | { readonly kind: 'failed'; readonly failure: AccountFailure; readonly waitSeconds?: number }
   | Extra;
 
 const hasIssues = (issues: object): boolean => Object.keys(issues).length > 0;
+
+/** Phân loại lỗi kèm thời gian chờ (nếu máy chủ gửi `Retry-After`). */
+function failedWith(caught: unknown): { failure: AccountFailure; waitSeconds?: number } {
+  const waitSeconds = waitSecondsOf(caught);
+  return { failure: failureOf(caught), ...(waitSeconds === undefined ? {} : { waitSeconds }) };
+}
 
 function canonical(raw: string): string {
   const phone = normalizePhone(raw);
@@ -71,7 +78,7 @@ export async function runLogin(
   try {
     await deps.login(canonical(form.phone), form.password);
   } catch (caught) {
-    return { kind: 'failed', failure: failureOf(caught) };
+    return { kind: 'failed', ...failedWith(caught) };
   }
   return { kind: 'done' };
 }
@@ -88,7 +95,7 @@ export async function runForgot(
   try {
     await deps.requestReset(canonical(form.phone));
   } catch (caught) {
-    return { kind: 'failed', failure: failureOf(caught) };
+    return { kind: 'failed', ...failedWith(caught) };
   }
   return { kind: 'sent' };
 }

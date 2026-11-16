@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { ApiError } from '@pinehill/api-client';
 import {
   confirmPasswordReset,
+  guestSignedHint,
   registerGuest,
   requestPasswordReset,
-} from '../../src/app/(guest)/account/account-api';
+} from '../src/account-client.js';
 
 interface Seen {
   url: string;
@@ -41,24 +42,24 @@ const body = {
   consentVersion: '2026-10',
 };
 
-describe('account-api', () => {
+describe('account-client', () => {
   it('posts to same-origin BFF routes with the CSRF marker', async () => {
     const reg = capture(() => Response.json({ registered: true }, { status: 201 }));
     await registerGuest(body, reg.transport);
-    expect(reg.seen[0]).toMatchObject({ url: '/account/api/register', method: 'POST', body });
+    expect(reg.seen[0]).toMatchObject({ url: '/api/session/register', method: 'POST', body });
     expect(reg.seen[0]?.headers.get('x-session-request')).toBe('1');
 
     const req = capture(() => new Response(null, { status: 202 }));
     await requestPasswordReset('+84912345678', req.transport);
     expect(req.seen[0]).toMatchObject({
-      url: '/account/api/password-reset/request',
+      url: '/api/session/password-reset/request',
       body: { phone: '+84912345678' },
     });
 
     const conf = capture(() => new Response(null, { status: 204 }));
     await confirmPasswordReset('tok', 'N3w-secret!', conf.transport);
     expect(conf.seen[0]).toMatchObject({
-      url: '/account/api/password-reset/confirm',
+      url: '/api/session/password-reset/confirm',
       body: { token: 'tok', newPassword: 'N3w-secret!' },
     });
   });
@@ -106,5 +107,37 @@ describe('account-api', () => {
     expect(await registerGuest(body, transport).catch((c: unknown) => c)).toMatchObject({
       kind: 'timeout',
     });
+  });
+});
+
+describe('Retry-After và cookie gợi ý (HB-324)', () => {
+  it('đọc thời gian chờ từ header Retry-After khi thân lỗi không có', async () => {
+    const { transport } = capture(
+      () =>
+        new Response(
+          JSON.stringify({
+            code: 'E_AUTH_ACCOUNT_LOCKED',
+            message: 'x',
+            traceId: 't',
+            timestamp: '2026-10-22T00:00:00Z',
+            path: '/x',
+          }),
+          { status: 423, headers: { 'retry-after': '600', 'content-type': 'application/json' } },
+        ),
+    );
+    expect(
+      await requestPasswordReset('+84912345678', transport).catch((c: unknown) => c),
+    ).toMatchObject({
+      status: 423,
+      code: 'E_AUTH_ACCOUNT_LOCKED',
+      retryAfterSeconds: 600,
+    });
+  });
+
+  it('cookie gợi ý chỉ khớp đúng tên và giá trị', () => {
+    expect(guestSignedHint('a=1; pinehill_guest_signed=1')).toBe(true);
+    expect(guestSignedHint('pinehill_guest_signed=')).toBe(false);
+    expect(guestSignedHint('xpinehill_guest_signed=1')).toBe(false);
+    expect(guestSignedHint('')).toBe(false);
   });
 });

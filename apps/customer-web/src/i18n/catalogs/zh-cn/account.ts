@@ -63,6 +63,8 @@ export const zhAccount: Readonly<Record<AccountMessageKey, string>> = {
   invalidCredentials: '手机号或密码不正确。',
   locked: '多次登录失败，账户已被暂时锁定。请几分钟后再试，或使用“忘记密码”。',
   rateLimited: '操作太快了，请几分钟后再试。',
+  retryInSeconds: '请 {n} 秒后再试。',
+  retryInMinutes: '请约 {n} 分钟后再试。',
   resetTokenInvalid: '此重设密码链接无效、已过期或已使用。请获取新链接。',
   validation: '服务器未接受所填信息。请检查各字段。',
   unavailable: '系统暂时没有响应。请稍后再试。',

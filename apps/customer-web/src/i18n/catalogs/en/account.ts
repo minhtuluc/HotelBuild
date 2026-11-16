@@ -68,6 +68,8 @@ export const enAccount: Readonly<Record<AccountMessageKey, string>> = {
   locked:
     'This account is temporarily locked after several failed sign-ins. Try again in a few minutes or use "Forgot password".',
   rateLimited: 'You are going too fast. Try again in a few minutes.',
+  retryInSeconds: 'Try again in {n} seconds.',
+  retryInMinutes: 'Try again in about {n} minutes.',
   resetTokenInvalid:
     'This password reset link is invalid, expired or already used. Request a new link.',
   validation: 'The server did not accept the details entered. Please check the fields.',

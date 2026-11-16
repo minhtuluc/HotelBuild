@@ -4,6 +4,7 @@ import { PineHillBrand } from '@pinehill/ui-web';
 import { serverTranslators } from '../i18n/server';
 import { LanguageSelect } from './language-select';
 import { VnClock } from './vn-clock';
+import { HeaderAccount } from './header-account';
 import { ExploreMenu, type ExploreGroup } from './explore-menu';
 import { landingContent } from '../content/landing-content';
 import { propertyPageByStation } from '../content/property-pages';
@@ -12,6 +13,10 @@ import type { Translators } from '../i18n/translate';
 const NAV_ITEMS = [
   { href: '/#search-block', key: 'guest.nav.search' },
   { href: '/bookings', key: 'guest.nav.bookings' },
+] as const;
+
+/** Chân trang giữ đủ link tài khoản; header thay hai link này bằng trạng thái đăng nhập (TD-42). */
+const ACCOUNT_ITEMS = [
   { href: '/profile', key: 'guest.nav.profile' },
   { href: '/account/login', key: 'guest.nav.account' },
 ] as const;
@@ -28,6 +33,7 @@ const CHAIN_ITEMS = [
 
 const FOOTER_ITEMS = [
   ...NAV_ITEMS,
+  ...ACCOUNT_ITEMS,
   ...CHAIN_ITEMS.filter((item) => !item.href.startsWith('/#')),
 ] as const;
 
@@ -70,6 +76,7 @@ export async function GuestHeader(): Promise<ReactElement> {
               {t(item.key)}
             </Link>
           ))}
+          <HeaderAccount />
         </nav>
         <div className="ph-header-tools">
           <LanguageSelect />

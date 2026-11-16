@@ -1,11 +1,12 @@
+import 'server-only';
 /**
- * BFF cho ba lệnh **công khai** của SCR-08 mà proxy phiên (`/api/session/*`) và proxy hành trình chưa phủ:
- * đăng ký, yêu cầu và xác nhận đặt lại mật khẩu. Trình duyệt chỉ nói chuyện cùng origin (CSRF như
- * `createSessionHandler`: `Origin` đúng + `x-session-request: 1`); thân lệnh được kiểm bằng schema hợp đồng
- * trước khi gọi API, không ghi/log mật khẩu hay token.
+ * Ba lệnh công khai của khách mà lệnh phiên chưa phủ (HB-324, TD-41; trước đây là BFF riêng của customer
+ * web): đăng ký, yêu cầu và xác nhận đặt lại mật khẩu. Đi dưới `/api/session/*`, cùng hàng rào CSRF với
+ * lệnh phiên (`Origin` đúng + `x-session-request: 1`). Thân lệnh kiểm bằng schema hợp đồng trước khi gọi API;
+ * không ghi log mật khẩu hay token. Lỗi chuyển tiếp `Retry-After` (header và `retryAfterSeconds` trong thân).
  *
- * Đăng ký trả cặp token nhưng cookie refresh chỉ do `/api/session/login` được đặt; vì vậy lệnh này **bỏ**
- * phiên vừa tạo (thu hồi best-effort) và client đăng nhập ngay sau đó bằng chính SĐT + mật khẩu vừa nhập.
+ * Đăng ký trả cặp token nhưng cookie refresh chỉ do lệnh đăng nhập đặt: lệnh này **bỏ** phiên vừa tạo (thu
+ * hồi best-effort), client đăng nhập ngay sau đó bằng chính SĐT + mật khẩu vừa nhập.
  */
 import { ApiClient, ApiError, createAuthApi } from '@pinehill/api-client';
 import {
@@ -13,50 +14,13 @@ import {
   passwordResetConfirmRequestSchema,
   passwordResetRequestSchema,
 } from '@pinehill/contracts';
+import { InvalidInput, jsonRecord, readJsonBody } from './body.js';
 
-export interface AccountHandlerOptions {
+export interface GuestAccountOptions {
   baseUrl: string;
-  /** Origin chính xác của app; thiếu thì lấy từ URL request (như proxy phiên). */
+  /** Origin chính xác của app; thiếu thì lấy từ URL request (như lệnh phiên). */
   origin?: string;
   fetchImpl?: typeof fetch;
-}
-
-const BODY_LIMIT = 16384;
-
-class InvalidInput extends Error {}
-
-async function readJson(request: Request): Promise<unknown> {
-  if (!request.body) throw new InvalidInput();
-  const reader = request.body.getReader();
-  let size = 0;
-  const chunks: Uint8Array[] = [];
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > BODY_LIMIT) throw new InvalidInput();
-      chunks.push(value);
-    }
-    const bytes = new Uint8Array(size);
-    let offset = 0;
-    for (const chunk of chunks) {
-      bytes.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
-    const value: unknown = JSON.parse(new TextDecoder().decode(bytes));
-    return value;
-  } catch {
-    throw new InvalidInput();
-  } finally {
-    await reader.cancel();
-    reader.releaseLock();
-  }
-}
-
-function record(value: unknown): Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new InvalidInput();
-  return { ...value };
 }
 
 function statusOf(error: unknown): number {
@@ -91,7 +55,7 @@ function failure(request: Request, error: unknown): Response {
   );
 }
 
-function allowed(request: Request, options: AccountHandlerOptions): boolean {
+function allowed(request: Request, options: GuestAccountOptions): boolean {
   return (
     request.method === 'POST' &&
     request.headers.get('origin') === (options.origin ?? new URL(request.url).origin) &&
@@ -99,7 +63,7 @@ function allowed(request: Request, options: AccountHandlerOptions): boolean {
   );
 }
 
-export function createAccountHandlers(options: AccountHandlerOptions) {
+export function createGuestAccountHandler(options: GuestAccountOptions) {
   const client = (getAccessToken?: () => string): ApiClient =>
     new ApiClient({
       baseUrl: options.baseUrl,
@@ -124,7 +88,7 @@ export function createAccountHandlers(options: AccountHandlerOptions) {
   const empty = (status: number): Response =>
     new Response(null, { status, headers: { 'cache-control': 'no-store' } });
 
-  /** Phiên vừa tạo không dùng tới: thu hồi, và lỗi thu hồi không làm hỏng đăng ký đã thành công. */
+  /** Phiên vừa tạo không dùng tới: thu hồi; lỗi thu hồi không làm hỏng đăng ký đã thành công. */
   async function discard(accessToken: string): Promise<void> {
     try {
       await client(() => accessToken).requestVoid({ method: 'POST', path: '/guest-auth/logout' });
@@ -137,7 +101,7 @@ export function createAccountHandlers(options: AccountHandlerOptions) {
     register: (request: Request): Promise<Response> =>
       guarded(request, async () => {
         const parsed = guestRegisterRequestSchema.safeParse({
-          ...record(await readJson(request)),
+          ...jsonRecord(await readJsonBody(request)),
           clientSurface: 'GUEST_WEB',
         });
         if (!parsed.success) throw new InvalidInput();
@@ -150,14 +114,18 @@ export function createAccountHandlers(options: AccountHandlerOptions) {
       }),
     resetRequest: (request: Request): Promise<Response> =>
       guarded(request, async () => {
-        const parsed = passwordResetRequestSchema.safeParse(record(await readJson(request)));
+        const parsed = passwordResetRequestSchema.safeParse(
+          jsonRecord(await readJsonBody(request)),
+        );
         if (!parsed.success) throw new InvalidInput();
         await createAuthApi(client()).passwordResetRequest(parsed.data);
         return empty(202);
       }),
     resetConfirm: (request: Request): Promise<Response> =>
       guarded(request, async () => {
-        const parsed = passwordResetConfirmRequestSchema.safeParse(record(await readJson(request)));
+        const parsed = passwordResetConfirmRequestSchema.safeParse(
+          jsonRecord(await readJsonBody(request)),
+        );
         if (!parsed.success) throw new InvalidInput();
         await createAuthApi(client()).passwordResetConfirm(parsed.data);
         return empty(204);
