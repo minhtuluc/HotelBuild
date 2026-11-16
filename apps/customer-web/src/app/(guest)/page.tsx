@@ -9,10 +9,15 @@ import { PlanRow } from '../../components/content/plan-row';
 import { POSTERS } from '../../components/station-posters';
 import { Photo } from '../../components/photo';
 import { ALL_PHOTO_SLOTS, slotById } from '../../content/photo-slots';
-import { availablePhotos } from '../../lib/photos';
+import { availablePhotos, photoSrcSet } from '../../lib/photos';
+
+/** Ảnh trang chủ rộng nhất là áp phích ga: gần cả khung ở màn hẹp, khoảng nửa khung ở màn rộng (HB-325). */
+const HOME_PHOTO_SIZES = '(max-width: 760px) calc(100vw - 32px), 560px';
 import { RouteMap } from '../../components/content/route-map';
 import { SyncHighlight } from '../../components/content/sync-highlight';
 import { CabinDiagram } from '../../components/content/cabin-diagram';
+import { PageToc } from '../../components/content/page-toc';
+import { HOME_TOC } from './home-toc';
 import { propertyPageKey } from '../../content/property-pages';
 import { StationMore } from '../../components/content/station-more';
 import { roomTypePageKey } from '../../content/room-type-pages';
@@ -50,6 +55,8 @@ function slotPhoto(ctx: PhotoContext, id: string, fallback?: ReactElement, class
       slot={slotById(id)}
       locale={ctx.locale}
       src={ctx.found[id]}
+      srcSet={photoSrcSet(ctx.found[id])}
+      sizes={HOME_PHOTO_SIZES}
       preview={ctx.preview}
       fallback={fallback}
       className={className}
@@ -389,6 +396,10 @@ export default async function GuestHomePage({
         </div>
       </section>
 
+      <PageToc
+        label={t('guest.station.tocLabel')}
+        items={HOME_TOC.map((item) => ({ id: item.id, label: t(item.key) }))}
+      />
       <Stations photos={photos} />
       <Classes photos={photos} />
       <Fare />

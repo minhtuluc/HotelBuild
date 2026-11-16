@@ -21,6 +21,8 @@ export interface GalleryItem {
   readonly id: string;
   readonly src: string;
   readonly alt: string;
+  /** Bản nhỏ cho ô lưới (HB-325); lightbox luôn dùng ảnh gốc. */
+  readonly srcSet?: string | undefined;
   /** Lưới nhiều tỉ lệ (UX-07, HB-311b): ô dọc hai hàng hoặc ô ngang hai cột. */
   readonly shape?: 'tall' | 'wide' | null;
   /** Trang của ga hoặc hạng trong ảnh, hiện trong lightbox. */
@@ -29,6 +31,12 @@ export interface GalleryItem {
 
 /** Từ 6 ảnh trở lên mới xếp nhiều tỉ lệ; ít hơn thì giữ bố cục ảnh lớn đầu tiên. */
 export const DENSE_FROM = 6;
+
+/**
+ * Ô lưới: màn hẹp chọn bản nhỏ nhất (≈ nửa màn, trùng file áp phích đã tải ở đầu trang ga); màn rộng đủ nét cho
+ * ô lớn đầu tiên (HB-325).
+ */
+const GRID_SIZES = '(max-width: 760px) 50vw, 40vw';
 
 function wrap(index: number, length: number): number {
   return (index + length) % length;
@@ -181,7 +189,14 @@ export function GalleryGrid({
                 setOpen(index);
               }}
             >
-              <img src={item.src} alt="" loading="lazy" decoding="async" />
+              <img
+                src={item.src}
+                srcSet={item.srcSet}
+                sizes={item.srcSet === undefined ? undefined : GRID_SIZES}
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
             </button>
           </li>
         ))}

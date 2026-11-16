@@ -325,6 +325,12 @@ export const ruCustomer: Readonly<Record<CustomerMessageKey, string>> = {
     'Условия вашей брони напечатаны в расчёте по выбранному тарифу и не меняются после бронирования.',
   'guest.steps.title': 'Посадка в четыре шага',
   'guest.faq.title': 'Частые вопросы',
+  'guest.home.toc.route': 'Станции',
+  'guest.home.toc.classes': 'Категории',
+  'guest.home.toc.fare': 'Цены',
+  'guest.home.toc.refund': 'Возврат',
+  'guest.home.toc.steps': 'Четыре шага',
+  'guest.home.toc.faq': 'Вопросы',
   'guest.home.lookupTitle': 'Уже есть билет?',
   'guest.home.lookup':
     'Найдите бронь по коду (PH-…) или по номеру телефона, указанному при бронировании.',

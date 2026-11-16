@@ -8,6 +8,7 @@
  * bình thường của khu này, không phải phiên hết hạn.
  */
 import { createSessionClient } from '@pinehill/web-session/client';
+import { GUEST_SESSION_EVENT } from './session-event';
 
 type SessionClient = ReturnType<typeof createSessionClient>;
 type Listener = (signedIn: boolean) => void;
@@ -21,6 +22,8 @@ export function guestSession(): SessionClient {
     onExpired: () => undefined,
     onSessionChanged: (accessToken) => {
       for (const listener of listeners) listener(accessToken !== null);
+      // HB-325: header mọi trang nghe sự kiện này thay vì import client phiên.
+      window.dispatchEvent(new Event(GUEST_SESSION_EVENT));
     },
   });
   return client;

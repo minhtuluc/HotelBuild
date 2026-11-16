@@ -30,7 +30,9 @@ export function readRefreshCookie(kind: SessionKind, header: string | null): str
  * khách biết có nên gọi `/api/session/refresh` hay không. Khách chưa đăng nhập không có cookie này nên tải
  * trang không phát yêu cầu phiên nào. Quyền truy cập vẫn do máy chủ quyết; nhân viên không dùng gợi ý này.
  */
-export const GUEST_SIGNED_HINT = 'pinehill_guest_signed';
+import { GUEST_SIGNED_HINT } from './hint.js';
+
+export { GUEST_SIGNED_HINT };
 
 export function signedHintCookie(age: number, url: string, development = false): string {
   const target = new URL(url);

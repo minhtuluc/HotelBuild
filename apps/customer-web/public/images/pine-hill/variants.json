@@ -1,0 +1,77 @@
+{
+  "chia-se": {
+    "file": "chia-se.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "ga-DL-canh": {
+    "file": "ga-DL-canh.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "ga-DL-phong": {
+    "file": "ga-DL-phong.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "ga-DL-poster": {
+    "file": "ga-DL-poster.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "ga-PT-canh": {
+    "file": "ga-PT-canh.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "ga-PT-phong": {
+    "file": "ga-PT-phong.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "ga-PT-poster": {
+    "file": "ga-PT-poster.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "ga-VT-canh": {
+    "file": "ga-VT-canh.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "ga-VT-phong": {
+    "file": "ga-VT-phong.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "ga-VT-poster": {
+    "file": "ga-VT-poster.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "hang-DLX": {
+    "file": "hang-DLX.webp",
+    "width": 800,
+    "variants": [640]
+  },
+  "hang-DOR": {
+    "file": "hang-DOR.webp",
+    "width": 800,
+    "variants": [640]
+  },
+  "hang-FAM": {
+    "file": "hang-FAM.webp",
+    "width": 800,
+    "variants": [640]
+  },
+  "hang-STD": {
+    "file": "hang-STD.webp",
+    "width": 800,
+    "variants": [640]
+  },
+  "hang-SUP": {
+    "file": "hang-SUP.webp",
+    "width": 800,
+    "variants": [640]
+  }
+}

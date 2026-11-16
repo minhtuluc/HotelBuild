@@ -315,6 +315,12 @@ export const viCustomer = {
     'Mức áp cho đơn của bạn in trên báo giá theo gói đã chọn và không đổi sau khi đặt.',
   'guest.steps.title': 'Lên tàu trong bốn bước',
   'guest.faq.title': 'Hỏi nhanh',
+  'guest.home.toc.route': 'Ba ga',
+  'guest.home.toc.classes': 'Hạng phòng',
+  'guest.home.toc.fare': 'Giá',
+  'guest.home.toc.refund': 'Trả vé',
+  'guest.home.toc.steps': 'Bốn bước',
+  'guest.home.toc.faq': 'Hỏi đáp',
   'guest.home.lookupTitle': 'Đã có vé?',
   'guest.home.lookup':
     'Tra cứu đơn bằng mã đặt phòng (dạng PH-…) hoặc số điện thoại đã dùng khi đặt.',

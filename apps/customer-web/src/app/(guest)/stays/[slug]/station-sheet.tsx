@@ -27,7 +27,7 @@ import {
 } from '../../../../content/property-pages';
 import { roomTypePageKey } from '../../../../content/room-type-pages';
 import type { Translators } from '../../../../i18n/translate';
-import { availablePhotos } from '../../../../lib/photos';
+import { availablePhotos, photoSrcSet } from '../../../../lib/photos';
 import { absoluteUrl } from '../../../../lib/site';
 import { localizePath } from '../../../../i18n/locales';
 
@@ -46,7 +46,7 @@ function galleryItems(ids: readonly string[], text: Translators): GalleryItem[] 
     const src = found[id];
     return slot === undefined || src === undefined
       ? []
-      : [{ id, src, alt: photoAlt(slot, text.locale) }];
+      : [{ id, src, srcSet: photoSrcSet(src), alt: photoAlt(slot, text.locale) }];
   });
 }
 
@@ -90,6 +90,8 @@ function SheetHead({ pageKey, copy, station, text, ctaHref }: SheetProps): React
           slot={slotById(pageKey.posterPhotoId)}
           locale={text.locale}
           src={found[pageKey.posterPhotoId]}
+          srcSet={photoSrcSet(found[pageKey.posterPhotoId])}
+          sizes="(max-width: 760px) calc(100vw - 50px), 420px"
           preview={false}
           fallback={Poster === undefined ? undefined : <Poster />}
           className="ph-poster-art"
