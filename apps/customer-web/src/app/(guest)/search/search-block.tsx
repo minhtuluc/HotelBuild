@@ -185,11 +185,11 @@ function Field({
 
 export function SearchBlock({
   intro,
-  preferredPropertyName,
+  preferredPropertySlug,
 }: {
   intro?: ReactNode;
-  /** Trang ga dẫn về (`/?ga=<slug>`): chọn sẵn cơ sở có tên chứa chuỗi này. */
-  preferredPropertyName?: string | undefined;
+  /** Trang ga dẫn về (`/?ga=<slug>`): chọn sẵn cơ sở có `slug` này (HB-311). */
+  preferredPropertySlug?: string | undefined;
 }): ReactElement {
   const localPath = useLocalePath();
   const t = useT();
@@ -209,7 +209,7 @@ export function SearchBlock({
       setProperties(loaded);
       setDraft((current) =>
         current.propertyId === ''
-          ? { ...current, propertyId: initialPropertyId(loaded, preferredPropertyName) }
+          ? { ...current, propertyId: initialPropertyId(loaded, preferredPropertySlug) }
           : current,
       );
       setState(
@@ -224,7 +224,7 @@ export function SearchBlock({
     } finally {
       setLoading(false);
     }
-  }, [preferredPropertyName]);
+  }, [preferredPropertySlug]);
 
   useEffect(() => {
     void load();

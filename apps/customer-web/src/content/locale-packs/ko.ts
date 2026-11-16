@@ -1,5 +1,6 @@
 /** Gói nội dung tiếng Hàn (HB-313). Xem ranh giới minh hoạ / chính sách ở `types.ts`. */
 import type { LocaleContentPack } from './types';
+import { KO_PAGES } from './ko-pages';
 
 export const KO_PACK: LocaleContentPack = {
   landing: {
@@ -174,40 +175,7 @@ export const KO_PACK: LocaleContentPack = {
       },
     ],
   },
-  properties: {
-    'da-lat': {
-      summary:
-        '노선의 첫 역, 고원 위에 있습니다. 달랏은 천천히 머물기 위한 곳입니다. 아침에는 안개, 한낮에는 부드러운 햇살, 저녁에는 겉옷이 필요할 만큼 선선합니다.',
-      story: [
-        '숙소는 소나무 언덕 사이에 있어 바람 소리가 들릴 만큼 시내에서 떨어져 있습니다. 아침 안개는 낮게 깔렸다가 9시 전에 걷히고, 저녁에는 기온이 빠르게 떨어지니 평지에서 오신다면 따뜻한 옷을 하나 챙기세요.',
-        '달랏은 며칠 묵기 좋습니다. 첫날 밤은 여정의 피로를 풀고, 다음 날부터는 호수 주변을 걷거나 자전거를 타거나 그냥 한자리에 머물러 보세요. 1박마다 요금이 승차권 구간에 따로 인쇄되어 어느 밤이 주말인지, 어느 밤이 성수기인지 바로 보입니다.',
-      ],
-      arrival: [
-        '리엔크엉 공항으로 날아온 뒤 택시나 공항 셔틀로 약 30km 이동합니다.',
-        '호찌민시에서 침대 버스로 약 7시간. 야간 운행이 많아 체크인 시각보다 이른 새벽에 도착합니다.',
-        '체크인 시각보다 일찍 도착하면 프런트에 짐을 맡기세요. 체크인·체크아웃 시간은 위 시간표에 있습니다.',
-      ],
-      seoTitle: '달랏역 · Pine Hill',
-      seoDescription:
-        '달랏 고원의 Pine Hill: 체크인·체크아웃 시간, 오시는 길, 객실 등급, 사진. 날짜를 고르면 1박 요금을 볼 수 있습니다.',
-      illustrative: true,
-    },
-  },
-  roomTypes: {
-    DLX: {
-      summary:
-        '3인 객차: 성인 세 명이 잘 수 있는 객실 하나라서 세 명이 함께 와도 객실을 하나 더 예약할 필요가 없습니다.',
-      description: [
-        'Deluxe는 세 명이 함께 여행할 때를 위한 등급입니다. 부모님 한 분과 함께하는 커플, 친구 세 명, 큰 자녀가 있는 가족 등. 같은 객실에서 각자 잘 자리가 있습니다.',
-        'Deluxe 요금은 1박씩 매겨지며 시즌, 주말, 숙박 일수에 따라 달라집니다. 검색에서 역과 날짜를 고르면 보류하기 전에 구간마다 인쇄된 요금을 볼 수 있습니다.',
-      ],
-      suits: '성인 세 명 일행, 또는 큰 자녀가 있는 가족',
-      seoTitle: 'Deluxe 등급(3인 객차) · Pine Hill',
-      seoDescription:
-        'Pine Hill Deluxe: 성인 세 명이 잘 수 있으며 달랏, 판티엣, 붕따우 세 숙소 모두에 있습니다. 날짜를 고르면 1박 요금이 표시됩니다.',
-      illustrative: true,
-    },
-  },
+  ...KO_PAGES,
   photoAlts: {
     'ga-DL-poster': '나무가 우거진 정원의 수영장 옆 목조 빌라',
     'ga-DL-phong': '더블 침대와 휴식 공간이 있는 넓은 목조 침실',

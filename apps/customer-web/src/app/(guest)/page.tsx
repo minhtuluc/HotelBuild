@@ -377,8 +377,8 @@ export default async function GuestHomePage({
         <div id="search-block" className="ph-hero-inner" style={{ scrollMarginTop: 16 }}>
           <SearchBlock
             intro={<HeroIntro />}
-            preferredPropertyName={
-              typeof query.ga === 'string' ? propertyPageKey(query.ga)?.apiNameIncludes : undefined
+            preferredPropertySlug={
+              typeof query.ga === 'string' ? propertyPageKey(query.ga)?.slug : undefined
             }
           />
         </div>

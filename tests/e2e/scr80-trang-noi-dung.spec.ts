@@ -123,10 +123,20 @@ test.describe('Tờ giới thiệu ga Đà Lạt (HB-310)', () => {
       'href',
       '/stays/da-lat',
     );
-    await expect(page.getByRole('link', { name: 'Đọc thêm về ga Phan Thiết' })).toHaveCount(0);
+    // HB-311: cả ba ga và năm hạng đều có trang.
+    await expect(
+      page.getByRole('link', { name: 'Đọc thêm về ga Phan Thiết', exact: true }),
+    ).toHaveAttribute('href', '/stays/phan-thiet');
+    await expect(
+      page.getByRole('link', { name: 'Đọc thêm về ga Vũng Tàu', exact: true }),
+    ).toHaveAttribute('href', '/stays/vung-tau');
     await expect(page.getByRole('link', { name: 'Deluxe', exact: true })).toHaveAttribute(
       'href',
       '/room-types/DLX',
+    );
+    await expect(page.getByRole('link', { name: 'Dorm', exact: true })).toHaveAttribute(
+      'href',
+      '/room-types/DOR',
     );
   });
 
@@ -169,8 +179,8 @@ test.describe('Hạng khoang Deluxe (HB-310)', () => {
     await axeClean(page);
   });
 
-  test('mã hạng chưa có trang trả 404', async ({ page }) => {
-    const response = await page.goto('/room-types/STD');
+  test('mã hạng không có trang trả 404', async ({ page }) => {
+    const response = await page.goto('/room-types/XYZ');
     expect(response?.status()).toBe(404);
   });
 });
