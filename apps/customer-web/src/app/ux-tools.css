@@ -569,11 +569,22 @@
   .ph-stub {
     right: 0;
     width: 48px;
-    background: var(--color-world-ticket, #f0c2b3);
+    /* Hồng nhạt chứ không hồng vé: cuống vẫn tách khỏi dải nền vé hồng (Hạng phòng, Bốn bước). */
+    background: var(--color-world-ticketLight, #f6dcd3);
     color: var(--color-world-ticketMuted, #6b2f22);
     /* Mép khuyết tròn dọc cạnh trong, như đường xé của cuống vé. */
     -webkit-mask: radial-gradient(circle at 0 7px, transparent 4px, #000 4.5px) 0 0 / 100% 14px;
     mask: radial-gradient(circle at 0 7px, transparent 4px, #000 4.5px) 0 0 / 100% 14px;
+  }
+
+  /* Đường xé nét đứt sát mép khuyết. */
+  .ph-stub::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 9px;
+    border-left: 1.5px dashed rgb(107 47 34 / 0.45);
   }
 
   .ph-stub-brand {
@@ -612,7 +623,7 @@
     height: 16px;
     border: 1.5px dashed rgb(107 47 34 / 0.6);
     border-radius: 50%;
-    background: var(--color-world-ticket, #f0c2b3);
+    background: var(--color-world-ticketLight, #f6dcd3);
     transform: translate(-50%, -50%);
     transition:
       background-color 0.2s,
