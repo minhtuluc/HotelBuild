@@ -5,6 +5,8 @@ risk: R1
 owner: claude
 max_lines: 1500
 allow:
+  - packages/api-client/src/client.ts
+  - packages/api-client/src/transport.ts
   - packages/web-session/src/**
   - packages/web-session/test/**
   - apps/customer-web/src/**
