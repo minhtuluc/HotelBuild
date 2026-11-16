@@ -12,6 +12,7 @@ import { RouteMap } from '../../../../components/content/route-map';
 import { StationTimetable } from '../../../../components/content/station-timetable';
 import { StickyBookingStub } from '../../../../components/content/sticky-booking-stub';
 import { JourneyCta } from '../../../../components/content/journey-cta';
+import { LegsTable } from '../../../../components/content/legs-table';
 import { SeasonAlmanac, type AlmanacSeason } from '../../../../components/content/season-almanac';
 import { monthRange } from '../../../../i18n/format';
 import { Photo } from '../../../../components/photo';
@@ -239,24 +240,7 @@ export function StationSheet(props: SheetProps): ReactElement {
           </div>
           <aside className="ph-arrival" aria-labelledby="station-arrival">
             <h2 id="station-arrival">{t('guest.station.arrivalTitle')}</h2>
-            <table className="ph-legs" data-testid="arrival-legs">
-              <thead>
-                <tr>
-                  <th scope="col">{t('guest.station.legsTime')}</th>
-                  <th scope="col">{t('guest.station.legsRoute')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {copy.legs.map((leg) => (
-                  <tr key={leg.route}>
-                    <th scope="row" className="ph-legs-time">
-                      {leg.time}
-                    </th>
-                    <td>{leg.route}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <LegsTable legs={copy.legs} text={text} testId="arrival-legs" />
             <p className="ph-legs-note">{copy.arrivalNote}</p>
           </aside>
         </div>

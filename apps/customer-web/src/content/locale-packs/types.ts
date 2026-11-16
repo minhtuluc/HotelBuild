@@ -7,6 +7,7 @@
  * duyệt trước ngày phát hành công khai (quyết định Q6). Mã gói, số tiền, mốc giờ giữ nguyên.
  */
 import type { Locale } from '../../i18n/locales';
+import type { ChainPagesCopy } from '../chain-pages';
 import type { DiningPageCopy, IncludedCopy } from '../dining-page';
 import type { LandingContent } from '../landing-content';
 import type { PropertyPageCopy } from '../property-pages';
@@ -28,4 +29,6 @@ export interface LocaleContentPack {
   readonly dining: DiningPageCopy;
   /** Khối "Giá đã gồm" theo `docs/02-nghiep-vu/tien-nghi-trong-gia.md` (HB-318). */
   readonly included: IncludedCopy;
+  /** Trang toàn chuỗi: đường đến, trải nghiệm, ưu đãi, thư viện ảnh (HB-311b). */
+  readonly chain: ChainPagesCopy;
 }

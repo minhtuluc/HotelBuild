@@ -1,0 +1,342 @@
+/*
+ * Trang toàn chuỗi và menu Khám phá (HB-311b): `/getting-here`, `/experiences`, `/offers`, `/gallery`.
+ * Ba vật liệu (giấy, bảng ga đen, giấy vé) và token sẵn có của globals.css; không màu mới.
+ */
+@layer components {
+  /* ——— Menu Khám phá: bảng thả xuống trên desktop, ngăn kéo đáy màn dưới 760 px ——— */
+  .ph-explore {
+    position: relative;
+  }
+
+  .ph-explore-toggle {
+    gap: 6px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .ph-explore-toggle[aria-expanded='true'] {
+    color: var(--color-world-signal, #f2b632);
+  }
+
+  .ph-explore-caret {
+    font-size: 12px;
+  }
+
+  .ph-explore-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(12rem, 1fr));
+    gap: 18px 28px;
+    width: max-content;
+    max-width: min(560px, 100vw - 32px);
+    padding: 20px 22px;
+    border-top: 3px solid var(--color-world-signal, #f2b632);
+    border-radius: 0 0 6px 6px;
+    background: var(--color-dark, #121614);
+    color: var(--color-darkText, #f4efe6);
+    box-shadow: 0 18px 36px rgb(18 22 20 / 0.35);
+  }
+
+  .ph-explore-panel[hidden] {
+    display: none;
+  }
+
+  .ph-explore-title {
+    margin: 0 0 8px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-darkTextMuted, #a9b3ac);
+  }
+
+  .ph-explore-group ul {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ph-explore-link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 4px;
+    font-size: 16px;
+    color: var(--color-darkText, #f4efe6);
+    text-decoration: none;
+  }
+
+  .ph-explore-link:hover,
+  .ph-explore-link:focus-visible {
+    color: var(--color-world-signal, #f2b632);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .ph-explore-close {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  @media (max-width: 759px) {
+    .ph-explore-panel {
+      position: fixed;
+      inset: auto 0 0;
+      top: auto;
+      grid-template-columns: minmax(0, 1fr);
+      width: auto;
+      max-width: none;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 20px 16px 24px;
+      border-radius: 10px 10px 0 0;
+    }
+  }
+
+  /* ——— Đầu trang và khối chung ——— */
+  .ph-chain-stations {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(16px, 2.5vw, 28px);
+    align-items: start;
+  }
+
+  .ph-chain-station h2 {
+    font-size: clamp(1.6rem, 2.6vw, 2.1rem);
+  }
+
+  .ph-chain-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    font-weight: 600;
+    text-underline-offset: 4px;
+  }
+
+  .ph-band-board .ph-chain-more {
+    color: var(--color-world-signal, #f2b632);
+  }
+
+  .ph-chain-list {
+    display: grid;
+    gap: 12px;
+    max-width: 64ch;
+    margin: 0;
+    padding-left: 1.1em;
+    font-size: 17px;
+    line-height: 1.6;
+  }
+
+  .ph-chain-external {
+    margin: 24px 0 0;
+  }
+
+  .ph-chain-external a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    font-weight: 600;
+    color: var(--color-world-signal, #f2b632);
+    text-underline-offset: 4px;
+  }
+
+  .ph-chain-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 24px;
+    margin-top: clamp(24px, 3vw, 36px);
+  }
+
+  /* ——— Trải nghiệm: ba thẻ mỗi ga, nhãn mùa như tem giờ ——— */
+  .ph-experiences {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(16px, 2.5vw, 28px);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ph-experience {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 3px solid var(--color-primary, #1b3a82);
+  }
+
+  .ph-band-board .ph-experience {
+    border-top-color: var(--color-world-signal, #f2b632);
+  }
+
+  .ph-experience h3 {
+    margin: 0;
+    font-family: var(--font-display, 'Barlow Condensed', sans-serif);
+    font-size: clamp(1.35rem, 2vw, 1.6rem);
+    font-weight: 600;
+    line-height: 1.1;
+  }
+
+  .ph-experience p {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .ph-experience .ph-experience-when {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-textMuted, #5a4640);
+  }
+
+  .ph-band-board .ph-experience .ph-experience-when {
+    color: var(--color-darkTextMuted, #a9b3ac);
+  }
+
+  /* ——— Ưu đãi: ba bậc số đêm, thông số gói dưới tên gói ——— */
+  .ph-los {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ph-los-tier {
+    display: grid;
+    gap: 6px;
+    padding: 18px 20px;
+    border-top: 3px solid var(--color-primary, #1b3a82);
+    background: var(--color-surface, #fbfaf7);
+  }
+
+  .ph-los-nights {
+    margin: 0;
+    font-family: var(--font-display, 'Barlow Condensed', sans-serif);
+    font-size: clamp(1.5rem, 2.4vw, 2rem);
+    font-weight: 600;
+    line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ph-los-factor {
+    margin: 0;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-textMuted, #5a4640);
+  }
+
+  .ph-plan-facts {
+    display: grid;
+    gap: 2px;
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+    color: var(--color-darkTextMuted, #a9b3ac);
+  }
+
+  .ph-chain-terms {
+    margin-bottom: clamp(20px, 3vw, 32px);
+  }
+
+  /* ——— Thư viện ảnh: bộ lọc, lưới nhiều tỉ lệ (UX-07), link trong lightbox ——— */
+  .ph-gallery-browser {
+    display: grid;
+    gap: 16px;
+  }
+
+  .ph-gallery-filters {
+    display: grid;
+    gap: 10px;
+  }
+
+  .ph-gallery-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ph-gallery-filter-label {
+    min-width: 7rem;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-textMuted, #5a4640);
+  }
+
+  .ph-gallery-count {
+    margin: 0;
+    font-size: 14px;
+    color: var(--color-textMuted, #5a4640);
+  }
+
+  .ph-gallery[data-dense='true'] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: clamp(120px, 14vw, 200px);
+    grid-auto-flow: dense;
+  }
+
+  .ph-gallery[data-dense='true'] li:first-child {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .ph-gallery[data-dense='true'] li[data-shape='tall'] {
+    grid-row: span 2;
+  }
+
+  .ph-gallery[data-dense='true'] li[data-shape='wide'] {
+    grid-column: span 2;
+  }
+
+  .ph-gallery[data-dense='true'] img,
+  .ph-gallery[data-dense='true'] li:first-child img {
+    aspect-ratio: auto;
+    min-height: 0;
+  }
+
+  .ph-lightbox-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    font-weight: 600;
+    color: var(--color-world-signal, #f2b632);
+    text-underline-offset: 4px;
+  }
+
+  @media (max-width: 900px) {
+    .ph-chain-stations,
+    .ph-experiences {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ph-gallery[data-dense='true'] {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .ph-los {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ph-gallery[data-dense='true'] li[data-shape='wide'] {
+      grid-column: 1 / -1;
+    }
+  }
+}

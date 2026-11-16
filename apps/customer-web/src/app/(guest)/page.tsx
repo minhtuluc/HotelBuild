@@ -4,7 +4,8 @@ import { webEnv } from '../../config';
 import { serverTranslators } from '../../i18n/server';
 import { money } from '../../i18n/format';
 import type { Locale } from '../../i18n/locales';
-import { landingContent, type FarePlan } from '../../content/landing-content';
+import { landingContent } from '../../content/landing-content';
+import { PlanRow } from '../../components/content/plan-row';
 import { POSTERS } from '../../components/station-posters';
 import { Photo } from '../../components/photo';
 import { ALL_PHOTO_SLOTS, slotById } from '../../content/photo-slots';
@@ -248,42 +249,9 @@ async function Fare(): Promise<ReactElement> {
   );
 }
 
-/** Một gói giá: thanh chia theo mốc giờ, mốc xa nhất bên trái, giờ nhận phòng bên phải. */
-async function PlanRow({ plan }: { plan: FarePlan }): Promise<ReactElement> {
-  const { t } = await serverTranslators();
-  return (
-    <li className="ph-plan">
-      <div className="ph-plan-name">
-        <strong>{plan.name}</strong>
-        <span>
-          {plan.code} · {plan.deposit}
-        </span>
-      </div>
-      <ol className="ph-plan-steps">
-        {plan.steps.map((step) => (
-          <li
-            key={step.label}
-            className="ph-plan-step"
-            data-level={
-              step.refundPercent >= 100 ? 'full' : step.refundPercent > 0 ? 'half' : 'none'
-            }
-          >
-            <span className="ph-plan-when">{step.label}</span>
-            <span className="ph-plan-refund">
-              {t('guest.refund.percent', { percent: step.refundPercent })}
-            </span>
-            {step.firstNightCharge ? (
-              <span className="ph-plan-charge">{t('guest.refund.firstNight')}</span>
-            ) : null}
-          </li>
-        ))}
-      </ol>
-    </li>
-  );
-}
-
 async function Refunds(): Promise<ReactElement> {
-  const { t, locale } = await serverTranslators();
+  const text = await serverTranslators();
+  const { t, locale } = text;
   const content = landingContent(locale);
   return (
     <section
@@ -299,7 +267,7 @@ async function Refunds(): Promise<ReactElement> {
         </header>
         <ul className="ph-plans">
           {content.farePlans.map((plan) => (
-            <PlanRow key={plan.code} plan={plan} />
+            <PlanRow key={plan.code} plan={plan} text={text} />
           ))}
         </ul>
         <p className="ph-fineprint">{t('guest.refund.note')}</p>

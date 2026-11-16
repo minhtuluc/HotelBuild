@@ -1,6 +1,7 @@
 /** Gói nội dung tiếng Nga (HB-313). Xem ranh giới minh hoạ / chính sách ở `types.ts`. */
 import type { LocaleContentPack } from './types';
 import { RU_PAGES } from './ru-pages';
+import { RU_CHAIN } from './ru-chain';
 
 export const RU_PACK: LocaleContentPack = {
   landing: {
@@ -190,6 +191,7 @@ export const RU_PACK: LocaleContentPack = {
     ],
   },
   ...RU_PAGES,
+  chain: RU_CHAIN,
   photoAlts: {
     'ga-DL-poster': 'Деревянная вилла у бассейна в зелёном саду',
     'ga-DL-phong': 'Просторная деревянная спальня с двуспальной кроватью и зоной отдыха',
