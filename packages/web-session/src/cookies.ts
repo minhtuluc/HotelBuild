@@ -24,3 +24,16 @@ export function readRefreshCookie(kind: SessionKind, header: string | null): str
     return undefined;
   }
 }
+
+/**
+ * Cookie gợi ý "có thể đã đăng nhập" của khách (HB-324, TD-42): không bí mật, không `HttpOnly`, để trang
+ * khách biết có nên gọi `/api/session/refresh` hay không. Khách chưa đăng nhập không có cookie này nên tải
+ * trang không phát yêu cầu phiên nào. Quyền truy cập vẫn do máy chủ quyết; nhân viên không dùng gợi ý này.
+ */
+export const GUEST_SIGNED_HINT = 'pinehill_guest_signed';
+
+export function signedHintCookie(age: number, url: string, development = false): string {
+  const target = new URL(url);
+  const secure = !(development && target.protocol === 'http:' && target.hostname === '127.0.0.1');
+  return `${GUEST_SIGNED_HINT}=${age > 0 ? '1' : ''}; Path=/; SameSite=Strict; Max-Age=${age}${secure ? '; Secure' : ''}`;
+}

@@ -38,6 +38,13 @@ const DIRECT_KEYS = {
   AccountMessageKey
 >;
 
+/** "Thử lại sau N giây" dưới 2 phút, "sau khoảng N phút" từ 2 phút trở lên (làm tròn lên). */
+export function waitLine(text: AccountTranslate, seconds: number): string {
+  return seconds < 120
+    ? text('retryInSeconds', { n: seconds })
+    : text('retryInMinutes', { n: Math.ceil(seconds / 60) });
+}
+
 /**
  * Các câu hiển thị cho một thất bại. SĐT đã có hồ sơ → hướng dẫn liên hệ lễ tân kèm thông tin liên hệ cấu
  * hình được (thiếu thì lời hướng dẫn chung). Mất mạng/hết giờ là "chưa xác định kết quả" theo từng luồng.
@@ -47,6 +54,7 @@ export function failureLines(
   failure: AccountFailure,
   flow: Flow,
   contact: string | null,
+  waitSeconds?: number,
 ): readonly string[] {
   if (failure === 'phoneRegistered')
     return [
@@ -54,5 +62,9 @@ export function failureLines(
       contact === null ? text('contactGeneric') : text('contactLine', { contact }),
     ];
   if (failure === 'unknownOutcome') return [text(UNKNOWN_KEYS[flow])];
-  return [text(DIRECT_KEYS[failure])];
+  const wait =
+    waitSeconds === undefined || (failure !== 'locked' && failure !== 'rateLimited')
+      ? []
+      : [waitLine(text, waitSeconds)];
+  return [text(DIRECT_KEYS[failure]), ...wait];
 }

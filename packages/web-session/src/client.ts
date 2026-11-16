@@ -1,8 +1,8 @@
 'use client';
 import { SessionCoordinator } from './coordinator.js';
 import { ApiError } from '@pinehill/api-client';
-import { errorBodySchema } from '@pinehill/contracts';
 import { isPublicSession, type PublicSession, type SessionState } from './protocol.js';
+import { httpFailure } from './http-failure.js';
 export interface SessionClientOptions {
   kind: 'staff' | 'guest';
   coordinator?: SessionCoordinator;
@@ -69,15 +69,7 @@ export function createSessionClient(options: SessionClientOptions) {
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
       const data: unknown = response.status === 204 ? undefined : await response.json();
-      if (!response.ok) {
-        const parsed = errorBodySchema.safeParse(data);
-        throw new ApiError({
-          kind: 'http',
-          status: response.status,
-          code: parsed.success ? parsed.data.code : undefined,
-          message: 'Không thể hoàn tất yêu cầu phiên.',
-        });
-      }
+      if (!response.ok) throw httpFailure(response, data, 'Không thể hoàn tất yêu cầu phiên.');
       return data;
     } finally {
       clearTimeout(timeout);
@@ -150,3 +142,10 @@ export function createSessionClient(options: SessionClientOptions) {
 }
 
 export { createJourneyApiClient, type JourneySession } from './journey-client.js';
+export {
+  confirmPasswordReset,
+  guestSignedHint,
+  registerGuest,
+  requestPasswordReset,
+  type AccountTransport,
+} from './account-client.js';

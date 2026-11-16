@@ -68,6 +68,8 @@ export const jaAccount: Readonly<Record<AccountMessageKey, string>> = {
   locked:
     'ログインに何度か失敗したため、アカウントを一時的にロックしました。数分後にもう一度お試しいただくか、「パスワードをお忘れの方」をご利用ください。',
   rateLimited: '操作が速すぎます。数分後にもう一度お試しください。',
+  retryInSeconds: '{n} 秒後にもう一度お試しください。',
+  retryInMinutes: '約 {n} 分後にもう一度お試しください。',
   resetTokenInvalid:
     'このパスワード再設定リンクは無効、期限切れ、または使用済みです。新しいリンクを請求してください。',
   validation: '入力内容がサーバーで受け付けられませんでした。各項目を確認してください。',

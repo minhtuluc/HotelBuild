@@ -226,3 +226,25 @@ test('composition is notified of token changes and logout without persisting tok
   expect(changes).toEqual(['synthetic-owner2', null]);
   expect([...env.values.values()].join('')).not.toContain('synthetic-owner2');
 });
+test('HB-324 (TD-41): login failure keeps Retry-After as retryAfterSeconds', async () => {
+  const client = createSessionClient({
+    kind: 'guest',
+    coordinator: environment().create(),
+    onExpired: () => undefined,
+    fetchImpl: async () =>
+      Response.json(
+        {
+          code: 'E_AUTH_ACCOUNT_LOCKED',
+          message: 'synthetic',
+          traceId: 't',
+          timestamp: '2026-10-07T00:00:00.000Z',
+          path: '/api/session/login',
+        },
+        { status: 423, headers: { 'retry-after': '900' } },
+      ),
+  });
+  clients.push(client);
+  await expect(
+    client.login({ phone: '+84912345678', password: 'synthetic-password' }),
+  ).rejects.toMatchObject({ status: 423, code: 'E_AUTH_ACCOUNT_LOCKED', retryAfterSeconds: 900 });
+});

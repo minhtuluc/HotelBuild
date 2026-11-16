@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createAccountHandlers } from '../../src/app/(guest)/account/api/handlers';
+import { createGuestAccountHandler } from '../src/account.js';
 
 const ORIGIN = 'http://127.0.0.1:3001';
 const BASE = 'https://api.synthetic.test/api/v1';
@@ -35,7 +35,7 @@ const failure = (status: number, code: string, extra: Record<string, unknown> = 
 
 function setup(respond: (call: Upstream) => Response | Promise<Response>) {
   const calls: Upstream[] = [];
-  const handlers = createAccountHandlers({
+  const handlers = createGuestAccountHandler({
     baseUrl: BASE,
     origin: ORIGIN,
     fetchImpl: async (input, init) => {
@@ -82,7 +82,7 @@ describe('register', () => {
         ? Response.json(tokenPair, { status: 201 })
         : new Response(null, { status: 204 }),
     );
-    const response = await handlers.register(post('/account/api/register', registerBody));
+    const response = await handlers.register(post('/api/session/register', registerBody));
     expect(response.status).toBe(201);
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(response.headers.get('set-cookie')).toBeNull();
@@ -110,13 +110,13 @@ describe('register', () => {
         ? Response.json(tokenPair, { status: 201 })
         : failure(503, 'E_GEN_SERVICE_UNAVAILABLE'),
     );
-    const response = await handlers.register(post('/account/api/register', registerBody));
+    const response = await handlers.register(post('/api/session/register', registerBody));
     expect(response.status).toBe(201);
   });
 
   it('relays the server error code and status (phone already has a profile)', async () => {
     const { handlers, calls } = setup(() => failure(409, 'E_AUTH_PHONE_REGISTERED'));
-    const response = await handlers.register(post('/account/api/register', registerBody));
+    const response = await handlers.register(post('/api/session/register', registerBody));
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({ code: 'E_AUTH_PHONE_REGISTERED' });
     expect(calls).toHaveLength(1);
@@ -131,7 +131,7 @@ describe('register', () => {
       '{not json',
       '',
     ]) {
-      const response = await handlers.register(post('/account/api/register', body));
+      const response = await handlers.register(post('/api/session/register', body));
       expect(response.status).toBe(400);
       expect(await response.json()).toMatchObject({ code: 'E_GEN_VALIDATION_FAILED' });
     }
@@ -145,7 +145,7 @@ describe('register', () => {
         : new Response(null, { status: 204 }),
     );
     const response = await handlers.register(
-      post('/account/api/register', { ...registerBody, clientSurface: 'GUEST_ANDROID' }),
+      post('/api/session/register', { ...registerBody, clientSurface: 'GUEST_ANDROID' }),
     );
     expect(response.status).toBe(201);
     expect(calls[0]?.body).toMatchObject({ clientSurface: 'GUEST_WEB' });
@@ -154,21 +154,21 @@ describe('register', () => {
   it('rejects oversized bodies', async () => {
     const { handlers, calls } = setup(() => Response.json(tokenPair));
     const response = await handlers.register(
-      post('/account/api/register', { ...registerBody, fullName: 'a'.repeat(20000) }),
+      post('/api/session/register', { ...registerBody, fullName: 'a'.repeat(20000) }),
     );
     expect(response.status).toBe(400);
     expect(calls).toEqual([]);
   });
 
   it('maps a transport failure to a 502 error body, never a success', async () => {
-    const handlers = createAccountHandlers({
+    const handlers = createGuestAccountHandler({
       baseUrl: BASE,
       origin: ORIGIN,
       fetchImpl: async () => {
         throw new TypeError('down');
       },
     });
-    const response = await handlers.register(post('/account/api/register', registerBody));
+    const response = await handlers.register(post('/api/session/register', registerBody));
     expect(response.status).toBe(502);
     expect(await response.json()).toMatchObject({ code: 'E_GEN_SERVICE_UNAVAILABLE' });
   });
@@ -188,7 +188,7 @@ describe('register', () => {
           { status: 429, headers: { 'content-type': 'application/json', 'retry-after': '42' } },
         ),
     );
-    const response = await handlers.register(post('/account/api/register', registerBody));
+    const response = await handlers.register(post('/api/session/register', registerBody));
     expect(response.status).toBe(429);
     expect(response.headers.get('retry-after')).toBe('42');
   });
@@ -198,7 +198,7 @@ describe('password reset', () => {
   it('request returns 202 with the identical empty answer and sends only the phone', async () => {
     const { handlers, calls } = setup(() => new Response(null, { status: 202 }));
     const response = await handlers.resetRequest(
-      post('/account/api/password-reset/request', { phone: '+84912345678' }),
+      post('/api/session/password-reset/request', { phone: '+84912345678' }),
     );
     expect(response.status).toBe(202);
     expect(await response.text()).toBe('');
@@ -212,7 +212,7 @@ describe('password reset', () => {
   it('request rejects a non-canonical phone before any upstream call', async () => {
     const { handlers, calls } = setup(() => new Response(null, { status: 202 }));
     const response = await handlers.resetRequest(
-      post('/account/api/password-reset/request', { phone: '0912345678' }),
+      post('/api/session/password-reset/request', { phone: '0912345678' }),
     );
     expect(response.status).toBe(400);
     expect(calls).toEqual([]);
@@ -221,7 +221,7 @@ describe('password reset', () => {
   it('confirm forwards token and new password and answers 204', async () => {
     const { handlers, calls } = setup(() => new Response(null, { status: 204 }));
     const response = await handlers.resetConfirm(
-      post('/account/api/password-reset/confirm', { token: 'tok-123', newPassword: 'N3w-secret!' }),
+      post('/api/session/password-reset/confirm', { token: 'tok-123', newPassword: 'N3w-secret!' }),
     );
     expect(response.status).toBe(204);
     expect(calls[0]).toMatchObject({
@@ -233,7 +233,7 @@ describe('password reset', () => {
   it('confirm relays an invalid or used token as E_AUTH_RESET_TOKEN_INVALID', async () => {
     const { handlers } = setup(() => failure(400, 'E_AUTH_RESET_TOKEN_INVALID'));
     const response = await handlers.resetConfirm(
-      post('/account/api/password-reset/confirm', { token: 'used', newPassword: 'N3w-secret!' }),
+      post('/api/session/password-reset/confirm', { token: 'used', newPassword: 'N3w-secret!' }),
     );
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ code: 'E_AUTH_RESET_TOKEN_INVALID' });
@@ -242,7 +242,7 @@ describe('password reset', () => {
   it('never echoes the token or password in an error body', async () => {
     const { handlers } = setup(() => failure(400, 'E_AUTH_RESET_TOKEN_INVALID'));
     const response = await handlers.resetConfirm(
-      post('/account/api/password-reset/confirm', {
+      post('/api/session/password-reset/confirm', {
         token: 'super-secret-token',
         newPassword: 'N3w-secret!',
       }),
@@ -259,14 +259,14 @@ describe('CSRF', () => {
     ['missing marker header', { 'x-session-request': '' }],
   ])('%s is refused with 403 and no upstream call', async (_name, headers) => {
     const { handlers, calls } = setup(() => Response.json(tokenPair));
-    const response = await handlers.register(post('/account/api/register', registerBody, headers));
+    const response = await handlers.register(post('/api/session/register', registerBody, headers));
     expect(response.status).toBe(403);
     expect(calls).toEqual([]);
   });
 
   it('a request without an origin header is refused', async () => {
     const { handlers, calls } = setup(() => Response.json(tokenPair));
-    const request = new Request(`${ORIGIN}/account/api/register`, {
+    const request = new Request(`${ORIGIN}/api/session/register`, {
       method: 'POST',
       headers: { 'x-session-request': '1', 'content-type': 'application/json' },
       body: JSON.stringify(registerBody),

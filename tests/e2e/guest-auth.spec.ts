@@ -169,6 +169,8 @@ test.describe('đăng nhập', () => {
     await controlStatus(request, phone.canonical, 423);
     await page.getByTestId('login-submit').click();
     await expect(failure).toContainText('tạm khoá');
+    // HB-324 (TD-41): thời gian chờ từ `Retry-After` của máy chủ không còn bị bỏ mất.
+    await expect(failure).toContainText('Thử lại sau 42 giây.');
 
     await controlStatus(request, phone.canonical, 429);
     await page.getByTestId('login-submit').click();
@@ -247,6 +249,45 @@ test.describe('quên và đặt lại mật khẩu', () => {
     await page.goto('/account/reset-password');
     await expect(page.getByTestId('reset-missing-token')).toBeVisible();
     await expect(page.getByTestId('reset-new-link')).toBeVisible();
+  });
+});
+
+test.describe('trạng thái đăng nhập trên mọi trang khách (HB-324, TD-42)', () => {
+  test('khách chưa đăng nhập: header có "Tài khoản", tải trang không gọi làm mới phiên', async ({
+    page,
+  }) => {
+    const refreshes: string[] = [];
+    page.on('request', (sent) => {
+      if (sent.url().includes('/api/session/refresh')) refreshes.push(sent.url());
+    });
+    for (const path of ['/', '/stays/da-lat', '/offers']) {
+      await page.goto(path);
+      await page.waitForLoadState('networkidle');
+      await expect(page.getByTestId('header-account')).toHaveText('Tài khoản');
+    }
+    expect(refreshes).toEqual([]);
+  });
+
+  test('đã đăng nhập: header trang chủ có "Hồ sơ" và đăng xuất được, cookie gợi ý bị xoá', async ({
+    page,
+  }) => {
+    const phone = freshPhone();
+    await page.goto('/account/login?next=/');
+    await page.getByLabel('Số điện thoại').fill(phone.national);
+    await page.getByLabel('Mật khẩu', { exact: true }).fill('Synthetic-pass1');
+    await page.getByTestId('login-submit').click();
+    await expect(page).toHaveURL((url) => url.pathname === '/');
+    const header = page.locator('header.ph-header');
+    await expect(header.getByTestId('header-profile')).toHaveText('Hồ sơ');
+    await page.goto('/stays/phan-thiet');
+    await expect(header.getByTestId('header-profile')).toHaveAttribute('href', '/profile');
+    const hint = (await page.context().cookies()).find((c) => c.name === 'pinehill_guest_signed');
+    expect(hint).toMatchObject({ value: '1', httpOnly: false, path: '/', sameSite: 'Strict' });
+    await header.getByTestId('header-logout').click();
+    await expect(header.getByTestId('header-account')).toHaveText('Tài khoản');
+    const names = (await page.context().cookies()).map((c) => c.name);
+    expect(names).not.toContain('pinehill_guest_signed');
+    expect(names).not.toContain('pinehill_guest_refresh');
   });
 });
 

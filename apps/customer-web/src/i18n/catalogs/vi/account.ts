@@ -66,6 +66,8 @@ export const viAccount = {
   locked:
     'Tài khoản tạm khoá do đăng nhập sai nhiều lần. Hãy thử lại sau ít phút hoặc dùng "Quên mật khẩu".',
   rateLimited: 'Bạn thao tác quá nhanh. Hãy thử lại sau ít phút.',
+  retryInSeconds: 'Thử lại sau {n} giây.',
+  retryInMinutes: 'Thử lại sau khoảng {n} phút.',
   resetTokenInvalid:
     'Liên kết đặt lại mật khẩu không hợp lệ, đã hết hạn hoặc đã được dùng. Hãy yêu cầu liên kết mới.',
   validation: 'Máy chủ không chấp nhận thông tin vừa nhập. Hãy kiểm tra lại các trường.',

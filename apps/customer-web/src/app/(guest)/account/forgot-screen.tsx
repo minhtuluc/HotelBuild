@@ -22,6 +22,7 @@ export function ForgotScreen({ contact }: { contact: string | null }): ReactElem
   const [phone, setPhone] = useState('');
   const [issues, setIssues] = useState<Issues<'phone'>>({});
   const [failure, setFailure] = useState<AccountFailure | null>(null);
+  const [waitSeconds, setWaitSeconds] = useState<number | undefined>(undefined);
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   useFocusFirstIssue(issues, ['phone']);
@@ -35,7 +36,10 @@ export function ForgotScreen({ contact }: { contact: string | null }): ReactElem
     const outcome = await runForgot({ phone }, browserDeps);
     setBusy(false);
     setIssues(outcome.kind === 'issues' ? outcome.issues : {});
-    if (outcome.kind === 'failed') setFailure(outcome.failure);
+    if (outcome.kind === 'failed') {
+      setFailure(outcome.failure);
+      setWaitSeconds(outcome.waitSeconds);
+    }
     if (outcome.kind === 'sent') setSent(true);
   }
 
@@ -63,7 +67,7 @@ export function ForgotScreen({ contact }: { contact: string | null }): ReactElem
         <Notice
           tone="error"
           testId="forgot-failure"
-          lines={failureLines(text, failure, 'forgot', contact)}
+          lines={failureLines(text, failure, 'forgot', contact, waitSeconds)}
         />
       )}
       {sent ? <Notice tone="success" testId="forgot-done" lines={[text('forgotDone')]} /> : null}
