@@ -131,6 +131,7 @@ export function ScrollRails({
         </div>
       </nav>
       <div className="ph-stub" aria-hidden="true">
+        <span className="ph-stub-paper" />
         <span className="ph-stub-brand">Pine Hill</span>
         <div className="ph-stub-track">
           {items.map((item, index) => (

@@ -343,21 +343,31 @@
 }
 
 /*
- * HB-327: hai lề trang chủ trên màn rộng. Trái là đường ray bảng ga (mục lục + đầu tàu bám cuộn), phải là cuống
- * vé hồng có lỗ bấm. Chỉ từ 1520 px, khi mỗi lề còn từ 140 px; hẹp hơn thì ẩn hẳn, dải mục lục ngang làm thay.
- * Hai lề dùng chung hình học rãnh (`--rail-top`, `--rail-bottom`) để lỗ vé thẳng hàng với ga.
+ * HB-327: hai lề trang chủ trên màn rộng. Từ 1520 px, trang chừa hai cột lề bằng nhau: các dải nội dung dừng ở
+ * mép cột, hai cột để lộ nền giấy mẫu biểu của trang, ngăn với nội dung bằng kẻ đôi mực xanh (như viền dưới hero).
+ * Trái là đường ray (mục lục + đầu tàu bám cuộn), phải là cuống vé đặt trong lề, lỗ bấm thẳng hàng với ga.
+ * Hẹp hơn 1520 px thì ẩn hẳn, dải mục lục ngang làm thay. Hai cột dùng chung hình học (`--rail-*`).
  */
 @layer components {
+  :root {
+    --rail-w: 128px;
+    --rail-top: 184px;
+    --rail-bottom: 84px;
+  }
+
   .ph-rails {
     display: none;
-    --rail-top: 176px;
-    --rail-bottom: 76px;
     --rail-pos: 0;
   }
 
   @media (min-width: 1520px) {
     .ph-rails {
       display: block;
+    }
+
+    /* Hai lề là cột của trang chứ không phải lớp phủ: nội dung, header, footer dừng ở mép cột. */
+    body:has(.ph-rails) {
+      padding-inline: var(--rail-w);
     }
 
     /* Đã có đường ray thì không cần dải mục lục ngang thứ hai. */
@@ -378,28 +388,31 @@
     top: 0;
     bottom: 0;
     z-index: 15;
+    width: var(--rail-w);
+    color: var(--color-textMuted, #5a4640);
+  }
+
+  .ph-rail {
+    left: 0;
+    border-right: 3px double var(--color-primary, #1b3a82);
+  }
+
+  .ph-stub {
+    right: 0;
+    border-left: 3px double var(--color-primary, #1b3a82);
   }
 
   /* ——— Trái: đường ray ——— */
-  .ph-rail {
-    left: 0;
-    width: 120px;
-    background: var(--color-dark, #121614);
-    border-right: 1px solid #2b322e;
-    box-shadow: inset -3px 0 0 #1c221f;
-    color: var(--color-darkTextMuted, #a9b3ac);
-  }
-
   .ph-rail-readout {
     position: absolute;
     top: 24px;
-    left: 16px;
-    right: 12px;
+    left: 18px;
+    right: 14px;
     display: grid;
     gap: 6px;
     margin: 0;
     padding-bottom: 14px;
-    border-bottom: 1px solid #2b322e;
+    border-bottom: 1px solid rgb(27 58 130 / 0.35);
     font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   }
 
@@ -408,13 +421,13 @@
     font-weight: 600;
     line-height: 0.9;
     font-variant-numeric: tabular-nums;
-    color: var(--color-world-signal, #f2b632);
+    color: var(--color-primary, #1b3a82);
   }
 
   .ph-rail-count small {
     margin-left: 2px;
     font-size: 18px;
-    color: var(--color-darkTextMuted, #a9b3ac);
+    color: var(--color-textMuted, #5a4640);
   }
 
   .ph-rail-now {
@@ -422,7 +435,7 @@
     font-size: 15px;
     font-weight: 600;
     line-height: 1.1;
-    color: var(--color-darkText, #f4efe6);
+    color: var(--color-text, #1a1716);
   }
 
   .ph-rail-track {
@@ -433,30 +446,34 @@
     right: 0;
   }
 
-  /* Hai thanh ray và tà vẹt (bậc) chạy suốt rãnh. */
+  /* Hai thanh ray và tà vẹt (bậc) in mực mảnh trên giấy mẫu biểu. */
   .ph-rail-track::before {
     content: '';
     position: absolute;
     top: -20px;
     bottom: -20px;
-    left: 18px;
+    left: 20px;
     width: 22px;
-    border-inline: 2px solid #4a544e;
-    background: repeating-linear-gradient(to bottom, #2b322e 0 3px, transparent 3px 12px);
+    border-inline: 2px solid rgb(26 23 22 / 0.42);
+    background: repeating-linear-gradient(
+      to bottom,
+      rgb(26 23 22 / 0.16) 0 3px,
+      transparent 3px 12px
+    );
   }
 
-  /* Đoạn đã đi qua: tà vẹt sáng màu tín hiệu tới đúng chỗ đầu tàu. */
+  /* Đoạn đã đi qua: ray và tà vẹt đổi sang đỏ dấu bấm tới đúng chỗ đầu tàu. */
   .ph-rail-track::after {
     content: '';
     position: absolute;
     top: -20px;
-    left: 18px;
+    left: 20px;
     width: 22px;
     height: calc(var(--rail-pos) * 100% + 20px);
-    border-inline: 2px solid rgb(242 182 50 / 0.55);
+    border-inline: 2px solid var(--color-accent, #b8341c);
     background: repeating-linear-gradient(
       to bottom,
-      rgb(242 182 50 / 0.28) 0 3px,
+      rgb(184 52 28 / 0.38) 0 3px,
       transparent 3px 12px
     );
     transition: height 0.18s ease-out;
@@ -470,14 +487,12 @@
     position: absolute;
     z-index: 1;
     top: calc(var(--rail-pos) * 100%);
-    left: 21px;
+    left: 23px;
     width: 16px;
     height: 26px;
     border-radius: 5px 5px 3px 3px;
-    background: var(--color-world-signal, #f2b632);
-    box-shadow:
-      0 0 0 3px var(--color-dark, #121614),
-      0 0 14px rgb(242 182 50 / 0.45);
+    background: var(--color-primary, #1b3a82);
+    box-shadow: 0 0 0 3px var(--color-world-ground, #dfe5f0);
     transform: translateY(-50%);
     transition:
       top 0.18s ease-out,
@@ -493,11 +508,11 @@
     width: 8px;
     height: 6px;
     border-radius: 1px;
-    background: var(--color-dark, #121614);
+    background: var(--color-world-ground, #dfe5f0);
   }
 
   .ph-rails[data-started='false'] .ph-rail-train {
-    opacity: 0.45;
+    opacity: 0.5;
   }
 
   .ph-rail ol {
@@ -522,12 +537,12 @@
     align-items: center;
     gap: 12px;
     min-height: 44px;
-    padding: 4px 8px 4px 18px;
+    padding: 4px 10px 4px 20px;
     font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
     font-size: 15px;
     font-weight: 600;
     line-height: 1.1;
-    color: var(--color-darkTextMuted, #a9b3ac);
+    color: var(--color-textMuted, #5a4640);
     text-decoration: none;
   }
 
@@ -535,67 +550,66 @@
     justify-self: center;
     width: 12px;
     height: 12px;
-    border: 2px solid #6f7a73;
+    border: 2px solid rgb(26 23 22 / 0.5);
     border-radius: 50%;
-    background: var(--color-dark, #121614);
+    background: var(--color-world-ground, #dfe5f0);
     transition:
       border-color 0.2s,
       background-color 0.2s;
   }
 
   .ph-rail li[data-passed='true'] .ph-rail-dot {
-    border-color: var(--color-world-signal, #f2b632);
+    border-color: var(--color-accent, #b8341c);
   }
 
   .ph-rail a:hover,
   .ph-rail a:focus-visible {
-    color: var(--color-darkText, #f4efe6);
+    color: var(--color-text, #1a1716);
   }
 
   .ph-rail a:focus-visible {
-    outline: 2px solid var(--color-world-signal, #f2b632);
+    outline: 2px solid var(--color-primary, #1b3a82);
     outline-offset: -2px;
   }
 
   .ph-rail a[aria-current='true'] {
-    color: var(--color-world-signal, #f2b632);
+    color: var(--color-primary, #1b3a82);
   }
 
   .ph-rail a[aria-current='true'] .ph-rail-dot {
-    background: var(--color-world-signal, #f2b632);
+    border-color: var(--color-accent, #b8341c);
+    background: var(--color-accent, #b8341c);
   }
 
-  /* ——— Phải: cuống vé ——— */
-  .ph-stub {
-    right: 0;
-    width: 48px;
-    /* Hồng nhạt chứ không hồng vé: cuống vẫn tách khỏi dải nền vé hồng (Hạng phòng, Bốn bước). */
-    background: var(--color-world-ticketLight, #f6dcd3);
-    color: var(--color-world-ticketMuted, #6b2f22);
-    /* Mép khuyết tròn dọc cạnh trong, như đường xé của cuống vé. */
-    -webkit-mask: radial-gradient(circle at 0 7px, transparent 4px, #000 4.5px) 0 0 / 100% 14px;
-    mask: radial-gradient(circle at 0 7px, transparent 4px, #000 4.5px) 0 0 / 100% 14px;
-  }
-
-  /* Đường xé nét đứt sát mép khuyết. */
-  .ph-stub::before {
-    content: '';
+  /* ——— Phải: cuống vé đặt trong lề ——— */
+  .ph-stub-paper {
     position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 9px;
-    border-left: 1.5px dashed rgb(107 47 34 / 0.45);
+    top: 20px;
+    bottom: 20px;
+    left: 50%;
+    width: 60px;
+    background: var(--color-world-ticket, #f0c2b3);
+    box-shadow: 0 6px 14px rgb(18 22 20 / 0.12);
+    transform: translateX(-50%);
+    /* Mép khuyết tròn hai bên, như cuống vé xé khỏi cuốn. */
+    -webkit-mask:
+      radial-gradient(circle at 0 7px, transparent 4px, #000 4.5px) left top / 51% 14px repeat-y,
+      radial-gradient(circle at 100% 7px, transparent 4px, #000 4.5px) right top / 51% 14px repeat-y;
+    mask:
+      radial-gradient(circle at 0 7px, transparent 4px, #000 4.5px) left top / 51% 14px repeat-y,
+      radial-gradient(circle at 100% 7px, transparent 4px, #000 4.5px) right top / 51% 14px repeat-y;
   }
 
   .ph-stub-brand {
     position: absolute;
-    top: 28px;
+    top: 40px;
     left: 50%;
     font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
     font-size: 14px;
     font-weight: 600;
     letter-spacing: 0.18em;
     text-transform: uppercase;
+    color: var(--color-world-ticketMuted, #6b2f22);
     writing-mode: vertical-rl;
     transform: translateX(-50%);
   }
@@ -606,14 +620,8 @@
     bottom: var(--rail-bottom);
     left: 0;
     right: 0;
-    background: linear-gradient(
-        to bottom,
-        transparent,
-        rgb(107 47 34 / 0.35) 4%,
-        rgb(107 47 34 / 0.35) 96%,
-        transparent
-      )
-      center / 1px 100% no-repeat;
+    background: linear-gradient(rgb(107 47 34 / 0.35), rgb(107 47 34 / 0.35)) center / 1px 100%
+      no-repeat;
   }
 
   .ph-stub-hole {
@@ -623,7 +631,7 @@
     height: 16px;
     border: 1.5px dashed rgb(107 47 34 / 0.6);
     border-radius: 50%;
-    background: var(--color-world-ticketLight, #f6dcd3);
+    background: var(--color-world-ticket, #f0c2b3);
     transform: translate(-50%, -50%);
     transition:
       background-color 0.2s,
@@ -631,23 +639,24 @@
       transform 0.2s;
   }
 
-  /* Lỗ đã bấm: thấy bảng ga đen phía sau, viền đỏ dấu bấm. */
+  /* Lỗ đã bấm: thấy nền giấy mẫu biểu phía sau, viền đỏ dấu bấm. */
   .ph-stub-hole[data-punched='true'] {
     border: 2px solid var(--color-world-ticketPunch, #962a16);
-    background: var(--color-dark, #121614);
+    background: var(--color-world-ground, #dfe5f0);
     transform: translate(-50%, -50%) scale(1.1);
   }
 
   .ph-stub-count {
     position: absolute;
-    bottom: 26px;
+    bottom: 36px;
     left: 0;
     right: 0;
     font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     text-align: center;
+    color: var(--color-world-ticketMuted, #6b2f22);
   }
 
   @media (prefers-reduced-motion: reduce) {
