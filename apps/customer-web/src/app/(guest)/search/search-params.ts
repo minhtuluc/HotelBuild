@@ -79,3 +79,8 @@ export function criteriaIssue(params: URLSearchParams): FieldIssue {
   }
   return { field: 'propertyId', issue: 'REQUIRED' };
 }
+
+/** Trang hạng giữ nguyên kỳ đang tìm (HB-317, FEAT-01): nút chính ở đó dẫn thẳng về SCR-02 cùng kỳ. */
+export function classHref(criteria: StayCriteria, code: string): string {
+  return `/room-types/${encodeURIComponent(code)}?${criteriaQuery(criteria).toString()}`;
+}

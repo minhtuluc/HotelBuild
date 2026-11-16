@@ -1,0 +1,121 @@
+/*
+ * Giữ ngữ cảnh hành trình và tiện ích đặt vé (HB-317): nút chọn nhanh số đêm trên vé tìm phòng, link sang
+ * trang hạng ở bảng kết quả, dòng tóm tắt kỳ trên trang nội dung, bản in A4 của báo giá và kết quả đặt phòng.
+ * Chỉ dùng token sẵn có của globals.css (DESIGN.md).
+ */
+@layer components {
+  /* Chọn nhanh số đêm: nhãn in trên vé, viền mực xanh như ô vé, không bo tròn kiểu viên thuốc. */
+  .ph-quick-nights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ph-quick-night {
+    min-height: var(--touch-target, 44px);
+    padding: 0 14px;
+    border: 1.5px solid var(--color-primary, #1b3a82);
+    border-radius: 2px;
+    background: rgb(255 255 255 / 0.38);
+    color: var(--color-primary, #1b3a82);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: background-color 150ms ease;
+  }
+
+  .ph-quick-night:hover {
+    background: rgb(255 255 255 / 0.7);
+  }
+
+  .ph-quick-night[aria-pressed='true'] {
+    background: var(--color-primary, #1b3a82);
+    color: var(--color-surface, #fbfaf7);
+  }
+
+  /* Link phụ sang trang hạng, dưới nút chính ở cột thao tác của bảng kết quả. */
+  .ph-availability-class-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-target, 44px);
+    margin-top: 4px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .ph-journey-summary {
+    margin: 0;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-textMuted, #5c5450);
+  }
+
+  .ph-quote-share {
+    display: grid;
+    gap: 8px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ph-quick-night {
+      transition: none;
+    }
+  }
+}
+
+/*
+ * Bản in A4 (FEAT-06): ẩn điều hướng, nút bấm, cuống vé dính đáy và mọi phần gắn `data-print="hide"`; giữ bảng
+ * giá từng đêm, tóm tắt báo giá và mã đặt phòng. Mực đen trên nền trắng, bảng không gãy giữa dòng.
+ */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .ph-header,
+  .ph-footer,
+  .ph-sticky-stub,
+  .ph-skip-link,
+  .ph-lang,
+  [data-print='hide'],
+  button,
+  .ph-btn,
+  .ph-btn-accent {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  .ph-page-shell {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  table {
+    page-break-inside: auto;
+  }
+
+  tr,
+  .ph-two-col > div {
+    break-inside: avoid;
+  }
+
+  a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+
+  * {
+    box-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -15,6 +15,7 @@ import { StationMore } from '../../components/content/station-more';
 import { roomTypePageKey } from '../../content/room-type-pages';
 import { ApiProbe } from './api-probe';
 import { SearchBlock } from './search/search-block';
+import { draftFromUrl, urlParams } from './search/journey-context';
 
 /** Trang chủ là tuyến động vì đọc cấu hình API ở thời điểm gọi (kiến trúc §7.5). */
 export const dynamic = 'force-dynamic';
@@ -380,6 +381,7 @@ export default async function GuestHomePage({
             preferredPropertySlug={
               typeof query.ga === 'string' ? propertyPageKey(query.ga)?.slug : undefined
             }
+            initialDraft={draftFromUrl(urlParams(query))}
           />
         </div>
       </div>

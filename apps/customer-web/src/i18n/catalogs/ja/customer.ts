@@ -31,6 +31,15 @@ export const jaCustomer: Readonly<Record<CustomerMessageKey, string>> = {
   'guest.search.submit': '検索',
   'guest.search.error': '施設一覧を読み込めませんでした。もう一度お試しください。',
   'guest.search.retry': 'もう一度試す',
+  'guest.search.quickNights': '泊数をすばやく選ぶ',
+  'guest.search.quickNight': '{nights} 泊',
+  'guest.journey.cta': 'この日程の空室を見る',
+  'guest.rooms.copyLink': '見積もりのリンクをコピー',
+  'guest.rooms.copyLink.ok':
+    'リンクをコピーしました。受け取った方が開いた時点の料金が表示されます。',
+  'guest.rooms.copyLink.failed':
+    '自動でコピーできませんでした。ブラウザのアドレス欄の URL を選択してコピーしてください。',
+  'guest.rooms.print': '見積もりを印刷 / 保存',
   'guest.results.title': '検索結果',
   'guest.results.criteria': '滞在 {from} → {to} · {nights} 泊',
   'guest.results.invalid':
