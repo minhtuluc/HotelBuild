@@ -1,10 +1,11 @@
 'use client';
 /**
  * Hai lề trang chủ trên màn rộng (HB-327), học từ thước độ cao bám cuộn của mẫu tham chiếu Villa Castagneto:
- * - trái: đường ray mảnh, mỗi dải của mục lục là một ga dừng, đầu tàu trượt nội suy giữa hai ga;
- * - phải: hàng lỗ bấm vé đánh số, soi gương với hàng ga; dải nào đã đi qua thì lỗ được bấm (chỉ trang trí).
+ * - trái: đường ray mảnh, mỗi dải của mục lục là một ga dừng, đầu tàu trượt nội suy giữa hai ga; tên ga in
+ *   chữ dọc dọc theo ray, chỉ hiện ga đang đọc và ga đang trỏ/focus để cột mỏng được;
+ * - phải: hàng lỗ bấm vé, soi gương với hàng ga; dải nào đã đi qua thì lỗ được bấm (chỉ trang trí).
  * Hai cột nằm trong `main` và dính theo cuộn (`sticky`), nên bắt đầu dưới header và dừng trên footer.
- * CSS chỉ cho hiện khi khung rộng từ 1520 px; hẹp hơn thì ẩn hẳn và dải mục lục ngang (`PageToc`) làm việc này.
+ * CSS chỉ cho hiện khi khung rộng từ 1400 px; hẹp hơn thì ẩn hẳn và dải mục lục ngang (`PageToc`) làm việc này.
  * Ga là neo cùng trang nên không có JS vẫn nhảy được; JS chỉ đặt vị trí đầu tàu và lỗ bấm.
  */
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from 'react';
@@ -55,7 +56,7 @@ export function ScrollRails({
   useEffect(() => {
     const root = rootRef.current;
     // Không đo khi hai lề đang ẩn (màn hẹp): khỏi đọc layout mỗi lần cuộn trên điện thoại.
-    const wide = window.matchMedia('(min-width: 1520px)');
+    const wide = window.matchMedia('(min-width: 1400px)');
     const targets = items.flatMap((item) => {
       const node = document.getElementById(item.id);
       return node === null ? [] : [node];
@@ -105,7 +106,7 @@ export function ScrollRails({
         <div className="ph-rail-inner">
           <p className="ph-rail-count" aria-hidden="true">
             {pad(state.started ? at + 1 : 0)}
-            <small>/{pad(items.length)}</small>
+            <small>{pad(items.length)}</small>
           </p>
           <div className="ph-rail-track">
             <span className="ph-rail-train" aria-hidden="true" />
@@ -121,7 +122,7 @@ export function ScrollRails({
                     aria-current={state.started && index === at ? 'true' : undefined}
                   >
                     <span className="ph-rail-dot" aria-hidden="true" />
-                    {item.label}
+                    <span className="ph-rail-label">{item.label}</span>
                   </a>
                 </li>
               ))}
@@ -131,15 +132,15 @@ export function ScrollRails({
       </nav>
       <div className="ph-stub" aria-hidden="true">
         <div className="ph-rail-inner">
+          <span className="ph-stub-brand">Pine Hill</span>
           <div className="ph-stub-track">
             {items.map((item, index) => (
-              <span key={item.id} className="ph-stub-stop" style={stopStyle(index)}>
-                {pad(index + 1)}
-                <span
-                  className="ph-stub-hole"
-                  data-punched={state.started && index <= at ? 'true' : 'false'}
-                />
-              </span>
+              <span
+                key={item.id}
+                className="ph-stub-hole"
+                style={stopStyle(index)}
+                data-punched={state.started && index <= at ? 'true' : 'false'}
+              />
             ))}
           </div>
         </div>

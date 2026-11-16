@@ -343,28 +343,31 @@
 }
 
 /*
- * HB-327: hai lề trang chủ trên màn rộng. Từ 1520 px, phần thân trang (`main`) chừa hai cột lề bằng nhau; header và
- * footer vẫn tràn hết khung. Hai cột để lộ nền giấy mẫu biểu của trang (liền với nền hero), không viền, không
- * nền riêng. Trong mỗi cột chỉ có một nét mực mảnh chạy sát mép nội dung: trái là đường ray với tên ga (mục lục +
- * đầu tàu bám cuộn), phải là hàng lỗ bấm vé đánh số, soi gương với hàng ga. Cột dính theo cuộn (`sticky`) nên bắt
- * đầu dưới header và dừng trên footer như một phần của bố cục. Hẹp hơn 1520 px thì ẩn hẳn.
+ * HB-327: hai lề trang chủ trên màn rộng. Từ 1400 px, phần thân trang (`main`) chừa hai cột lề mảnh bằng nhau
+ * (56 px); header và footer vẫn tràn hết khung. Hai cột để lộ nền giấy mẫu biểu của trang, không viền, không nền
+ * riêng. Mỗi cột chỉ có một nét mực mảnh, soi gương nhau: trái là đường ray với sáu ga (mục lục + đầu tàu bám
+ * cuộn), phải là hàng lỗ bấm vé. Tên ga in chữ dọc chạy dọc theo ray, chỉ hiện ga đang đọc và ga đang trỏ/focus,
+ * nhờ vậy cột mỏng được. Cột dính theo cuộn (`sticky`) nên bắt đầu dưới header và dừng trên footer.
+ * Hẹp hơn 1400 px thì ẩn hẳn, dải mục lục ngang làm thay.
  */
 @layer components {
   .ph-rails {
     display: none;
-    --rail-w: 128px;
+    --rail-w: 56px;
+    /* Tâm nét ray tính từ mép ngoài của cột; hai cột dùng chung để soi gương. */
+    --rail-x: 34px;
     --rail-pos: 0;
     --rail-ink: rgb(26 23 22 / 0.22);
   }
 
-  @media (min-width: 1520px) {
+  @media (min-width: 1400px) {
     .ph-rails {
       display: block;
     }
 
     main:has(> .ph-rails) {
       position: relative;
-      padding-inline: 128px;
+      padding-inline: 56px;
     }
 
     /* Đã có đường ray thì không cần dải mục lục ngang thứ hai. */
@@ -412,13 +415,13 @@
   .ph-rail-track,
   .ph-stub-track {
     position: absolute;
-    top: 24%;
-    bottom: 20%;
+    top: 20%;
+    bottom: 14%;
     left: 0;
     right: 0;
   }
 
-  /* Nét ray: một nét mực mảnh sát mép nội dung, hai cột soi gương nhau. */
+  /* Nét ray mảnh, mờ dần ở hai đầu. */
   .ph-rail-track::before,
   .ph-stub-track::before {
     content: '';
@@ -435,14 +438,6 @@
     );
   }
 
-  .ph-rail-track::before {
-    right: 27px;
-  }
-
-  .ph-stub-track::before {
-    left: 27px;
-  }
-
   /* Đoạn đã đi qua: nét ray đậm lên thành mực xanh tới đúng chỗ đầu tàu. */
   .ph-rail-track::after,
   .ph-stub-track::after {
@@ -455,12 +450,14 @@
     transition: height 0.18s ease-out;
   }
 
+  .ph-rail-track::before,
   .ph-rail-track::after {
-    right: 27px;
+    left: calc(var(--rail-x) - 1px);
   }
 
+  .ph-stub-track::before,
   .ph-stub-track::after {
-    left: 27px;
+    right: calc(var(--rail-x) - 1px);
   }
 
   .ph-rails[data-started='false'] .ph-rail-track::after,
@@ -469,12 +466,17 @@
   }
 
   /* ——— Trái: đường ray ——— */
+
+  /* Số đọc xếp chồng: ga đang đọc trên, tổng số ga dưới, canh giữa trên nét ray. */
   .ph-rail-count {
     position: absolute;
-    top: calc(24% - 84px);
-    right: 22px;
+    top: calc(20% - 82px);
+    left: calc(var(--rail-x) - 22px);
+    width: 44px;
+    display: grid;
+    justify-items: center;
     margin: 0;
-    font-size: 30px;
+    font-size: 22px;
     font-weight: 600;
     line-height: 1;
     font-variant-numeric: tabular-nums;
@@ -482,8 +484,10 @@
   }
 
   .ph-rail-count small {
-    margin-left: 1px;
-    font-size: 15px;
+    margin-top: 3px;
+    padding-top: 3px;
+    border-top: 1px solid var(--rail-ink);
+    font-size: 13px;
     font-weight: 500;
     color: var(--color-textMuted, #5a4640);
   }
@@ -492,10 +496,10 @@
     position: absolute;
     z-index: 1;
     top: calc(var(--rail-pos) * 100%);
-    right: 23px;
-    width: 10px;
-    height: 22px;
-    border-radius: 5px 5px 2px 2px;
+    left: calc(var(--rail-x) - 4px);
+    width: 8px;
+    height: 20px;
+    border-radius: 4px 4px 2px 2px;
     background: var(--color-primary, #1b3a82);
     box-shadow: 0 0 0 3px var(--color-world-ground, #dfe5f0);
     transform: translateY(-50%);
@@ -513,30 +517,25 @@
   /* `top` của ga và lỗ vé đặt inline theo thứ tự ga. */
   .ph-rail li {
     position: absolute;
-    left: 0;
-    right: 0;
+    left: calc(var(--rail-x) - 22px);
+    width: 44px;
+    height: 44px;
     transform: translateY(-50%);
   }
 
+  /* Vùng bấm 44 × 44 quanh chấm ga. */
   .ph-rail a {
+    position: relative;
     display: grid;
-    grid-template-columns: 1fr 22px;
-    align-items: center;
-    gap: 8px;
-    min-height: 44px;
-    padding: 4px 17px 4px 10px;
-    font-size: 15px;
-    font-weight: 500;
-    line-height: 1.1;
-    text-align: right;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
     color: var(--color-textMuted, #5a4640);
     text-decoration: none;
-    transition: color 0.2s;
   }
 
   .ph-rail-dot {
-    order: 2;
-    justify-self: center;
     width: 10px;
     height: 10px;
     border: 2px solid rgb(26 23 22 / 0.4);
@@ -544,53 +543,90 @@
     background: var(--color-world-ground, #dfe5f0);
     transition:
       border-color 0.2s,
-      background-color 0.2s;
+      background-color 0.2s,
+      transform 0.2s;
   }
 
   .ph-rail li[data-passed='true'] .ph-rail-dot {
     border-color: var(--color-primary, #1b3a82);
   }
 
-  .ph-rail a:hover,
-  .ph-rail a:focus-visible {
-    color: var(--color-text, #1a1716);
+  .ph-rail a:hover .ph-rail-dot,
+  .ph-rail a:focus-visible .ph-rail-dot {
+    transform: scale(1.3);
   }
 
   .ph-rail a:focus-visible {
     outline: 2px solid var(--color-primary, #1b3a82);
-    outline-offset: -2px;
+    outline-offset: -4px;
   }
 
-  .ph-rail a[aria-current='true'] {
+  /*
+   * Tên ga: chữ dọc (đọc từ trên xuống) đặt bên trái nét ray, chạy từ dưới chấm ga tới gần ga kế tiếp.
+   * Mặc định ẩn bằng độ mờ (vẫn là tên truy cập của link); hiện cho ga đang đọc và ga đang trỏ/focus.
+   */
+  .ph-rail-label {
+    position: absolute;
+    top: 34px;
+    left: -8px;
+    max-height: calc(13.2vh - 26px);
+    overflow: hidden;
+    font-size: 14px;
     font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    writing-mode: vertical-rl;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition:
+      opacity 0.2s,
+      transform 0.2s;
+    pointer-events: none;
+  }
+
+  .ph-rail a[aria-current='true'] .ph-rail-label,
+  .ph-rail a:hover .ph-rail-label,
+  .ph-rail a:focus-visible .ph-rail-label {
+    opacity: 1;
+    transform: none;
+  }
+
+  .ph-rail a[aria-current='true'] .ph-rail-label {
     color: var(--color-text, #1a1716);
   }
 
+  .ph-rail a:hover .ph-rail-label,
+  .ph-rail a:focus-visible .ph-rail-label {
+    color: var(--color-primary, #1b3a82);
+  }
+
   /* ——— Phải: hàng lỗ bấm vé ——— */
-  .ph-stub-stop {
+
+  /* Soi gương với số đọc bên trái: tên tuyến in dọc, canh giữa trên nét ray. */
+  .ph-stub-brand {
     position: absolute;
-    left: 0;
-    right: 0;
-    display: grid;
-    grid-template-columns: 22px 1fr;
-    align-items: center;
-    gap: 8px;
-    padding-left: 17px;
-    font-size: 14px;
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.04em;
-    transform: translateY(-50%);
+    top: calc(20% - 92px);
+    right: var(--rail-x);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-textMuted, #5a4640);
+    writing-mode: vertical-rl;
+    transform: translateX(50%);
   }
 
   .ph-stub-hole {
-    order: -1;
-    justify-self: center;
+    position: absolute;
+    right: var(--rail-x);
     width: 12px;
     height: 12px;
     border: 1.5px dashed rgb(26 23 22 / 0.45);
     border-radius: 50%;
     background: var(--color-world-ground, #dfe5f0);
+    transform: translate(50%, -50%);
     transition:
       background-color 0.2s,
       border-color 0.2s;
@@ -609,6 +645,7 @@
     .ph-rail-track::after,
     .ph-stub-track::after,
     .ph-rail-dot,
+    .ph-rail-label,
     .ph-stub-hole {
       transition: none;
     }

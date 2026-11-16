@@ -3,17 +3,17 @@ import { expect, test } from '@playwright/test';
 
 /**
  * HB-327 — hai lề trang chủ trên màn rộng: đường ray bám cuộn (trái) và cuống vé bấm lỗ (phải). Màn hẹp hơn
- * 1520 px thì hai lề ẩn hẳn, dải mục lục ngang (HB-325) làm việc này.
+ * 1400 px thì hai lề ẩn hẳn, dải mục lục ngang (HB-325) làm việc này.
  */
 test.beforeEach(({}, testInfo) => {
   test.skip(!testInfo.project.name.startsWith('customer-web'), 'ca này chỉ chạy trên customer-web');
 });
 
 test.describe('đường ray hai lề trang chủ (HB-327)', () => {
-  test('1600 px: đường ray thay dải mục lục ngang; bấm ga nhảy tới dải, bấm lỗ vé tới đó', async ({
+  test('1440 px: đường ray thay dải mục lục ngang; bấm ga nhảy tới dải, bấm lỗ vé tới đó', async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 1600, height: 900 });
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
     const rails = page.getByTestId('scroll-rails');
     const rail = rails.getByRole('navigation');

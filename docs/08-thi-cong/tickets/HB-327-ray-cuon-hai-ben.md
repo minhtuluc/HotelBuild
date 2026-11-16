@@ -24,17 +24,17 @@ unlock:
 
 ## Thay đổi
 
-0. **Hai lề là cột của trang, không phải lớp phủ.** Từ 1520 px, phần thân trang (`main`) chừa hai cột lề rộng bằng nhau (128 px); header và footer vẫn tràn hết khung. Hai cột không có nền hay viền riêng: chúng để lộ nền giấy mẫu biểu của trang, liền với nền hero. Cột dính theo cuộn (`sticky`), nên bắt đầu dưới header và dừng trên footer.
-1. **Lề trái là đường ray.** Một nét mực mảnh sát mép nội dung, sáu ga dừng ứng với sáu dải của mục lục trang chủ (`HOME_TOC`), tên ga căn phải. Đầu tàu trượt nội suy giữa hai ga theo vạch đọc (một phần ba màn hình), giống cách mẫu 01 nội suy độ cao; đoạn đã đi qua đậm lên thành mực xanh. Phía trên là số đọc `03/06`. Mỗi ga là link neo, có `aria-current`.
-2. **Lề phải là hàng lỗ bấm vé.** Soi gương với lề trái: cùng nét mực, sáu lỗ đánh số thẳng hàng với sáu ga. Dải nào đã đi qua thì lỗ được bấm (chấm đỏ dấu bấm, màu nhấn duy nhất của hai lề). Chỉ trang trí: `aria-hidden`.
-3. **Ngưỡng:** hai lề chỉ hiện khi khung rộng từ 1520 px (đủ chỗ cho hai cột 128 px mà dải nội dung vẫn rộng đủ 1240 px). Hẹp hơn thì ẩn hẳn, giữ dải mục lục ngang hiện có (HB-325). Từ 1520 px, dải mục lục ngang ẩn để không có hai mục lục.
+0. **Hai lề là cột mảnh của trang, không phải lớp phủ.** Từ 1400 px, phần thân trang (`main`) chừa hai cột lề rộng bằng nhau (56 px); header và footer vẫn tràn hết khung. Hai cột không có nền hay viền riêng: chúng để lộ nền giấy mẫu biểu của trang, liền với nền hero. Cột dính theo cuộn (`sticky`), nên bắt đầu dưới header và dừng trên footer.
+1. **Lề trái là đường ray.** Một nét mực mảnh, sáu chấm ga ứng với sáu dải của mục lục trang chủ (`HOME_TOC`). Tên ga in chữ dọc chạy dọc theo ray, từ dưới chấm ga tới gần ga kế; chỉ hiện ga đang đọc và ga đang trỏ chuột/focus, các tên khác ẩn bằng độ mờ nhưng vẫn là tên truy cập của link. Nhờ vậy cột chỉ cần 56 px. Đầu tàu trượt nội suy giữa hai ga theo vạch đọc (một phần ba màn hình), giống cách mẫu 01 nội suy độ cao; đoạn đã đi qua đậm lên thành mực xanh. Phía trên là số đọc xếp chồng `03` trên `06`. Mỗi ga là link neo, vùng bấm 44 × 44 px, có `aria-current`.
+2. **Lề phải là hàng lỗ bấm vé.** Soi gương với lề trái: cùng nét mực, cùng khoảng cách tới mép, sáu lỗ thẳng hàng với sáu ga, tên tuyến in dọc ở vị trí số đọc. Dải nào đã đi qua thì lỗ được bấm (chấm đỏ dấu bấm, màu nhấn duy nhất của hai lề). Chỉ trang trí: `aria-hidden`.
+3. **Ngưỡng:** hai lề chỉ hiện khi khung rộng từ 1400 px (đủ chỗ cho hai cột 56 px mà dải nội dung vẫn rộng đủ 1240 px), nên màn laptop 1440 px cũng có. Hẹp hơn thì ẩn hẳn, giữ dải mục lục ngang hiện có (HB-325). Từ 1400 px, dải mục lục ngang ẩn để không có hai mục lục.
 4. Không thêm chuỗi dịch: nhãn ga dùng lại nhãn mục lục, số đọc chỉ là số.
 5. `prefers-reduced-motion`: đầu tàu nhảy, không trượt. Không in khi in trang.
 
 ## Tiêu chí nghiệm thu
 
 1. Vị trí đầu tàu nội suy đúng giữa hai ga, kẹp ở hai đầu — test: `apps/customer-web/test/content/scroll-rails.spec.ts`
-2. 1600 px: đường ray và cuống vé hiện, dải mục lục ngang ẩn; bấm ga "Trả vé" nhảy tới `#tra-ve`, ga đó có `aria-current`, bốn lỗ đầu đã bấm — test: `tests/e2e/scr92-ray-cuon-hai-ben.spec.ts`
+2. 1440 px: đường ray và cuống vé hiện, dải mục lục ngang ẩn; bấm ga "Trả vé" nhảy tới `#tra-ve`, ga đó có `aria-current`, bốn lỗ đầu đã bấm — test: `tests/e2e/scr92-ray-cuon-hai-ben.spec.ts`
 3. 1280 px và 360 px: hai lề ẩn, dải mục lục ngang hiện, không cuộn ngang — cùng file e2e.
 
 ## Ngoài phạm vi
