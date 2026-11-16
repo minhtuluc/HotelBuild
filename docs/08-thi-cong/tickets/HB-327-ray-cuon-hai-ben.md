@@ -24,9 +24,9 @@ unlock:
 
 ## Thay đổi
 
-0. **Hai lề là cột của trang, không phải lớp phủ.** Từ 1520 px, trang chừa hai cột lề rộng bằng nhau (128 px). Dải nội dung, header, footer dừng ở mép cột. Hai cột để lộ nền giấy mẫu biểu của trang và ngăn với nội dung bằng kẻ đôi mực xanh, như viền dưới hero.
-1. **Lề trái là đường ray.** Ray và chữ in mực trên nền giấy mẫu biểu; đoạn đã đi qua đổi sang đỏ dấu bấm. Một đoạn ray dọc có tà vẹt, sáu ga dừng ứng với sáu dải của mục lục trang chủ (`HOME_TOC`). Đầu tàu trượt nội suy giữa hai ga theo vạch đọc (một phần ba màn hình), giống cách mẫu 01 nội suy độ cao. Trên cùng là số đọc `03 / 06` và tên dải đang đọc. Mỗi ga là link neo, có `aria-current`.
-2. **Lề phải là cuống vé.** Một cuống vé hồng đặt giữa cột lề, mép khuyết hai bên, sáu lỗ bấm thẳng hàng với sáu ga bên trái. Dải nào đã đi qua thì lỗ được bấm. Chỉ trang trí: `aria-hidden`.
+0. **Hai lề là cột của trang, không phải lớp phủ.** Từ 1520 px, phần thân trang (`main`) chừa hai cột lề rộng bằng nhau (128 px); header và footer vẫn tràn hết khung. Hai cột không có nền hay viền riêng: chúng để lộ nền giấy mẫu biểu của trang, liền với nền hero. Cột dính theo cuộn (`sticky`), nên bắt đầu dưới header và dừng trên footer.
+1. **Lề trái là đường ray.** Một nét mực mảnh sát mép nội dung, sáu ga dừng ứng với sáu dải của mục lục trang chủ (`HOME_TOC`), tên ga căn phải. Đầu tàu trượt nội suy giữa hai ga theo vạch đọc (một phần ba màn hình), giống cách mẫu 01 nội suy độ cao; đoạn đã đi qua đậm lên thành mực xanh. Phía trên là số đọc `03/06`. Mỗi ga là link neo, có `aria-current`.
+2. **Lề phải là hàng lỗ bấm vé.** Soi gương với lề trái: cùng nét mực, sáu lỗ đánh số thẳng hàng với sáu ga. Dải nào đã đi qua thì lỗ được bấm (chấm đỏ dấu bấm, màu nhấn duy nhất của hai lề). Chỉ trang trí: `aria-hidden`.
 3. **Ngưỡng:** hai lề chỉ hiện khi khung rộng từ 1520 px (đủ chỗ cho hai cột 128 px mà dải nội dung vẫn rộng đủ 1240 px). Hẹp hơn thì ẩn hẳn, giữ dải mục lục ngang hiện có (HB-325). Từ 1520 px, dải mục lục ngang ẩn để không có hai mục lục.
 4. Không thêm chuỗi dịch: nhãn ga dùng lại nhãn mục lục, số đọc chỉ là số.
 5. `prefers-reduced-motion`: đầu tàu nhảy, không trượt. Không in khi in trang.

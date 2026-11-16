@@ -1,8 +1,9 @@
 'use client';
 /**
  * Hai lề trang chủ trên màn rộng (HB-327), học từ thước độ cao bám cuộn của mẫu tham chiếu Villa Castagneto:
- * - trái: đường ray bảng ga, mỗi dải của mục lục là một ga dừng, đầu tàu trượt nội suy giữa hai ga;
- * - phải: cuống vé hồng, dải nào đã đi qua thì lỗ thẳng hàng với ga đó được bấm (chỉ trang trí).
+ * - trái: đường ray mảnh, mỗi dải của mục lục là một ga dừng, đầu tàu trượt nội suy giữa hai ga;
+ * - phải: hàng lỗ bấm vé đánh số, soi gương với hàng ga; dải nào đã đi qua thì lỗ được bấm (chỉ trang trí).
+ * Hai cột nằm trong `main` và dính theo cuộn (`sticky`), nên bắt đầu dưới header và dừng trên footer.
  * CSS chỉ cho hiện khi khung rộng từ 1520 px; hẹp hơn thì ẩn hẳn và dải mục lục ngang (`PageToc`) làm việc này.
  * Ga là neo cùng trang nên không có JS vẫn nhảy được; JS chỉ đặt vị trí đầu tàu và lỗ bấm.
  */
@@ -88,7 +89,6 @@ export function ScrollRails({
   }, [items, last]);
 
   const at = Math.floor(state.pos);
-  const current = state.started ? items[at] : undefined;
   /** Ga và lỗ vé cùng một vị trí dọc rãnh, để lỗ thẳng hàng với ga. */
   const stopStyle = (index: number): CSSProperties => ({
     top: `${last > 0 ? (index / last) * 100 : 0}%`,
@@ -102,50 +102,47 @@ export function ScrollRails({
       data-testid="scroll-rails"
     >
       <nav className="ph-rail" aria-label={label}>
-        <p className="ph-rail-readout" aria-hidden="true">
-          <span className="ph-rail-count">
+        <div className="ph-rail-inner">
+          <p className="ph-rail-count" aria-hidden="true">
             {pad(state.started ? at + 1 : 0)}
             <small>/{pad(items.length)}</small>
-          </span>
-          <span className="ph-rail-now">{current?.label ?? '—'}</span>
-        </p>
-        <div className="ph-rail-track">
-          <span className="ph-rail-train" aria-hidden="true" />
-          <ol>
-            {items.map((item, index) => (
-              <li
-                key={item.id}
-                style={stopStyle(index)}
-                data-passed={state.started && index <= at ? 'true' : 'false'}
-              >
-                <a
-                  href={`#${item.id}`}
-                  aria-current={state.started && index === at ? 'true' : undefined}
+          </p>
+          <div className="ph-rail-track">
+            <span className="ph-rail-train" aria-hidden="true" />
+            <ol>
+              {items.map((item, index) => (
+                <li
+                  key={item.id}
+                  style={stopStyle(index)}
+                  data-passed={state.started && index <= at ? 'true' : 'false'}
                 >
-                  <span className="ph-rail-dot" aria-hidden="true" />
-                  {item.label}
-                </a>
-              </li>
-            ))}
-          </ol>
+                  <a
+                    href={`#${item.id}`}
+                    aria-current={state.started && index === at ? 'true' : undefined}
+                  >
+                    <span className="ph-rail-dot" aria-hidden="true" />
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
       </nav>
       <div className="ph-stub" aria-hidden="true">
-        <span className="ph-stub-paper" />
-        <span className="ph-stub-brand">Pine Hill</span>
-        <div className="ph-stub-track">
-          {items.map((item, index) => (
-            <span
-              key={item.id}
-              className="ph-stub-hole"
-              style={stopStyle(index)}
-              data-punched={state.started && index <= at ? 'true' : 'false'}
-            />
-          ))}
+        <div className="ph-rail-inner">
+          <div className="ph-stub-track">
+            {items.map((item, index) => (
+              <span key={item.id} className="ph-stub-stop" style={stopStyle(index)}>
+                {pad(index + 1)}
+                <span
+                  className="ph-stub-hole"
+                  data-punched={state.started && index <= at ? 'true' : 'false'}
+                />
+              </span>
+            ))}
+          </div>
         </div>
-        <span className="ph-stub-count">
-          {pad(state.started ? at + 1 : 0)}/{pad(items.length)}
-        </span>
       </div>
     </div>
   );
