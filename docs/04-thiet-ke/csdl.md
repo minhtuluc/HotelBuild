@@ -1359,6 +1359,21 @@ CREATE TABLE operations (
 CREATE INDEX idx_operations_requested_by ON operations (requested_by, created_at DESC);
 ```
 
+**Sao lưu/diễn tập qua `operations` (migration `0015_backup_operations`, HB-246).** `BACKUP` và
+`RESTORE_DRILL` do API ghi yêu cầu; sidecar `backup` giành việc, chạy pgBackRest và chốt `result_json`
+(không có tệp tải nên không cần `result_ref`/`result_path`). Chỉ mục duy nhất từng phần chặn hai việc nặng
+chạy cùng lúc. Ràng buộc `operations_kind_check`/`ck_operations_succeeded` đổi ở §3.3, sau bản của
+migration 0010. `backup_catalog` là một dòng ảnh chụp `pgbackrest info --output=json` do sidecar ghi; `app_rw`
+chỉ được đọc.
+
+```sql
+CREATE TABLE backup_catalog (
+  id           smallint PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  info_json    jsonb NOT NULL CHECK (jsonb_typeof(info_json) = 'array'),
+  refreshed_at timestamptz NOT NULL DEFAULT now()
+);
+```
+
 **`refund_payout_operations` — thao tác chi hoàn bền (migration `0007_refund_payout_operations`, HB-100).**
 ADR-016 tách trạng thái **kỹ thuật** của một leg chi khỏi `refund_requests.status`: hồ sơ vẫn `APPROVED`
 (tiền còn giữ hạn mức) cho tới khi PSP xác nhận; timeout để operation ở `UNKNOWN` để đối soát, không trả
@@ -1713,6 +1728,23 @@ ALTER TABLE properties ADD CONSTRAINT ck_properties_slug_format
 CREATE TRIGGER trg_properties_slug_default
   BEFORE INSERT ON properties
   FOR EACH ROW EXECUTE FUNCTION fn_property_slug_default();
+
+-- Migration 0015 (HB-246): sao lưu/diễn tập theo yêu cầu dùng chung `operations`. Giữ đủ loại CHAN của
+-- 0010; loại sao lưu chốt bằng `result_json` (nhãn bản sao lưu, số đo RTO). Mỗi lúc chỉ một việc nặng.
+ALTER TABLE operations DROP CONSTRAINT operations_kind_check;
+ALTER TABLE operations ADD CONSTRAINT operations_kind_check CHECK (
+  kind IN ('REPORT_EXPORT','CHANNEL_SYNC','CHANNEL_DELIVERY_RETRY','BACKUP','RESTORE_DRILL')
+);
+ALTER TABLE operations DROP CONSTRAINT ck_operations_succeeded;
+ALTER TABLE operations ADD CONSTRAINT ck_operations_succeeded CHECK (
+  status <> 'SUCCEEDED'
+  OR (finished_at IS NOT NULL
+      AND (kind <> 'REPORT_EXPORT'
+           OR (result_ref IS NOT NULL AND result_path IS NOT NULL))
+      AND (kind NOT IN ('BACKUP','RESTORE_DRILL') OR result_json IS NOT NULL))
+);
+CREATE UNIQUE INDEX uq_operations_backup_active ON operations ((true))
+  WHERE kind IN ('BACKUP','RESTORE_DRILL') AND status IN ('PENDING','RUNNING');
 
 CREATE FUNCTION fn_immutable_record() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN

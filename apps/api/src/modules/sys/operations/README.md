@@ -19,7 +19,7 @@ link chết. Tuyến tải cần **cả** bearer token của người yêu cầu
 
 - Tệp do worker ghi trong `EXPORT_DIR`; mọi đường dẫn đọc phải qua `insideExportDir` (chặn `..` và mọi
   thư mục khác) — API **không** đọc tệp tuỳ ý từ đường dẫn trong CSDL.
-- Hạn tệp (`result_expires_at`) chỉ *cho phép* đọc trong hạn; việc **xoá** tệp không còn phụ thuộc lượt tải:
+- Hạn tệp (`result_expires_at`) chỉ _cho phép_ đọc trong hạn; việc **xoá** tệp không còn phụ thuộc lượt tải:
   worker có job dọn định kỳ `q.export-cleanup` (mặc định 15 phút, `EXPORT_CLEANUP_INTERVAL_SECONDS`) xoá tệp
   quá hạn và **giữ nguyên hàng** `operations` (ràng buộc `ck_operations_succeeded` buộc `result_path` NOT NULL
   khi `SUCCEEDED`; tệp mất ⇒ tuyến tải trả 404 như tệp hết hạn).

@@ -396,8 +396,9 @@ Ví dụ (HB-204): `POST /api/v1/front-office/no-show/preview` thân `{ "booking
 | GET | `/api/v1/audit-logs` | Nhật ký kiểm toán (chỉ đọc) | MANAGER, OWNER | `actorId`, `entityType`, `entityId`, `action`, `from`, `to` | UC-SYS-01 | BR-SYS-01,05 |
 | GET | `/api/v1/system-settings` | Danh sách tham số kèm kiểu giá trị, người sửa cuối, phiên bản (màn SCR-17) | OWNER | — | UC-SYS-02 | BR-SYS-02 |
 | PUT | `/api/v1/system-settings/{key}` | Sửa tham số (ghi `AuditLog` cùng transaction) | OWNER | `value`, `reason` | UC-SYS-02 | BR-SYS-02, BR-GEN-07 |
-| POST | `/api/v1/system/backups` | Yêu cầu sao lưu (202) | SYSADMIN | `mode` (`PITR`/`FULL`) | UC-SYS-03 | BR-SYS-03 |
-| POST | `/api/v1/system/backups/{backupId}/restore` | Diễn tập phục hồi vào môi trường tạm do server chọn (202); không nhận đường dẫn/DB URL của client | SYSADMIN | `targetTimestamp`, `reason` | UC-SYS-03 | BR-SYS-03 |
+| GET | `/api/v1/system/backups` | Trạng thái sao lưu cho SCR-18: bản sao lưu trong kho, `pg_stat_archiver`, số giây từ WAL cuối, 20 thao tác gần nhất (HB-246) | SYSADMIN | — | UC-SYS-03 | BR-SYS-03 |
+| POST | `/api/v1/system/backups` | Yêu cầu sao lưu (202 + `Location` tới `/operations/{id}`); `PITR` = gia tăng trên bản full gần nhất; đang có sao lưu/diễn tập ⇒ 409 `E_SYS_REQUEST_IN_PROGRESS` (HB-246) | SYSADMIN | `mode` (`PITR`/`FULL`) | UC-SYS-03 | BR-SYS-03 |
+| POST | `/api/v1/system/backups/{backupId}/restore` | Diễn tập phục hồi vào môi trường tạm do server chọn (202); không nhận đường dẫn/DB URL của client. `backupId` = nhãn pgBackRest có trong kho (404 nếu không); `targetTimestamp` trong `[lúc bản đó xong, bây giờ]` (400 nếu không); kết quả: `rtoSeconds` + số dòng đối soát (HB-246) | SYSADMIN | `targetTimestamp`, `reason` | UC-SYS-03 | BR-SYS-03 |
 | GET | `/api/v1/system/health` | Công khai chỉ `{status: "ok"}`; không lộ version, hostname, topology hay lỗi phụ thuộc | — | — | UC-SYS-03 | NFR-USE-01, NFR-USE-02 |
 
 `GET /audit-logs` với `entityType=SystemSetting`: `entityId` nhận UUID gốc hoặc khóa tham số (SCR-17). Khóa được đối chiếu từ `key` trong snapshot lịch sử bất biến, không join giá trị hiện tại; bộ lọc quyền/count/cursor vẫn áp dụng trước phân trang.
