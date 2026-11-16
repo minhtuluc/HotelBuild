@@ -9,6 +9,7 @@ import { Breadcrumbs } from '../../../components/content/breadcrumbs';
 import { JsonLd, breadcrumbList } from '../../../components/content/json-ld';
 import { PriceIncludes } from '../../../components/content/price-includes';
 import { LocaleLink as Link } from '../../../components/locale-link';
+import { SlotImage } from '../../../components/content/slot-image';
 import { DINING_SERVICES, type DiningPageCopy } from '../../../content/dining-page';
 import { landingContent } from '../../../content/landing-content';
 import { searchCtaHref } from '../../../content/property-pages';
@@ -33,6 +34,12 @@ function ServiceBoard({ text, copy }: DiningSheetProps): ReactElement {
         <ol className="ph-dining-services" data-testid="dining-services">
           {DINING_SERVICES.map((service) => (
             <li key={service.id} className="ph-dining-service" data-status={service.status}>
+              <SlotImage
+                id={`an-${service.id}`}
+                locale={text.locale}
+                sizes="(max-width: 900px) calc(100vw - 32px), 33vw"
+                className="ph-dining-photo"
+              />
               <p className="ph-dining-hours">
                 <span className="ph-sr-only">{t('guest.dining.hours')} </span>
                 {service.hours}

@@ -41,35 +41,35 @@ export const ROOM_TYPE_PAGES: readonly RoomTypePageKey[] = [
     stationCodes: ['DL', 'PT', 'VT'],
     photoId: 'hang-DLX',
     /** Chỉ ảnh đúng hạng; ảnh phòng của từng ga không chắc là hạng này nên không đưa vào. */
-    galleryIds: ['hang-DLX'],
+    galleryIds: ['hang-DLX', 'hang-DLX-2', 'hang-DLX-3'],
   },
   {
     code: 'STD',
     sleeps: 2,
     stationCodes: ['DL', 'PT', 'VT'],
     photoId: 'hang-STD',
-    galleryIds: ['hang-STD'],
+    galleryIds: ['hang-STD', 'hang-STD-2', 'hang-STD-3'],
   },
   {
     code: 'SUP',
     sleeps: 2,
     stationCodes: ['DL', 'PT', 'VT'],
     photoId: 'hang-SUP',
-    galleryIds: ['hang-SUP'],
+    galleryIds: ['hang-SUP', 'hang-SUP-2', 'hang-SUP-3'],
   },
   {
     code: 'FAM',
     sleeps: 4,
     stationCodes: ['DL', 'PT', 'VT'],
     photoId: 'hang-FAM',
-    galleryIds: ['hang-FAM'],
+    galleryIds: ['hang-FAM', 'hang-FAM-2', 'hang-FAM-3'],
   },
   {
     code: 'DOR',
     sleeps: 6,
     stationCodes: ['DL', 'PT', 'VT'],
     photoId: 'hang-DOR',
-    galleryIds: ['hang-DOR'],
+    galleryIds: ['hang-DOR', 'hang-DOR-2', 'hang-DOR-3'],
   },
 ];
 

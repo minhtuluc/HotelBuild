@@ -26,6 +26,37 @@ Bản dựng đồ án hiện dùng ảnh minh hoạ để kiểm tra bố cục
 
 Các file Amanoi lấy từ bộ local `amanoi-dig`; URL trang nguồn gốc của từng file nằm trong `Impeccable/amanoi-dig/amanoi-dig/data/images_manifest.json`. Ảnh Amanoi không kèm giấy phép tái sử dụng thương mại: chỉ dùng làm tư liệu minh hoạ nội bộ cho đồ án, không phát hành thương mại. Ảnh Wikimedia Commons giữ điều kiện ghi công và chia sẻ tương tự của giấy phép tương ứng; ảnh Pexels dùng theo Pexels License.
 
+### Ảnh minh hoạ thêm ở HB-326 (22 ô)
+
+Tìm trên mạng cho các chỗ còn chờ ảnh (ảnh nhiều góc của hạng, hoạt động quanh ga, ăn uống). Chỉ chọn nguồn có giấy phép dùng lại (Wikimedia Commons, Pexels), không chọn ảnh có mặt người nhìn rõ hay ảnh ngụ ý tiện nghi chưa có nguồn. Vẫn là minh hoạ, không phải ảnh của Pine Hill.
+
+| Mã ô | Nguồn | Tác giả, giấy phép |
+|---|---|---|
+| `tn-dl-pine-walk` | [Đà Lạt năm 2013 — đường về thành phố ngàn thông](https://commons.wikimedia.org/wiki/File:%C4%90%C3%A0_L%E1%BA%A1t_n%C4%83m_2013-%C4%90%C6%B0%E1%BB%9Dng_v%E1%BB%81-T%E1%BA%A1m_bi%E1%BB%87t_th%C3%A0nh_ph%E1%BB%91_ng%C3%A0n_th%C3%B4ng.jpg) | Phương Huy, CC BY-SA 4.0; cắt 4:3, WebP |
+| `tn-dl-lake-ride` | [Da Lat — Xuan Huong Lake](https://commons.wikimedia.org/wiki/File:Da_Lat_-_Xuan_Huong_Lake.jpg) | P. Hughes, CC BY 4.0; cắt 4:3, WebP |
+| `tn-dl-wild-sunflowers` | [Dã quỳ](https://commons.wikimedia.org/wiki/File:D%C3%A3_qu%E1%BB%B3.jpg) | Bùi Thụy Đào Nguyên, CC BY-SA 3.0; cắt 4:3, WebP |
+| `tn-pt-dunes` | [Mui Ne sand dunes 1](https://commons.wikimedia.org/wiki/File:Mui_Ne_sand_dunes_1.jpg) | ruben i, CC BY 2.0; cắt 4:3, WebP |
+| `tn-pt-kitesurf` | [Vietnam, Mui Ne beach, Kitesurfing, kiteboarding](https://commons.wikimedia.org/wiki/File:Vietnam,_Mui_Ne_beach,_Kitesurfing,_kiteboarding.jpg) | Vyacheslav Argenberg, CC BY 4.0; cắt 4:3, WebP |
+| `tn-pt-fishing-village` | [Vietnam, Fishing boats in Mui Ne harbor](https://commons.wikimedia.org/wiki/File:Vietnam,_Fishing_boats_in_Mui_Ne_harbor.jpg) | Vyacheslav Argenberg, CC BY 4.0; cắt 4:3, WebP |
+| `tn-vt-lighthouse` | [View of Vung Tau from Vung Tau lighthouse](https://commons.wikimedia.org/wiki/File:View_of_Vung_Tau_from_Vung_Tau_lighthouse_(August_3,_2018)_(43913499002).jpg) | Damian Vo, CC BY-SA 2.0; cắt 4:3, WebP |
+| `tn-vt-early-swim` | [Bai Truoc Vung Tau](https://commons.wikimedia.org/wiki/File:Bai_Truoc_Vung_Tau.jpg) | NDTK08, CC BY 4.0; cắt 4:3, WebP |
+| `tn-vt-small-mountain` | [Statue of Jesus in Vung Tau](https://commons.wikimedia.org/wiki/File:Statue_of_Jesus_in_Vung_Tau.jpg) | Chris Phan, CC BY-SA 2.0; cắt 4:3, WebP |
+| `an-breakfast` | [Special Baguette (Bánh mì) — Banh Mi Ancient Saigon](https://commons.wikimedia.org/wiki/File:Special_Baguette_(B%C3%A1nh_m%C3%AC)_-_Banh_Mi_Ancient_Saigon_2024-12-20.jpg) | Andy Li, CC0; cắt 4:3, WebP |
+| `an-tea` | [Vietnamese Coffee in Da Lat](https://commons.wikimedia.org/wiki/File:Vietnamese_Coffee_in_Da_Lat.jpg) | Frank Fox, CC BY-SA 4.0; cắt 4:3, WebP |
+| `an-evening` | [Dalat night market — panoramio](https://commons.wikimedia.org/wiki/File:Dalat_night_market_-_panoramio.jpg) | The Erica Chang, CC BY 3.0; cắt 4:3, WebP |
+| `hang-STD-2` | [Pexels 3954172](https://www.pexels.com/photo/3954172/) | Pexels License; cắt 4:3, WebP |
+| `hang-STD-3` | [Pexels 32637049](https://www.pexels.com/photo/32637049/) | Pexels License; cắt 4:3, WebP |
+| `hang-SUP-2` | [Pexels 31264600](https://www.pexels.com/photo/31264600/) | Pexels License; cắt 4:3, WebP |
+| `hang-SUP-3` | [Pexels 16436961](https://www.pexels.com/photo/16436961/) | Pexels License; cắt 4:3, WebP |
+| `hang-DLX-2` | [Pexels 14025023](https://www.pexels.com/photo/14025023/) | Pexels License; cắt 4:3, WebP |
+| `hang-DLX-3` | [Pexels 24807130](https://www.pexels.com/photo/24807130/) | Pexels License; cắt 4:3, WebP |
+| `hang-FAM-2` | [Pexels 4221409](https://www.pexels.com/photo/4221409/) | Pexels License; cắt 4:3, WebP |
+| `hang-FAM-3` | [Pexels 27729152](https://www.pexels.com/photo/27729152/) | Pexels License; cắt 4:3, WebP |
+| `hang-DOR-2` | [Pexels 38998685](https://www.pexels.com/photo/38998685/) | Pexels License; cắt 4:3, WebP |
+| `hang-DOR-3` | [Pexels 11062931](https://www.pexels.com/photo/11062931/) | Pexels License; cắt 4:3, WebP |
+
+Ảnh Commons mang giấy phép CC BY / CC BY-SA cần ghi công tác giả khi phát hành công khai (chưa hiện trên trang trong bản demo).
+
 ## Cách thêm ảnh
 
 1. Đặt tên file đúng **mã ô** (cột đầu tiên bên dưới), đuôi `.webp` (ưu tiên), `.avif`, `.jpg` hoặc `.png`.
@@ -37,7 +68,7 @@ Xem trước mọi ô (kể cả ô chưa có ảnh): mở trang chủ với `?a
 
 Ô chưa có ảnh khi chạy thật: áp phích ga quay về tranh SVG minh hoạ; các ô còn lại tự ẩn.
 
-## Danh sách ô ảnh (15 ô)
+## Danh sách ô ảnh (15 ô ban đầu; 22 ô thêm ở HB-326 xem bảng phía trên và `src/content/photo-slots-extra.ts`)
 
 ### Dải "Ba ga trên tuyến" (mỗi ga 3 ô)
 

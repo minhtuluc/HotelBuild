@@ -130,7 +130,17 @@ describe('thư viện ảnh', () => {
     expect(galleryEntry('chia-se')).toBeNull();
     expect(galleryEntry('ga-XX-poster')).toBeNull();
     expect(galleryEntries().map((entry) => entry.id)).not.toContain('chia-se');
-    expect(galleryEntries().length).toBe(14);
+    // HB-326: ảnh nhiều góc của hạng vào nhóm hạng; ảnh hoạt động vào nhóm cảnh theo ga; ảnh ăn uống không vào.
+    expect(galleryEntry('hang-STD-2')).toMatchObject({ group: 'class', href: '/room-types/STD' });
+    expect(galleryEntry('tn-pt-dunes')).toMatchObject({
+      group: 'view',
+      stationCode: 'PT',
+      href: '/stays/phan-thiet',
+    });
+    expect(galleryEntry('an-tea')).toBeNull();
+    expect(galleryEntry('tn-khong-co')).toBeNull();
+    // 9 ảnh ga + 5 ảnh hạng + 10 ảnh nhiều góc của hạng + 9 ảnh hoạt động.
+    expect(galleryEntries().length).toBe(33);
   });
 
   it('lọc theo ga bỏ ảnh hạng phòng; lọc theo nhóm; kết hợp hai bộ lọc', () => {
@@ -139,9 +149,14 @@ describe('thư viện ảnh', () => {
     expect(filterGallery(entries, 'DL', null).every((entry) => entry.stationCode === 'DL')).toBe(
       true,
     );
-    expect(filterGallery(entries, 'DL', null)).toHaveLength(3);
-    expect(filterGallery(entries, null, 'class')).toHaveLength(5);
+    expect(filterGallery(entries, 'DL', null)).toHaveLength(6);
+    expect(filterGallery(entries, null, 'class')).toHaveLength(15);
     expect(filterGallery(entries, 'PT', 'class')).toHaveLength(0);
-    expect(filterGallery(entries, 'VT', 'view').map((entry) => entry.id)).toEqual(['ga-VT-canh']);
+    expect(filterGallery(entries, 'VT', 'view').map((entry) => entry.id)).toEqual([
+      'ga-VT-canh',
+      'tn-vt-lighthouse',
+      'tn-vt-early-swim',
+      'tn-vt-small-mountain',
+    ]);
   });
 });

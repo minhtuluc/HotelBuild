@@ -5,6 +5,7 @@
 import { ALL_PHOTO_SLOTS } from './photo-slots';
 import { propertyPageByStation } from './property-pages';
 import { isRoomTypeCode } from './room-type-codes';
+import { EXPERIENCES } from './chain-pages';
 
 export type GalleryGroup = 'poster' | 'room' | 'view' | 'class';
 export const GALLERY_GROUPS: readonly GalleryGroup[] = ['poster', 'room', 'view', 'class'];
@@ -44,11 +45,28 @@ function stationEntry(id: string, code: string, suffix: string): GalleryEntry | 
   };
 }
 
+/** Ảnh hoạt động quanh ga (HB-326, `tn-<mã hoạt động>`): nhóm "Cảnh quanh ga", theo ga của hoạt động. */
+function experienceEntry(id: string): GalleryEntry | null {
+  const item = EXPERIENCES.find((experience) => `tn-${experience.id}` === id);
+  const page = item === undefined ? undefined : propertyPageByStation(item.stationCode);
+  if (item === undefined || page === undefined) return null;
+  return {
+    id,
+    group: 'view',
+    stationCode: item.stationCode,
+    classCode: null,
+    href: `/stays/${page.slug}`,
+    shape: null,
+  };
+}
+
 /** Một ô ảnh → mục thư viện; `null` nếu ô không thuộc thư viện. Thuần, để test. */
 export function galleryEntry(id: string): GalleryEntry | null {
   const station = /^ga-([A-Z]{2})-([a-z]+)$/.exec(id);
   if (station !== null) return stationEntry(id, station[1] ?? '', station[2] ?? '');
-  const code = /^hang-([A-Z]{3})$/.exec(id)?.[1] ?? '';
+  if (id.startsWith('tn-')) return experienceEntry(id);
+  // Ảnh chính của hạng và ảnh nhiều góc (HB-326: `hang-<MÃ>-2`, `hang-<MÃ>-3`).
+  const code = /^hang-([A-Z]{3})(?:-\d)?$/.exec(id)?.[1] ?? '';
   if (!isRoomTypeCode(code)) return null;
   return {
     id,

@@ -1,4 +1,19 @@
 {
+  "an-breakfast": {
+    "file": "an-breakfast.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "an-evening": {
+    "file": "an-evening.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "an-tea": {
+    "file": "an-tea.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
   "chia-se": {
     "file": "chia-se.webp",
     "width": 1200,
@@ -49,29 +64,124 @@
     "width": 1200,
     "variants": [640, 960]
   },
+  "hang-DLX-2": {
+    "file": "hang-DLX-2.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "hang-DLX-3": {
+    "file": "hang-DLX-3.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
   "hang-DLX": {
     "file": "hang-DLX.webp",
     "width": 800,
     "variants": [640]
+  },
+  "hang-DOR-2": {
+    "file": "hang-DOR-2.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "hang-DOR-3": {
+    "file": "hang-DOR-3.webp",
+    "width": 1200,
+    "variants": [640, 960]
   },
   "hang-DOR": {
     "file": "hang-DOR.webp",
     "width": 800,
     "variants": [640]
   },
+  "hang-FAM-2": {
+    "file": "hang-FAM-2.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "hang-FAM-3": {
+    "file": "hang-FAM-3.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
   "hang-FAM": {
     "file": "hang-FAM.webp",
     "width": 800,
     "variants": [640]
+  },
+  "hang-STD-2": {
+    "file": "hang-STD-2.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "hang-STD-3": {
+    "file": "hang-STD-3.webp",
+    "width": 1200,
+    "variants": [640, 960]
   },
   "hang-STD": {
     "file": "hang-STD.webp",
     "width": 800,
     "variants": [640]
   },
+  "hang-SUP-2": {
+    "file": "hang-SUP-2.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "hang-SUP-3": {
+    "file": "hang-SUP-3.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
   "hang-SUP": {
     "file": "hang-SUP.webp",
     "width": 800,
     "variants": [640]
+  },
+  "tn-dl-lake-ride": {
+    "file": "tn-dl-lake-ride.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "tn-dl-pine-walk": {
+    "file": "tn-dl-pine-walk.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "tn-dl-wild-sunflowers": {
+    "file": "tn-dl-wild-sunflowers.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "tn-pt-dunes": {
+    "file": "tn-pt-dunes.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "tn-pt-fishing-village": {
+    "file": "tn-pt-fishing-village.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "tn-pt-kitesurf": {
+    "file": "tn-pt-kitesurf.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "tn-vt-early-swim": {
+    "file": "tn-vt-early-swim.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "tn-vt-lighthouse": {
+    "file": "tn-vt-lighthouse.webp",
+    "width": 1200,
+    "variants": [640, 960]
+  },
+  "tn-vt-small-mountain": {
+    "file": "tn-vt-small-mountain.webp",
+    "width": 1200,
+    "variants": [640, 960]
   }
 }

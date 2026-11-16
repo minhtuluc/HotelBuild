@@ -305,3 +305,20 @@
     contain-intrinsic-block-size: auto 600px;
   }
 }
+
+/* HB-326: ảnh minh hoạ trong thẻ hoạt động (/experiences) và mục ăn uống (/dining): khung giấy ảnh 4:3. */
+@layer components {
+  .ph-experience-photo,
+  .ph-dining-photo {
+    border-radius: 3px;
+    box-shadow: 0 8px 18px rgb(18 22 20 / 0.16);
+  }
+
+  .ph-experience-photo {
+    margin-bottom: 6px;
+  }
+
+  .ph-dining-photo {
+    margin-bottom: 4px;
+  }
+}
