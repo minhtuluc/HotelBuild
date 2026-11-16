@@ -69,6 +69,28 @@ function operationView(row: OperationRow): BackupOperation | null {
   };
 }
 
+/** `pg_stat_archiver` → hợp đồng; vắng dòng (không thể với PostgreSQL thật) thì coi như chưa archive gì. */
+const NO_ARCHIVE: ArchiverRow = {
+  archived_count: 0n,
+  failed_count: 0n,
+  last_archived_time: null,
+  last_failed_time: null,
+};
+
+function archiveView(row: ArchiverRow, now: Date) {
+  const last = row.last_archived_time;
+  return {
+    archive: {
+      archivedCount: Number(row.archived_count),
+      failedCount: Number(row.failed_count),
+      lastArchivedAt: last?.toISOString() ?? null,
+      lastFailedAt: row.last_failed_time?.toISOString() ?? null,
+    },
+    secondsSinceLastArchive:
+      last === null ? null : Math.max(0, Math.floor((now.getTime() - last.getTime()) / 1000)),
+  };
+}
+
 /** `uq_operations_backup_active` vi phạm ⇒ hai lệnh lọt kiểm tra cùng lúc; trả đúng 409 như kiểm tra. */
 function activeViolation(error: unknown): boolean {
   return (
@@ -87,26 +109,16 @@ export class BackupService {
 
   async status(): Promise<BackupStatus> {
     const catalog = await this.db.backup_catalog.findUnique({ where: { id: 1 } });
-    const [archiver] = await this.db.$queryRaw<ArchiverRow[]>`
+    const [archiver = NO_ARCHIVE] = await this.db.$queryRaw<ArchiverRow[]>`
       SELECT archived_count, failed_count, last_archived_time, last_failed_time FROM pg_stat_archiver`;
     const rows = await this.db.$queryRaw<OperationRow[]>`
       SELECT id, kind, status, payload_json, result_json, error_code, created_at, started_at, finished_at
         FROM operations WHERE kind IN ('BACKUP','RESTORE_DRILL')
        ORDER BY created_at DESC, id DESC LIMIT 20`;
-    const lastArchived = archiver?.last_archived_time ?? null;
     return {
       catalogRefreshedAt: catalog?.refreshed_at.toISOString() ?? null,
       backups: backupSets(catalog?.info_json ?? []),
-      archive: {
-        archivedCount: Number(archiver?.archived_count ?? 0n),
-        failedCount: Number(archiver?.failed_count ?? 0n),
-        lastArchivedAt: lastArchived?.toISOString() ?? null,
-        lastFailedAt: archiver?.last_failed_time?.toISOString() ?? null,
-      },
-      secondsSinceLastArchive:
-        lastArchived === null
-          ? null
-          : Math.max(0, Math.floor((this.clock.now().getTime() - lastArchived.getTime()) / 1000)),
+      ...archiveView(archiver, this.clock.now()),
       operations: rows.map(operationView).filter((row) => row !== null),
     };
   }
