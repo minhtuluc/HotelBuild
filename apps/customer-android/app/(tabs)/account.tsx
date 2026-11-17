@@ -10,6 +10,8 @@ import { useCallback, useEffect, useMemo, useState, type ReactElement } from 're
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { color, space, formatDateTimeVn } from '@pinehill/ui-native';
 import type { GuestLoyalty, GuestSummary } from '@pinehill/contracts';
+import { useFocusEffect } from 'expo-router';
+import { LoginPrompt } from '../../src/login-prompt';
 import { createSession } from '../../src/session-factory';
 import { netInfoSource } from '../../src/netinfo-device.native';
 import { t, type MessageKey } from '../../src/strings';
@@ -201,18 +203,22 @@ export default function AccountScreen(): ReactElement {
   const [outcome, setOutcome] = useState<ProfileOutcome | null>(null);
   const [busy, setBusy] = useState(false);
   const [alert, setAlert] = useState<string | null>(null);
+  const [signedIn, setSignedIn] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    void session.silentRefresh().then((ok) => {
-      if (cancelled) return;
-      setReady(true);
-      if (!ok) setAlert(t('profile.signedOut'));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [session]);
+  // HB-249: kiểm lại phiên mỗi lần mở tab — khách có thể vừa đăng nhập ở màn `/login` rồi quay về.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void session.silentRefresh().then((ok) => {
+        if (cancelled) return;
+        setSignedIn(ok);
+        setReady(true);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [session]),
+  );
 
   const load = useCallback(async (): Promise<void> => {
     setBusy(true);
@@ -222,9 +228,9 @@ export default function AccountScreen(): ReactElement {
   }, [net, session]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !signedIn) return;
     void load();
-  }, [load, ready]);
+  }, [load, ready, signedIn]);
 
   if (!ready)
     return (
@@ -245,14 +251,29 @@ export default function AccountScreen(): ReactElement {
       <Text accessibilityRole="header" style={theme.title}>
         {t('profile.title')}
       </Text>
-      <ProfileBody
-        outcome={outcome}
-        alert={alert}
-        busy={busy}
-        onReload={() => {
-          void load();
-        }}
-      />
+      {signedIn ? (
+        <>
+          <ProfileBody
+            outcome={outcome}
+            alert={alert}
+            busy={busy}
+            onReload={() => {
+              void load();
+            }}
+          />
+          <Pressable
+            testID="logout"
+            accessibilityRole="button"
+            accessibilityLabel={t('home.logout')}
+            onPress={() => void session.logout().then(() => setSignedIn(false))}
+            style={theme.buttonSecondary}
+          >
+            <Text style={{ color: color.danger, fontWeight: '500' }}>{t('home.logout')}</Text>
+          </Pressable>
+        </>
+      ) : (
+        <LoginPrompt hint="account.loginHint" />
+      )}
       <Text style={{ color: color.textMuted }} data-testid="profile-cut">
         {t('profile.cut')}
       </Text>

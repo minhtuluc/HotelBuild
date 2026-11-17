@@ -39,6 +39,7 @@ vi.mock('expo-router', () => ({
   Link: 'Link',
   useLocalSearchParams: () => ({ code: 'SYN079' }),
   useRouter: () => ({ push: (route: unknown) => runtime.routes.push(route) }),
+  useFocusEffect: () => undefined,
 }));
 vi.mock('expo-crypto', () => ({ randomUUID: () => '00000000-0000-4000-8000-000000000001' }));
 vi.mock('expo-secure-store', () => ({
@@ -111,7 +112,8 @@ test.each(['ready', 'offline'] as const)(
             cached: [booking],
             cachedAt: '2026-12-01T00:00:00Z',
           };
-    runtime.hooks.push(true, outcome, '', false);
+    // ready, outcome, query, busy, signedIn (HB-249)
+    runtime.hooks.push(true, outcome, '', false, true);
     const nodes = elements(BookingsScreen());
     expect(
       nodes.filter((node) => node.type === 'Text').map((node) => textOf(node.props.children)),

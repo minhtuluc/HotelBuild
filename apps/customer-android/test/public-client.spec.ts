@@ -31,6 +31,19 @@ const AVAILABILITY = {
   meta: { limit: 20, nextCursor: null, hasMore: false },
 };
 
+const PROPERTIES = {
+  data: [
+    {
+      id: 'p1',
+      name: 'Pine Hill Đà Lạt',
+      slug: 'da-lat',
+      checkInTime: '14:00',
+      checkOutTime: '12:00',
+    },
+  ],
+  meta: { limit: 20, nextCursor: null, hasMore: false, total: 1 },
+};
+
 const QUOTE = {
   quoteId: 'q1',
   channelCode: 'WEB',
@@ -62,6 +75,14 @@ const QUOTE = {
   expiresAt: '2026-09-19T03:27:44Z',
 };
 
+function responseFor(path: string): unknown {
+  if (path.endsWith('/public/properties')) return PROPERTIES;
+  if (path.endsWith('/quotes')) return QUOTE;
+  if (path.endsWith('/rate-plans'))
+    return { data: [], meta: { limit: 20, nextCursor: null, hasMore: false, total: 0 } };
+  return AVAILABILITY;
+}
+
 function harness(): { api: PublicJourneyApi; calls: Captured[] } {
   const calls: Captured[] = [];
   const fetchImpl: typeof fetch = async (input, init) => {
@@ -79,12 +100,7 @@ function harness(): { api: PublicJourneyApi; calls: Captured[] } {
             : Object.entries(raw);
     for (const [key, value] of entries) headers[key] = String(value);
     calls.push({ url, headers });
-    const path = new URL(url).pathname;
-    const body = path.endsWith('/quotes')
-      ? QUOTE
-      : path.endsWith('/rate-plans')
-        ? { data: [], meta: { limit: 20, nextCursor: null, hasMore: false, total: 0 } }
-        : AVAILABILITY;
+    const body = responseFor(new URL(url).pathname);
     return new Response(JSON.stringify(body), {
       status: 200,
       headers: { 'content-type': 'application/json' },
@@ -100,6 +116,16 @@ function harness(): { api: PublicJourneyApi; calls: Captured[] } {
 }
 
 describe('createPublicJourneyApi', () => {
+  it('HB-249: danh sách cơ sở công khai đọc GET /public/properties, không gửi Authorization', async () => {
+    const { api, calls } = harness();
+    const result = await api.listProperties();
+    expect(result.map((property) => [property.id, property.name])).toEqual([
+      ['p1', 'Pine Hill Đà Lạt'],
+    ]);
+    expect(new URL(calls[0]?.url ?? '').pathname).toBe('/api/v1/public/properties');
+    expect(calls[0]?.headers.authorization).toBeUndefined();
+  });
+
   it('tìm phòng công khai không gửi Authorization và không gửi Idempotency-Key', async () => {
     const { api, calls } = harness();
     const result = await api.availability({

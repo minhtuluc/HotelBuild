@@ -16,6 +16,10 @@ export default function JourneyTabs(): ReactElement {
         tabBarStyle: { backgroundColor: color.surface, borderTopColor: color.border },
         tabBarActiveTintColor: color.primary,
         tabBarInactiveTintColor: color.textMuted,
+        // HB-249: chưa có bộ icon; ẩn ô icon để không hiện ký tự thay thế, nhãn chữ đủ rõ.
+        tabBarIconStyle: { display: 'none' },
+        tabBarLabelStyle: { fontSize: 15, fontWeight: '600' },
+        tabBarLabelPosition: 'beside-icon',
       }}
     >
       <Tabs.Screen name="search" options={{ title: t('nav.search') }} />

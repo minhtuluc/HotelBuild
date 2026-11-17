@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { color, radius, space, touchTargetDp, formatDateTimeVn } from '@pinehill/ui-native';
 import type { Quote, RatePlanCode, RatePlanPublic } from '@pinehill/contracts';
 import { createAppApiClient } from '../../src/api';
@@ -15,6 +15,7 @@ import { createPublicJourneyApi } from '../../src/public-client';
 import { netInfoSource } from '../../src/netinfo-device.native';
 import { t } from '../../src/strings';
 import { formatVnd } from '../../src/search';
+import { useStableSearchParams } from '../../src/stable-params';
 import { theme } from '../../src/theme';
 import {
   criteriaFromParams,
@@ -282,7 +283,7 @@ function RoomView({
 }
 
 export default function RoomDetailScreen(): ReactElement {
-  const params = useLocalSearchParams<Record<string, string>>();
+  const params = useStableSearchParams();
   const router = useRouter();
   const criteria: RoomCriteria | null = useMemo(() => criteriaFromParams(params), [params]);
   const roomName =

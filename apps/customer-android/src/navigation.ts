@@ -3,6 +3,8 @@
  * Deep link theo scheme thật của app (`app.json` → `pinehill-customer://booking/<code>`);
  * đặc tả HB-084 ghi `pinehill://` chỉ là minh hoạ — dùng scheme thật để không vỡ universal link.
  */
+import type { catalog } from './strings';
+
 export const APP_SCHEME = 'pinehill-customer';
 
 /** Các tab chính của journey khách: tìm phòng / đơn của tôi / tài khoản. */
@@ -38,3 +40,27 @@ export function resolveTab(value: string): JourneyTab {
   }
   return 'search';
 }
+
+/** HB-249: app mở thẳng vào tìm phòng (xem phòng không cần tài khoản); đăng nhập là một màn riêng. */
+export const START_ROUTE = '/search';
+export const LOGIN_ROUTE = '/login';
+
+/**
+ * Tiêu đề header của từng route (khoá catalog), để header không hiện tên file như `index` hay `(tabs)`.
+ * Route trong nhóm `(tabs)` ghi không kèm tên nhóm.
+ */
+export const SCREEN_TITLES: Readonly<Record<string, keyof typeof catalog>> = {
+  index: 'home.title',
+  login: 'guest.title',
+  search: 'journey.search.title',
+  bookings: 'journey.bookings.title',
+  account: 'journey.account.title',
+  'room/[roomTypeId]': 'screen.room',
+  'booking/confirm': 'hold.title',
+  'booking/[code]': 'orders.detail.title',
+  'booking/[code]/cancel': 'booking.cancel.title',
+  'booking/[code]/reschedule': 'booking.reschedule.title',
+  'payment/[bookingId]': 'screen.payment',
+  'access-denied': 'screen.accessDenied',
+  '+not-found': 'screen.notFound',
+};

@@ -1,0 +1,171 @@
+/**
+ * Màn hình đăng nhập/đăng ký/khôi phục phiên cho khách (SCR-71). HB-249: là route riêng `/login`, mở từ
+ * tab Tài khoản, Đơn của tôi hoặc bước xác nhận đặt phòng; xong thì quay lại màn đã mở nó.
+ */
+import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { color, waitMessage } from '@pinehill/ui-native';
+import { isApiError } from '@pinehill/api-client';
+import { START_ROUTE } from '../src/navigation';
+import { createSession } from '../src/session-factory';
+import { Session } from '../src/session';
+import { t } from '../src/strings';
+import { theme } from '../src/theme';
+
+export default function LoginScreen(): ReactElement {
+  const router = useRouter();
+  const session = useMemo(createSession, []);
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [phone, setPhone] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [password, setPassword] = useState('');
+  const [booted, setBooted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  function leave(): void {
+    if (router.canGoBack()) router.back();
+    else router.replace(START_ROUTE);
+  }
+
+  useEffect(() => {
+    void (async () => {
+      if (await session.silentRefresh().catch(() => false)) leave();
+      else setBooted(true);
+    })();
+  }, [session]);
+
+  function mapError(cause: unknown): string {
+    if (!isApiError(cause)) return t('guest.error', { code: 'UNKNOWN' });
+    if (cause.knownCode === 'E_AUTH_PHONE_REGISTERED') return t('guest.phoneRegistered');
+    const code = cause.code ?? 'UNKNOWN';
+    if (cause.knownCode === 'E_AUTH_ACCOUNT_LOCKED' || cause.knownCode === 'E_GEN_RATE_LIMITED') {
+      return waitMessage(code, cause.retryAfterSeconds ?? 900) ?? t('guest.error', { code });
+    }
+    return t('guest.error', { code });
+  }
+
+  async function submit(): Promise<void> {
+    setBusy(true);
+    setError(null);
+    try {
+      if (mode === 'register') {
+        await session.register({
+          phone,
+          fullName,
+          password,
+          consentMarketing: true,
+          consentVersion: '2026-10',
+        });
+      } else {
+        await session.login(phone, password);
+      }
+      leave();
+    } catch (cause) {
+      if (Session.isOffline(cause)) setError(t('guest.offline'));
+      else setError(mapError(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function forgot(): Promise<void> {
+    setBusy(true);
+    setError(null);
+    try {
+      await session.passwordResetRequest(phone);
+      setError(t('guest.forgot.sent'));
+    } catch (cause) {
+      if (Session.isOffline(cause)) setError(t('guest.offline'));
+      else setError(mapError(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!booted) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: color.bg,
+        }}
+      >
+        <ActivityIndicator accessibilityLabel={t('session.restoring')} color={color.primary} />
+      </View>
+    );
+  }
+  return (
+    <View style={theme.screen}>
+      <Text style={theme.title}>{t('guest.title')}</Text>
+      <TextInput
+        testID="phone"
+        accessibilityLabel={t('guest.phone')}
+        placeholder={t('guest.phone')}
+        value={phone}
+        onChangeText={setPhone}
+        keyboardType="phone-pad"
+        style={theme.field}
+      />
+      {mode === 'register' ? (
+        <TextInput
+          testID="fullname"
+          accessibilityLabel={t('guest.fullName')}
+          placeholder={t('guest.fullName')}
+          value={fullName}
+          onChangeText={setFullName}
+          style={theme.field}
+        />
+      ) : null}
+      <TextInput
+        testID="password"
+        accessibilityLabel={t('guest.password')}
+        placeholder={t('guest.password')}
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        style={theme.field}
+      />
+      {error === null ? null : (
+        <Text accessibilityLiveRegion="polite" style={theme.alertDanger}>
+          {error}
+        </Text>
+      )}
+      <Pressable
+        testID="submit"
+        accessibilityRole="button"
+        accessibilityLabel={mode === 'login' ? t('guest.login') : t('guest.register')}
+        disabled={busy}
+        onPress={() => void submit()}
+        style={theme.buttonPrimary}
+      >
+        <Text style={theme.buttonPrimaryText}>
+          {busy ? t('state.loading') : mode === 'login' ? t('guest.login') : t('guest.register')}
+        </Text>
+      </Pressable>
+      <Pressable
+        testID="toggle-mode"
+        accessibilityRole="button"
+        accessibilityLabel={mode === 'login' ? t('guest.register') : t('guest.login')}
+        onPress={() => setMode(mode === 'login' ? 'register' : 'login')}
+        style={theme.buttonPlain}
+      >
+        <Text style={theme.buttonPlainText}>
+          {mode === 'login' ? t('guest.register') : t('guest.login')}
+        </Text>
+      </Pressable>
+      <Pressable
+        testID="forgot"
+        accessibilityRole="button"
+        accessibilityLabel={t('guest.forgot')}
+        onPress={() => void forgot()}
+        style={theme.buttonPlain}
+      >
+        <Text style={theme.buttonPlainText}>{t('guest.forgot')}</Text>
+      </Pressable>
+    </View>
+  );
+}
