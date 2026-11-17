@@ -1,8 +1,8 @@
 import { randomUUID } from 'expo-crypto';
 import type { UserMe } from '@pinehill/contracts';
 import type { Session } from '../session';
-import { secureStorage } from '../storage.native';
-import { netInfoSource } from '../netinfo.native';
+import { secureStorage } from '../storage-device.native';
+import { netInfoSource } from '../netinfo-device.native';
 import { OfflineQueue } from './queue';
 import { offlineContext, offlinePorts } from './ports';
 

@@ -11,7 +11,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 import { color, space, formatDateTimeVn } from '@pinehill/ui-native';
 import type { GuestLoyalty, GuestSummary } from '@pinehill/contracts';
 import { createSession } from '../../src/session-factory';
-import { netInfoSource } from '../../src/netinfo.native';
+import { netInfoSource } from '../../src/netinfo-device.native';
 import { t, type MessageKey } from '../../src/strings';
 import { theme } from '../../src/theme';
 import {

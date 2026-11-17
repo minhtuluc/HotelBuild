@@ -1,4 +1,4 @@
-/** Giao diện lưu trữ bảo mật — thuần để test chạy trên Node; bản thật ở `storage.native.ts`. */
+/** Giao diện lưu trữ bảo mật — thuần để test chạy trên Node; bản thật ở `storage-device.native.ts`. */
 export interface KeyValueStorage {
   get(key: string): Promise<string | null>;
   set(key: string, value: string): Promise<void>;
