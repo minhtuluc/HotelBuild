@@ -5,11 +5,13 @@ import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import { PRISMA } from '../../../infrastructure/prisma/prisma.module.js';
 import { CLOCK } from '../../../infrastructure/ports.js';
 import { GuestsController } from './controller.js';
+import { GuestsMeController } from './me.controller.js';
 import { guestsPermissions } from './permissions.js';
 import { GuestsService } from './service.js';
 
 @Module({
-  controllers: [GuestsController],
+  // `GuestsMeController` trước: đường tĩnh `guests/me` không bị hiểu thành `guests/:guestId`.
+  controllers: [GuestsMeController, GuestsController],
   providers: [
     guestsPermissions,
     {

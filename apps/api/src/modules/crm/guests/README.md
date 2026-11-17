@@ -36,6 +36,14 @@ E_BOOK_BLACKLISTED` (BR-CRM-04). HB-151 (walk-in) và HB-144 (check-in) **phải
    transaction của mình; hiện chưa có tuyến nào trong kho gọi (hai ticket đó còn mở), nên hành vi chặn
    end-to-end chỉ kiểm được ở mức guard.
 
+## Hồ sơ của chính khách (HB-250)
+
+`GET /guests/me` (`guestSummarySchema`) và `GET /guests/me/loyalty` (`guestLoyaltySchema`) cho **phiên khách**
+(web/Android). Tuyến `@Public`: chủ thể lấy từ phiên đã kiểm bằng `bookingCaller` (chữ ký + `auth_sessions` còn sống),
+`guestId` không bao giờ nhận từ client. Phiên nhân viên → `403 E_RBAC_FORBIDDEN`; thiếu/sai/hết phiên → `401`;
+hồ sơ đã ẩn danh hoá → `404`. Số liệu loyalty dùng chung phép tính với `GET /guests/{guestId}/loyalty`.
+Controller riêng `me.controller.ts` đăng ký trước `GuestsController` để `me` không bị hiểu thành `{guestId}`.
+
 ## Quản trị hồ sơ (HB-166)
 
 | Tuyến                                | Permission      | Vai trò                                       | Mã thành công                | Audit                      |

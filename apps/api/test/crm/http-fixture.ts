@@ -6,8 +6,10 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import { Redis } from 'ioredis';
 import request from 'supertest';
 import { z } from 'zod';
-import { tokenPairSchema } from '@pinehill/contracts';
+import { tokenPairSchema, type AccessTokenClaims } from '@pinehill/contracts';
 import { AppModule } from '../../src/app.module.js';
+import { signAccessToken } from '../../src/infrastructure/crypto/access-tokens.js';
+import { openGuestSession } from '../support/guest-session.js';
 import { CLOCK } from '../../src/infrastructure/ports.js';
 import {
   databaseUrl,
@@ -20,6 +22,10 @@ import {
 } from '../idempotency/database.js';
 
 let app: NestFastifyApplication, redis: Redis;
+/** HB-250: giữ bí mật ký access token để fixture ký được token phiên khách (`guestTokenFor`). */
+const accessSecret = randomBytes(32).toString('hex');
+/** Vai trò phiên khách nằm ngoài `userRoleSchema`; lấy qua zod thay vì `as` (QT §2). */
+const GUEST_ROLE = z.custom<AccessTokenClaims['role']>((value) => value === 'GUEST').parse('GUEST');
 
 export const http = () => request(app.getHttpServer());
 export { db, rows, clock, userId, propertyId, otherPropertyId } from '../idempotency/database.js';
@@ -58,6 +64,17 @@ export async function login(role = 'FRONT_DESK'): Promise<string> {
     .send({ username: 'h029-first', password });
   expect(response.status).toBe(200);
   return tokenPairSchema.parse(response.body).accessToken;
+}
+
+/** HB-250: token phiên khách thật (dòng `auth_sessions` + chữ ký) cho một `guests.id` đã có. */
+export async function guestTokenFor(guestId: string): Promise<string> {
+  const sessionId = await openGuestSession(rows, guestId, 'GUEST_ANDROID');
+  const { token } = await signAccessToken(
+    { userId: guestId, role: GUEST_ROLE, propertyScope: [], sessionId },
+    accessSecret,
+    clock.now(),
+  );
+  return token;
 }
 
 /** Ba tuyến quản trị của HB-166; thao tác ghi mang `Idempotency-Key` như mọi lệnh ghi khác (api.md §3). */
@@ -291,7 +308,7 @@ beforeAll(async () => {
   const module = AppModule.register({
     DATABASE_URL: databaseUrl,
     REDIS_URL: url.href,
-    JWT_ACCESS_SECRET: randomBytes(32).toString('hex'),
+    JWT_ACCESS_SECRET: accessSecret,
     JWT_REFRESH_SECRET: randomBytes(32).toString('hex'),
     BUSINESS_TIMEZONE: 'Asia/Ho_Chi_Minh',
     IDEMPOTENCY_TTL_HOURS: 24,
