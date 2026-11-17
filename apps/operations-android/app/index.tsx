@@ -50,7 +50,6 @@ export default function RootScreen(): ReactElement {
   const [collecting, setCollecting] = useState<BookingSummary | null>(null);
   const [walkInFromArrivals, setWalkInFromArrivals] = useState(false);
   const [stage, setStage] = useState<Stage>('boot');
-  const [currentPassword, setCurrentPassword] = useState('');
   const [profile, setProfile] = useState<UserMe | null>(null);
 
   /** Chọn bước kế tiếp theo hồ sơ phiên (`/auth/me`): đổi mật khẩu → PIN → cơ sở → màn chính. */
@@ -180,23 +179,11 @@ export default function RootScreen(): ReactElement {
   }
   if (stage === 'changePassword') {
     return (
-      <ChangePasswordScreen
-        session={session}
-        onDone={(password) => {
-          setCurrentPassword(password);
-          void session.profile().then(advance);
-        }}
-      />
+      <ChangePasswordScreen session={session} onDone={() => void session.profile().then(advance)} />
     );
   }
   if (stage === 'pinSetup') {
-    return (
-      <PinSetupScreen
-        session={session}
-        currentPassword={currentPassword}
-        onDone={() => void session.profile().then(advance)}
-      />
-    );
+    return <PinSetupScreen session={session} onDone={() => void session.profile().then(advance)} />;
   }
   if (stage === 'selectProperty') {
     return (

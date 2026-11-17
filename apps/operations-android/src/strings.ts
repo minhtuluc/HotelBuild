@@ -19,6 +19,7 @@ export const catalog = {
   'pin.setup.hint': 'Nhập PIN 6 số hai lần để xác nhận.',
   'pin.setup.entry': 'PIN lần {number}',
   'pin.setup.mismatch': 'Hai lần nhập không khớp.',
+  'pin.setup.passwordRequired': 'Nhập mật khẩu hiện tại để đặt PIN.',
   'pin.prompt': 'Nhập PIN để mở khoá',
   'pin.locked': 'PIN tạm khoá.',
   'property.select': 'Chọn cơ sở đang làm việc',
