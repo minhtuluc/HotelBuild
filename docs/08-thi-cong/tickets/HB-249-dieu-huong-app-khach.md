@@ -22,8 +22,8 @@ unlock:
 1. Đăng nhập xong, màn chính chỉ có nút **Đăng xuất**. Các tab Tìm phòng / Đơn của tôi / Tài khoản không có đường vào (chỉ mở được bằng deep link). Khách cũng phải đăng nhập trước khi được xem phòng.
 2. Ô "Cơ sở (mã)" bắt khách gõ mã như `CS-01`, nhưng `GET /inventory/availability` cần id cơ sở, nên tìm phòng luôn trả `E_GEN_VALIDATION_FAILED`.
 3. Header hiện tên file route (`index`, `(tabs)`); tab hiện ký tự `⏷` thay cho icon.
-5. Giữ chỗ luôn bị 409 `E_RATE_QUOTE_MISMATCH`: báo giá ở màn chi tiết phòng lấy bằng client công khai (chủ thể ẩn danh), còn giữ chỗ gửi token của khách. API chỉ cho chính chủ thể tiêu thụ báo giá. Bản web đã xin lại giá trong phiên ở màn xác nhận. Kèm theo: `submit` thiếu `hold` trong dependency nên thử lại sau lỗi đặt phòng có thể giữ chỗ lần hai.
 4. Mở "Chi tiết & giá" làm app treo: `useLocalSearchParams()` trả object mới mỗi lần render. Màn chi tiết phòng dùng nó làm dependency nên `load` → `setState` → render → `load`… Hơn 7.000 request `rate-plans`/`quotes` trong vài phút, luồng JS chạy 93% CPU. Màn xác nhận giữ chỗ có cùng mẫu.
+5. Giữ chỗ luôn bị 409 `E_RATE_QUOTE_MISMATCH`: báo giá ở màn chi tiết phòng lấy bằng client công khai (chủ thể ẩn danh), còn giữ chỗ gửi token của khách. API chỉ cho chính chủ thể tiêu thụ báo giá. Bản web đã xin lại giá trong phiên ở màn xác nhận. Kèm theo: `submit` thiếu `hold` trong dependency nên thử lại sau lỗi đặt phòng có thể giữ chỗ lần hai.
 
 ## Thay đổi
 
@@ -39,8 +39,8 @@ unlock:
 2. Danh sách cơ sở đọc `GET /public/properties` không gửi `Authorization` — test: `test/public-client.spec.ts`
 3. Chọn cơ sở mặc định/giữ lựa chọn — test: `test/properties.spec.ts`
 4. Khoá tham số theo nội dung; không màn nào dùng tham số thô làm dependency — test: `test/stable-params.spec.ts`
-6. Giữ chỗ xin lại báo giá trong phiên và dùng mã mới — test: `test/hold.spec.ts`
-5. Máy thật: mở app vào Tìm phòng → chọn cơ sở theo tên → có kết quả → mở chi tiết phòng (2 request, không lặp) → giữ chỗ & đặt phòng tạo booking → Đăng xuất ở tab Tài khoản → lời nhắc đăng nhập → đăng nhập → quay lại tab Đơn của tôi thấy booking.
+5. Giữ chỗ xin lại báo giá trong phiên và dùng mã mới — test: `test/hold.spec.ts`
+6. Máy thật: mở app vào Tìm phòng → chọn cơ sở theo tên → có kết quả → mở chi tiết phòng (2 request, không lặp) → giữ chỗ & đặt phòng tạo booking → Đăng xuất ở tab Tài khoản → lời nhắc đăng nhập → đăng nhập → quay lại tab Đơn của tôi thấy booking.
 
 ## Ngoài phạm vi
 
