@@ -120,6 +120,8 @@ export type ActionFailure =
       readonly code: string;
       readonly status: number | null;
       readonly reason: string;
+      /** HB-251: mã lý do máy chủ gửi trong `details` (vd. `UNITS_NOT_READY`); `null` nếu không có. */
+      readonly reasonCode: string | null;
     }
   | { readonly kind: 'conflict' }
   | { readonly kind: 'forbidden' }
@@ -137,7 +139,13 @@ function rejected(caught: ApiError): ActionFailure {
     code: caught.code ?? String(caught.status ?? 'UNKNOWN'),
     status: caught.status ?? null,
     reason: caught.message,
+    reasonCode: caught.details?.find((detail) => detail.field === 'reason')?.issue ?? null,
   };
+}
+
+/** HB-251: nhận phòng bị từ chối vì phòng chưa có bằng chứng sẵn sàng → đề nghị ghi biên bản đã kiểm (BR-FO-07). */
+export function needsInspection(failure: ActionFailure): boolean {
+  return failure.kind === 'rejected' && failure.reasonCode === 'UNITS_NOT_READY';
 }
 
 function versionConflict(caught: ApiError): boolean {

@@ -33,7 +33,11 @@ export function refused(failure: CheckInFailure): AppError {
       'E_FO_CHECKIN_NOT_ALLOWED',
       'Dữ kiện đặt phòng không đủ để quyết định nhận phòng.',
     );
-  return new AppError(409, 'E_FO_CHECKIN_NOT_ALLOWED', reasonMessage[failure.reason]!);
+  // HB-251: mã lý do cho máy đọc (an toàn, không PII) để app đề nghị đúng bước kế tiếp, vd. ghi biên bản
+  // đã kiểm phòng khi `UNITS_NOT_READY` (BR-FO-07).
+  return new AppError(409, 'E_FO_CHECKIN_NOT_ALLOWED', reasonMessage[failure.reason]!, undefined, [
+    { field: 'reason', issue: failure.reason },
+  ]);
 }
 
 /** Từ chối vì trạng thái dữ liệu tải sau khoá (phòng khác loại, đã bị chiếm…). */

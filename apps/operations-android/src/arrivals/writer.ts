@@ -5,12 +5,22 @@
  * (design §8.1). Khoá chỉ nằm trong RAM: sau khi khởi động lại, lễ tân tải lại danh sách và đối soát
  * (booking đã CHECKED_IN thì không còn trong danh sách đến); máy chủ từ chối lần nhận phòng thứ hai.
  */
-import type { CheckInResponse } from '@pinehill/contracts';
+import type { CheckInResponse, HousekeepingTaskCreateRequest } from '@pinehill/contracts';
 import { actionFailure, type ActionFailure, type CheckInBody } from './model';
+
+/** HB-251: biên bản đã kiểm phòng (`POST /housekeeping/tasks`, `status: INSPECTED`). */
+export type InspectionBody = HousekeepingTaskCreateRequest & { readonly status: 'INSPECTED' };
+
+export type InspectionOutcome =
+  | { readonly kind: 'done' }
+  | { readonly kind: 'offline' }
+  | { readonly kind: 'failed'; readonly failure: ActionFailure };
 
 export interface CheckInPorts {
   online(): Promise<boolean>;
   send(body: CheckInBody, idempotencyKey: string): Promise<CheckInResponse>;
+  /** Thiếu cổng này thì màn không đề nghị ghi biên bản (vd. bộ lắp test chỉ cần nhận phòng). */
+  inspect?(body: InspectionBody, idempotencyKey: string): Promise<void>;
   createId(): string;
 }
 
@@ -27,9 +37,14 @@ interface Pending {
 
 export class CheckInWriter {
   private pending: Pending | null = null;
+  private pendingInspection: Pending | null = null;
   private inFlight: Promise<SubmitOutcome> | null = null;
   private closed = false;
   constructor(private readonly ports: CheckInPorts) {}
+
+  get canInspect(): boolean {
+    return this.ports.inspect !== undefined;
+  }
 
   get hasPending(): boolean {
     return this.pending !== null;
@@ -53,6 +68,31 @@ export class CheckInWriter {
     });
     this.inFlight = running;
     return running;
+  }
+
+  /**
+   * HB-251 — ghi biên bản đã kiểm phòng, cùng quy tắc với nhận phòng: chỉ gửi khi có mạng, giữ khoá
+   * `Idempotency-Key` khi kết quả chưa chắc để lần thử lại không tạo biên bản thứ hai.
+   */
+  async recordInspection(body: InspectionBody): Promise<InspectionOutcome> {
+    const inspect = this.ports.inspect;
+    if (inspect === undefined) return { kind: 'failed', failure: { kind: 'forbidden' } };
+    if (!(await this.online())) return { kind: 'offline' };
+    const fingerprint = JSON.stringify(body);
+    const key =
+      this.pendingInspection?.fingerprint === fingerprint
+        ? this.pendingInspection.key
+        : this.ports.createId();
+    this.pendingInspection = { fingerprint, key };
+    try {
+      await inspect.call(this.ports, body, key);
+      this.pendingInspection = null;
+      return { kind: 'done' };
+    } catch (caught) {
+      const failure = actionFailure(caught);
+      if (failure.kind !== 'unknownOutcome') this.pendingInspection = null;
+      return { kind: 'failed', failure };
+    }
   }
 
   private async online(): Promise<boolean> {

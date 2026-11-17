@@ -1,6 +1,8 @@
 /** Nối SCR-57/58 với tuyến đọc/ghi có sẵn qua `@pinehill/api-client` (không thêm endpoint). */
 import { createBookingApi, createGuestApi } from '@pinehill/api-client';
 import {
+  housekeepingTaskCreateRequestSchema,
+  housekeepingTaskSchema,
   checkInRequestSchema,
   checkInResponseSchema,
   listResponseSchema,
@@ -11,6 +13,7 @@ import {
 import type { Session } from '../session';
 import type { CheckInBody } from './model';
 import type { ArrivalsPorts } from './reader';
+import type { InspectionBody } from './writer';
 
 export function arrivalsPorts(session: Session): ArrivalsPorts {
   return {
@@ -42,6 +45,21 @@ export async function sendCheckIn(
     decoder: checkInResponseSchema,
   });
   return response.data;
+}
+
+/** HB-251: biên bản đã kiểm phòng (BR-FO-07) — client ghim phiên hiện tại, một lần gửi, khoá do writer giữ. */
+export async function sendInspection(
+  session: Session,
+  body: InspectionBody,
+  idempotencyKey: string,
+): Promise<void> {
+  await session.resourceClient().request({
+    method: 'POST',
+    path: '/housekeeping/tasks',
+    body: housekeepingTaskCreateRequestSchema.parse(body),
+    idempotencyKey,
+    decoder: housekeepingTaskSchema,
+  });
 }
 
 /** Hồ sơ khách theo id (HB-208) cho tên trên thẻ SCR-57; client ghim phiên hiện tại, một lần gửi. */
