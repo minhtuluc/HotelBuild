@@ -75,14 +75,14 @@ interface Wire {
   guest: (id: string) => Response;
 }
 
-const guestOk = (id: string) =>
+const guestOk = (id: string, loyaltyTier = 'GUEST', loyaltyPoints = 0) =>
   Response.json({
     id,
     fullName: 'Nguyễn Văn An',
     phone: '+84912345678',
     email: 'an@example.com',
-    loyaltyTier: 'GUEST',
-    loyaltyPoints: 0,
+    loyaltyTier,
+    loyaltyPoints,
     totalStays: 0,
     blacklisted: false,
     consentMarketing: false,
@@ -168,11 +168,25 @@ test('cards show the guest name read by id, one request per distinct guest, and 
   expect(textOf()).not.toContain('an@example.com');
 });
 
+test('TD-34: cards show the loyalty tier returned by the server, never the points', async () => {
+  const wire: Wire = {
+    guestReads: [],
+    guest: (id) => (id === 'g1' ? guestOk(id, 'GOLD', 4321) : guestOk(id)),
+  };
+  await mount(wire, [booking('b1', 'g1'), booking('b2', 'g2')]);
+  expect(wire.guestReads.slice().sort()).toEqual(['g1', 'g2']);
+  expect(byId('arrival-tier-b1')?.text).toBe('Hạng thành viên: Vàng');
+  expect(byId('arrival-tier-b2')?.text).toBe('Hạng thành viên: Khách');
+  expect(byId('arrival-b1')?.props.accessibilityLabel).toContain('Hạng thành viên: Vàng');
+  expect(textOf()).not.toContain('4321');
+});
+
 test('a missing guest never hides the card or blocks check-in', async () => {
   const wire: Wire = { guestReads: [], guest: notFound };
   await mount(wire, [booking('b1', 'g1')]);
   expect(byId('arrival-b1')).toBeDefined();
   expect(byId('arrival-name-b1')).toBeUndefined();
+  expect(byId('arrival-tier-b1')).toBeUndefined();
   press('arrival-b1');
   await settle();
   press('check-in-submit');

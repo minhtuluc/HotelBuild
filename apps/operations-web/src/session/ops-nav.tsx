@@ -28,6 +28,7 @@ export const OPS_NAV_GROUPS: readonly NavGroup[] = [
       { href: '/rooms', labelKey: 'navRooms' },
       { href: '/room-blocks', labelKey: 'navRoomBlocks' },
       { href: '/overbooking/cases', labelKey: 'navOverbooking' },
+      { href: '/overbooking/policy-exceptions', labelKey: 'navPolicyExceptions' },
     ],
   },
   {
@@ -38,6 +39,9 @@ export const OPS_NAV_GROUPS: readonly NavGroup[] = [
       { href: '/seasons', labelKey: 'navSeasons' },
       { href: '/promotions', labelKey: 'navPromotions' },
       { href: '/channels', labelKey: 'navChannels' },
+      { href: '/channels/configuration', labelKey: 'navChannelConfiguration' },
+      { href: '/channels/sync', labelKey: 'navChannelSync' },
+      { href: '/channels/ota-bookings', labelKey: 'navOtaBookings' },
       { href: '/channel-allotments', labelKey: 'navAllotments' },
       { href: '/multi-channel-quote', labelKey: 'navMultiChannelQuote' },
     ],
@@ -46,6 +50,8 @@ export const OPS_NAV_GROUPS: readonly NavGroup[] = [
     titleKey: 'navGroupBookingsFinance',
     items: [
       { href: '/bookings', labelKey: 'navBookings' },
+      { href: '/bookings/new', labelKey: 'navNewBooking' },
+      { href: '/reconciliation', labelKey: 'navReconciliation' },
       { href: '/crm/guests', labelKey: 'navCrmGuests' },
       { href: '/crm/loyalty', labelKey: 'navCrmLoyalty' },
       { href: '/noti/notifications', labelKey: 'navNotifications' },
@@ -60,20 +66,32 @@ export const OPS_NAV_GROUPS: readonly NavGroup[] = [
       { href: '/reports/revenue-by-channel', labelKey: 'navReportsRevenue' },
       { href: '/reports/cancellations', labelKey: 'navReportsCancellations' },
       { href: '/reports/overbooking', labelKey: 'navReportsOverbooking' },
+      { href: '/admin/users', labelKey: 'navUsers' },
       { href: '/audit-logs', labelKey: 'navAuditLogs' },
       { href: '/system-settings', labelKey: 'navSettings' },
     ],
   },
 ] as const;
 
-/** Mục đang mở: khớp đúng đường dẫn, hoặc là tiền tố của phân hệ con (trừ trang chủ). */
-function isCurrent(pathname: string, href: string): boolean {
+function matches(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/';
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+/**
+ * Mục đang mở: khớp đúng đường dẫn, hoặc là tiền tố của phân hệ con (trừ trang chủ). Khi nhiều mục cùng khớp
+ * (`/bookings` và `/bookings/new`) chỉ mục dài nhất được đánh dấu, để `aria-current` không trỏ hai nơi.
+ */
+export function currentNavHref(pathname: string): string | null {
+  let best: string | null = null;
+  for (const group of OPS_NAV_GROUPS)
+    for (const { href } of group.items)
+      if (matches(pathname, href) && (best === null || href.length > best.length)) best = href;
+  return best;
+}
+
 export function OpsModuleNav({ onNavigate }: { onNavigate: () => void }): ReactElement {
-  const pathname = usePathname() ?? '/';
+  const current = currentNavHref(usePathname() ?? '/');
   return (
     <nav
       id="ops-module-nav"
@@ -91,7 +109,7 @@ export function OpsModuleNav({ onNavigate }: { onNavigate: () => void }): ReactE
                   href={item.href}
                   onClick={onNavigate}
                   className="ph-ops-nav-link"
-                  aria-current={isCurrent(pathname, item.href) ? 'page' : undefined}
+                  aria-current={item.href === current ? 'page' : undefined}
                 >
                   {text(item.labelKey)}
                 </Link>

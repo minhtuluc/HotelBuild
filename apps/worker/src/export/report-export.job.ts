@@ -4,6 +4,7 @@ import { toCsv } from './csv.js';
 import { reportTable } from './report-tables.js';
 import { DEFAULT_EXPORT_DIR, exportExtension, writeExportFile } from './storage.js';
 import { toXlsx } from './xlsx.js';
+import { jobTraceShape } from '../tracing/job-trace-shape.js';
 
 /** Hạn tệp xuất: link ký chỉ sống trong khoảng này (HB-163 AC2). */
 export const EXPORT_TTL_SECONDS = 900;
@@ -13,11 +14,9 @@ const GENERATION_ERROR_CODE = 'E_GEN_SERVICE_UNAVAILABLE';
 const GENERATION_ERROR_MESSAGE = 'Không sinh được tệp báo cáo.';
 const EXPORT_FAILED_ACTION = 'REPORT_EXPORT_FAILED';
 
-// `traceparent` là ngữ cảnh quan sát (HB-181) do API gắn khi đẩy job; không phải dữ liệu nghiệp vụ.
 const payloadSchema = z.strictObject({
   operationId: z.uuid(),
-  traceparent: z.string().max(128).optional(),
-  correlationId: z.string().max(128).optional(),
+  ...jobTraceShape,
 });
 const storedPayloadSchema = z.object({
   report: z.enum(['occupancy', 'adr-revpar', 'revenue-by-channel', 'cancellations']),

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { jobTraceShape } from '../tracing/job-trace-shape.js';
 
 /**
  * Dữ liệu job `q.notification-send` — gương của `NotificationJobData` trong
@@ -7,9 +8,7 @@ import { z } from 'zod';
  */
 export const notificationSendPayloadSchema = z.strictObject({
   notificationId: z.uuid(),
-  // Ngữ cảnh quan sát (HB-181) do API gắn khi đẩy job — không phải dữ liệu nghiệp vụ.
-  traceparent: z.string().max(128).optional(),
-  correlationId: z.string().max(128).optional(),
+  ...jobTraceShape,
 });
 
 export type NotificationSendPayload = z.infer<typeof notificationSendPayloadSchema>;

@@ -1,18 +1,24 @@
 /**
- * SCR-57 — tên khách trên thẻ, đọc theo id qua `GET /guests/{guestId}` (HB-208, đóng TD-33). Chỉ giữ **họ
- * tên** trong RAM của màn hình (không SĐT/email, không ghi đĩa); xoá khi đổi phiên/cơ sở. Tải có giới hạn
+ * SCR-57 — tên và hạng thành viên khách trên thẻ, đọc theo id qua `GET /guests/{guestId}` (HB-208, đóng TD-33;
+ * hạng từ HB-328, TD-34). Chỉ giữ **họ tên và hạng** trong RAM của màn hình (không SĐT/email/điểm, không ghi
+ * đĩa); xoá khi đổi phiên/cơ sở. Tải có giới hạn
  * đồng thời để một danh sách dài không làm nghẽn mạng. Lỗi không bao giờ chặn thẻ hay check-in: 403/404
  * (không có/ngoài phạm vi) nhớ là "không tên" và không hỏi lại; mất mạng/5xx/401 thử lại ở lần `ensure` sau.
  */
 import { isApiError } from '@pinehill/api-client';
-import type { GuestSummary } from '@pinehill/contracts';
+import type { GuestSummary, LoyaltyTier } from '@pinehill/contracts';
 
 export const NAME_CONCURRENCY = 4;
 
 const PERMANENT = new Set([403, 404]);
 
+interface GuestCardInfo {
+  readonly fullName: string;
+  readonly tier: LoyaltyTier;
+}
+
 export class GuestNames {
-  private names = new Map<string, string | null>();
+  private names = new Map<string, GuestCardInfo | null>();
   private pending = new Set<string>();
   private epoch = 0;
   private alive = true;
@@ -34,7 +40,12 @@ export class GuestNames {
 
   /** `null` = chưa có hoặc không có tên; thẻ vẫn hiện bình thường. */
   get(guestId: string): string | null {
-    return this.names.get(guestId) ?? null;
+    return this.names.get(guestId)?.fullName ?? null;
+  }
+
+  /** Hạng thành viên do máy chủ trả (không tự suy); `null` khi chưa đọc được hồ sơ. */
+  tier(guestId: string): LoyaltyTier | null {
+    return this.names.get(guestId)?.tier ?? null;
   }
 
   clear(): void {
@@ -71,10 +82,10 @@ export class GuestNames {
   }
 
   private async load(id: string, stamp: number): Promise<void> {
-    let name: string | null | undefined;
+    let name: GuestCardInfo | null | undefined;
     try {
       const guest = await this.fetchGuest(id);
-      name = guest.id === id ? guest.fullName : null;
+      name = guest.id === id ? { fullName: guest.fullName, tier: guest.loyaltyTier } : null;
     } catch (error) {
       name = isApiError(error) && PERMANENT.has(error.status ?? 0) ? null : undefined;
     }

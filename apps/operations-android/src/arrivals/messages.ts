@@ -30,6 +30,7 @@ export const catalog = {
     'Booking {code} không nằm trong danh sách khách đến hôm nay. Dùng Tra cứu để kiểm tra.',
   scanCancelled: 'Đã huỷ quét. Bạn vẫn nhập mã booking vào ô tìm kiếm được.',
   open: 'Mở nhận phòng {code}',
+  tierLine: 'Hạng thành viên: {tier}',
   guestsLine: '{rooms} phòng · {adults} người lớn · {children} trẻ em',
   moneyLine: 'Đã thu {paid} / cọc {deposit} · còn phải thu {balance}',
   penaltyLine: 'Phí phạt: {penalty}',

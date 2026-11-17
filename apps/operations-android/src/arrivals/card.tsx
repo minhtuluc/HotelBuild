@@ -1,8 +1,8 @@
 import type { ReactElement } from 'react';
 import { Pressable, Text } from 'react-native';
-import type { BookingSummary } from '@pinehill/contracts';
+import type { BookingSummary, LoyaltyTier } from '@pinehill/contracts';
 import { color } from '@pinehill/ui-native';
-import { statusText, stayPeriodText } from '../lookup/messages';
+import { statusText, stayPeriodText, tierText } from '../lookup/messages';
 import { formatVnd } from '../lookup/view';
 import { theme } from '../theme';
 import { arrivalsText as text } from './messages';
@@ -11,11 +11,14 @@ import { arrivalsText as text } from './messages';
 export function ArrivalCard({
   booking,
   guestName = null,
+  guestTier = null,
   onOpen,
 }: {
   booking: BookingSummary;
   /** Họ tên đọc theo id (HB-208); `null` khi chưa có/không có — thẻ vẫn hiện bình thường. */
   guestName?: string | null;
+  /** Hạng thành viên đọc cùng hồ sơ khách (TD-34); `null` khi chưa có — không hiện dòng hạng. */
+  guestTier?: LoyaltyTier | null;
   onOpen: (booking: BookingSummary) => void;
 }): ReactElement {
   return (
@@ -26,6 +29,7 @@ export function ArrivalCard({
         text('open', { code: booking.code }),
         statusText(booking.status),
         ...(guestName === null ? [] : [guestName]),
+        ...(guestTier === null ? [] : [text('tierLine', { tier: tierText(guestTier) })]),
       ].join(', ')}
       onPress={() => {
         onOpen(booking);
@@ -38,6 +42,11 @@ export function ArrivalCard({
           style={{ color: color.text, fontWeight: '600' }}
         >
           {guestName}
+        </Text>
+      )}
+      {guestTier === null ? null : (
+        <Text testID={'arrival-tier-' + booking.id} style={theme.muted}>
+          {text('tierLine', { tier: tierText(guestTier) })}
         </Text>
       )}
       <Text style={{ color: color.text, fontWeight: '600' }}>

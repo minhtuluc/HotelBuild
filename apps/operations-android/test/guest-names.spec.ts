@@ -3,12 +3,16 @@ import { ApiError } from '@pinehill/api-client';
 import type { GuestSummary } from '@pinehill/contracts';
 import { GuestNames, NAME_CONCURRENCY } from '../src/arrivals/guest-names';
 
-const guest = (id: string, fullName: string): GuestSummary => ({
+const guest = (
+  id: string,
+  fullName: string,
+  loyaltyTier: GuestSummary['loyaltyTier'] = 'GUEST',
+): GuestSummary => ({
   id,
   fullName,
   phone: '+84912345678',
   email: null,
-  loyaltyTier: 'GUEST',
+  loyaltyTier,
   loyaltyPoints: 0,
   totalStays: 0,
   blacklisted: false,
@@ -28,6 +32,24 @@ test('loads each distinct guest once and exposes only the full name', async () =
   expect(names.get('never-asked')).toBeNull();
   await names.ensure(['g1']);
   expect(fetchGuest).toHaveBeenCalledTimes(2);
+});
+
+test('keeps the server tier next to the name (TD-34), null before it is read', async () => {
+  const names = new GuestNames(async (id: string) => guest(id, `Khách ${id}`, 'PLATINUM'));
+  expect(names.tier('g1')).toBeNull();
+  await names.ensure(['g1']);
+  expect(names.tier('g1')).toBe('PLATINUM');
+  names.clear();
+  expect(names.tier('g1')).toBeNull();
+});
+
+test('a 404 leaves neither name nor tier', async () => {
+  const names = new GuestNames(async () => {
+    throw http(404);
+  });
+  await names.ensure(['g1']);
+  expect(names.get('g1')).toBeNull();
+  expect(names.tier('g1')).toBeNull();
 });
 
 test('never runs more than NAME_CONCURRENCY requests at once', async () => {

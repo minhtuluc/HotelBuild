@@ -253,6 +253,7 @@ export function ArrivalsScreen({
           <ArrivalCard
             booking={item}
             guestName={names?.get(item.guestId) ?? null}
+            guestTier={names?.tier(item.guestId) ?? null}
             onOpen={setSelected}
           />
         )}
