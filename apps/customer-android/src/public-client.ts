@@ -10,15 +10,19 @@ import {
   type ApiClient,
   type ApiResponse,
 } from '@pinehill/api-client';
+import { listResponseSchema, propertyPublicSummarySchema } from '@pinehill/contracts';
 import type {
   Availability,
   ListPage,
+  PropertyPublicSummary,
   Quote,
   QuoteRequest,
   RatePlanPublic,
 } from '@pinehill/contracts';
 
 export interface PublicJourneyApi {
+  /** HB-249: `GET /public/properties` — cơ sở để khách chọn khi tìm phòng (API tìm phòng cần id). */
+  listProperties(): Promise<readonly PropertyPublicSummary[]>;
   availability(query: {
     propertyId: string;
     checkIn: string;
@@ -45,6 +49,14 @@ export function createPublicJourneyApi(client: ApiClient): PublicJourneyApi {
   const quote = createQuoteApi(client);
   const rate = createRateApi(client);
   return {
+    listProperties: async () => {
+      const page = await client.request({
+        method: 'GET',
+        path: '/public/properties',
+        decoder: listResponseSchema(propertyPublicSummarySchema),
+      });
+      return page.data.data;
+    },
     availability: (query) => inventory.availability(query),
     quote: (input) => quote.quote(input),
     listRatePlans: (query) => rate.listRatePlans(query),

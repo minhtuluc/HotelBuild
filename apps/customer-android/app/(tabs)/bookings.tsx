@@ -7,10 +7,11 @@
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { color, space, formatDateTimeVn } from '@pinehill/ui-native';
 import { createBookingApi } from '@pinehill/api-client';
 import type { BookingSummary } from '@pinehill/contracts';
+import { LoginPrompt } from '../../src/login-prompt';
 import { createSession } from '../../src/session-factory';
 import { secureStorage } from '../../src/storage-device.native';
 import { netInfoSource } from '../../src/netinfo-device.native';
@@ -177,16 +178,22 @@ export default function BookingsScreen(): ReactElement {
   const [outcome, setOutcome] = useState<OrdersOutcome | null>(null);
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    void session.silentRefresh().then(() => {
-      if (!cancelled) setReady(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [session]);
+  // HB-249: kiểm lại phiên mỗi lần mở tab — khách có thể vừa đăng nhập ở màn `/login` rồi quay về.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void session.silentRefresh().then((ok) => {
+        if (cancelled) return;
+        setSignedIn(ok);
+        setReady(true);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [session]),
+  );
 
   const load = useCallback(
     async (code = ''): Promise<void> => {
@@ -198,9 +205,9 @@ export default function BookingsScreen(): ReactElement {
   );
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !signedIn) return;
     void load();
-  }, [load, ready]);
+  }, [load, ready, signedIn]);
 
   if (!ready)
     return (
@@ -231,18 +238,29 @@ export default function BookingsScreen(): ReactElement {
         {t('orders.title')}
       </Text>
 
-      <SearchBar query={query} busy={busy} onChange={setQuery} onSearch={() => void load(query)} />
-      <OrdersNotice outcome={outcome} busy={busy} />
+      {signedIn ? (
+        <>
+          <SearchBar
+            query={query}
+            busy={busy}
+            onChange={setQuery}
+            onSearch={() => void load(query)}
+          />
+          <OrdersNotice outcome={outcome} busy={busy} />
 
-      {bookings.map((booking) => (
-        <OrderRow
-          key={booking.id}
-          booking={booking}
-          onOpen={() => {
-            router.push({ pathname: '/booking/[code]', params: { code: booking.code } });
-          }}
-        />
-      ))}
+          {bookings.map((booking) => (
+            <OrderRow
+              key={booking.id}
+              booking={booking}
+              onOpen={() => {
+                router.push({ pathname: '/booking/[code]', params: { code: booking.code } });
+              }}
+            />
+          ))}
+        </>
+      ) : (
+        <LoginPrompt hint="orders.loginHint" />
+      )}
     </ScrollView>
   );
 }

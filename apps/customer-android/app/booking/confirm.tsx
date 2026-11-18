@@ -7,9 +7,10 @@
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { color, space, formatDateTimeVn } from '@pinehill/ui-native';
 import type { BookingSummary, Hold, RatePlanCode } from '@pinehill/contracts';
+import { LoginPrompt } from '../../src/login-prompt';
 import { createSession } from '../../src/session-factory';
 import { holdApiFrom } from '../../src/hold-api';
 import { netInfoSource } from '../../src/netinfo-device.native';
@@ -17,6 +18,7 @@ import { t } from '../../src/strings';
 import { calendarDateLabel } from '../../src/calendar-date';
 import { formatVnd } from '../../src/search';
 import { planCodeOf } from '../../src/room-detail';
+import { useStableSearchParams } from '../../src/stable-params';
 import { theme } from '../../src/theme';
 import {
   bookingResult,
@@ -208,8 +210,19 @@ function Outcome({
   );
 }
 
+/** Đã giữ chỗ rồi (lần trước hỏng ở bước đặt phòng) thì dùng lại chỗ giữ và mã báo giá, không giữ lần hai. */
+async function holdOrReuse(
+  deps: Parameters<typeof startHold>[0],
+  input: HoldInput,
+  hold: Hold | null,
+  quoteId: string | null,
+): Promise<HoldOutcome> {
+  if (hold !== null && quoteId !== null) return { kind: 'ready', hold, quoteId };
+  return startHold(deps, input);
+}
+
 export default function ConfirmHoldScreen(): ReactElement {
-  const params = useLocalSearchParams<Record<string, string>>();
+  const params = useStableSearchParams();
   const router = useRouter();
   const parsed = useMemo(() => confirmParamsFrom(params), [params]);
   const session = useMemo(() => createSession(), []);
@@ -224,6 +237,7 @@ export default function ConfirmHoldScreen(): ReactElement {
   const [alert, setAlert] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [sessionQuoteId, setSessionQuoteId] = useState<string | null>(null);
 
   // Phiên khách: mở lại app thì refresh im lặng để có access token cho hai tuyến cần đăng nhập.
   useEffect(() => {
@@ -263,13 +277,7 @@ export default function ConfirmHoldScreen(): ReactElement {
     };
     setBusy(true);
     setAlert(null);
-    // Đã giữ chỗ rồi (lần trước hỏng ở bước đặt phòng) thì chỉ đặt lại, không tạo chỗ giữ thứ hai.
-    let held: HoldOutcome;
-    if (hold === null) {
-      held = await startHold({ api, net }, input);
-    } else {
-      held = { kind: 'ready', hold };
-    }
+    const held = await holdOrReuse({ api, net }, input, hold, sessionQuoteId);
     if (held.kind === 'offline') {
       setAlert(t('guest.offline'));
       setBusy(false);
@@ -281,8 +289,11 @@ export default function ConfirmHoldScreen(): ReactElement {
       return;
     }
     setHold(held.hold);
+    setSessionQuoteId(held.quoteId);
     setNowMs(Date.now());
-    const result = bookingResult(await finishBooking({ api, net }, input));
+    const result = bookingResult(
+      await finishBooking({ api, net }, { ...input, quoteId: held.quoteId }),
+    );
     setBusy(false);
     if (result.offline) {
       setAlert(t('guest.offline'));
@@ -294,7 +305,7 @@ export default function ConfirmHoldScreen(): ReactElement {
     }
     setBooking(result.booking);
     setDuplicate(result.duplicate);
-  }, [api, guest, net, note, parsed]);
+  }, [api, guest, net, note, parsed, hold, sessionQuoteId]);
 
   if (parsed === null) {
     return (
@@ -323,15 +334,7 @@ export default function ConfirmHoldScreen(): ReactElement {
   if (!session.hasAccessToken()) {
     return (
       <View style={theme.screen}>
-        <Text accessibilityRole="alert" style={theme.alertDanger}>
-          {t('guest.title')}
-        </Text>
-        <Action
-          label={t('guest.login')}
-          onPress={() => {
-            router.push('/');
-          }}
-        />
+        <LoginPrompt hint="hold.loginHint" />
       </View>
     );
   }
