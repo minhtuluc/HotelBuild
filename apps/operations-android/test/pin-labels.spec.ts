@@ -40,12 +40,16 @@ test('localized PIN labels keep distinct fields and the original secure input at
       throw Error('Rendering labels must not call the API');
     },
   });
-  const fields = inputs(PinSetupScreen({ session, currentPassword: '', onDone: () => undefined }));
+  const fields = inputs(PinSetupScreen({ session, onDone: () => undefined }));
   expect(fields.map((field) => [field.testID, field.accessibilityLabel])).toEqual([
+    ['pin-current-password', 'Mật khẩu hiện tại'],
     ['pin-1', 'PIN lần 1'],
     ['pin-2', 'PIN lần 2'],
   ]);
-  for (const field of fields) {
+  const [password, ...pins] = fields;
+  expect(password?.secureTextEntry).toBe(true);
+  expect(password?.keyboardType).toBeUndefined();
+  for (const field of pins) {
     expect(field.secureTextEntry).toBe(true);
     expect(field.maxLength).toBe(6);
     expect(field.keyboardType).toBe('number-pad');

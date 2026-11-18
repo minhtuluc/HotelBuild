@@ -1,22 +1,23 @@
-/** Đặt PIN lần đầu (SCR-56): nhập 6 số hai lần khớp rồi gọi `PUT /auth/pin`. */
+/**
+ * Đặt PIN lần đầu (SCR-56): xác nhận mật khẩu hiện tại, nhập 6 số hai lần khớp rồi gọi `PUT /auth/pin`.
+ * Màn tự hỏi mật khẩu (HB-247) vì người dùng có thể tới đây thẳng từ đăng nhập, sau khi đổi mật khẩu
+ * hoặc từ phiên khôi phục — không đường nào giữ sẵn mật khẩu đúng.
+ */
 import { useState, type ReactElement } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { isApiError } from '@pinehill/api-client';
+import { pinSetupRequest } from '../src/pin-setup-model';
 import { Session } from '../src/session';
 import { t } from '../src/strings';
 import { theme } from '../src/theme';
 
 export interface PinSetupScreenProps {
   session: Session;
-  currentPassword: string;
   onDone: () => void;
 }
 
-export default function PinSetupScreen({
-  session,
-  currentPassword,
-  onDone,
-}: PinSetupScreenProps): ReactElement {
+export default function PinSetupScreen({ session, onDone }: PinSetupScreenProps): ReactElement {
+  const [currentPassword, setCurrentPassword] = useState('');
   const [first, setFirst] = useState('');
   const [second, setSecond] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -26,11 +27,12 @@ export default function PinSetupScreen({
     setBusy(true);
     setError(null);
     try {
-      if (first !== second) {
-        setError(t('pin.setup.mismatch'));
+      const checked = pinSetupRequest({ first, second, currentPassword });
+      if (!checked.ok) {
+        setError(t(checked.error));
         return;
       }
-      await session.setPin(first, currentPassword);
+      await session.setPin(checked.request.pin, checked.request.currentPassword);
       onDone();
     } catch (cause) {
       setError(
@@ -45,6 +47,16 @@ export default function PinSetupScreen({
     <View style={theme.screen}>
       <Text style={theme.title}>{t('pin.setup.title')}</Text>
       <Text style={theme.muted}>{t('pin.setup.hint')}</Text>
+      <TextInput
+        testID="pin-current-password"
+        accessibilityLabel={t('changePassword.current')}
+        placeholder={t('changePassword.current')}
+        value={currentPassword}
+        onChangeText={setCurrentPassword}
+        secureTextEntry
+        autoCapitalize="none"
+        style={theme.field}
+      />
       <TextInput
         testID="pin-1"
         accessibilityLabel={t('pin.setup.entry', { number: 1 })}

@@ -8,7 +8,7 @@ import { theme } from '../src/theme';
 
 export interface ChangePasswordScreenProps {
   session: Session;
-  onDone: (currentPassword: string) => void;
+  onDone: () => void;
 }
 
 export default function ChangePasswordScreen({
@@ -25,7 +25,7 @@ export default function ChangePasswordScreen({
     setError(null);
     try {
       await session.changePassword(current, next);
-      onDone(current);
+      onDone();
     } catch (cause) {
       setError(
         t('login.error', { code: isApiError(cause) ? (cause.code ?? 'UNKNOWN') : 'UNKNOWN' }),
