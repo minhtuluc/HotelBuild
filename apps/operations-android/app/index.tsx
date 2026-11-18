@@ -1,6 +1,7 @@
 /** Điểm vào Operations Android: đăng nhập → me() → đổi mật khẩu/PIN/chọn cơ sở → màn chính. */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, BackHandler, View } from 'react-native';
+import { Stack } from 'expo-router';
 import { color } from '@pinehill/ui-native';
 import type { BookingSummary, UserMe } from '@pinehill/contracts';
 import { createSession } from '../src/session-factory';
@@ -23,19 +24,7 @@ import { CollectScreen } from '../src/stay/collect';
 import { DeparturesScreen } from '../src/stay/screen';
 import { createCheckOutWriter, createCollectWriter } from '../src/stay/writer-factory.native';
 import { t } from '../src/strings';
-
-type Stage =
-  | 'boot'
-  | 'login'
-  | 'changePassword'
-  | 'pinSetup'
-  | 'selectProperty'
-  | 'home'
-  | 'housekeeping'
-  | 'lookup'
-  | 'arrivals'
-  | 'walkIn'
-  | 'departures';
+import { backStep, stageTitle, type Stage } from '../src/stages';
 
 export default function RootScreen(): ReactElement {
   const session = useMemo(createSession, []);
@@ -99,6 +88,27 @@ export default function RootScreen(): ReactElement {
   }, [session]);
 
   const goHome = () => setStage('home');
+  // HB-252: cả luồng nằm trong một route nên Back mặc định thoát app; đóng màn con hoặc về màn chính trước.
+  const back = backStep({
+    stage,
+    noShow: noShowTarget !== null,
+    collecting: collecting !== null,
+    walkInFromArrivals,
+  });
+  useEffect(() => {
+    if (back === 'default') return undefined;
+    const steps = {
+      closeNoShow: () => setNoShowTarget(null),
+      closeCollect: () => setCollecting(null),
+      closeWalkIn: () => setWalkInFromArrivals(false),
+      home: goHome,
+    };
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      steps[back]();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [back]);
   const arrivalsStage = (): ReactElement => {
     if (noShowTarget !== null)
       return (
@@ -158,55 +168,72 @@ export default function RootScreen(): ReactElement {
     walkIn: () => <WalkInScreen session={session} createFlow={makeWalkInFlow} onBack={goHome} />,
   };
 
-  if (stage === 'boot') {
+  const body = (): ReactElement => {
+    if (stage === 'boot') {
+      return (
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: color.bg,
+          }}
+        >
+          <ActivityIndicator accessibilityLabel={t('session.restoring')} color={color.primary} />
+        </View>
+      );
+    }
+    if (stage === 'login') {
+      return (
+        <LoginScreen
+          session={session}
+          onAuthenticated={() => void session.profile().then(advance)}
+        />
+      );
+    }
+    if (stage === 'changePassword') {
+      return (
+        <ChangePasswordScreen
+          session={session}
+          onDone={() => void session.profile().then(advance)}
+        />
+      );
+    }
+    if (stage === 'pinSetup') {
+      return (
+        <PinSetupScreen session={session} onDone={() => void session.profile().then(advance)} />
+      );
+    }
+    if (stage === 'selectProperty') {
+      return (
+        <SelectPropertyScreen
+          properties={profile?.propertyScope ?? []}
+          onSelect={(propertyId) => {
+            session.selectProperty(propertyId);
+            setStage('home');
+          }}
+        />
+      );
+    }
+    const tool = tools[stage];
+    if (tool !== undefined) return tool();
     return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: color.bg,
-        }}
-      >
-        <ActivityIndicator accessibilityLabel={t('session.restoring')} color={color.primary} />
-      </View>
-    );
-  }
-  if (stage === 'login') {
-    return (
-      <LoginScreen session={session} onAuthenticated={() => void session.profile().then(advance)} />
-    );
-  }
-  if (stage === 'changePassword') {
-    return (
-      <ChangePasswordScreen session={session} onDone={() => void session.profile().then(advance)} />
-    );
-  }
-  if (stage === 'pinSetup') {
-    return <PinSetupScreen session={session} onDone={() => void session.profile().then(advance)} />;
-  }
-  if (stage === 'selectProperty') {
-    return (
-      <SelectPropertyScreen
-        properties={profile?.propertyScope ?? []}
-        onSelect={(propertyId) => {
-          session.selectProperty(propertyId);
-          setStage('home');
-        }}
+      <HomeScreen
+        session={session}
+        onLogout={() => setStage('login')}
+        onTasks={() => setStage('housekeeping')}
+        onLookup={() => setStage('lookup')}
+        onArrivals={() => setStage('arrivals')}
+        onWalkIn={() => setStage('walkIn')}
+        onDepartures={() => setStage('departures')}
       />
     );
-  }
-  const tool = tools[stage];
-  if (tool !== undefined) return tool();
+  };
+
   return (
-    <HomeScreen
-      session={session}
-      onLogout={() => setStage('login')}
-      onTasks={() => setStage('housekeeping')}
-      onLookup={() => setStage('lookup')}
-      onArrivals={() => setStage('arrivals')}
-      onWalkIn={() => setStage('walkIn')}
-      onDepartures={() => setStage('departures')}
-    />
+    <>
+      <Stack.Screen options={{ title: stageTitle(stage) }} />
+      {body()}
+    </>
   );
 }
