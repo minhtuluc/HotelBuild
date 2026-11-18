@@ -2,7 +2,7 @@
 import { randomUUID } from 'expo-crypto';
 import type { CheckOutResponse, Payment } from '@pinehill/contracts';
 import type { Session } from '../session';
-import { netInfoSource } from '../netinfo.native';
+import { netInfoSource } from '../netinfo-device.native';
 import type { CheckOutBody, CollectBody } from './model';
 import { checkOutPorts, collectPorts, unlockPin } from './ports';
 import { PinnedWriter } from './writer';

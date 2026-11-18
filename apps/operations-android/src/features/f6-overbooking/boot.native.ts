@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { randomUUID } from 'expo-crypto';
 import type { UserMe } from '@pinehill/contracts';
-import { netInfoSource } from '../../netinfo.native';
+import { netInfoSource } from '../../netinfo-device.native';
 import { OfflineError } from '../../netinfo';
 import type { Session } from '../../session';
 import { createSession } from '../../session-factory';

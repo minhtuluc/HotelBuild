@@ -16,8 +16,8 @@ import { color, space, touchTargetDp, formatDateTimeVn } from '@pinehill/ui-nati
 import { createBookingApi } from '@pinehill/api-client';
 import type { CancelPreview, CancelResponse } from '@pinehill/contracts';
 import { createSession } from '../../../src/session-factory';
-import { secureStorage } from '../../../src/storage.native';
-import { netInfoSource } from '../../../src/netinfo.native';
+import { secureStorage } from '../../../src/storage-device.native';
+import { netInfoSource } from '../../../src/netinfo-device.native';
 import { t, type MessageKey } from '../../../src/strings';
 import { formatVnd } from '../../../src/search';
 import { theme } from '../../../src/theme';

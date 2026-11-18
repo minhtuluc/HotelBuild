@@ -12,7 +12,7 @@ import { color, radius, space, touchTargetDp, formatDateTimeVn } from '@pinehill
 import type { Quote, RatePlanCode, RatePlanPublic } from '@pinehill/contracts';
 import { createAppApiClient } from '../../src/api';
 import { createPublicJourneyApi } from '../../src/public-client';
-import { netInfoSource } from '../../src/netinfo.native';
+import { netInfoSource } from '../../src/netinfo-device.native';
 import { t } from '../../src/strings';
 import { formatVnd } from '../../src/search';
 import { theme } from '../../src/theme';

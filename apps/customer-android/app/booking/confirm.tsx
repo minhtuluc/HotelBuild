@@ -12,7 +12,7 @@ import { color, space, formatDateTimeVn } from '@pinehill/ui-native';
 import type { BookingSummary, Hold, RatePlanCode } from '@pinehill/contracts';
 import { createSession } from '../../src/session-factory';
 import { holdApiFrom } from '../../src/hold-api';
-import { netInfoSource } from '../../src/netinfo.native';
+import { netInfoSource } from '../../src/netinfo-device.native';
 import { t } from '../../src/strings';
 import { calendarDateLabel } from '../../src/calendar-date';
 import { formatVnd } from '../../src/search';

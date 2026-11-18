@@ -1,7 +1,7 @@
 /** Lắp `NoShowWriter` với phụ thuộc thật (NetInfo, expo-crypto) — chỉ import từ gốc ứng dụng. */
 import { randomUUID } from 'expo-crypto';
 import type { Session } from '../session';
-import { netInfoSource } from '../netinfo.native';
+import { netInfoSource } from '../netinfo-device.native';
 import { sendNoShow } from './ports';
 import { NoShowWriter } from './writer';
 
