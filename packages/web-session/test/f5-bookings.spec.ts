@@ -83,11 +83,15 @@ test('reschedule retains state, changes dates/count and does not create a refund
   const owner = await f.actor();
   const booking = await f.booking(owner);
   const changed = (
-    await owner.bookings.reschedule(booking.id, {
-      checkIn: '2026-10-20',
-      checkOut: '2026-10-22',
-      reason: 'Synthetic dates',
-    })
+    await owner.bookings.reschedule(
+      booking.id,
+      {
+        checkIn: '2026-10-20',
+        checkOut: '2026-10-22',
+        reason: 'Synthetic dates',
+      },
+      String(booking.version ?? 1),
+    )
   ).data;
   expect(changed).toMatchObject({
     status: 'HELD',
@@ -99,12 +103,20 @@ test('reschedule retains state, changes dates/count and does not create a refund
   });
   expect((await owner.refunds.list({ bookingId: booking.id })).data.data).toEqual([]);
   await expect(
-    owner.bookings.reschedule(booking.id, { checkIn: '2026-10-22', checkOut: '2026-10-20' }),
+    owner.bookings.reschedule(
+      booking.id,
+      { checkIn: '2026-10-22', checkOut: '2026-10-20' },
+      String(changed.version ?? 2),
+    ),
   ).rejects.toMatchObject({ status: 422, code: 'E_BOOK_INVALID_DATES' });
   const conflict = await f.booking(owner);
   await f.control(owner, conflict.id, 'reschedule-conflict');
   await expect(
-    owner.bookings.reschedule(conflict.id, { checkIn: '2026-10-23', checkOut: '2026-10-24' }),
+    owner.bookings.reschedule(
+      conflict.id,
+      { checkIn: '2026-10-23', checkOut: '2026-10-24' },
+      String(conflict.version ?? 1),
+    ),
   ).rejects.toMatchObject({ status: 409, code: 'E_INV_ROOM_TAKEN' });
 });
 test('hard delete requires reason and DRAFT/HELD without any payment', async () => {

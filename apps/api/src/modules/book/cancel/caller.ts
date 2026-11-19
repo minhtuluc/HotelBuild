@@ -1,5 +1,5 @@
 /**
- * Chủ thể của hai tuyến huỷ (HB-256): nhân viên **hoặc** khách sở hữu booking (api.md §2.5 vai trò tối
+ * Chủ thể của hai tuyến huỷ (HB-256) và tuyến đổi ngày (HB-258): nhân viên **hoặc** khách sở hữu booking (api.md §2.5 vai trò tối
  * thiểu `GUEST`). Hai tuyến là `@Public` để phiên khách đi qua; chủ thể tự xác thực bằng `bookingCaller`
  * (cùng cách `POST/GET /bookings` của HB-077 và `GET /bookings/{id}/balance`): kiểm chữ ký, dòng phiên
  * (TD-59) và **đọc lại** vai trò/phạm vi nhân viên từ CSDL. Nhân viên vẫn phải có quyền của tuyến.
@@ -33,7 +33,7 @@ export interface CallerDeps {
 export async function cancelCaller(
   deps: CallerDeps,
   request: FastifyRequest,
-  permission: 'bookings.cancel' | 'bookings.cancelPreview',
+  permission: 'bookings.cancel' | 'bookings.cancelPreview' | 'bookings.reschedule',
 ): Promise<CancelActor> {
   const caller = await bookingCaller(deps.db, request, deps.config, deps.clock);
   if (caller.type === 'USER' && !deps.permissions.allows(caller.role, permission))

@@ -337,8 +337,14 @@ describe('hợp đồng F5 qua HTTP thật', () => {
     expect(cancelled.data.status).toBe('CANCELLED');
     // HB-257: neo xem trước đi trong `If-Match` — thiếu thì API trả 428 cho mọi lệnh huỷ.
     expect(recorded(1).headers['if-match']).toBe('W/"v1-anchor"');
-    const moved = await api.reschedule('b1', { checkIn: '2026-12-25', checkOut: '2026-12-27' });
+    const moved = await api.reschedule(
+      'b1',
+      { checkIn: '2026-12-25', checkOut: '2026-12-27' },
+      '"4"',
+    );
     expect(moved.data.rescheduleCount).toBe(1);
+    // HB-258: đổi ngày neo bằng `version` booking trong `If-Match`.
+    expect(recorded(2).headers['if-match']).toBe('"4"');
     await api.deleteBooking('b1', 'Không dùng nữa');
     const seen = recorded(3);
     expect(seen.method).toBe('DELETE');
