@@ -10,8 +10,9 @@ import { ActivityIndicator, Pressable, ScrollView, Share, Text, View } from 'rea
 import { Link, useLocalSearchParams } from 'expo-router';
 import { color, space, touchTargetDp } from '@pinehill/ui-native';
 import { createBookingApi } from '@pinehill/api-client';
-import type { BookingSummary } from '@pinehill/contracts';
+import type { BookingSummary, BookingPriceSnapshot } from '@pinehill/contracts';
 import { createSession } from '../../src/session-factory';
+import { loadNights, nightLines, nightsReader } from '../../src/nights';
 import { secureStorage } from '../../src/storage-device.native';
 import { netInfoSource } from '../../src/netinfo-device.native';
 import { t } from '../../src/strings';
@@ -56,7 +57,45 @@ function PaymentList({ payments }: { payments: BookingSummary['payments'] }): Re
   );
 }
 
-function DetailBody({ booking }: { booking: BookingSummary }): ReactElement {
+/** HB-266: giá từng đêm đã chốt; `undefined` = đang tải, `null` = chưa xem được (không chặn chi tiết). */
+function NightList({
+  nights,
+}: {
+  nights: BookingPriceSnapshot | null | undefined;
+}): ReactElement | null {
+  if (nights === undefined) return null;
+  if (nights === null)
+    return <Text style={theme.muted}>{t('orders.detail.nights.unavailable')}</Text>;
+  return (
+    <View style={{ gap: space.s1 }} data-testid="order-nights">
+      <Text style={theme.sectionTitle}>{t('orders.detail.nights.title')}</Text>
+      {nightLines(nights.nights).map((line) => (
+        <Text key={line.key} style={[theme.body, theme.tabular]}>
+          {line.roomCount > 1
+            ? t('orders.detail.nights.rooms', {
+                date: line.date,
+                amount: money(line.amount),
+                rooms: line.roomCount,
+              })
+            : t('orders.detail.nights.row', { date: line.date, amount: money(line.amount) })}
+        </Text>
+      ))}
+      {nights.totals.discountAmount > 0 ? (
+        <Text style={[theme.muted, theme.tabular]}>
+          {t('orders.detail.nights.discount', { amount: money(nights.totals.discountAmount) })}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function DetailBody({
+  booking,
+  nights,
+}: {
+  booking: BookingSummary;
+  nights: BookingPriceSnapshot | null | undefined;
+}): ReactElement {
   const status = t(ORDER_STATUS_KEYS[booking.status]);
   const stay = stayOf(booking);
   return (
@@ -86,9 +125,7 @@ function DetailBody({ booking }: { booking: BookingSummary }): ReactElement {
         </Text>
       ))}
       <View style={theme.divider} />
-      <Text style={theme.muted} data-testid="order-snapshot-pending">
-        {t('orders.detail.snapshotPending')}
-      </Text>
+      <NightList nights={nights} />
       <PaymentList payments={booking.payments} />
       <View style={{ flexDirection: 'row', gap: space.s2 }}>
         <Link
@@ -108,6 +145,27 @@ function DetailBody({ booking }: { booking: BookingSummary }): ReactElement {
       </View>
     </View>
   );
+}
+
+/** HB-266: đọc giá theo đêm khi đã có booking; lỗi ⇒ `null`, không chặn màn chi tiết. */
+function useNights(
+  session: ReturnType<typeof createSession>,
+  booking: BookingSummary | null,
+): BookingPriceSnapshot | null | undefined {
+  const [nights, setNights] = useState<BookingPriceSnapshot | null | undefined>(undefined);
+  const bookingId = booking === null ? null : booking.id;
+  useEffect(() => {
+    if (bookingId === null) return;
+    let cancelled = false;
+    setNights(undefined);
+    void loadNights(nightsReader(session.apiClient(), bookingId)).then((loaded) => {
+      if (!cancelled) setNights(loaded);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingId, session]);
+  return nights;
 }
 
 export default function BookingDetailScreen(): ReactElement {
@@ -156,6 +214,9 @@ export default function BookingDetailScreen(): ReactElement {
     void load();
   }, [load, ready]);
 
+  // HB-266: giá theo đêm đọc riêng sau khi có booking; state khai sau cùng (thứ tự hook của test).
+  const nights = useNights(session, bookingOf(outcome));
+
   if (!ready || busy)
     return (
       <View
@@ -192,7 +253,7 @@ export default function BookingDetailScreen(): ReactElement {
           {t('orders.detail.pay')}
         </Link>
       ) : null}
-      {booking === null ? null : <DetailBody booking={booking} />}
+      {booking === null ? null : <DetailBody booking={booking} nights={nights} />}
       {booking === null ? null : (
         <Pressable
           accessibilityRole="button"

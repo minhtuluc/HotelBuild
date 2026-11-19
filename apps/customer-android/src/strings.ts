@@ -108,8 +108,11 @@ export const catalog = {
   'orders.detail.pay': 'Thanh toán tiền cọc',
   'orders.detail.notFound': 'Không thấy đơn này trong danh sách đã tải.',
   'orders.detail.notCached': 'Đang offline và đơn này chưa từng được tải về máy.',
-  'orders.detail.snapshotPending':
-    'Bảng giá theo đêm: hợp đồng chưa có tuyến snapshot giá cho app — chờ ticket hợp đồng.',
+  'orders.detail.nights.title': 'Giá theo đêm (đã chốt khi đặt)',
+  'orders.detail.nights.row': '{date}: {amount}',
+  'orders.detail.nights.rooms': '{date}: {amount} ({rooms} phòng)',
+  'orders.detail.nights.discount': 'Giảm giá: {amount}',
+  'orders.detail.nights.unavailable': 'Chưa xem được giá theo đêm — kiểm tra kết nối rồi tải lại.',
   'orders.detail.payments.title': 'Các khoản thanh toán',
   'orders.detail.payments.empty': 'Chưa có khoản thanh toán nào.',
   'orders.detail.payments.row': '{type} · {method} · {amount} — {status}',
