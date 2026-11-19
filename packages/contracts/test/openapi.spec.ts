@@ -111,6 +111,7 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   ['get', '/api/v1/bookings', 'bearer'],
   ['get', '/api/v1/bookings/{bookingId}', 'bearer'],
   ['post', '/api/v1/bookings/{bookingId}/confirm', 'bearer'],
+  ['get', '/api/v1/bookings/{bookingId}/nights', 'bearer'],
   ['post', '/api/v1/walk-in', 'bearer'],
   ['post', '/api/v1/holds', 'bearer'],
   ['delete', '/api/v1/holds/{holdId}', 'bearer'],
@@ -183,7 +184,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 126 path của F0…F8 (kèm đọc đối soát theo người thu HB-262, logout khách TD-58, sửa/ngừng khuyến mãi HB-240, sửa/ngừng mùa HB-241, bảng ngày HB-242, ảnh công khai HB-244, tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151, 3 path HB-204, confirm-transfer HB-215 và hợp đồng F6 HB-120)', () => {
+  it('có đủ 127 path của F0…F8 (kèm bảng giá theo đêm HB-266, đọc đối soát theo người thu HB-262, logout khách TD-58, sửa/ngừng khuyến mãi HB-240, sửa/ngừng mùa HB-241, bảng ngày HB-242, ảnh công khai HB-244, tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151, 3 path HB-204, confirm-transfer HB-215 và hợp đồng F6 HB-120)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -251,6 +252,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/bookings/{bookingId}/cancel',
         '/api/v1/bookings/{bookingId}/reschedule',
         '/api/v1/bookings/{bookingId}/balance',
+        '/api/v1/bookings/{bookingId}/nights',
         '/api/v1/payments',
         '/api/v1/payments/online',
         '/api/v1/payments/{paymentId}/status',
