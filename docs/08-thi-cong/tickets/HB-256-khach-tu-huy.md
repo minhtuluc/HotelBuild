@@ -7,6 +7,8 @@ max_lines: 520
 allow:
   - apps/api/src/modules/book/cancel/**
   - apps/api/src/modules/fo/check-out/service.ts
+  - apps/api/src/modules/book/bookings/principal.ts
+  - apps/api/src/common/guards/auth.guard.ts
   - apps/api/test/huy-booking/**
   - apps/api/test/rbac/routes/f4-booking.ts
   - docs/08-thi-cong/tickets/HB-256-khach-tu-huy.md
@@ -33,6 +35,7 @@ unlock:
 5. Phạt đêm đầu khi khách huỷ (BR-CANCEL-06): ghi nghĩa vụ `booking_charges` PENALTY như cũ. **Không** tạo phiếu `payments` PENALTY `CASH` PENDING, vì `ck_payments_cash_shift` bắt buộc có nhân viên lập. Sổ cái và lệnh thu tại quầy đọc nghĩa vụ từ `booking_charges`.
 6. Bất khả kháng: khách vẫn bị chặn ở lệnh huỷ (BR-CANCEL-13, chỉ MANAGER/OWNER). Xem trước trả cảnh báo `FORCE_MAJEURE_REQUIRES_MANAGER`.
 7. Trả phòng sớm dùng chung `recordRefund` qua `staffActor` (không đổi hành vi).
+9. **Chặn mật khẩu tạm trên tuyến `@Public`**: `AuthGuard` trả `403 E_AUTH_PASSWORD_CHANGE_REQUIRED` cho nhân viên đang buộc đổi mật khẩu, nhưng `bookingCaller` không kiểm. Hai tuyến huỷ, và cả `POST/GET /bookings` cùng `balance` có từ trước, vì thế để lọt nhân viên dùng mật khẩu tạm. `bookingCaller` nay đọc `must_change_password` và chặn như guard; lỗi do agent soát R2 tìm ra và đã được xác nhận bằng test.
 8. Bảng đối chiếu RBAC bỏ hai tuyến này, vì route `@Public` không thuộc bảng bảo vệ. Quyền nhân viên vẫn được `guards.spec.ts` kiểm.
 
 ## Tiêu chí nghiệm thu
@@ -42,6 +45,7 @@ unlock:
    - Khách khác bị 404; không có bearer thì 401; nhân viên vẫn huỷ được.
    - Khách chọn bất khả kháng: xem trước có cảnh báo, lệnh huỷ 403.
    - Khách huỷ trong bậc phạt: có công nợ PENALTY 800.000 ₫, không có phiếu tiền mặt.
+   - Nhân viên đang buộc đổi mật khẩu: xem trước và huỷ đều 403 `E_AUTH_PASSWORD_CHANGE_REQUIRED`.
 2. Vẫn xanh: `test/huy-booking` (cancel, guards), `test/rbac`, `uc-check-out`, `xem-truoc-tien-sanh`, `front-office/day-board`; `check:openapi`/`check:contract` không có thay đổi phá vỡ.
 3. Máy thật: khách huỷ PH-261119-00004 (đã trả cọc 390.000 ₫) trên app Android.
 

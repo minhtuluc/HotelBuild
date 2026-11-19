@@ -115,3 +115,21 @@ describe('HB-256: khách tự huỷ', () => {
     ).toEqual([]);
   });
 });
+
+describe('HB-256: tuyến @Public vẫn giữ mọi chặn của AuthGuard cho nhân viên', () => {
+  test('nhân viên đang buộc đổi mật khẩu tạm không xem trước/huỷ được (E_AUTH_PASSWORD_CHANGE_REQUIRED)', async () => {
+    const target = await booking();
+    await pay(target.id, 500_000n);
+    const staff = await login('FRONT_DESK');
+    await rows("UPDATE users SET must_change_password=true WHERE username='h029-first'");
+    try {
+      const blocked = await preview(staff, target.id);
+      expect(blocked.status).toBe(403);
+      expect(errorCode(blocked.body)).toBe('E_AUTH_PASSWORD_CHANGE_REQUIRED');
+      expect((await cancel(staff, target.id, guestCancel, { tag: 'W/"x"' })).status).toBe(403);
+      expect((await bookingRow(target.id)).status).toBe('CONFIRMED');
+    } finally {
+      await rows("UPDATE users SET must_change_password=false WHERE username='h029-first'");
+    }
+  });
+});
