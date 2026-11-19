@@ -7,6 +7,8 @@ max_lines: 300
 allow:
   - packages/api-client/src/booking.ts
   - packages/api-client/test/f5-endpoints.spec.ts
+  - packages/web-session/test/f5-bookings.spec.ts
+  - packages/web-session/test/f5-refunds.spec.ts
   - apps/customer-android/src/cancel.ts
   - apps/customer-android/src/booking-actions-api.ts
   - apps/customer-android/src/strings.ts
