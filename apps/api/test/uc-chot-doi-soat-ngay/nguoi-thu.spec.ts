@@ -155,3 +155,36 @@ test('người thu không tồn tại ⇒ 404; ngày sai dạng ⇒ 400', async 
   expect(code(unknown)).toBe('E_GEN_NOT_FOUND');
   expect((await daily(accountant, '03-11-2026')).status).toBe(400);
 });
+
+test('ngưỡng lệch quỹ là của đối soát (BR-PAY-10 = 50.000), không lấy ngưỡng duyệt hoàn `deal.threshold.minor`', async () => {
+  // Máy thật: dev seed đặt `deal.threshold.minor = 5.000.000` ⇒ lệch 100.000 không báo MANAGER.
+  const businessDate = '2026-10-27';
+  clock.value = Date.parse(`${businessDate}T03:00:00.000Z`);
+  await rows(
+    `DELETE FROM system_settings WHERE key IN ('reconciliation.cashDiscrepancyThreshold',
+       'reconciliation.discrepancyThresholdVnd', 'pay.reconciliation.discrepancyThreshold')`,
+  );
+  await rows(
+    `INSERT INTO system_settings(key, value, value_type) VALUES ('deal.threshold.minor', '5000000', 'NUMBER')
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+  );
+  const guest = await issueGuest('+84900000265', 'HB-262 Guest 3');
+  const frontDesk = await staffToken('FRONT_DESK', 'h029-first');
+  const amount = await cashDeposit(frontDesk, '0900000265', guest.token);
+  const accountant = await staffToken('ACCOUNTANT', 'h029-second');
+  const response = await close(
+    {
+      propertyId,
+      businessDate,
+      collectorId: userId,
+      countedCash: amount + 100_000,
+      pinToken: await pinTokenFor(accountant),
+    },
+    accountant,
+  );
+  expect(response.status, JSON.stringify(response.body)).toBe(201);
+  expect(reconciliationCloseResponseSchema.parse(response.body)).toMatchObject({
+    difference: 100_000,
+    managerNotified: true,
+  });
+});

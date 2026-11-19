@@ -39,7 +39,8 @@ const THRESHOLD_KEYS = [
   'reconciliation.cashDiscrepancyThreshold',
   'reconciliation.discrepancyThresholdVnd',
   'pay.reconciliation.discrepancyThreshold',
-  'deal.threshold.minor',
+  // HB-262: KHÔNG dùng `deal.threshold.minor` — đó là ngưỡng duyệt hoàn tiền (TC-PAY-16, mặc định 5.000.000),
+  // dùng làm ngưỡng lệch quỹ thì lệch dưới 5 triệu không ai báo MANAGER, trái BR-PAY-10 (50.000 VND).
 ] as const;
 /** Đích nhận cảnh báo lệch quỹ — cùng khoá/mặc định với danh mục cảnh báo HB-182 ở worker. */
 const MANAGER_RECIPIENT_KEY = 'alerts.recipient.manager';
