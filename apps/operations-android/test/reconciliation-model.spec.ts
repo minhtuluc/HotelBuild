@@ -5,6 +5,7 @@ import {
   canClose,
   closeBodyFor,
   closeMatches,
+  formatDifference,
   parseCountedCash,
 } from '../src/reconciliation/model';
 
@@ -56,5 +57,12 @@ describe('SCR-68 đối soát tiền mặt (HB-263)', () => {
     };
     expect(closeMatches(body, response)).toBe(true);
     expect(closeMatches(body, { ...response, countedCash: 1 })).toBe(false);
+  });
+
+  it('chênh lệch có dấu: thiếu hiện "−", thừa hiện "+", không ném lỗi với số âm', () => {
+    // Máy thật: chốt thiếu 100.000 làm màn sập (`formatVnd` chỉ nhận số không âm).
+    expect(formatDifference(-100_000)).toBe('−100.000 ₫');
+    expect(formatDifference(30_000)).toBe('+30.000 ₫');
+    expect(formatDifference(0)).toBe('0 ₫');
   });
 });

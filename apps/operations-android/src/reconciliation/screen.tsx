@@ -20,7 +20,14 @@ import { PinPanel } from '../stay/controls';
 import type { PinnedWriter } from '../stay/writer';
 import { theme } from '../theme';
 import { cashText as text } from './messages';
-import { businessDateVn, canClose, closeBodyFor, parseCountedCash, type CloseBody } from './model';
+import {
+  businessDateVn,
+  canClose,
+  closeBodyFor,
+  formatDifference,
+  parseCountedCash,
+  type CloseBody,
+} from './model';
 import { loadDaily } from './ports';
 
 type Writer = PinnedWriter<CloseBody, ReconciliationCloseResponse>;
@@ -49,7 +56,7 @@ function submitMessage(outcome: Awaited<ReturnType<Writer['submit']>>): string {
       return text('done', {
         expected: formatVnd(outcome.response.expectedCash),
         counted: formatVnd(outcome.response.countedCash),
-        difference: formatVnd(outcome.response.difference),
+        difference: formatDifference(outcome.response.difference),
       });
     case 'offline':
       return text('offline');
@@ -160,7 +167,7 @@ function CollectorCard({
           <Text style={[theme.body, theme.tabular]}>
             {text('closed', {
               counted: formatVnd(row.closed.countedCash),
-              difference: formatVnd(row.closed.difference),
+              difference: formatDifference(row.closed.difference),
             })}
           </Text>
           {row.closed.managerNotified ? <Text style={theme.muted}>{text('notified')}</Text> : null}

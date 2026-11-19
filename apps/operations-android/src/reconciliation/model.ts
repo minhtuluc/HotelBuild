@@ -55,3 +55,11 @@ export function closeMatches(body: CloseBody, response: ReconciliationCloseRespo
     response.countedCash === body.countedCash
   );
 }
+
+const VND = new Intl.NumberFormat('vi-VN');
+
+/** Chênh lệch quỹ có dấu (`counted − expected`): thiếu "−", thừa "+"; `formatVnd` chỉ nhận số không âm. */
+export function formatDifference(amount: number): string {
+  const sign = amount < 0 ? '−' : amount > 0 ? '+' : '';
+  return `${sign}${VND.format(Math.abs(amount))} ₫`;
+}
