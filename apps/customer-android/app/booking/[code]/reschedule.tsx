@@ -296,7 +296,7 @@ export default function RescheduleBookingScreen(): ReactElement {
     setAlert(null);
     setStep('submitting');
     const request = rescheduleRequestFor({ checkIn, checkOut, quoteId: quote.quoteId, note });
-    const done = await confirmReschedule({ api: actions, net }, booking.id, request);
+    const done = await confirmReschedule({ api: actions, net }, booking, request);
     if (done.kind === 'offline') {
       setOnline(false);
       setStep('quoted');

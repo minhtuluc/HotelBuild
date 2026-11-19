@@ -137,6 +137,8 @@ export function RescheduleBookingScreen(): ReactElement {
         await api.bookings.reschedule(
           bookingId,
           rescheduleRequestOf(checkIn, checkOut, quote.quoteId, reason),
+          // HB-258: neo `If-Match` = version booking đang xem (thiếu ⇒ 428, cũ ⇒ 412).
+          booking?.version === undefined ? '' : `"${booking.version}"`,
         )
       ).data;
       setUpdated(next);
@@ -152,7 +154,7 @@ export function RescheduleBookingScreen(): ReactElement {
     } finally {
       setBusy(false);
     }
-  }, [api, bookingId, checkIn, checkOut, load, quote, reason]);
+  }, [api, booking, bookingId, checkIn, checkOut, load, quote, reason]);
 
   if (forced !== undefined) {
     return (

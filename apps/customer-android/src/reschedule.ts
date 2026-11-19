@@ -111,7 +111,11 @@ export function actionStates(gate: RescheduleGate): RescheduleActionStates {
 /** Bề mặt API cần cho màn đổi ngày — tách ra để test không cần mạng. */
 export interface RescheduleApi {
   quote(request: QuoteRequest): Promise<Quote>;
-  reschedule(bookingId: string, request: RescheduleRequest): Promise<BookingSummary>;
+  reschedule(
+    bookingId: string,
+    request: RescheduleRequest,
+    ifMatch: string,
+  ): Promise<BookingSummary>;
 }
 
 export interface RescheduleDeps {
@@ -171,9 +175,14 @@ export type RescheduleOutcome =
   | { readonly kind: 'failed'; readonly code: string | null };
 
 /** Gửi lệnh đổi ngày: mất mạng thì dừng trước khi gọi máy chủ (không xác nhận thao tác tiền offline). */
+/** Neo `If-Match` của lệnh đổi ngày = `version` booking đang xem (HB-098); thiếu version ⇒ máy chủ trả 428. */
+export function versionTag(version: number | undefined): string {
+  return version === undefined ? '' : `"${version}"`;
+}
+
 export async function confirmReschedule(
   deps: RescheduleDeps,
-  bookingId: string,
+  target: Pick<BookingSummary, 'id' | 'version'>,
   request: RescheduleRequest,
 ): Promise<RescheduleOutcome> {
   try {
@@ -183,7 +192,8 @@ export async function confirmReschedule(
     throw caught;
   }
   try {
-    return { kind: 'done', booking: await deps.api.reschedule(bookingId, request) };
+    const booking = await deps.api.reschedule(target.id, request, versionTag(target.version));
+    return { kind: 'done', booking };
   } catch (caught) {
     return { kind: 'failed', code: isApiError(caught) ? (caught.code ?? null) : null };
   }

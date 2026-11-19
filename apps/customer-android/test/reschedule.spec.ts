@@ -99,10 +99,13 @@ const QUOTE: Quote = {
 /** 00:05 — trước mốc hết hạn của `QUOTE`. */
 const NOW = Date.parse('2026-12-20T00:05:00.000Z');
 
+const TARGET = { id: 'b1', version: 7 };
+
 function stubApi() {
   const quote = vi.fn(async (_request: QuoteRequest) => QUOTE);
-  const reschedule = vi.fn(async (_bookingId: string, _request: RescheduleRequest) =>
-    booking({ checkIn: '2026-12-27', checkOut: '2026-12-29', rescheduleCount: 1 }),
+  const reschedule = vi.fn(
+    async (_bookingId: string, _request: RescheduleRequest, _ifMatch: string) =>
+      booking({ checkIn: '2026-12-27', checkOut: '2026-12-29', rescheduleCount: 1 }),
   );
   const api: RescheduleApi = { quote, reschedule };
   return { api, quote, reschedule };
@@ -283,7 +286,7 @@ describe('SCR-82 đổi ngày lưu trú trên Android (HB-114)', () => {
       quoteId: 'q-new',
       note: '',
     });
-    expect(await confirmReschedule({ api, net: offline }, 'b1', request)).toEqual({
+    expect(await confirmReschedule({ api, net: offline }, TARGET, request)).toEqual({
       kind: 'offline',
     });
     expect(reschedule).not.toHaveBeenCalled();
@@ -297,27 +300,30 @@ describe('SCR-82 đổi ngày lưu trú trên Android (HB-114)', () => {
       quoteId: 'q-new',
       note: '',
     });
-    const outcome = await confirmReschedule({ api, net: online }, 'b1', request);
+    const outcome = await confirmReschedule({ api, net: online }, TARGET, request);
     expect(outcome.kind).toBe('done');
     expect(outcome.kind === 'done' ? outcome.booking.rescheduleCount : null).toBe(1);
-    expect(reschedule).toHaveBeenCalledWith('b1', request);
+    // HB-258: neo `If-Match` = `version` của booking khách đang xem (thiếu ⇒ 428, cũ ⇒ 412).
+    expect(reschedule).toHaveBeenCalledWith('b1', request, '"7"');
   });
 
   it('xác nhận lỗi: trả mã, không coi là đã đổi', async () => {
     const quote = vi.fn(async (_request: QuoteRequest) => QUOTE);
-    const reschedule = vi.fn(async (_bookingId: string, _request: RescheduleRequest) => {
-      throw new ApiError({
-        kind: 'http',
-        message: 'Xung đột',
-        status: 409,
-        code: 'E_BOOK_RESCHEDULE_LIMIT',
-      });
-    });
+    const reschedule = vi.fn(
+      async (_bookingId: string, _request: RescheduleRequest, _tag: string) => {
+        throw new ApiError({
+          kind: 'http',
+          message: 'Xung đột',
+          status: 409,
+          code: 'E_BOOK_RESCHEDULE_LIMIT',
+        });
+      },
+    );
     const api: RescheduleApi = { quote, reschedule };
     expect(
       await confirmReschedule(
         { api, net: online },
-        'b1',
+        TARGET,
         rescheduleRequestFor({
           checkIn: '2026-12-27',
           checkOut: '2026-12-29',

@@ -27,6 +27,8 @@ import {
 } from '@pinehill/contracts';
 import type { BookingSummary, Quote } from '@pinehill/contracts';
 import { AppModule } from '../../src/app.module.js';
+import { signAccessToken } from '../../src/infrastructure/crypto/access-tokens.js';
+import { openGuestSession } from '../support/guest-session.js';
 import { CLOCK } from '../../src/infrastructure/ports.js';
 import { databaseUrl, password } from '../idempotency/database.js';
 import {
@@ -61,6 +63,20 @@ export const shifted = { checkIn: day(28), checkOut: day(31) };
 
 let app: NestFastifyApplication;
 let redis: Redis;
+const accessSecret = randomBytes(32).toString('hex');
+
+/** HB-258: token phiên khách thật cho chủ của booking (dòng `auth_sessions` + cùng secret của app). */
+export async function guestTokenOf(bookingId: string): Promise<string> {
+  const [owner] = await rows('SELECT guest_id FROM bookings WHERE id=$1::uuid', [bookingId]);
+  const guestId = String(owner?.guest_id);
+  const sessionId = await openGuestSession(rows, guestId);
+  const { token } = await signAccessToken(
+    { userId: guestId, role: 'GUEST', propertyScope: [], sessionId },
+    accessSecret,
+    clock.now(),
+  );
+  return token;
+}
 
 export const http = () => request(app.getHttpServer());
 export const errorCode = (body: unknown) => errorBodySchema.parse(body).code;
@@ -355,7 +371,7 @@ beforeAll(async () => {
   const module = AppModule.register({
     DATABASE_URL: databaseUrl,
     REDIS_URL: url.href,
-    JWT_ACCESS_SECRET: randomBytes(32).toString('hex'),
+    JWT_ACCESS_SECRET: accessSecret,
     JWT_REFRESH_SECRET: randomBytes(32).toString('hex'),
     BUSINESS_TIMEZONE: 'Asia/Ho_Chi_Minh',
     IDEMPOTENCY_TTL_HOURS: 24,

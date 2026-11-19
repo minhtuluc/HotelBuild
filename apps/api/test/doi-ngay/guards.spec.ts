@@ -85,12 +85,12 @@ describe('HB-098 cổng chặn quyền', () => {
     expect(accepted.status, JSON.stringify(accepted.body)).toBe(200);
   });
 
-  test('bất biến khai báo quyền: chỉ vai trò người dùng hợp lệ, không khai GUEST trước HB-017', () => {
+  test('bất biến khai báo quyền: chỉ vai trò nhân viên hợp lệ; khách đi nhánh riêng (HB-258)', () => {
     const declared = Object.values(reschedulePermissionRules).flat();
     expect(declared.length).toBeGreaterThan(0);
     for (const role of declared) expect(userRoleSchema.safeParse(role).success).toBe(true);
     // `PermissionRegistry` từ chối vai trò ngoài `userRoleSchema` ngay khi khởi động ⇒ khai `GUEST` sẽ
-    // làm sập ứng dụng; đường khách đổi ngày của chính mình thuộc phiên khách (HB-017).
+    // làm sập ứng dụng; khách đổi ngày booking của mình đi qua `cancelCaller` (HB-258, guest.spec).
     expect(userRoleSchema.safeParse('GUEST').success).toBe(false);
     expect(declared).not.toContain('GUEST');
     expect([...new Set(declared)].sort()).toEqual([

@@ -10,23 +10,38 @@
  */
 import { Inject, Injectable } from '@nestjs/common';
 import type { ExecutionContext } from '@nestjs/common';
+import type { PrismaClient } from '@prisma/client';
 import type { FastifyRequest } from 'fastify';
+import type { Clock } from '@pinehill/domain';
 import type { IdempotencyAccess } from '../../../common/idempotency/decorators.js';
+import { PermissionRegistry } from '../../../common/rbac/permission-registry.js';
+import { CONFIG } from '../../../config/env.js';
+import type { ApiConfig } from '../../../config/env.js';
+import { CLOCK } from '../../../infrastructure/ports.js';
+import { PRISMA } from '../../../infrastructure/prisma/prisma.module.js';
+import { cancelCaller } from '../cancel/caller.js';
 import type { Principal } from '../../../common/idempotency/request.js';
 import { RescheduleService } from './service.js';
 import { bookingParam, deleteReason, requestActor, rescheduleInput } from './validation.js';
 
 @Injectable()
 export class RescheduleAccess implements IdempotencyAccess {
-  constructor(@Inject(RescheduleService) private readonly service: RescheduleService) {}
+  constructor(
+    @Inject(RescheduleService) private readonly service: RescheduleService,
+    @Inject(PRISMA) readonly db: PrismaClient,
+    @Inject(CONFIG) readonly config: ApiConfig,
+    @Inject(CLOCK) readonly clock: Clock,
+    @Inject(PermissionRegistry) readonly permissions: PermissionRegistry,
+  ) {}
 
   async authorize(context: ExecutionContext): Promise<Principal> {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
-    const actor = requestActor(request);
+    // HB-258: khách hoặc nhân viên; khoá chống trùng gắn đúng chủ thể.
+    const actor = await cancelCaller(this, request, 'bookings.reschedule');
     const bookingId = bookingParam(request.params);
     rescheduleInput(request.body);
     await this.service.authorizeFor(this.service.db, actor, bookingId);
-    return { type: 'USER', id: actor.id };
+    return { type: actor.kind, id: actor.id };
   }
 }
 

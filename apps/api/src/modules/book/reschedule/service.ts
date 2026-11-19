@@ -25,6 +25,7 @@ import { channelCodeSchema } from '@pinehill/contracts';
 import type { Clock } from '@pinehill/domain';
 import type { UnitIdentity } from '@pinehill/domain/inventory';
 import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
+import { auditActor, staffActor, type CancelActor } from '../cancel/caller.js';
 import { AppError } from '../../../common/app-error.js';
 import type { ApiConfig } from '../../../config/env.js';
 import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
@@ -101,7 +102,7 @@ export class RescheduleService {
   }
 
   /** Neo cho khoá chống trùng (HB-029): kiểm phiên, phạm vi cơ sở và sự tồn tại của booking trước. */
-  async authorizeFor(db: PrismaClient, actor: AuthorizedActor, bookingId: string): Promise<void> {
+  async authorizeFor(db: PrismaClient, actor: CancelActor, bookingId: string): Promise<void> {
     await this.authorize(db, actor, bookingId, false);
   }
 
@@ -116,16 +117,20 @@ export class RescheduleService {
     actor: AuthorizedActor,
     bookingId: string,
   ): Promise<void> {
-    await this.authorize(db, actor, bookingId, true);
+    await this.authorize(db, staffActor(actor), bookingId, true);
   }
 
-  /** BR-RBAC-02: phiên còn hiệu lực và còn phạm vi cơ sở của booking (OWNER toàn chuỗi). */
+  /**
+   * Khách (HB-258): chỉ booking của chính mình, khác chủ ⇒ `404` như HB-077. Nhân viên (BR-RBAC-02):
+   * phiên còn hiệu lực và còn phạm vi cơ sở của booking (OWNER toàn chuỗi).
+   */
   private async authorize(
     tx: Tx,
-    actor: AuthorizedActor,
+    actor: CancelActor,
     bookingId: string,
     tolerateMissing: boolean,
   ): Promise<void> {
+    if (actor.kind === 'GUEST') return requireOwner(tx, actor.id, bookingId);
     await tx.$queryRaw`SELECT id FROM users WHERE id=${actor.id}::uuid FOR SHARE`;
     const user = await tx.users.findUnique({
       where: { id: actor.id },
@@ -221,7 +226,7 @@ export class RescheduleService {
 
   async reschedule(
     tx: Tx,
-    actor: AuthorizedActor,
+    actor: CancelActor,
     bookingId: string,
     input: RescheduleInput,
     tag: unknown,
@@ -245,7 +250,7 @@ export class RescheduleService {
       const offer = await stayPrice(
         tx,
         this.quotes,
-        { type: 'USER', id: actor.id },
+        { type: actor.kind, id: actor.id },
         stay,
         input.quoteId,
       );
@@ -276,7 +281,7 @@ export class RescheduleService {
 
   private async apply(
     tx: Tx,
-    actor: AuthorizedActor,
+    actor: CancelActor,
     facts: RescheduleFacts,
     input: RescheduleInput,
     offer: StoredQuote,
@@ -357,9 +362,9 @@ export class RescheduleService {
       now: facts.now,
     });
     // BR-PAY-02: số dư là projection của sổ nghĩa vụ/phân bổ, không tự cộng trừ trên `bookings`.
-    await this.ledger.sync(tx, facts.id, actor);
+    await this.ledger.sync(tx, facts.id, auditActor(actor));
     await this.audit.record(tx, {
-      actor,
+      actor: auditActor(actor),
       action: 'BOOKING_RESCHEDULED',
       entityType: 'Booking',
       entityId: facts.id,
@@ -439,10 +444,19 @@ export class RescheduleService {
     try {
       // Trong handler booking **phải** tồn tại: `404` cho ID lạ, còn lần gửi lại cùng khoá đã được
       // `IdempotencyStore` phát lại trước khi tới đây (HB-029, api.md §1.6).
-      await this.authorize(tx, actor, bookingId, false);
+      await this.authorize(tx, staffActor(actor), bookingId, false);
       await hardDeleteBooking(tx, { bookingId, reason: maskOperationalText(reason), actor });
     } catch (error) {
       safeError(error);
     }
   }
+}
+
+/** HB-258: khách chỉ đụng booking của chính mình; booking lạ hoặc của người khác đều che `404`. */
+async function requireOwner(tx: Tx, guestId: string, bookingId: string): Promise<void> {
+  const owned = await tx.bookings.findUnique({
+    where: { id: bookingId },
+    select: { guest_id: true },
+  });
+  if (owned?.guest_id !== guestId) throw missing();
 }

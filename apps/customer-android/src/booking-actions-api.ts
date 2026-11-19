@@ -19,7 +19,8 @@ export function bookingActionsFrom(client: ApiClient): BookingActionsApi {
     },
     cancel: async (bookingId, request, ifMatch) =>
       (await bookings.cancel(bookingId, request, ifMatch)).data,
-    reschedule: async (bookingId, request) => (await bookings.reschedule(bookingId, request)).data,
+    reschedule: async (bookingId, request, ifMatch) =>
+      (await bookings.reschedule(bookingId, request, ifMatch)).data,
     quote: async (request) => (await quotes.quote(request)).data,
   };
 }

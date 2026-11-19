@@ -76,7 +76,12 @@ export interface BookingApi {
     input: CancelRequest,
     ifMatch: string,
   ): Promise<ApiResponse<CancelResponse>>;
-  reschedule(bookingId: string, input: RescheduleRequest): Promise<ApiResponse<BookingSummary>>;
+  /** `ifMatch` = `version` của booking (`"7"`) — bắt buộc (thiếu ⇒ 428, cũ ⇒ 412, HB-098). */
+  reschedule(
+    bookingId: string,
+    input: RescheduleRequest,
+    ifMatch: string,
+  ): Promise<ApiResponse<BookingSummary>>;
   deleteBooking(bookingId: string, reason: string): Promise<ApiResponse<undefined>>;
 }
 
@@ -137,10 +142,11 @@ export function createBookingApi(client: ApiClient): BookingApi {
         body: cancelRequestSchema.parse(input),
         decoder: cancelResponseSchema,
       }),
-    reschedule: (bookingId, input) =>
+    reschedule: (bookingId, input, ifMatch) =>
       client.request({
         method: 'POST',
         path: `/bookings/${encodeURIComponent(bookingId)}/reschedule`,
+        ifMatch,
         body: rescheduleRequestSchema.parse(input),
         decoder: bookingSummarySchema,
       }),

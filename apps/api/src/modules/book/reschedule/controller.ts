@@ -24,7 +24,16 @@ import type { FastifyRequest } from 'fastify';
 import type { BookingSummary } from '@pinehill/contracts';
 import { IdempotencyContext } from '../../../common/idempotency/context.js';
 import { Idempotent } from '../../../common/idempotency/decorators.js';
+import type { PrismaClient } from '@prisma/client';
+import type { Clock } from '@pinehill/domain';
+import { Public } from '../../../common/guards/decorators.js';
 import { Permission } from '../../../common/rbac/permissions.js';
+import { PermissionRegistry } from '../../../common/rbac/permission-registry.js';
+import { CONFIG } from '../../../config/env.js';
+import type { ApiConfig } from '../../../config/env.js';
+import { CLOCK } from '../../../infrastructure/ports.js';
+import { PRISMA } from '../../../infrastructure/prisma/prisma.module.js';
+import { cancelCaller } from '../cancel/caller.js';
 import { HardDeleteAccess, RescheduleAccess } from './access.js';
 import { RescheduleService } from './service.js';
 import { bookingId, deleteReason, requestActor, rescheduleInput } from './validation.js';
@@ -34,13 +43,18 @@ export class RescheduleController {
   constructor(
     @Inject(RescheduleService) private readonly service: RescheduleService,
     @Inject(IdempotencyContext) private readonly context: IdempotencyContext,
+    @Inject(PRISMA) readonly db: PrismaClient,
+    @Inject(CONFIG) readonly config: ApiConfig,
+    @Inject(CLOCK) readonly clock: Clock,
+    @Inject(PermissionRegistry) readonly permissions: PermissionRegistry,
   ) {}
 
   /** AC1/AC2: đổi ngày, giữ nguyên trạng thái, append ảnh giá RESCHEDULE, nhả chỗ cũ (BR-BOOK-12). */
+  // HB-258: `@Public` để khách tự đổi ngày booking của mình (api.md §2.5); chủ thể tự xác thực ở `cancelCaller`.
+  @Public()
   @Post(':bookingId/reschedule')
   @HttpCode(200)
   @Header('Cache-Control', 'no-store')
-  @Permission('bookings.reschedule')
   @Idempotent(RescheduleAccess)
   async reschedule(
     @Param('bookingId') id: unknown,
@@ -50,7 +64,7 @@ export class RescheduleController {
   ): Promise<BookingSummary> {
     return this.service.reschedule(
       this.context.transaction(),
-      requestActor(request),
+      await cancelCaller(this, request, 'bookings.reschedule'),
       bookingId(id),
       rescheduleInput(body),
       tag,

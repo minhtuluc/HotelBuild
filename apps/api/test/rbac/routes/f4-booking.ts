@@ -37,11 +37,8 @@ export function f4Booking(keyed: Oracle): void {
   // trong `cancelCaller`, có test riêng ở `test/huy-booking/guards.spec.ts` + `guest.spec.ts`.
   // HB-098 / api.md §2.5, §6.3: đổi ngày (thân oracle thiếu `checkIn`/`checkOut` ⇒ 400) và xoá cứng
   // (`reason` của oracle hợp lệ, `:bookingId` không tồn tại ⇒ 404 trước khi chạm dữ liệu).
-  keyed[`${RequestMethod.POST}:bookings/:bookingId/reschedule`] = {
-    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
-    status: 400,
-    method: RequestMethod.POST,
-  };
+  // HB-258: đổi ngày là `@Public` (khách tự đổi booking của mình); quyền nhân viên kiểm ở `cancelCaller`
+  // và có test riêng ở `test/doi-ngay/guards.spec.ts` + `guest.spec.ts`.
   keyed[`${RequestMethod.DELETE}:bookings/:bookingId`] = {
     roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
     status: 404,
