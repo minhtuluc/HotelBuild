@@ -110,9 +110,11 @@ export function updateRequestFor(
           ...(draft.consent ? { consentVersion: CONSENT_VERSION } : {}),
         }),
   };
-  return Object.keys(request).length === 0
-    ? { ok: false, issue: 'unchanged' }
-    : { ok: true, request };
+  if (Object.keys(request).length === 0) return { ok: false, issue: 'unchanged' };
+  // Cùng luật với máy chủ (zod `email()`): email lọt regex sơ bộ nhưng máy chủ từ chối thì báo tại chỗ.
+  return guestSelfUpdateRequestSchema.safeParse(request).success
+    ? { ok: true, request }
+    : { ok: false, issue: 'email' };
 }
 
 export type SaveOutcome =

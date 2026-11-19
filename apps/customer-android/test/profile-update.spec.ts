@@ -54,6 +54,11 @@ describe('HB-260 sửa hồ sơ khách (SCR-83)', () => {
       issue: 'email',
     });
     expect(updateRequestFor(draftOf(GUEST), GUEST)).toEqual({ ok: false, issue: 'unchanged' });
+    // Máy thật: bộ gõ biến `example` thành `ẽample` — regex sơ bộ cho qua, schema hợp đồng thì không.
+    expect(updateRequestFor({ ...draftOf(GUEST), email: 'khach@ẽample.com' }, GUEST)).toEqual({
+      ok: false,
+      issue: 'email',
+    });
   });
 
   it('lưu: offline không gọi máy chủ; thành công trả hồ sơ máy chủ; lỗi trả mã', async () => {
