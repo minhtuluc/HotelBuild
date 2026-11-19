@@ -100,10 +100,16 @@ export function formatHoursBeforeCheckIn(hours: number): string {
   return HOURS_FORMATTER.format(hours);
 }
 
+/** Xem trước kèm `ETag` máy chủ — neo **bắt buộc** của lệnh huỷ (`If-Match`, HB-097/HB-257). */
+export interface AnchoredPreview {
+  readonly preview: CancelPreview;
+  readonly tag: string;
+}
+
 /** Bề mặt API cần cho màn huỷ — tách ra để test không cần mạng. */
 export interface CancelApi {
-  preview(bookingId: string, request: CancelPreviewRequest): Promise<CancelPreview>;
-  cancel(bookingId: string, request: CancelRequest): Promise<CancelResponse>;
+  preview(bookingId: string, request: CancelPreviewRequest): Promise<AnchoredPreview>;
+  cancel(bookingId: string, request: CancelRequest, ifMatch: string): Promise<CancelResponse>;
 }
 
 export interface CancelDeps {
@@ -113,7 +119,7 @@ export interface CancelDeps {
 
 export type PreviewOutcome =
   | { readonly kind: 'offline' }
-  | { readonly kind: 'preview'; readonly preview: CancelPreview }
+  | { readonly kind: 'preview'; readonly preview: CancelPreview; readonly tag: string }
   | { readonly kind: 'failed'; readonly code: string | null };
 
 /** Xem trước: offline thì không gọi máy chủ (chỉ còn bản đã có để đọc). */
@@ -129,7 +135,8 @@ export async function loadPreview(
     throw caught;
   }
   try {
-    return { kind: 'preview', preview: await deps.api.preview(bookingId, request) };
+    const anchored = await deps.api.preview(bookingId, request);
+    return { kind: 'preview', preview: anchored.preview, tag: anchored.tag };
   } catch (caught) {
     return { kind: 'failed', code: isApiError(caught) ? (caught.code ?? null) : null };
   }
@@ -157,10 +164,12 @@ export async function confirmCancel(
   if (!samePreview(fresh.preview, preview)) return { kind: 'stale', preview: fresh.preview };
   const trimmed = note.trim();
   try {
-    const result = await deps.api.cancel(bookingId, {
-      ...request,
-      ...(trimmed === '' ? {} : { note: trimmed }),
-    });
+    // Neo của lần đối chiếu ngay trước: máy chủ từ chối (412) nếu version/số liệu đổi sau lần này.
+    const result = await deps.api.cancel(
+      bookingId,
+      { ...request, ...(trimmed === '' ? {} : { note: trimmed }) },
+      fresh.tag,
+    );
     return { kind: 'cancelled', result };
   } catch (caught) {
     return { kind: 'failed', code: isApiError(caught) ? (caught.code ?? null) : null };

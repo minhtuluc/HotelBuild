@@ -12,8 +12,13 @@ export function bookingActionsFrom(client: ApiClient): BookingActionsApi {
   const bookings = createBookingApi(client);
   const quotes = createQuoteApi(client);
   return {
-    preview: async (bookingId, request) => (await bookings.cancelPreview(bookingId, request)).data,
-    cancel: async (bookingId, request) => (await bookings.cancel(bookingId, request)).data,
+    preview: async (bookingId, request) => {
+      const response = await bookings.cancelPreview(bookingId, request);
+      if (response.etag === undefined) throw new Error('Cancel preview without ETag');
+      return { preview: response.data, tag: response.etag };
+    },
+    cancel: async (bookingId, request, ifMatch) =>
+      (await bookings.cancel(bookingId, request, ifMatch)).data,
     reschedule: async (bookingId, request) => (await bookings.reschedule(bookingId, request)).data,
     quote: async (request) => (await quotes.quote(request)).data,
   };

@@ -70,7 +70,12 @@ export interface BookingApi {
     bookingId: string,
     input: CancelPreviewRequest,
   ): Promise<ApiResponse<CancelPreview>>;
-  cancel(bookingId: string, input: CancelRequest): Promise<ApiResponse<CancelResponse>>;
+  /** `ifMatch` = `etag` của `cancelPreview` cùng tập phòng — bắt buộc (thiếu ⇒ 428, cũ ⇒ 412). */
+  cancel(
+    bookingId: string,
+    input: CancelRequest,
+    ifMatch: string,
+  ): Promise<ApiResponse<CancelResponse>>;
   reschedule(bookingId: string, input: RescheduleRequest): Promise<ApiResponse<BookingSummary>>;
   deleteBooking(bookingId: string, reason: string): Promise<ApiResponse<undefined>>;
 }
@@ -124,10 +129,11 @@ export function createBookingApi(client: ApiClient): BookingApi {
         body: cancelPreviewRequestSchema.parse(input),
         decoder: cancelPreviewSchema,
       }),
-    cancel: (bookingId, input) =>
+    cancel: (bookingId, input, ifMatch) =>
       client.request({
         method: 'POST',
         path: `/bookings/${encodeURIComponent(bookingId)}/cancel`,
+        ifMatch,
         body: cancelRequestSchema.parse(input),
         decoder: cancelResponseSchema,
       }),

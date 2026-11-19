@@ -45,9 +45,16 @@ const RESPONSE: CancelResponse = {
   refundRequest: { id: 'r1', status: 'PENDING', approvedAmount: null },
 };
 
-function stubApi(result: CancelPreview = previewOf()) {
-  const preview = vi.fn(async (_bookingId: string, _request: CancelPreviewRequest) => result);
-  const cancel = vi.fn(async (_bookingId: string, _request: CancelRequest) => RESPONSE);
+const TAG = 'W/"v3-a1b2"';
+
+function stubApi(result: CancelPreview = previewOf(), tag = TAG) {
+  const preview = vi.fn(async (_bookingId: string, _request: CancelPreviewRequest) => ({
+    preview: result,
+    tag,
+  }));
+  const cancel = vi.fn(
+    async (_bookingId: string, _request: CancelRequest, _ifMatch: string) => RESPONSE,
+  );
   const api: CancelApi = { preview, cancel };
   return { api, preview, cancel };
 }
@@ -100,7 +107,7 @@ describe('SCR-81 huỷ đặt phòng trên Android (HB-114)', () => {
       'b1',
       cancelRequestFor('GUEST_REQUEST'),
     );
-    expect(outcome).toEqual({ kind: 'preview', preview: previewOf() });
+    expect(outcome).toEqual({ kind: 'preview', preview: previewOf(), tag: TAG });
     expect(refundRows(BREAKDOWN)).toEqual([
       { key: 'paid', amount: 2_000_000 },
       { key: 'requested', amount: 1_600_000 },
@@ -155,11 +162,11 @@ describe('SCR-81 huỷ đặt phòng trên Android (HB-114)', () => {
       '  khách bận  ',
     );
     expect(outcome).toEqual({ kind: 'cancelled', result: RESPONSE });
-    expect(cancel).toHaveBeenCalledWith('b1', {
-      reason: 'GUEST_REQUEST',
-      isForceMajeure: false,
-      note: 'khách bận',
-    });
+    expect(cancel).toHaveBeenCalledWith(
+      'b1',
+      { reason: 'GUEST_REQUEST', isForceMajeure: false, note: 'khách bận' },
+      TAG,
+    );
   });
 
   it('xác nhận: ghi chú rỗng thì không gửi trường note', async () => {
@@ -171,10 +178,11 @@ describe('SCR-81 huỷ đặt phòng trên Android (HB-114)', () => {
       previewOf(),
       '   ',
     );
-    expect(cancel).toHaveBeenCalledWith('b1', {
-      reason: 'FORCE_MAJEURE',
-      isForceMajeure: true,
-    });
+    expect(cancel).toHaveBeenCalledWith(
+      'b1',
+      { reason: 'FORCE_MAJEURE', isForceMajeure: true },
+      TAG,
+    );
   });
 
   it('xác nhận offline: dừng trước khi gọi máy chủ', async () => {
@@ -193,10 +201,11 @@ describe('SCR-81 huỷ đặt phòng trên Android (HB-114)', () => {
   });
 
   it('xác nhận: lỗi máy chủ trả mã, không coi là đã huỷ', async () => {
-    const preview = vi.fn(async (_bookingId: string, _request: CancelPreviewRequest) =>
-      previewOf(),
-    );
-    const cancel = vi.fn(async (_bookingId: string, _request: CancelRequest) => {
+    const preview = vi.fn(async (_bookingId: string, _request: CancelPreviewRequest) => ({
+      preview: previewOf(),
+      tag: TAG,
+    }));
+    const cancel = vi.fn(async (_bookingId: string, _request: CancelRequest, _ifMatch: string) => {
       throw new ApiError({
         kind: 'timeout',
         message: 'Chưa xác định kết quả',
@@ -213,5 +222,19 @@ describe('SCR-81 huỷ đặt phòng trên Android (HB-114)', () => {
         '',
       ),
     ).toEqual({ kind: 'failed', code: 'E_PAY_PROVIDER_TIMEOUT' });
+  });
+
+  it('HB-257: lệnh huỷ gửi If-Match = ETag của lần xem trước ngay trước nó (thiếu neo ⇒ 428)', async () => {
+    // Máy thật: thiếu neo nên mọi lệnh huỷ trả `E_GEN_PRECONDITION_REQUIRED`. Neo phải lấy từ lần xem
+    // trước **mới nhất** (lần đối chiếu ngay trước khi huỷ), không phải lần khách bấm xem trước ban đầu.
+    const { api, cancel } = stubApi(previewOf(), 'W/"v4-fresh"');
+    await confirmCancel(
+      { api, net: online },
+      'b1',
+      cancelRequestFor('GUEST_REQUEST'),
+      previewOf(),
+      '',
+    );
+    expect(cancel.mock.calls[0]?.[2]).toBe('W/"v4-fresh"');
   });
 });

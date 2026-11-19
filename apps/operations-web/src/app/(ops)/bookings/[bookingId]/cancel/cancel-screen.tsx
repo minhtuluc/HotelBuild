@@ -162,14 +162,17 @@ export function CancelScreen(): ReactElement {
     setBusy(true);
     try {
       // AC1: đối chiếu lại ngay trước khi huỷ; số liệu đổi thì dừng và buộc xác nhận lại.
-      const fresh = (await api.bookings.cancelPreview(bookingId, previewRequestOf(draft))).data;
+      const anchored = await api.bookings.cancelPreview(bookingId, previewRequestOf(draft));
+      const fresh = anchored.data;
       if (!samePreview(fresh, preview)) {
         setPreview(fresh);
         setStale(true);
         setStep('previewed');
         return;
       }
-      setResult((await api.bookings.cancel(bookingId, cancelRequestOf(draft))).data);
+      // HB-257: neo `If-Match` = ETag của chính lần đối chiếu này (thiếu ⇒ 428, cũ ⇒ 412).
+      const tag = anchored.etag ?? '';
+      setResult((await api.bookings.cancel(bookingId, cancelRequestOf(draft), tag)).data);
       setStep('done');
     } catch (caught) {
       setStep('previewed');
