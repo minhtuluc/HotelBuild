@@ -1,15 +1,14 @@
 /**
  * SCR-76 + SCR-78 (HB-087) — xác nhận & giữ chỗ trên Android.
  *
- * Hai bước rõ ràng, đều **cần phiên khách**: `POST /holds` (giữ chỗ có hạn, mốc `expiresAt` do máy chủ trả)
- * rồi `POST /bookings` (đặt phòng; nếu máy chủ nghi trùng thì hỏi khách thay vì tự tạo thêm). Đếm ngược
- * chỉ để hiển thị/khoá nút: app không tự tính hạn, và mọi con số tiền là nguyên văn máy chủ trả (ADR-018).
+ * Một lệnh **cần phiên khách**, giống customer web: xin báo giá trong phiên rồi `POST /bookings`. Máy chủ
+ * tự giữ chỗ (HELD + `holdExpiresAt`); nếu nghi trùng thì hỏi khách thay vì tự tạo thêm. HB-253: không gọi
+ * `POST /holds` — booking do tuyến đó tạo không có snapshot giá/nghĩa vụ phòng nên không đọc được số dư và
+ * không thanh toán được. Đếm ngược chỉ để hiển thị/khoá nút; mọi con số tiền là nguyên văn máy chủ trả (ADR-018).
  */
 import type {
   BookingCreateRequest,
   BookingSummary,
-  Hold,
-  HoldCreateRequest,
   RatePlanCode,
   QuoteRequest,
 } from '@pinehill/contracts';
@@ -43,20 +42,6 @@ export interface HoldInput {
   readonly note?: string;
 }
 
-export function holdRequestFor(input: HoldInput): HoldCreateRequest {
-  return {
-    propertyId: input.criteria.propertyId,
-    roomTypeId: input.criteria.roomTypeId,
-    channelCode: GUEST_CHANNEL_CODE,
-    checkIn: input.criteria.checkIn,
-    checkOut: input.criteria.checkOut,
-    adults: input.criteria.adults,
-    children: input.criteria.children,
-    roomCount: input.criteria.roomCount,
-    quoteId: input.quoteId,
-  };
-}
-
 export function bookingRequestFor(input: HoldInput): BookingCreateRequest {
   return {
     propertyId: input.criteria.propertyId,
@@ -78,14 +63,8 @@ export function bookingRequestFor(input: HoldInput): BookingCreateRequest {
 export interface HoldApi {
   /** HB-249: báo giá trong phiên của khách — API chỉ cho chính chủ thể tiêu thụ báo giá. */
   quote(request: QuoteRequest): Promise<{ readonly quoteId: string }>;
-  hold(request: HoldCreateRequest): Promise<Hold>;
   book(request: BookingCreateRequest): Promise<BookingSummary>;
 }
-
-export type HoldOutcome =
-  | { readonly kind: 'offline' }
-  | { readonly kind: 'ready'; readonly hold: Hold; readonly quoteId: string }
-  | { readonly kind: 'failed'; readonly code: string | null };
 
 export type BookingOutcome =
   | { readonly kind: 'offline' }
@@ -119,32 +98,18 @@ export function quoteRequestFor(input: HoldInput): QuoteRequest {
 }
 
 /**
- * Bước 1: xin lại báo giá trong phiên của khách rồi giữ chỗ bằng mã báo giá đó (HB-249). Báo giá ở màn chi
- * tiết phòng là của khách ẩn danh nên API trả 409 `E_RATE_QUOTE_MISMATCH` nếu dùng thẳng. Trả `expiresAt`
- * của máy chủ để màn hình đếm ngược và `quoteId` mới cho bước đặt phòng.
+ * Xin lại báo giá trong phiên của khách (báo giá ở màn chi tiết phòng là của khách ẩn danh — API trả 409
+ * `E_RATE_QUOTE_MISMATCH` nếu dùng thẳng, HB-249) rồi đặt phòng bằng mã báo giá đó. Máy chủ nghi trùng
+ * thì trả `duplicate` để hỏi khách.
  */
-export async function startHold(
-  deps: { readonly api: HoldApi; readonly net: NetInfoSource },
-  input: HoldInput,
-): Promise<HoldOutcome> {
-  if (!(await online(deps.net))) return { kind: 'offline' };
-  try {
-    const { quoteId } = await deps.api.quote(quoteRequestFor(input));
-    const hold = await deps.api.hold(holdRequestFor({ ...input, quoteId }));
-    return { kind: 'ready', hold, quoteId };
-  } catch (caught) {
-    return { kind: 'failed', code: isApiError(caught) ? (caught.code ?? null) : null };
-  }
-}
-
-/** Bước 2: đặt phòng trên chỗ đang giữ; máy chủ nghi trùng thì trả `duplicate` để hỏi khách. */
-export async function finishBooking(
+export async function placeBooking(
   deps: { readonly api: HoldApi; readonly net: NetInfoSource },
   input: HoldInput,
 ): Promise<BookingOutcome> {
   if (!(await online(deps.net))) return { kind: 'offline' };
   try {
-    const booking = await deps.api.book(bookingRequestFor(input));
+    const { quoteId } = await deps.api.quote(quoteRequestFor(input));
+    const booking = await deps.api.book(bookingRequestFor({ ...input, quoteId }));
     return booking.duplicateSuspected ? { kind: 'duplicate', booking } : { kind: 'ready', booking };
   } catch (caught) {
     return { kind: 'failed', code: isApiError(caught) ? (caught.code ?? null) : null };
@@ -177,16 +142,17 @@ export function bookingResult(outcome: BookingOutcome): BookingResult {
   };
 }
 
-/** Số mili giây còn lại theo mốc `expiresAt` của máy chủ; `null` khi mốc không đọc được. */
-export function holdRemaining(hold: Hold, nowMs: number): number | null {
-  const expiry = Date.parse(hold.expiresAt);
+/** Số mili giây còn lại theo mốc giữ chỗ của máy chủ; `null` khi mốc không đọc được. */
+export function holdRemaining(expiresAt: string, nowMs: number): number | null {
+  const expiry = Date.parse(expiresAt);
   return Number.isNaN(expiry) ? null : Math.max(0, expiry - nowMs);
 }
 
-/** Nút "đặt phòng" chỉ mở khi chỗ giữ còn hạn (AC1: hết hạn thì khoá tiếp tục). */
-export function continueEnabled(hold: Hold | null, nowMs: number): boolean {
-  if (hold === null) return false;
-  const remaining = holdRemaining(hold, nowMs);
+/** Nút tiếp tục chỉ mở khi booking còn trong hạn giữ (AC1); kênh không giữ chỗ thì không có hạn. */
+export function continueEnabled(booking: BookingSummary | null, nowMs: number): boolean {
+  if (booking === null) return false;
+  if (booking.holdExpiresAt === null) return true;
+  const remaining = holdRemaining(booking.holdExpiresAt, nowMs);
   return remaining !== null && remaining > 0;
 }
 

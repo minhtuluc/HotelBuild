@@ -1,15 +1,15 @@
 /**
  * SCR-76 + SCR-78 (HB-087) — xác nhận & giữ chỗ trên Android.
  *
- * Một thao tác của khách: nhập họ tên/SĐT → `POST /holds` (giữ chỗ có hạn) → `POST /bookings` (tạo đặt
- * phòng). Sau đó màn hình đếm ngược theo `expiresAt` **của máy chủ** và khoá nút tiếp tục khi hết hạn;
- * nếu máy chủ nghi trùng thì hỏi khách thay vì tự tạo thêm.
+ * Một thao tác của khách: nhập họ tên/SĐT → báo giá trong phiên → `POST /bookings` (máy chủ tự giữ chỗ,
+ * HB-253). Sau đó màn hình đếm ngược theo `holdExpiresAt` **của máy chủ** và khoá nút tiếp tục khi hết
+ * hạn; nếu máy chủ nghi trùng thì hỏi khách thay vì tự tạo thêm.
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { color, space, formatDateTimeVn } from '@pinehill/ui-native';
-import type { BookingSummary, Hold, RatePlanCode } from '@pinehill/contracts';
+import type { BookingSummary, RatePlanCode } from '@pinehill/contracts';
 import { LoginPrompt } from '../../src/login-prompt';
 import { createSession } from '../../src/session-factory';
 import { holdApiFrom } from '../../src/hold-api';
@@ -23,16 +23,14 @@ import { theme } from '../../src/theme';
 import {
   bookingResult,
   continueEnabled,
-  finishBooking,
   formatCountdown,
   guestIssue,
   holdRemaining,
-  startHold,
+  placeBooking,
   type GuestContact,
   type HoldApi,
   type HoldCriteria,
   type HoldInput,
-  type HoldOutcome,
 } from '../../src/hold';
 
 const TICK_MS = 1000;
@@ -133,17 +131,15 @@ function Action({
   );
 }
 
-function HoldLine({ hold, nowMs }: { hold: Hold; nowMs: number }): ReactElement {
-  const remaining = holdRemaining(hold, nowMs);
+function HoldLine({ expiresAt, nowMs }: { expiresAt: string; nowMs: number }): ReactElement {
+  const remaining = holdRemaining(expiresAt, nowMs);
   const locked = remaining !== null && remaining <= 0;
   return (
     <View style={theme.card} accessible>
       <Text style={[{ color: locked ? color.warning : color.text }, theme.tabular]}>
         {t('hold.countdown', { time: formatCountdown(remaining ?? 0) })}
       </Text>
-      <Text style={theme.muted}>
-        {t('hold.expiresAt', { time: formatDateTimeVn(hold.expiresAt) })}
-      </Text>
+      <Text style={theme.muted}>{t('hold.expiresAt', { time: formatDateTimeVn(expiresAt) })}</Text>
     </View>
   );
 }
@@ -166,7 +162,6 @@ function Result({ booking }: { booking: BookingSummary }): ReactElement {
 }
 
 function Outcome({
-  hold,
   nowMs,
   booking,
   duplicate,
@@ -175,7 +170,6 @@ function Outcome({
   onKeep,
   onContinue,
 }: {
-  hold: Hold | null;
   nowMs: number;
   booking: BookingSummary | null;
   duplicate: boolean;
@@ -184,10 +178,11 @@ function Outcome({
   onKeep: () => void;
   onContinue: () => void;
 }): ReactElement {
-  const locked = hold !== null && !continueEnabled(hold, nowMs);
+  const expiresAt = booking?.holdExpiresAt ?? null;
+  const locked = booking !== null && !continueEnabled(booking, nowMs);
   return (
     <>
-      {hold === null ? null : <HoldLine hold={hold} nowMs={nowMs} />}
+      {expiresAt === null ? null : <HoldLine expiresAt={expiresAt} nowMs={nowMs} />}
       {!locked ? null : (
         <Text accessibilityRole="alert" style={{ color: color.warning }}>
           {t('hold.locked')}
@@ -210,17 +205,6 @@ function Outcome({
   );
 }
 
-/** Đã giữ chỗ rồi (lần trước hỏng ở bước đặt phòng) thì dùng lại chỗ giữ và mã báo giá, không giữ lần hai. */
-async function holdOrReuse(
-  deps: Parameters<typeof startHold>[0],
-  input: HoldInput,
-  hold: Hold | null,
-  quoteId: string | null,
-): Promise<HoldOutcome> {
-  if (hold !== null && quoteId !== null) return { kind: 'ready', hold, quoteId };
-  return startHold(deps, input);
-}
-
 export default function ConfirmHoldScreen(): ReactElement {
   const params = useStableSearchParams();
   const router = useRouter();
@@ -231,13 +215,11 @@ export default function ConfirmHoldScreen(): ReactElement {
   const [guest, setGuest] = useState<GuestContact>({ fullName: '', phone: '' });
   const [note, setNote] = useState('');
   const [issue, setIssue] = useState<'NAME' | 'PHONE' | null>(null);
-  const [hold, setHold] = useState<Hold | null>(null);
   const [booking, setBooking] = useState<BookingSummary | null>(null);
   const [duplicate, setDuplicate] = useState(false);
   const [alert, setAlert] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const [sessionQuoteId, setSessionQuoteId] = useState<string | null>(null);
 
   // Phiên khách: mở lại app thì refresh im lặng để có access token cho hai tuyến cần đăng nhập.
   useEffect(() => {
@@ -252,19 +234,20 @@ export default function ConfirmHoldScreen(): ReactElement {
 
   // Nhịp vẽ lại đếm ngược; hạn thật vẫn là mốc máy chủ trả.
   useEffect(() => {
-    if (hold === null) return;
+    if (booking?.holdExpiresAt == null) return;
     const timer = setInterval(() => {
       setNowMs(Date.now());
     }, TICK_MS);
     return () => {
       clearInterval(timer);
     };
-  }, [hold]);
+  }, [booking]);
 
   const api: HoldApi = useMemo(() => holdApiFrom(session.apiClient()), [session]);
 
   const submit = useCallback(async (): Promise<void> => {
-    if (parsed === null) return;
+    // Đã có booking thì không đặt lần hai (thử lại chỉ sau khi lệnh trước thất bại).
+    if (parsed === null || booking !== null) return;
     const found = guestIssue(guest);
     setIssue(found);
     if (found !== null) return;
@@ -277,23 +260,7 @@ export default function ConfirmHoldScreen(): ReactElement {
     };
     setBusy(true);
     setAlert(null);
-    const held = await holdOrReuse({ api, net }, input, hold, sessionQuoteId);
-    if (held.kind === 'offline') {
-      setAlert(t('guest.offline'));
-      setBusy(false);
-      return;
-    }
-    if (held.kind === 'failed') {
-      setAlert(t('hold.failed', { code: held.code ?? 'UNKNOWN' }));
-      setBusy(false);
-      return;
-    }
-    setHold(held.hold);
-    setSessionQuoteId(held.quoteId);
-    setNowMs(Date.now());
-    const result = bookingResult(
-      await finishBooking({ api, net }, { ...input, quoteId: held.quoteId }),
-    );
+    const result = bookingResult(await placeBooking({ api, net }, input));
     setBusy(false);
     if (result.offline) {
       setAlert(t('guest.offline'));
@@ -303,9 +270,10 @@ export default function ConfirmHoldScreen(): ReactElement {
       setAlert(t('hold.failed', { code: result.failedCode }));
       return;
     }
+    setNowMs(Date.now());
     setBooking(result.booking);
     setDuplicate(result.duplicate);
-  }, [api, guest, net, note, parsed, hold, sessionQuoteId]);
+  }, [api, booking, guest, net, note, parsed]);
 
   if (parsed === null) {
     return (
@@ -394,7 +362,7 @@ export default function ConfirmHoldScreen(): ReactElement {
 
       <Action
         label={t('hold.submit')}
-        disabled={busy}
+        disabled={busy || booking !== null}
         onPress={() => {
           void submit();
         }}
@@ -404,11 +372,10 @@ export default function ConfirmHoldScreen(): ReactElement {
       ) : null}
 
       <Outcome
-        hold={hold}
         nowMs={nowMs}
         booking={booking}
         duplicate={duplicate}
-        continueOn={continueEnabled(hold, nowMs) && !busy}
+        continueOn={continueEnabled(booking, nowMs) && !busy}
         onOpenOld={openBooking}
         onKeep={() => {
           setDuplicate(false);

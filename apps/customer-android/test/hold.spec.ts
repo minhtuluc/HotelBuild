@@ -1,15 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import type { BookingSummary, Hold } from '@pinehill/contracts';
+import type { BookingSummary } from '@pinehill/contracts';
 import {
   bookingRequestFor,
   bookingResult,
   continueEnabled,
-  finishBooking,
   formatCountdown,
   guestIssue,
   holdRemaining,
-  holdRequestFor,
-  startHold,
+  placeBooking,
   type HoldApi,
   type HoldInput,
 } from '../src/hold';
@@ -30,20 +28,6 @@ const INPUT: HoldInput = {
   ratePlanCode: 'SAVER3',
   quoteId: 'q1',
   guest: { fullName: 'Nguyễn Văn An', phone: '0912345678' },
-};
-
-const HOLD: Hold = {
-  holdId: 'h1',
-  bookingId: 'b1',
-  bookingCode: 'SYN079',
-  bookingStatus: 'HELD',
-  status: 'ACTIVE',
-  channelId: 'web',
-  releasedAt: null,
-  expiresAt: '2026-12-01T00:15:00.000Z',
-  holdExpiresAt: '2026-12-01T00:15:00.000Z',
-  quotedTotal: 2_000_000,
-  createdAt: '2026-12-01T00:00:00.000Z',
 };
 
 function booking(duplicateSuspected: boolean): BookingSummary {
@@ -85,49 +69,40 @@ function booking(duplicateSuspected: boolean): BookingSummary {
 
 const api = (overrides: Partial<HoldApi> = {}): HoldApi => ({
   quote: async () => ({ quoteId: 'q-session' }),
-  hold: async () => HOLD,
   book: async () => booking(false),
   ...overrides,
 });
 
+const EXPIRES = '2026-12-01T00:15:00.000Z';
+
 describe('SCR-76/SCR-78 xác nhận & giữ chỗ trên Android (HB-087)', () => {
-  it('thân lệnh giữ chỗ/đặt phòng đúng kênh khách, đúng gói và đúng kỳ', () => {
-    expect(holdRequestFor(INPUT)).toMatchObject({
-      channelCode: 'WEB',
-      quoteId: 'q1',
-      roomTypeId: 'rt-1',
-    });
-    // `holdCreateRequestSchema` là strictObject: không được lọt khoá thừa.
-    expect(Object.keys(holdRequestFor(INPUT)).sort()).toEqual([
-      'adults',
-      'channelCode',
-      'checkIn',
-      'checkOut',
-      'children',
-      'propertyId',
-      'quoteId',
-      'roomCount',
-      'roomTypeId',
-    ]);
+  it('thân lệnh đặt phòng đúng kênh khách, đúng gói và đúng kỳ', () => {
     expect(bookingRequestFor(INPUT)).toMatchObject({
       channelCode: 'WEB',
       ratePlanCode: 'SAVER3',
+      quoteId: 'q1',
+      roomTypeId: 'rt-1',
       guest: { fullName: 'Nguyễn Văn An', phone: '0912345678' },
     });
     expect(bookingRequestFor({ ...INPUT, note: '  ' })).not.toHaveProperty('note');
     expect(bookingRequestFor({ ...INPUT, note: 'Đến muộn' }).note).toBe('Đến muộn');
   });
 
-  it('đếm ngược theo mốc expiresAt của máy chủ; hết hạn thì khoá tiếp tục (AC1)', () => {
+  it('đếm ngược theo holdExpiresAt của booking máy chủ trả; hết hạn thì khoá tiếp tục (AC1)', () => {
     const before = Date.parse('2026-12-01T00:14:00.000Z');
-    const at = Date.parse('2026-12-01T00:15:00.000Z');
-    expect(holdRemaining(HOLD, before)).toBe(60_000);
-    expect(holdRemaining(HOLD, at)).toBe(0);
-    expect(continueEnabled(HOLD, before)).toBe(true);
-    expect(continueEnabled(HOLD, at)).toBe(false);
+    const at = Date.parse(EXPIRES);
+    const held = booking(false);
+    expect(holdRemaining(EXPIRES, before)).toBe(60_000);
+    expect(holdRemaining(EXPIRES, at)).toBe(0);
+    expect(holdRemaining('không-phải-mốc', before)).toBeNull();
+    expect(continueEnabled(held, before)).toBe(true);
+    expect(continueEnabled(held, at)).toBe(false);
     expect(continueEnabled(null, before)).toBe(false);
-    expect(holdRemaining({ ...HOLD, expiresAt: 'không-phải-mốc' }, before)).toBeNull();
-    expect(continueEnabled({ ...HOLD, expiresAt: 'không-phải-mốc' }, before)).toBe(false);
+    expect(continueEnabled({ ...held, holdExpiresAt: 'không-phải-mốc' }, before)).toBe(false);
+    // Kênh không giữ chỗ (PENDING_PAYMENT) không có hạn: được mở tiếp ngay.
+    expect(continueEnabled({ ...held, status: 'PENDING_PAYMENT', holdExpiresAt: null }, at)).toBe(
+      true,
+    );
   });
 
   it('định dạng đếm ngược mm:ss và h:mm:ss', () => {
@@ -137,57 +112,37 @@ describe('SCR-76/SCR-78 xác nhận & giữ chỗ trên Android (HB-087)', () =>
     expect(formatCountdown(3_661_000)).toBe('1:01:01');
   });
 
-  it('offline thì báo cần kết nối và không gọi mạng ở cả hai bước', async () => {
+  it('offline thì báo cần kết nối và không gọi mạng', async () => {
     let calls = 0;
     const counting = api({
-      hold: async () => {
+      quote: async () => {
         calls += 1;
-        return HOLD;
+        return { quoteId: 'q' };
       },
       book: async () => {
         calls += 1;
         return booking(false);
       },
     });
-    expect(await startHold({ api: counting, net: offline }, INPUT)).toEqual({ kind: 'offline' });
-    expect(await finishBooking({ api: counting, net: offline }, INPUT)).toEqual({
-      kind: 'offline',
-    });
+    expect(await placeBooking({ api: counting, net: offline }, INPUT)).toEqual({ kind: 'offline' });
     expect(calls).toBe(0);
   });
 
-  it('giữ chỗ rồi đặt phòng; máy chủ nghi trùng thì trả duplicate để hỏi khách (AC1)', async () => {
-    expect(await startHold({ api: api(), net: online }, INPUT)).toEqual({
-      kind: 'ready',
-      hold: HOLD,
-      quoteId: 'q-session',
-    });
-    expect(await finishBooking({ api: api(), net: online }, INPUT)).toEqual({
-      kind: 'ready',
-      booking: booking(false),
-    });
-    const duplicate = await finishBooking(
-      { api: api({ book: async () => booking(true) }), net: online },
-      INPUT,
-    );
-    expect(duplicate.kind).toBe('duplicate');
-  });
-
-  it('HB-249: lấy lại báo giá bằng phiên của khách rồi giữ chỗ bằng mã báo giá mới', async () => {
-    // Báo giá ở màn chi tiết phòng là của khách ẩn danh; API chỉ cho chính chủ thể dùng báo giá
-    // (409 E_RATE_QUOTE_MISMATCH trên máy thật), nên màn xác nhận phải xin giá lại trong phiên.
+  it('HB-253: một lệnh POST /bookings bằng báo giá lấy trong phiên — không gọi POST /holds', async () => {
+    // POST /holds tạo booking HELD không có snapshot giá/nghĩa vụ phòng: số dư trả 500 và không
+    // thanh toán được (máy thật, PH-261117-00002). POST /bookings tự giữ chỗ (HELD + holdExpiresAt).
     const quoted: unknown[] = [];
-    const held: unknown[] = [];
-    const outcome = await startHold(
+    const booked: string[] = [];
+    const outcome = await placeBooking(
       {
         api: api({
           quote: async (request) => {
             quoted.push(request);
             return { quoteId: 'q-session' };
           },
-          hold: async (request) => {
-            held.push(request.quoteId);
-            return HOLD;
+          book: async (request) => {
+            booked.push(request.quoteId);
+            return booking(false);
           },
         }),
         net: online,
@@ -207,21 +162,26 @@ describe('SCR-76/SCR-78 xác nhận & giữ chỗ trên Android (HB-087)', () =>
         roomCount: 1,
       },
     ]);
-    expect(held).toEqual(['q-session']);
-    expect(outcome).toEqual({ kind: 'ready', hold: HOLD, quoteId: 'q-session' });
+    expect(booked).toEqual(['q-session']);
+    expect(outcome).toEqual({ kind: 'ready', booking: booking(false) });
+    expect(Object.keys(api())).toEqual(['quote', 'book']);
+  });
+
+  it('máy chủ nghi trùng thì trả duplicate để hỏi khách (AC1)', async () => {
+    const duplicate = await placeBooking(
+      { api: api({ book: async () => booking(true) }), net: online },
+      INPUT,
+    );
+    expect(duplicate.kind).toBe('duplicate');
   });
 
   it('lỗi máy chủ thì trả mã để màn hình hiện câu chữ theo mã', async () => {
-    const failure = {
-      name: 'ApiError',
-      message: 'x',
-      code: 'E_INV_NO_AVAILABILITY',
-    };
+    const failure = { name: 'ApiError', message: 'x', code: 'E_INV_NO_AVAILABILITY' };
     expect(
-      await startHold(
+      await placeBooking(
         {
           api: api({
-            hold: async () => {
+            book: async () => {
               throw failure;
             },
           }),

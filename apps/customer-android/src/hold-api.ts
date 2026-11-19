@@ -4,13 +4,7 @@
  */
 import type { ApiClient } from '@pinehill/api-client';
 import { createBookingApi } from '@pinehill/api-client';
-import {
-  holdCreateRequestSchema,
-  holdSchema,
-  quoteRequestSchema,
-  quoteSchema,
-} from '@pinehill/contracts';
-import type { Hold, HoldCreateRequest } from '@pinehill/contracts';
+import { quoteRequestSchema, quoteSchema } from '@pinehill/contracts';
 import type { HoldApi } from './hold';
 
 export function holdApiFrom(client: ApiClient): HoldApi {
@@ -22,15 +16,6 @@ export function holdApiFrom(client: ApiClient): HoldApi {
         path: '/quotes',
         body: quoteRequestSchema.parse(request),
         decoder: quoteSchema,
-      });
-      return response.data;
-    },
-    hold: async (request: HoldCreateRequest): Promise<Hold> => {
-      const response = await client.request({
-        method: 'POST',
-        path: '/holds',
-        body: holdCreateRequestSchema.parse(request),
-        decoder: holdSchema,
       });
       return response.data;
     },
