@@ -231,3 +231,11 @@ export function bookingOf(outcome: OrderDetailOutcome | null): BookingSummary | 
   if (outcome === null || outcome.kind === 'failed' || outcome.kind === 'notFound') return null;
   return outcome.booking;
 }
+
+/**
+ * HB-265: thanh toán cọc trực tuyến chỉ áp cho booking còn chờ (HELD/PENDING_PAYMENT — api.md §3.5);
+ * booking đã xác nhận/kết thúc mở màn thanh toán chỉ thấy "chưa đủ dữ liệu", nên ẩn lối vào.
+ */
+export function canPayDeposit(booking: Pick<BookingSummary, 'status'>): boolean {
+  return booking.status === 'HELD' || booking.status === 'PENDING_PAYMENT';
+}

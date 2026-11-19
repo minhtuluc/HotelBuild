@@ -3,6 +3,7 @@ import { ApiError } from '@pinehill/api-client';
 import type { BookingSummary } from '@pinehill/contracts';
 import {
   ORDERS_CACHE_KEY,
+  canPayDeposit,
   loadOrderDetail,
   balanceRows,
   findByCode,
@@ -216,4 +217,11 @@ describe('SCR-79/SCR-80 đơn của tôi trên Android (HB-113)', () => {
       expect(stay).toEqual({ checkIn, checkOut, nights: 42, roomCount: 3 });
     },
   );
+
+  it('HB-265: lối vào thanh toán cọc chỉ cho booking còn chờ', () => {
+    expect(canPayDeposit({ status: 'HELD' })).toBe(true);
+    expect(canPayDeposit({ status: 'PENDING_PAYMENT' })).toBe(true);
+    expect(canPayDeposit({ status: 'CONFIRMED' })).toBe(false);
+    expect(canPayDeposit({ status: 'CANCELLED' })).toBe(false);
+  });
 });

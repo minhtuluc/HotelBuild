@@ -24,6 +24,7 @@ import {
   loadOrderDetail,
   stayOf,
   type OrderDetailOutcome,
+  canPayDeposit,
 } from '../../src/orders';
 import { OrderNotices } from '../../src/order-view';
 
@@ -182,7 +183,7 @@ export default function BookingDetailScreen(): ReactElement {
         </Text>
       ) : null}
       <OrderNotices outcome={outcome} />
-      {booking ? (
+      {booking && canPayDeposit(booking) ? (
         <Link
           href={{ pathname: '/payment/[bookingId]', params: { bookingId: booking.id } }}
           accessibilityLabel={t('orders.detail.pay')}
