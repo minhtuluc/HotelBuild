@@ -48,6 +48,9 @@ export function f5Pay(keyed: Oracle): void {
   keyed[`${RequestMethod.POST}:refund-requests/:refundRequestId/confirm-transfer`] = { roles: ['ACCOUNTANT'], status: 400, method: RequestMethod.POST };
   // prettier-ignore
   keyed[`${RequestMethod.POST}:reconciliation/daily/close`] = { roles: ['ACCOUNTANT'], status: 400, method: RequestMethod.POST };
+  // HB-262 / SCR-68: đọc tổng tiền mặt theo người thu; oracle thiếu query ⇒ 400.
+  // prettier-ignore
+  keyed[`${RequestMethod.GET}:reconciliation/daily`] = { roles: ['FRONT_DESK', 'ACCOUNTANT', 'MANAGER', 'OWNER'], status: 400, method: RequestMethod.GET };
   // HB-213 / api.md §2.6, §6.3: danh sách hồ sơ hoàn cho quầy/điều phối/MANAGER/OWNER + ACCOUNTANT đối soát.
   // prettier-ignore
   keyed[`${RequestMethod.GET}:refund-requests`] = { roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER', 'ACCOUNTANT'], status: 200, method: RequestMethod.GET };
