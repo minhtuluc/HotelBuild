@@ -52,6 +52,7 @@ import {
 } from './validation.js';
 import type { BookingInput } from './validation.js';
 import { confirmBooking, flagDuplicateSuspected, insertBooking } from './writes.js';
+import { listedPayment, paymentSelect } from '../../pay/online/projection.js';
 
 type Tx = Prisma.TransactionClient;
 
@@ -430,6 +431,12 @@ export class BookingsService {
       guestId: row.guest_id,
       propertyId: row.property_id,
     });
-    return project(row);
+    // HB-254: api.md §3.5 — màn thanh toán cần biết chắc đã có giao dịch nào (kể cả `[]`) trước khi mở nút.
+    const payments = await this.db.payments.findMany({
+      where: { booking_id: row.id },
+      orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
+      select: paymentSelect,
+    });
+    return { ...project(row), payments: payments.map(listedPayment) };
   }
 }

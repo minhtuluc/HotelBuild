@@ -79,6 +79,34 @@ export function projectPayment(row: PaymentRow, paymentUrl: string): Payment {
   });
 }
 
+/** Phương thức qua cổng PSP: hạn giao dịch là cửa sổ BR-PAY-05; tại quầy thì không có hạn. */
+const ONLINE_METHODS: ReadonlySet<string> = new Set(['VNPAY', 'MOMO']);
+
+/**
+ * Một dòng của `BookingSummary.payments` (`GET /bookings/{id}`, api.md §3.5 — HB-254). Khác lúc khởi tạo:
+ * `paymentUrl` luôn `null` vì URL cổng chỉ cấp một lần và không lưu; dòng `REFUND` lưu số âm
+ * (`ck_payments_sign`) còn hợp đồng đòi số dương — trả độ lớn, chiều tiền đã nằm ở `type`.
+ */
+export function listedPayment(row: PaymentRow): Payment {
+  const amount = row.amount < 0n ? -row.amount : row.amount;
+  return paymentSchema.parse({
+    paymentId: row.id,
+    bookingId: row.booking_id,
+    type: row.type,
+    method: row.method,
+    amount: Number(amount),
+    status: row.status,
+    providerTxnId: row.provider_txn_id,
+    paymentUrl: null,
+    expiresAt: ONLINE_METHODS.has(row.method)
+      ? new Date(row.created_at.getTime() + PAYMENT_WINDOW_SECONDS * 1000).toISOString()
+      : null,
+    paidAt: row.paid_at?.toISOString() ?? null,
+    createdAt: row.created_at.toISOString(),
+    createdBy: row.created_by,
+  });
+}
+
 export function projectStatus(row: StatusRow): PaymentStatusView {
   return paymentStatusViewSchema.parse({
     paymentId: row.id,
