@@ -36,6 +36,8 @@ export interface OrdersCache {
 /** Bề mặt API cần cho hai màn — tách ra để test không cần mạng. */
 export interface OrdersApi {
   list(query: { q?: string; limit?: number }): Promise<ListPage<BookingSummary>>;
+  /** HB-265: `GET /bookings/{id}` — bản chi tiết có `payments` (danh sách không có). */
+  get?(bookingId: string): Promise<BookingSummary>;
 }
 
 export type OrdersOutcome =
@@ -210,7 +212,18 @@ export async function loadOrderDetail(
       cachedAt: outcome.cachedAt,
     };
   const found = findByCode(outcome.kind === 'ready' ? outcome.bookings : [], code);
-  return found === undefined ? { kind: 'notFound' } : { kind: 'ready', booking: found };
+  if (found === undefined) return { kind: 'notFound' };
+  return { kind: 'ready', booking: await detailOf(deps.api, found) };
+}
+
+/** Đọc thêm bản chi tiết (có giao dịch); lỗi thì giữ bản trong danh sách — không chặn màn chi tiết. */
+async function detailOf(api: OrdersApi, found: BookingSummary): Promise<BookingSummary> {
+  if (api.get === undefined) return found;
+  try {
+    return await api.get(found.id);
+  } catch {
+    return found;
+  }
 }
 
 /** Booking đang mở từ kết quả tải chi tiết (kể cả bản offline đã tải); lỗi/không thấy thì `null`. */

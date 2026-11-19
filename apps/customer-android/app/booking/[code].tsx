@@ -31,6 +31,30 @@ function money(amount: number): string {
   return t('orders.money', { amount: formatVnd(amount) });
 }
 
+/** HB-265: giao dịch do máy chủ trả ở chi tiết; bản offline/cũ không có thì không hiện khối này. */
+function PaymentList({ payments }: { payments: BookingSummary['payments'] }): ReactElement | null {
+  if (payments === undefined) return null;
+  return (
+    <View style={{ gap: space.s1 }} data-testid="order-payments">
+      <Text style={theme.sectionTitle}>{t('orders.detail.payments.title')}</Text>
+      {payments.length === 0 ? (
+        <Text style={theme.muted}>{t('orders.detail.payments.empty')}</Text>
+      ) : (
+        payments.map((payment) => (
+          <Text key={payment.paymentId} style={[theme.body, theme.tabular]}>
+            {t('orders.detail.payments.row', {
+              type: t(`payment.type.${payment.type}`),
+              method: t(`payment.method.${payment.method}`),
+              amount: money(payment.amount),
+              status: t(`payment.status.${payment.status}`),
+            })}
+          </Text>
+        ))
+      )}
+    </View>
+  );
+}
+
 function DetailBody({ booking }: { booking: BookingSummary }): ReactElement {
   const status = t(ORDER_STATUS_KEYS[booking.status]);
   const stay = stayOf(booking);
@@ -64,9 +88,7 @@ function DetailBody({ booking }: { booking: BookingSummary }): ReactElement {
       <Text style={theme.muted} data-testid="order-snapshot-pending">
         {t('orders.detail.snapshotPending')}
       </Text>
-      <Text style={theme.muted} data-testid="order-payments-pending">
-        {t('orders.detail.paymentsPending')}
-      </Text>
+      <PaymentList payments={booking.payments} />
       <View style={{ flexDirection: 'row', gap: space.s2 }}>
         <Link
           href={{ pathname: '/booking/[code]/cancel', params: { code: booking.code } }}
@@ -98,6 +120,11 @@ export default function BookingDetailScreen(): ReactElement {
       list: (query: { q?: string; limit?: number }) =>
         createBookingApi(session.apiClient())
           .list(query)
+          .then((response) => response.data),
+      // HB-265: bản chi tiết có danh sách giao dịch.
+      get: (bookingId: string) =>
+        createBookingApi(session.apiClient())
+          .get(bookingId)
           .then((response) => response.data),
     }),
     [session],
