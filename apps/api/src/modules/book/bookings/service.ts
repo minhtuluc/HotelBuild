@@ -38,6 +38,7 @@ import { inventoryError, lockBooking, lockStock } from './lock.js';
 import { loadPolicySnapshot } from './policy.js';
 import { requireBookingRead, requireConfirm, requireCreate, requireRead } from './principal.js';
 import type { BookingCaller } from './principal.js';
+import type { ActorContext } from '../../../common/actor/actor-context.js';
 import { bookingSelect, listBookings, project } from './projection.js';
 import type { CommissionSetting, SnapshotStay } from './snapshot.js';
 import {
@@ -405,7 +406,7 @@ export class BookingsService {
       fromStatus,
       paymentId: payment.id,
       paidAmount,
-      caller,
+      actor: confirmingActor(caller),
       now,
     });
     const row = await tx.bookings.findUniqueOrThrow({
@@ -432,4 +433,14 @@ export class BookingsService {
     });
     return project(row);
   }
+}
+
+/** Chủ thể ghi vào history/audit khi xác nhận: chỉ nhân viên có `users.id`; khách không có id người dùng. */
+function confirmingActor(caller: BookingCaller): ActorContext {
+  return {
+    id: caller.type === 'USER' ? caller.id : null,
+    role: caller.role,
+    ip: caller.ip,
+    correlationId: caller.correlationId,
+  };
 }
