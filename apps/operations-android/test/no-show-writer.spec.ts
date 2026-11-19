@@ -71,7 +71,13 @@ test('a rejected response clears the pending key', async () => {
   const outcome = await writer.submit(body);
   expect(outcome).toEqual({
     kind: 'failed',
-    failure: { kind: 'rejected', code: 'E_BOOK_INVALID_STATE', status: 409, reason: 'sớm' },
+    failure: {
+      kind: 'rejected',
+      code: 'E_BOOK_INVALID_STATE',
+      status: 409,
+      reason: 'sớm',
+      reasonCode: null,
+    },
   });
   expect(writer.hasPending).toBe(false);
 });

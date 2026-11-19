@@ -193,6 +193,7 @@ test('server rejection is shown verbatim with its code; the retry is a new inten
       code: 'E_FO_CHECKIN_NOT_ALLOWED',
       status: 409,
       reason: 'Còn nợ vượt ngưỡng; cần quản lý hoặc chủ sở hữu duyệt cho nợ.',
+      reasonCode: null,
     },
   });
   expect((await writer.submit(body)).kind).toBe('done');

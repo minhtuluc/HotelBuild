@@ -3,6 +3,7 @@ import { ApiError } from '@pinehill/api-client';
 import type { BookingSummary, RoomSummary } from '@pinehill/contracts';
 import {
   actionFailure,
+  needsInspection,
   arrivalsOf,
   checkInBody,
   filterArrivals,
@@ -159,6 +160,7 @@ test('actionFailure separates certain rejections, conflicts, forbidden and unkno
     code: 'E_FO_CHECKIN_NOT_ALLOWED',
     status: 409,
     reason: 'Còn nợ',
+    reasonCode: null,
   });
   expect(actionFailure(http(403, 'E_RBAC_FORBIDDEN'))).toEqual({ kind: 'forbidden' });
   expect(actionFailure(http(401, 'E_AUTH_EXPIRED'))).toEqual({ kind: 'forbidden' });
@@ -169,4 +171,29 @@ test('actionFailure separates certain rejections, conflicts, forbidden and unkno
     'unknownOutcome',
   );
   expect(actionFailure(new Error('boom')).kind).toBe('unknownOutcome');
+});
+
+test('HB-251: the machine-readable refusal reason is kept and only room readiness asks for an inspection', () => {
+  const notReady = new ApiError({
+    kind: 'http',
+    status: 409,
+    code: 'E_FO_CHECKIN_NOT_ALLOWED',
+    message: 'Phòng thực tế chưa sẵn sàng để giao cho khách.',
+    details: [{ field: 'reason', issue: 'UNITS_NOT_READY' }],
+  });
+  const failure = actionFailure(notReady);
+  expect(failure).toMatchObject({ kind: 'rejected', reasonCode: 'UNITS_NOT_READY' });
+  expect(needsInspection(failure)).toBe(true);
+  const debt = actionFailure(
+    new ApiError({
+      kind: 'http',
+      status: 409,
+      code: 'E_FO_CHECKIN_NOT_ALLOWED',
+      message: 'Còn nợ',
+      details: [{ field: 'reason', issue: 'DEBT_APPROVAL_REQUIRED' }],
+    }),
+  );
+  expect(needsInspection(debt)).toBe(false);
+  expect(needsInspection(actionFailure(http(409, 'E_FO_CHECKIN_NOT_ALLOWED')))).toBe(false);
+  expect(needsInspection({ kind: 'forbidden' })).toBe(false);
 });

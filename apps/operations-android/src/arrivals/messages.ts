@@ -66,6 +66,14 @@ export const catalog = {
   unknownOutcome:
     'Chưa xác định kết quả (mã tham chiếu: {reference}). Làm mới danh sách để đối soát; bấm xác nhận lại sẽ dùng cùng khoá nên không nhận phòng hai lần.',
   reconcile: 'Làm mới để đối soát',
+  inspectHint:
+    'Phòng chưa có xác nhận sẵn sàng của buồng phòng cho hôm nay. Nếu bạn đã kiểm trực tiếp và phòng sạch, ghi biên bản rồi bấm xác nhận nhận phòng lại (BR-FO-07).',
+  inspect: 'Ghi biên bản đã kiểm phòng {rooms}',
+  inspecting: 'Đang ghi biên bản…',
+  inspectReason: 'Lễ tân đã kiểm phòng trực tiếp trước khi giao cho khách',
+  inspectDone: 'Đã ghi biên bản kiểm phòng {rooms}. Bấm xác nhận nhận phòng để thử lại.',
+  inspectOffline: 'Cần kết nối mạng để ghi biên bản. Chưa có gì được gửi.',
+  inspectFailed: 'Không ghi được biên bản kiểm phòng ({code}).',
 } as const;
 
 export const arrivalsText = makeTranslate(catalog);

@@ -2,7 +2,7 @@ import { isValidElement } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { Session } from '../src/session';
 import { memoryStorage } from '../src/storage';
-import { sendCheckIn } from '../src/arrivals/ports';
+import { sendCheckIn, sendInspection } from '../src/arrivals/ports';
 import { ArrivalsCache } from '../src/arrivals/reader';
 import { ArrivalsScreen } from '../src/arrivals/screen';
 import { CheckInWriter, type CheckInPorts } from '../src/arrivals/writer';
@@ -202,7 +202,35 @@ interface Wire {
   online: boolean;
   checkIn: () => Response;
   posts: Array<{ key: string | null; body: unknown }>;
+  /** HB-251: `POST /housekeeping/tasks` (biên bản đã kiểm phòng); thiếu thì cổng không được lắp. */
+  inspect?: () => Response;
+  inspections?: Array<{ key: string | null; body: unknown }>;
 }
+
+/** HB-251: `POST /housekeeping/tasks` ghi vào `wire.inspections`; tuyến khác trả `null`. */
+function inspection(wire: Wire, url: URL, init: RequestInit | undefined): Response | null {
+  if (!url.pathname.endsWith('/housekeeping/tasks') || wire.inspect === undefined) return null;
+  const raw = init?.body;
+  wire.inspections?.push({
+    key: new Headers(init?.headers).get('idempotency-key'),
+    body: typeof raw === 'string' ? JSON.parse(raw) : null,
+  });
+  return wire.inspect();
+}
+
+/** Thân 409 nhận phòng bị từ chối; `issue` là mã lý do trong `details` (HB-251). */
+const refusal = (message: string, issue?: string) => () =>
+  Response.json(
+    {
+      code: 'E_FO_CHECKIN_NOT_ALLOWED',
+      message,
+      traceId: 't',
+      timestamp: '2026-10-22T07:00:00Z',
+      path: '/front-office/check-in',
+      ...(issue === undefined ? {} : { details: [{ field: 'reason', issue }] }),
+    },
+    { status: 409 },
+  );
 
 async function mount(wire: Wire, bookings = [booking('b1', { balanceDue: 0 })]) {
   const session = new Session({
@@ -221,6 +249,8 @@ async function mount(wire: Wire, bookings = [booking('b1', { balanceDue: 0 })]) 
           data: [room('r2', 'CS01-102'), room('r1', 'CS01-101')],
           meta,
         });
+      const inspected = inspection(wire, url, init);
+      if (inspected !== null) return inspected;
       wire.posts.push({
         key: new Headers(init?.headers).get('idempotency-key'),
         body: typeof init?.body === 'string' ? JSON.parse(init.body) : null,
@@ -235,6 +265,9 @@ async function mount(wire: Wire, bookings = [booking('b1', { balanceDue: 0 })]) 
     online: async () => wire.online,
     createId: () => `key-${++n}`,
     send: (body, key) => sendCheckIn(session, body, key),
+    ...(wire.inspect === undefined
+      ? {}
+      : { inspect: (body, key) => sendInspection(session, body, key) }),
   };
   const cache = new ArrivalsCache();
   const createWriter = () => new CheckInWriter(ports);
@@ -319,17 +352,7 @@ test('a server refusal is shown with its code and reason; the debt gate is not c
   const wire: Wire = {
     online: true,
     posts: [],
-    checkIn: () =>
-      Response.json(
-        {
-          code: 'E_FO_CHECKIN_NOT_ALLOWED',
-          message: 'Còn nợ vượt ngưỡng; cần quản lý hoặc chủ sở hữu duyệt cho nợ.',
-          traceId: 't',
-          timestamp: '2026-10-22T07:00:00Z',
-          path: '/front-office/check-in',
-        },
-        { status: 409 },
-      ),
+    checkIn: refusal('Còn nợ vượt ngưỡng; cần quản lý hoặc chủ sở hữu duyệt cho nợ.'),
   };
   await mount(wire, [booking('b1', { balanceDue: 2_100_000, paidAmount: 900_000 })]);
   press('arrival-b1');
@@ -377,4 +400,37 @@ test('the QR button never blocks the flow when no scanner exists', async () => {
   expect(textOf()).toContain('Nhập mã booking');
   expect(byId('arrival-b1')).toBeDefined();
   expect(byId('arrivals-filter')).toBeDefined();
+});
+
+test('HB-251: a room without readiness evidence offers an inspection record, then check-in succeeds', async () => {
+  let ready = false;
+  const notReady = refusal('Phòng thực tế chưa sẵn sàng để giao cho khách.', 'UNITS_NOT_READY');
+  const inspect = () => {
+    ready = true;
+    const task = { id: 't1', roomId: 'r1', roomCode: 'CS01-101', businessDate: '2026-10-22' };
+    const rest = { assignedTo: null, note: null, completedAt: '2026-10-22T07:00:00.000Z' };
+    return Response.json({ ...task, ...rest, status: 'INSPECTED', version: 1 }, { status: 201 });
+  };
+  const checkIn = () => (ready ? checkedIn() : notReady());
+  const wire: Wire = { online: true, posts: [], inspections: [], checkIn, inspect };
+  await mount(wire);
+  press('arrival-b1');
+  await settle();
+  press('check-in-submit');
+  await settle();
+  // The refusal sits next to the buttons, not at the end of the scrolled form where it was off-screen.
+  const scroll = walk(tree).filter((node) => node.type === 'ScrollView');
+  expect(byId('check-in-result')).toBeDefined();
+  expect(walk(scroll).some((node) => node.props.testID === 'check-in-result')).toBe(false);
+  expect(textOf()).toContain('Phòng thực tế chưa sẵn sàng');
+
+  press('check-in-inspect');
+  await settle();
+  const reason = 'Lễ tân đã kiểm phòng trực tiếp trước khi giao cho khách';
+  const body = { roomId: 'r1', businessDate: '2026-10-22', status: 'INSPECTED', reason };
+  expect(wire.inspections).toEqual([{ key: 'key-2', body }]);
+  expect(textOf()).toContain('Đã ghi biên bản kiểm phòng CS01-101');
+  press('check-in-submit');
+  await settle();
+  expect(byId('check-in-done')).toBeDefined();
 });
