@@ -33,7 +33,8 @@ function guestSessionForbidden(): AppError {
   return new AppError(403, 'E_RBAC_FORBIDDEN', 'Bạn không có quyền thực hiện thao tác này.');
 }
 
-function passwordChangeRequired(): AppError {
+/** Dùng chung với các tuyến `@Public` tự xác thực nhân viên (`bookingCaller`, HB-256). */
+export function passwordChangeRequired(): AppError {
   return new AppError(
     403,
     'E_AUTH_PASSWORD_CHANGE_REQUIRED',

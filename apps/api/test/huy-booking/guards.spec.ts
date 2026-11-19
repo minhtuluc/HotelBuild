@@ -214,12 +214,12 @@ describe('HB-097 cổng chặn huỷ', () => {
     expect((await anchoredCancel(ownerToken, owner.id, guestCancel)).status).toBe(200);
   });
 
-  test('fix 1: map quyền của module chỉ khai vai trò người dùng hợp lệ; GUEST chờ phiên khách (HB-017)', () => {
+  test('fix 1: map quyền của module chỉ khai vai trò nhân viên hợp lệ; khách đi nhánh riêng (HB-256)', () => {
     const declared = Object.values(cancelPermissionRules).flat();
     expect(declared.length).toBeGreaterThan(0);
     for (const role of declared) expect(userRoleSchema.safeParse(role).success).toBe(true);
     // `PermissionRegistry.onModuleInit` từ chối mọi vai trò ngoài `userRoleSchema` ngay khi khởi động,
-    // nên khai `GUEST` ở đây sẽ làm sập ứng dụng; đường khách tự huỷ phải mở ở HB-017 (phiên khách).
+    // nên khai `GUEST` ở đây sẽ làm sập ứng dụng; khách tự huỷ đi qua `cancelCaller` (HB-256, guest.spec).
     expect(userRoleSchema.safeParse('GUEST').success).toBe(false);
     expect(declared).not.toContain('GUEST');
     expect([...new Set(declared)].sort()).toEqual([

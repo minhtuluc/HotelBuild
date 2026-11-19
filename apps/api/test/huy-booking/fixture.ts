@@ -11,6 +11,8 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import { Redis } from 'ioredis';
 import request from 'supertest';
 import { errorBodySchema, tokenPairSchema } from '@pinehill/contracts';
+import { signAccessToken } from '../../src/infrastructure/crypto/access-tokens.js';
+import { openGuestSession } from '../support/guest-session.js';
 import { AppModule } from '../../src/app.module.js';
 import { CLOCK } from '../../src/infrastructure/ports.js';
 import { BookingLedger } from '../../src/modules/pay/ledger/service.js';
@@ -33,6 +35,34 @@ export const ledger = new BookingLedger(clock);
 
 let app: NestFastifyApplication;
 let redis: Redis;
+const accessSecret = randomBytes(32).toString('hex');
+
+/** HB-256: token phiên khách thật (dòng `auth_sessions` + chữ ký cùng secret của app). */
+export async function guestToken(guestId: string): Promise<string> {
+  const sessionId = await openGuestSession(rows, guestId);
+  const { token } = await signAccessToken(
+    { userId: guestId, role: 'GUEST', propertyScope: [], sessionId },
+    accessSecret,
+    clock.now(),
+  );
+  return token;
+}
+
+/** Chủ booking do `seed.booking` tạo (`guests LIMIT 1`) và một khách khác. */
+export async function bookingGuest(id: string): Promise<string> {
+  return String((await rows('SELECT guest_id FROM bookings WHERE id=$1', [id]))[0]!.guest_id);
+}
+export async function otherGuest(): Promise<string> {
+  const phone = `+849${randomBytes(4).readUInt32BE(0).toString().padStart(8, '0').slice(0, 8)}`;
+  return String(
+    (
+      await rows('INSERT INTO guests(full_name,phone) VALUES($1,$2) RETURNING id', [
+        'HB-256 khách khác',
+        phone,
+      ])
+    )[0]!.id,
+  );
+}
 
 export const http = () => request(app.getHttpServer());
 
@@ -54,7 +84,7 @@ beforeAll(async () => {
   const module = AppModule.register({
     DATABASE_URL: databaseUrl,
     REDIS_URL: url.href,
-    JWT_ACCESS_SECRET: randomBytes(32).toString('hex'),
+    JWT_ACCESS_SECRET: accessSecret,
     JWT_REFRESH_SECRET: randomBytes(32).toString('hex'),
     BUSINESS_TIMEZONE: 'Asia/Ho_Chi_Minh',
     IDEMPOTENCY_TTL_HOURS: 24,

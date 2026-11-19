@@ -7,11 +7,11 @@ import {
   type CancelRequest,
   type CancelResponse,
 } from '@pinehill/contracts';
-import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
 import { AppError } from '../../../common/app-error.js';
 import { AuditWriter } from '../../../infrastructure/audit/audit-writer.js';
 import { BookingLedger } from '../../pay/ledger/service.js';
 import { previewFingerprint, previewTag } from './anchor.js';
+import { auditActor, type CancelActor } from './caller.js';
 import type { PreviewBreakdown } from './anchor.js';
 import { readFacts } from './context.js';
 import type { CancelDecision, CancelFacts, DecisionInput } from './context.js';
@@ -59,7 +59,7 @@ export class CancelService {
   }
 
   /** Neo cho khoá chống trùng: kiểm phiên, phạm vi cơ sở và tình trạng booking trước khi ghi. */
-  async authorizeFor(db: PrismaClient, actor: AuthorizedActor, bookingId: string): Promise<void> {
+  async authorizeFor(db: PrismaClient, actor: CancelActor, bookingId: string): Promise<void> {
     await this.authorize(db, actor, bookingId);
   }
 
@@ -68,7 +68,7 @@ export class CancelService {
    * đang hoạt động). Cảnh báo bất khả kháng trả trong `warnings` để lệnh xem trước **không** bị chặn.
    */
   async preview(
-    actor: AuthorizedActor,
+    actor: CancelActor,
     bookingId: string,
     input: { reason: string; isForceMajeure: boolean },
     rooms: readonly string[] | null,
@@ -109,7 +109,7 @@ export class CancelService {
 
   async cancel(
     tx: Tx,
-    actor: AuthorizedActor,
+    actor: CancelActor,
     bookingId: string,
     input: CancelRequest,
     tag: unknown,
@@ -129,7 +129,7 @@ export class CancelService {
    */
   private async plan(
     tx: Tx,
-    actor: AuthorizedActor,
+    actor: CancelActor,
     bookingId: string,
     input: CancelRequest,
     tag: unknown,
@@ -159,7 +159,7 @@ export class CancelService {
 
   private async apply(
     tx: Tx,
-    actor: AuthorizedActor,
+    actor: CancelActor,
     plan: Plan,
     input: CancelRequest,
     now: Date,
@@ -178,7 +178,14 @@ export class CancelService {
     const total = await closeBooking(tx, facts, leaving.length === 0, input, now);
     const penaltyId =
       !channelManaged && decision.penalty > 0n
-        ? await recordPenalty(tx, facts, decision, selected, actor.id, now)
+        ? await recordPenalty(
+            tx,
+            facts,
+            decision,
+            selected,
+            actor.kind === 'USER' ? actor.id : null,
+            now,
+          )
         : null;
     const refund = await recordRefund(
       tx,
@@ -193,7 +200,7 @@ export class CancelService {
     );
     if (leaving.length) await partialSnapshot(tx, facts, leaving, total, now);
     await this.audit.record(tx, {
-      actor,
+      actor: auditActor(actor),
       action: 'BOOKING_CANCELLED',
       entityType: 'Booking',
       entityId: facts.id,
@@ -234,8 +241,19 @@ export class CancelService {
     });
   }
 
-  /** Phiên còn hiệu lực và còn phạm vi cơ sở của booking (BR-RBAC-02, OWNER toàn chuỗi). */
-  private async authorize(tx: Tx, actor: AuthorizedActor, bookingId: string): Promise<void> {
+  /**
+   * Khách: chỉ booking của chính mình, khác chủ thì che `404` như HB-077 (HB-256). Nhân viên: phiên còn
+   * hiệu lực và còn phạm vi cơ sở của booking (BR-RBAC-02, OWNER toàn chuỗi).
+   */
+  private async authorize(tx: Tx, actor: CancelActor, bookingId: string): Promise<void> {
+    if (actor.kind === 'GUEST') {
+      const owned = await tx.bookings.findUnique({
+        where: { id: bookingId },
+        select: { guest_id: true },
+      });
+      if (owned?.guest_id !== actor.id) throw missing();
+      return;
+    }
     await tx.$queryRaw`SELECT id FROM users WHERE id=${actor.id}::uuid FOR SHARE`;
     const user = await tx.users.findUnique({
       where: { id: actor.id },
@@ -261,7 +279,7 @@ export class CancelService {
 
   /** BR-CANCEL-13: chỉ MANAGER/OWNER được tạo, `note` ≥ 20 ký tự — kiểm ở **lệnh huỷ**, không ở xem trước. */
   private checkForceMajeure(
-    actor: AuthorizedActor,
+    actor: CancelActor,
     input: { isForceMajeure: boolean; note?: string | undefined },
   ): void {
     if (!input.isForceMajeure) return;
@@ -272,7 +290,7 @@ export class CancelService {
 
   /** Cảnh báo để lệnh xem trước vẫn chạy cho mọi vai trò có quyền đọc; lệnh huỷ mới là nơi chặn. */
   private previewWarnings(
-    actor: AuthorizedActor,
+    actor: CancelActor,
     facts: CancelFacts,
     input: { reason: string; isForceMajeure: boolean },
   ): string[] {

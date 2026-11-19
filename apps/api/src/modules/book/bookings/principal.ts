@@ -22,6 +22,7 @@ import type { PermissionLookup } from '../../../common/actor/authorized-actor.js
 import type { Principal } from '../../../common/idempotency/request.js';
 import type { ApiConfig } from '../../../config/env.js';
 import { findUsableSession } from '../../../common/guards/session-state.js';
+import { passwordChangeRequired } from '../../../common/guards/auth.guard.js';
 import { verifyAccessToken } from '../../../infrastructure/crypto/access-tokens.js';
 import { forbidden, missing, outOfScope, unauthorized } from './validation.js';
 
@@ -125,10 +126,13 @@ async function resolveBookingCaller(
       id: true,
       role: true,
       is_active: true,
+      must_change_password: true,
       user_property_scopes: { select: { property_id: true } },
     },
   });
   if (user === null || !user.is_active) throw unauthorized();
+  // HB-256: cùng chặn của `AuthGuard` — tài khoản đang dùng mật khẩu tạm chỉ được đổi mật khẩu/đăng xuất.
+  if (user.must_change_password) throw passwordChangeRequired();
   return Object.freeze({
     type: 'USER' as const,
     id: user.id,

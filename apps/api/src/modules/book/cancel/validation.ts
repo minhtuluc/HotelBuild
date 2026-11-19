@@ -6,8 +6,6 @@ import {
   type CancelRequest,
 } from '@pinehill/contracts';
 import { AppError } from '../../../common/app-error.js';
-import { isAuthorizedActor } from '../../../common/actor/authorized-actor.js';
-import type { FastifyRequest } from 'fastify';
 
 export const forbidden = () =>
   new AppError(403, 'E_RBAC_FORBIDDEN', 'Bạn không được thao tác huỷ booking.');
@@ -93,9 +91,4 @@ export function previewRooms(query: unknown): string[] | null {
   const ids = items.map((item) => item.trim()).filter((item) => item.length > 0);
   if (!ids.length) throw invalid();
   return [...new Set(ids.map((id) => bookingId(id)))];
-}
-
-export function requestActor(request: FastifyRequest) {
-  if (!isAuthorizedActor(request.actor)) throw forbidden();
-  return request.actor;
 }
