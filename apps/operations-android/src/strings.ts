@@ -33,6 +33,15 @@ export const catalog = {
   'home.pinDemo': 'Thử thao tác cần PIN',
   'home.pinDemo.ok': 'Đã mở khoá PIN: {purpose}',
   'home.logout': 'Đăng xuất',
+  'screen.home': 'Vận hành',
+  'screen.login': 'Đăng nhập',
+  'screen.property': 'Chọn cơ sở',
+  'screen.housekeeping': 'Buồng phòng',
+  'screen.lookup': 'Tra cứu',
+  'screen.arrivals': 'Khách đến',
+  'screen.walkIn': 'Khách vãng lai',
+  'screen.departures': 'Khách đi',
+  'screen.notFound': 'Không tìm thấy',
 } as const;
 
 export const t = makeTranslate(catalog);

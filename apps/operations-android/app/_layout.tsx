@@ -1,6 +1,7 @@
 import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import type { ReactElement } from 'react';
 import { NativeErrorPanel } from '@pinehill/ui-native';
+import { ROUTE_TITLES } from '../src/stages';
 import { t } from '../src/strings';
 import { stackScreenOptions } from '../src/theme';
 
@@ -9,6 +10,13 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps): ReactElement {
   return <NativeErrorPanel t={t} onRetry={() => void retry()} />;
 }
 
+/** HB-252: mỗi route có tiêu đề từ catalog thay vì tên file; `index` tự đặt lại theo bước đang mở. */
 export default function RootLayout(): ReactElement {
-  return <Stack screenOptions={stackScreenOptions} />;
+  return (
+    <Stack screenOptions={stackScreenOptions}>
+      {Object.entries(ROUTE_TITLES).map(([name, title]) => (
+        <Stack.Screen key={name} name={name} options={{ title }} />
+      ))}
+    </Stack>
+  );
 }
