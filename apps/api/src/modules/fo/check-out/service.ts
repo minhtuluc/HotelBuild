@@ -39,6 +39,7 @@ import type { LockedBooking } from '../../book/bookings/lock.js';
 import { PIN_PURPOSE_FINANCIAL, requirePinToken } from '../../auth/pin/consume.js';
 import { readFacts } from '../../book/cancel/context.js';
 import type { CancelDecision } from '../../book/cancel/context.js';
+import { staffActor } from '../../book/cancel/caller.js';
 import { recordRefund, releaseAssignments } from '../../book/cancel/writes.js';
 import { BookingLedger } from '../../pay/ledger/service.js';
 import { maskOperationalText } from '../../prop/room-blocks/operational-text.js';
@@ -459,6 +460,7 @@ export class CheckOutService {
       bookingRoomIds: selected,
       ...(note === undefined ? {} : { note: maskOperationalText(note) }),
     };
-    return recordRefund(tx, this.ledger, actor, facts, decision, request, selected, false, now);
+    const by = staffActor(actor);
+    return recordRefund(tx, this.ledger, by, facts, decision, request, selected, false, now);
   }
 }

@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { DomainError } from '@pinehill/domain';
 import { refundStatusSchema, type CancelRequest, type CancelResponse } from '@pinehill/contracts';
-import type { AuthorizedActor } from '../../../common/actor/authorized-actor.js';
+import { auditActor, type CancelActor } from './caller.js';
 import { AppError } from '../../../common/app-error.js';
 import { RetryTransaction } from '../../../common/idempotency/transaction-retry.js';
 import { BookingLedger } from '../../pay/ledger/service.js';
@@ -120,13 +120,17 @@ export async function closeBooking(
   return total[0]!.total_amount;
 }
 
-/** BR-CANCEL-06: phụ thu đêm đầu ghi công nợ `PENALTY` PENDING, không tự thu. */
+/**
+ * BR-CANCEL-06: phụ thu đêm đầu ghi công nợ `PENALTY` PENDING, không tự thu. Phiếu `CASH` PENDING kèm
+ * theo bắt buộc có nhân viên lập (`ck_payments_cash_shift`); khách tự huỷ (`actorId = null`, HB-256) chỉ
+ * ghi nghĩa vụ — sổ cái và lệnh thu tại quầy đọc nghĩa vụ từ `booking_charges`, không từ phiếu này.
+ */
 export async function recordPenalty(
   tx: Tx,
   facts: CancelFacts,
   decision: CancelDecision,
   selected: readonly string[],
-  actorId: string,
+  actorId: string | null,
   now: Date,
 ): Promise<string> {
   const key = `cancel-penalty:${[...selected].sort().join(',')}`;
@@ -135,7 +139,8 @@ export async function recordPenalty(
     VALUES(${facts.id}::uuid, 'PENALTY', ${key}, ${decision.penalty}, 'Phụ thu đêm đầu khi huỷ',
            ${now}::timestamptz, ${now}::timestamptz)
     RETURNING id`;
-  await tx.$executeRaw`
+  if (actorId !== null)
+    await tx.$executeRaw`
     INSERT INTO payments(booking_id, type, method, amount, status, idempotency_key, created_by, note,
                          created_at, updated_at)
     VALUES(${facts.id}::uuid, 'PENALTY', 'CASH', ${decision.penalty}, 'PENDING', ${key},
@@ -156,7 +161,7 @@ export async function recordPenalty(
 export async function recordRefund(
   tx: Tx,
   ledger: BookingLedger,
-  actor: AuthorizedActor,
+  actor: CancelActor,
   facts: CancelFacts,
   decision: CancelDecision,
   input: CancelRequest,
@@ -165,7 +170,7 @@ export async function recordRefund(
   now: Date,
 ): Promise<RefundView> {
   if (channelManaged || decision.net <= 0n) {
-    await ledger.sync(tx, facts.id, actor);
+    await ledger.sync(tx, facts.id, auditActor(actor));
     return null;
   }
   const payments = decision.legs.map((leg) => leg.paymentId);
@@ -180,7 +185,8 @@ export async function recordRefund(
       ${decision.hours.toFixed(2)}::numeric, ${decision.tierId}::uuid,
       ${decision.refundPercent}::numeric, ${decision.requested}, ${decision.fee}, 'PENDING',
       ${input.isForceMajeure}, ${input.evidenceRefs ?? []}::text[], ${input.reason},
-      ${actor.id}::uuid, 'USER', ${actor.id}, ${now}::timestamptz, ${now}::timestamptz)
+      ${actor.kind === 'USER' ? actor.id : null}::uuid, ${actor.kind}, ${actor.id},
+      ${now}::timestamptz, ${now}::timestamptz)
     RETURNING id, status, approved_amount, net_refund`;
   const request = rows[0]!;
   if (request.net_refund !== decision.net) throw exceedsPaid();
@@ -189,7 +195,7 @@ export async function recordRefund(
     facts.id,
     request.id,
     decision.legs.map((leg) => ({ paymentId: leg.paymentId, amount: leg.amount })),
-    actor,
+    auditActor(actor),
   );
   return {
     id: request.id,

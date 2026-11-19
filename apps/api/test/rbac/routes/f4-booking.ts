@@ -33,17 +33,8 @@ export function f4Booking(keyed: Oracle): void {
     status: 404,
     method: RequestMethod.DELETE,
   };
-  // HB-097 / api.md §2.5: xem trước và huỷ booking; thân oracle không hợp lệ → 400.
-  keyed[`${RequestMethod.POST}:bookings/:bookingId/cancel-preview`] = {
-    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
-    status: 400,
-    method: RequestMethod.POST,
-  };
-  keyed[`${RequestMethod.POST}:bookings/:bookingId/cancel`] = {
-    roles: ['FRONT_DESK', 'RESERVATION_AGENT', 'MANAGER', 'OWNER'],
-    status: 400,
-    method: RequestMethod.POST,
-  };
+  // HB-097 → HB-256: xem trước/huỷ là `@Public` (khách tự huỷ booking của mình); quyền nhân viên kiểm
+  // trong `cancelCaller`, có test riêng ở `test/huy-booking/guards.spec.ts` + `guest.spec.ts`.
   // HB-098 / api.md §2.5, §6.3: đổi ngày (thân oracle thiếu `checkIn`/`checkOut` ⇒ 400) và xoá cứng
   // (`reason` của oracle hợp lệ, `:bookingId` không tồn tại ⇒ 404 trước khi chạm dữ liệu).
   keyed[`${RequestMethod.POST}:bookings/:bookingId/reschedule`] = {
