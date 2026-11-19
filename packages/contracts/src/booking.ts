@@ -58,6 +58,11 @@ export const bookingSummarySchema = z.object({
   propertyId: z.string().min(1),
   roomTypeId: z.string().min(1),
   ratePlanId: z.string().min(1),
+  /**
+   * Mã gói công bố của `ratePlanId` (HB-259) — app khách cần mã để báo giá kỳ mới khi đổi ngày.
+   * Vắng khi gói không thuộc bốn mã công bố hoặc phản hồi cũ.
+   */
+  ratePlanCode: ratePlanCodeSchema.optional(),
   channelId: z.string().min(1),
   checkIn: businessDateSchema,
   checkOut: businessDateSchema,

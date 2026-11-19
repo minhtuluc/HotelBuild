@@ -94,7 +94,10 @@ test('AC4: GET /bookings/{id} theo quyền — khách lạ 404, nhân viên theo
   );
   const elsewhere = await booking({ property: otherPropertyId, type: otherTypeId });
 
-  expect((await getRequest(mine.booking.id)).status).toBe(200);
+  const detail = await getRequest(mine.booking.id);
+  expect(detail.status).toBe(200);
+  // HB-259: mã gói công bố đi kèm UUID — app khách cần mã để báo giá đổi ngày.
+  expect(bookingSummarySchema.parse(detail.body).ratePlanCode).toBe('FLEX7');
   const stranger = await getRequest(mine.booking.id, { token: otherGuestToken });
   expect(stranger.status).toBe(404);
   expect(codeOf(stranger.body)).toBe('E_GEN_NOT_FOUND');
