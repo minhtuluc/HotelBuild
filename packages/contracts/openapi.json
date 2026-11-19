@@ -10497,6 +10497,15 @@
                       "type": "string",
                       "minLength": 1
                     },
+                    "ratePlanCode": {
+                      "type": "string",
+                      "enum": [
+                        "FLEX7",
+                        "SAVER3",
+                        "NONREF",
+                        "LONGSTAY14"
+                      ]
+                    },
                     "channelId": {
                       "type": "string",
                       "minLength": 1
@@ -10977,6 +10986,15 @@
                           "ratePlanId": {
                             "type": "string",
                             "minLength": 1
+                          },
+                          "ratePlanCode": {
+                            "type": "string",
+                            "enum": [
+                              "FLEX7",
+                              "SAVER3",
+                              "NONREF",
+                              "LONGSTAY14"
+                            ]
                           },
                           "channelId": {
                             "type": "string",
@@ -11629,6 +11647,15 @@
                           "type": "string",
                           "minLength": 1
                         },
+                        "ratePlanCode": {
+                          "type": "string",
+                          "enum": [
+                            "FLEX7",
+                            "SAVER3",
+                            "NONREF",
+                            "LONGSTAY14"
+                          ]
+                        },
                         "channelId": {
                           "type": "string",
                           "minLength": 1
@@ -12102,6 +12129,15 @@
                           "type": "string",
                           "minLength": 1
                         },
+                        "ratePlanCode": {
+                          "type": "string",
+                          "enum": [
+                            "FLEX7",
+                            "SAVER3",
+                            "NONREF",
+                            "LONGSTAY14"
+                          ]
+                        },
                         "channelId": {
                           "type": "string",
                           "minLength": 1
@@ -12484,6 +12520,15 @@
                     "ratePlanId": {
                       "type": "string",
                       "minLength": 1
+                    },
+                    "ratePlanCode": {
+                      "type": "string",
+                      "enum": [
+                        "FLEX7",
+                        "SAVER3",
+                        "NONREF",
+                        "LONGSTAY14"
+                      ]
                     },
                     "channelId": {
                       "type": "string",
@@ -12954,6 +12999,15 @@
                     "ratePlanId": {
                       "type": "string",
                       "minLength": 1
+                    },
+                    "ratePlanCode": {
+                      "type": "string",
+                      "enum": [
+                        "FLEX7",
+                        "SAVER3",
+                        "NONREF",
+                        "LONGSTAY14"
+                      ]
                     },
                     "channelId": {
                       "type": "string",
@@ -14167,6 +14221,15 @@
                     "ratePlanId": {
                       "type": "string",
                       "minLength": 1
+                    },
+                    "ratePlanCode": {
+                      "type": "string",
+                      "enum": [
+                        "FLEX7",
+                        "SAVER3",
+                        "NONREF",
+                        "LONGSTAY14"
+                      ]
                     },
                     "channelId": {
                       "type": "string",

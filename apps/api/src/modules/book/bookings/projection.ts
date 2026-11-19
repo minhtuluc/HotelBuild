@@ -11,8 +11,8 @@
  * nhưng **không** đổi thứ tự tài nguyên, nên con trỏ không bao giờ nhảy hàng.
  */
 import type { Prisma, PrismaClient } from '@prisma/client';
-import { bookingSummarySchema } from '@pinehill/contracts';
-import type { BookingSummary, BookingsQuery, ListPage } from '@pinehill/contracts';
+import { bookingSummarySchema, ratePlanCodeSchema } from '@pinehill/contracts';
+import type { BookingSummary, BookingsQuery, ListPage, RatePlanCode } from '@pinehill/contracts';
 import { normalizePhone } from '../../crm/guests/phone.js';
 import { civilDay, dateOnly, isCivilDate } from '../../rate/calendar/support.js';
 import type { BookingCaller } from './principal.js';
@@ -29,6 +29,7 @@ export const bookingSelect = {
   property_id: true,
   room_type_id: true,
   rate_plan_id: true,
+  rate_plans: { select: { code: true } },
   channel_id: true,
   check_in: true,
   check_out: true,
@@ -57,6 +58,12 @@ export const bookingSelect = {
 
 export type BookingRow = Prisma.bookingsGetPayload<{ select: typeof bookingSelect }>;
 
+/** HB-259: chỉ trả mã thuộc bốn gói công bố; gói tự đặt mã khác thì bỏ trống trường (không làm hỏng phản hồi). */
+function planCode(code: string): { ratePlanCode?: RatePlanCode } {
+  const parsed = ratePlanCodeSchema.safeParse(code);
+  return parsed.success ? { ratePlanCode: parsed.data } : {};
+}
+
 export function project(row: BookingRow): BookingSummary {
   const checkIn = dateOnly(row.check_in);
   const checkOut = dateOnly(row.check_out);
@@ -69,6 +76,7 @@ export function project(row: BookingRow): BookingSummary {
     propertyId: row.property_id,
     roomTypeId: row.room_type_id,
     ratePlanId: row.rate_plan_id,
+    ...planCode(row.rate_plans.code),
     channelId: row.channel_id,
     checkIn,
     checkOut,

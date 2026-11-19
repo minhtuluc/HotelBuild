@@ -192,6 +192,19 @@ describe('SCR-82 đổi ngày lưu trú trên Android (HB-114)', () => {
     expect(quote).not.toHaveBeenCalled();
   });
 
+  it('HB-259: booking thật mang UUID gói — báo giá dùng `ratePlanCode` máy chủ trả', async () => {
+    // Máy thật: `ratePlanId` là UUID nên app báo "không phải mã gói công bố" và không đổi ngày được.
+    const { api, quote } = stubApi();
+    const outcome = await loadNewQuote(
+      { api, net: online },
+      booking({ ratePlanId: '2b9c1f0e-5d3a-4c8e-9f1a-0d2e3f4a5b6c', ratePlanCode: 'SAVER3' }),
+      '2026-12-27',
+      '2026-12-29',
+    );
+    expect(outcome.kind).toBe('ready');
+    expect(quote.mock.calls[0]?.[0]).toMatchObject({ ratePlanCode: 'SAVER3' });
+  });
+
   it('gói không phải mã công bố thì không tự lấy giá', async () => {
     const { api, quote } = stubApi();
     expect(

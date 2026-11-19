@@ -135,7 +135,8 @@ export async function loadNewQuote(
   checkIn: string,
   checkOut: string,
 ): Promise<QuoteOutcome> {
-  const planCode = planCodeOf(booking.ratePlanId);
+  // HB-259: `ratePlanId` là UUID; mã gói công bố đi riêng trong `ratePlanCode` (bản cũ có thể thiếu).
+  const planCode = booking.ratePlanCode ?? planCodeOf(booking.ratePlanId);
   if (planCode === null) return { kind: 'invalidPlan' };
   try {
     await requireOnline(deps.net);
