@@ -7,7 +7,9 @@ import { PinnedWriter } from '../stay/writer';
 import type { CloseBody } from './model';
 import { closePorts } from './ports';
 
-export function createCloseWriter(session: Session): PinnedWriter<CloseBody, ReconciliationCloseResponse> {
+export function createCloseWriter(
+  session: Session,
+): PinnedWriter<CloseBody, ReconciliationCloseResponse> {
   const net = netInfoSource();
   return new PinnedWriter(
     closePorts(session, { online: () => net.getConnected(), createId: () => randomUUID() }),

@@ -58,7 +58,9 @@ function submitMessage(outcome: Awaited<ReturnType<Writer['submit']>>): string {
     case 'failed':
       return outcome.failure.kind === 'unknownOutcome'
         ? text('unknown', { reference: outcome.failure.reference })
-        : text('rejected', { code: outcome.failure.kind === 'rejected' ? outcome.failure.code : outcome.failure.kind });
+        : text('rejected', {
+            code: outcome.failure.kind === 'rejected' ? outcome.failure.code : outcome.failure.kind,
+          });
     default:
       return text('rejected', { code: 'CLOSED' });
   }
@@ -116,7 +118,12 @@ function CloseForm({
         editable={!busy}
         style={theme.field}
       />
-      <PinPanel bookingId="" writer={writer} unlocked={unlocked} onUnlocked={() => setUnlocked(true)} />
+      <PinPanel
+        bookingId=""
+        writer={writer}
+        unlocked={unlocked}
+        onUnlocked={() => setUnlocked(true)}
+      />
       {message === null ? null : (
         <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={theme.body}>
           {message}
@@ -227,7 +234,12 @@ export function CashScreen(props: CashScreenProps): ReactElement {
             />
           ))
         : null}
-      <ActionButton testID="cash-refresh" label={text('refresh')} tone="plain" onPress={() => void refresh()} />
+      <ActionButton
+        testID="cash-refresh"
+        label={text('refresh')}
+        tone="plain"
+        onPress={() => void refresh()}
+      />
       <ActionButton testID="cash-back" label={text('back')} tone="plain" onPress={onBack} />
     </ScrollView>
   );

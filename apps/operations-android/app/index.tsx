@@ -24,6 +24,8 @@ import { CollectScreen } from '../src/stay/collect';
 import { DeparturesScreen } from '../src/stay/screen';
 import { createCheckOutWriter, createCollectWriter } from '../src/stay/writer-factory.native';
 import { t } from '../src/strings';
+import { CashScreen } from '../src/reconciliation/screen';
+import { createCloseWriter } from '../src/reconciliation/writer-factory.native';
 import { backStep, stageTitle, type Stage } from '../src/stages';
 
 export default function RootScreen(): ReactElement {
@@ -36,6 +38,7 @@ export default function RootScreen(): ReactElement {
   const makeWalkInFlow = useCallback(() => createWalkInFlow(session), [session]);
   const makeCheckOutWriter = useCallback(() => createCheckOutWriter(session), [session]);
   const makeCollectWriter = useCallback(() => createCollectWriter(session), [session]);
+  const makeCloseWriter = useCallback(() => createCloseWriter(session), [session]);
   const [collecting, setCollecting] = useState<BookingSummary | null>(null);
   const [walkInFromArrivals, setWalkInFromArrivals] = useState(false);
   const [stage, setStage] = useState<Stage>('boot');
@@ -165,6 +168,14 @@ export default function RootScreen(): ReactElement {
       />
     ),
     lookup: () => <LookupScreen session={session} onBack={goHome} />,
+    cash: () => (
+      <CashScreen
+        session={session}
+        role={profile?.role ?? 'FRONT_DESK'}
+        createWriter={makeCloseWriter}
+        onBack={goHome}
+      />
+    ),
     walkIn: () => <WalkInScreen session={session} createFlow={makeWalkInFlow} onBack={goHome} />,
   };
 
@@ -227,6 +238,7 @@ export default function RootScreen(): ReactElement {
         onWalkIn={() => setStage('walkIn')}
         onDepartures={() => setStage('departures')}
         onAlerts={() => router.push('/alerts')}
+        onCash={() => setStage('cash')}
       />
     );
   };
