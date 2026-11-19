@@ -144,7 +144,8 @@ export function createBody(
   return roomMoveCreateRequestSchema.parse({
     overbookingCaseId: ctx.caseId,
     bookingId: ctx.bookingId,
-    bookingRoomId: ctx.bookingRoomId,
+    // HB-268: mở từ cảnh báo thì không có phòng; máy chủ dùng phòng hoạt động duy nhất của booking.
+    ...(ctx.bookingRoomId === '' ? {} : { bookingRoomId: ctx.bookingRoomId }),
     moveType: option.moveType,
     ...(option.targetRoomId === null ? {} : { toRoomId: option.targetRoomId }),
     ...(option.targetPropertyId === null ? {} : { toPropertyId: option.targetPropertyId }),

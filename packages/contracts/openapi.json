@@ -21799,7 +21799,6 @@
                 },
                 "required": [
                   "bookingId",
-                  "bookingRoomId",
                   "moveType",
                   "reason",
                   "compensationAmount",

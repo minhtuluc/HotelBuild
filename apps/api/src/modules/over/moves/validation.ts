@@ -23,7 +23,7 @@ import { invalid, parse } from '../support.js';
 const flatMoveSchema = z.object({
   overbookingCaseId: z.string().min(1).optional(),
   bookingId: z.string().min(1),
-  bookingRoomId: z.string().min(1),
+  bookingRoomId: z.string().min(1).optional(),
   moveType: moveTypeSchema,
   toRoomId: z.string().min(1).optional(),
   toPropertyId: z.string().min(1).optional(),
@@ -42,7 +42,9 @@ const flatMoveSchema = z.object({
 
 export type MoveCommand = z.infer<typeof flatMoveSchema>;
 
-export interface NormalizedMove extends Omit<MoveCommand, 'walkOut'> {
+export interface NormalizedMove extends Omit<MoveCommand, 'walkOut' | 'bookingRoomId'> {
+  /** Đã xác định: client gửi, hoặc máy chủ suy từ phòng hoạt động duy nhất (HB-268). */
+  readonly bookingRoomId: string;
   readonly walkOut: WalkOutEvidence | null;
   /**
    * HB-230: bằng chứng đồng ý **do client gửi** (lưu `room_moves.consent_json`). Khác `consent` (đã
@@ -92,7 +94,12 @@ function evidenceOf(command: MoveCommand): WalkOutEvidence | null {
   return nested;
 }
 
-export function moveCreateInput(value: unknown): NormalizedMove {
+/** Lệnh đã kiểm hình dạng; `bookingRoomId` có thể vắng tới khi service suy ra (HB-268). */
+export type MoveInput = Omit<NormalizedMove, 'bookingRoomId'> & {
+  readonly bookingRoomId?: string | undefined;
+};
+
+export function moveCreateInput(value: unknown): MoveInput {
   const command = parse(flatMoveSchema, value);
   const walkOut = evidenceOf(command);
   const consent = command.consent ?? { granted: true, channel: 'IN_PERSON' as const };
@@ -101,7 +108,7 @@ export function moveCreateInput(value: unknown): NormalizedMove {
       ? {}
       : { overbookingCaseId: command.overbookingCaseId }),
     bookingId: command.bookingId,
-    bookingRoomId: command.bookingRoomId,
+    ...(command.bookingRoomId === undefined ? {} : { bookingRoomId: command.bookingRoomId }),
     moveType: command.moveType,
     ...(command.toRoomId === undefined ? {} : { toRoomId: command.toRoomId }),
     ...(command.toPropertyId === undefined ? {} : { toPropertyId: command.toPropertyId }),
