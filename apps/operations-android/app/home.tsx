@@ -16,6 +16,8 @@ export interface HomeScreenProps {
   onArrivals?: () => void;
   onWalkIn?: () => void;
   onDepartures?: () => void;
+  /** HB-261: SCR-67 cảnh báo quá tải (từ đó mở SCR-63 đổi phòng). */
+  onAlerts?: () => void;
   demoMode?: boolean;
 }
 
@@ -86,6 +88,7 @@ export default function HomeScreen({
   onArrivals,
   onWalkIn,
   onDepartures,
+  onAlerts,
   demoMode = isDemoEnabled(),
 }: HomeScreenProps): ReactElement {
   const navItems: ReadonlyArray<{
@@ -98,6 +101,7 @@ export default function HomeScreen({
     { testID: 'open-housekeeping', label: t('home.tasks'), onPress: onTasks },
     { testID: 'open-lookup', label: t('home.lookup'), onPress: onLookup },
     { testID: 'open-walk-in', label: t('home.walkIn'), onPress: onWalkIn },
+    { testID: 'open-alerts', label: t('home.alerts'), onPress: onAlerts },
   ];
 
   return (
