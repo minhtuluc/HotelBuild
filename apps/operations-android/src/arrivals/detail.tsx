@@ -15,12 +15,14 @@ import { formatVnDateTime } from './format';
 import { arrivalsText as text } from './messages';
 import {
   checkInBody,
+  needsInspection,
   roomChoices,
   roomSelectionIssue,
   suggestRooms,
   type ActionFailure,
   type RoomIssue,
 } from './model';
+import { InspectionPanel } from './inspection-panel';
 import type { CheckInWriter } from './writer';
 
 export interface CheckInDetailProps {
@@ -202,6 +204,43 @@ function Done({
   );
 }
 
+/**
+ * HB-251: kết quả nằm cạnh nút bấm — đặt cuối nội dung cuộn thì bị khuất trên máy thật. Phòng chưa có bằng chứng
+ * sẵn sàng thì kèm panel ghi biên bản đã kiểm phòng (khi writer có cổng ghi).
+ */
+function ResultArea({
+  result,
+  writer,
+  selected,
+  rooms,
+  businessDate,
+}: {
+  result: Result | null;
+  writer: CheckInWriter;
+  selected: readonly string[];
+  rooms: readonly RoomSummary[];
+  businessDate: string;
+}): ReactElement {
+  const inspect = result?.kind === 'failed' && needsInspection(result.failure) && writer.canInspect;
+  return (
+    <View testID="check-in-result" style={{ gap: space.s2 }}>
+      <ResultNotice result={result} />
+      {inspect ? (
+        <InspectionPanel
+          writer={writer}
+          roomIds={selected}
+          roomCodes={roomCodesOf(selected, rooms)}
+          businessDate={businessDate}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+function roomCodesOf(ids: readonly string[], rooms: readonly RoomSummary[]): string {
+  return ids.map((id) => rooms.find((room) => room.id === id)?.code ?? id).join(', ');
+}
+
 function useCheckInForm({
   booking,
   rooms,
@@ -313,9 +352,15 @@ export function CheckInDetail(props: CheckInDetailProps): ReactElement {
           onChangeText={form.setNote}
           style={field}
         />
-        <ResultNotice result={result} />
       </ScrollView>
       <View style={{ padding: space.s4, gap: space.s2 }}>
+        <ResultArea
+          result={result}
+          writer={props.writer}
+          selected={form.selected}
+          rooms={rooms}
+          businessDate={booking.checkIn}
+        />
         <ActionButton
           testID="check-in-submit"
           label={busy ? text('submitting') : text('submit')}

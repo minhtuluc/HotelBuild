@@ -11,7 +11,8 @@ import { useRouter } from 'expo-router';
 import { color, space } from '@pinehill/ui-native';
 import { createAppApiClient } from '../../src/api';
 import { createPublicJourneyApi } from '../../src/public-client';
-import { netInfoSource } from '../../src/netinfo.native';
+import { PropertyPicker } from '../../src/property-picker';
+import { netInfoSource } from '../../src/netinfo-device.native';
 import { t } from '../../src/strings';
 import { theme } from '../../src/theme';
 import {
@@ -139,11 +140,11 @@ export default function SearchScreen(): ReactElement {
         {t('journey.search.title')}
       </Text>
 
-      <Field
-        label={t('search.form.property')}
+      <PropertyPicker
+        load={api.listProperties}
         value={criteria.propertyId}
-        onChange={(value) => {
-          change({ propertyId: value });
+        onChange={(propertyId) => {
+          change({ propertyId });
         }}
       />
       <Field

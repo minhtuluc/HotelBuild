@@ -1,5 +1,5 @@
 import { randomUUID } from 'expo-crypto';
-import { secureStorage } from '../storage.native';
+import { secureStorage } from '../storage-device.native';
 import type { Session } from '../session';
 import { taskWritePorts } from './write-ports';
 import { TaskWriter } from './writer';

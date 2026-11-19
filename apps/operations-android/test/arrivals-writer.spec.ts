@@ -1,7 +1,7 @@
 import { expect, test, vi } from 'vitest';
 import { ApiError } from '@pinehill/api-client';
 import type { CheckInResponse } from '@pinehill/contracts';
-import { CheckInWriter, type CheckInPorts } from '../src/arrivals/writer';
+import { CheckInWriter, type CheckInPorts, type InspectionBody } from '../src/arrivals/writer';
 import type { CheckInBody } from '../src/arrivals/model';
 
 const body: CheckInBody = { bookingId: 'b1', actualRoomIds: ['r1'], earlyCheckIn: false };
@@ -18,13 +18,15 @@ const ok = (over: Partial<CheckInResponse> = {}): CheckInResponse => ({
 function setup(over: Partial<CheckInPorts> = {}) {
   let n = 0;
   const send = vi.fn(async (_body: CheckInBody, _key: string) => ok());
+  const inspect = vi.fn(async (_body: InspectionBody, _key: string) => undefined);
   const ports: CheckInPorts = {
     online: async () => true,
     send,
+    inspect,
     createId: () => `key-${++n}`,
     ...over,
   };
-  return { writer: new CheckInWriter(ports), send };
+  return { writer: new CheckInWriter(ports), send, inspect };
 }
 
 test('sends the body once with a fresh key and reports the server response', async () => {
@@ -86,7 +88,13 @@ test('a certain rejection clears the pending key so the next attempt is a new in
   const first = await writer.submit(body);
   expect(first).toEqual({
     kind: 'failed',
-    failure: { kind: 'rejected', code: 'E_FO_CHECKIN_NOT_ALLOWED', status: 409, reason: 'Còn nợ' },
+    failure: {
+      kind: 'rejected',
+      code: 'E_FO_CHECKIN_NOT_ALLOWED',
+      status: 409,
+      reason: 'Còn nợ',
+      reasonCode: null,
+    },
   });
   expect(writer.hasPending).toBe(false);
   await writer.submit(body);
@@ -136,4 +144,36 @@ test('reset forgets the pending key (session or property changed) and dispose cl
   writer.dispose();
   expect(await writer.submit(body)).toEqual({ kind: 'closed' });
   expect(send).toHaveBeenCalledTimes(2);
+});
+
+// HB-251 — phòng chưa có bằng chứng sẵn sàng: lễ tân ghi biên bản đã kiểm (BR-FO-07) rồi nhận phòng lại.
+const inspection: InspectionBody = {
+  roomId: 'r1',
+  businessDate: '2026-10-22',
+  status: 'INSPECTED',
+  reason: 'Lễ tân đã kiểm phòng trực tiếp trước khi giao',
+};
+
+test('records an inspection once with its own key', async () => {
+  const { writer, inspect, send } = setup();
+  expect(await writer.recordInspection(inspection)).toEqual({ kind: 'done' });
+  expect(inspect).toHaveBeenCalledWith(inspection, 'key-1');
+  expect(send).not.toHaveBeenCalled();
+});
+
+test('offline records nothing', async () => {
+  const { writer, inspect } = setup({ online: async () => false });
+  expect(await writer.recordInspection(inspection)).toEqual({ kind: 'offline' });
+  expect(inspect).not.toHaveBeenCalled();
+});
+
+test('an unclear inspection outcome keeps the key so a retry cannot create a second record', async () => {
+  const inspect = vi
+    .fn<(b: InspectionBody, key: string) => Promise<void>>()
+    .mockRejectedValueOnce(new ApiError({ kind: 'timeout', message: 'slow', traceId: 'tr1' }))
+    .mockResolvedValueOnce(undefined);
+  const { writer } = setup({ inspect });
+  expect((await writer.recordInspection(inspection)).kind).toBe('failed');
+  expect(await writer.recordInspection(inspection)).toEqual({ kind: 'done' });
+  expect(inspect.mock.calls.map(([, key]) => key)).toEqual(['key-1', 'key-1']);
 });

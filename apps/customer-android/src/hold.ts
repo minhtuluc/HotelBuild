@@ -11,6 +11,7 @@ import type {
   Hold,
   HoldCreateRequest,
   RatePlanCode,
+  QuoteRequest,
 } from '@pinehill/contracts';
 import { isApiError } from '@pinehill/api-client';
 import { OfflineError, requireOnline, type NetInfoSource } from './netinfo';
@@ -75,13 +76,15 @@ export function bookingRequestFor(input: HoldInput): BookingCreateRequest {
 
 /** Bề mặt API cần cho luồng này — tách ra để test không cần mạng. */
 export interface HoldApi {
+  /** HB-249: báo giá trong phiên của khách — API chỉ cho chính chủ thể tiêu thụ báo giá. */
+  quote(request: QuoteRequest): Promise<{ readonly quoteId: string }>;
   hold(request: HoldCreateRequest): Promise<Hold>;
   book(request: BookingCreateRequest): Promise<BookingSummary>;
 }
 
 export type HoldOutcome =
   | { readonly kind: 'offline' }
-  | { readonly kind: 'ready'; readonly hold: Hold }
+  | { readonly kind: 'ready'; readonly hold: Hold; readonly quoteId: string }
   | { readonly kind: 'failed'; readonly code: string | null };
 
 export type BookingOutcome =
@@ -100,14 +103,35 @@ async function online(net: NetInfoSource): Promise<boolean> {
   }
 }
 
-/** Bước 1: giữ chỗ. Trả `expiresAt` của máy chủ để màn hình đếm ngược. */
+/** Thân `POST /quotes` cho cùng kỳ/gói/khách — dùng để xin lại giá trong phiên trước khi giữ chỗ. */
+export function quoteRequestFor(input: HoldInput): QuoteRequest {
+  return {
+    propertyId: input.criteria.propertyId,
+    roomTypeId: input.criteria.roomTypeId,
+    channelCode: GUEST_CHANNEL_CODE,
+    ratePlanCode: input.ratePlanCode,
+    checkIn: input.criteria.checkIn,
+    checkOut: input.criteria.checkOut,
+    adults: input.criteria.adults,
+    children: input.criteria.children,
+    roomCount: input.criteria.roomCount,
+  };
+}
+
+/**
+ * Bước 1: xin lại báo giá trong phiên của khách rồi giữ chỗ bằng mã báo giá đó (HB-249). Báo giá ở màn chi
+ * tiết phòng là của khách ẩn danh nên API trả 409 `E_RATE_QUOTE_MISMATCH` nếu dùng thẳng. Trả `expiresAt`
+ * của máy chủ để màn hình đếm ngược và `quoteId` mới cho bước đặt phòng.
+ */
 export async function startHold(
   deps: { readonly api: HoldApi; readonly net: NetInfoSource },
   input: HoldInput,
 ): Promise<HoldOutcome> {
   if (!(await online(deps.net))) return { kind: 'offline' };
   try {
-    return { kind: 'ready', hold: await deps.api.hold(holdRequestFor(input)) };
+    const { quoteId } = await deps.api.quote(quoteRequestFor(input));
+    const hold = await deps.api.hold(holdRequestFor({ ...input, quoteId }));
+    return { kind: 'ready', hold, quoteId };
   } catch (caught) {
     return { kind: 'failed', code: isApiError(caught) ? (caught.code ?? null) : null };
   }

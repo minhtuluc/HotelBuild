@@ -68,7 +68,7 @@ test('session restore accessibility label comes from the catalog, not a hardcode
     catalogValue(readFileSync(new URL(stringsPath, import.meta.url), 'utf8'), 'session.restoring'),
   ).toBe('Đang khôi phục phiên');
 
-  const screenPath = '../app/index.tsx';
+  const screenPath = '../app/login.tsx';
   const source = readFileSync(new URL(screenPath, import.meta.url), 'utf8');
   expect(accessibilityLabelOf(source, screenPath, 'ActivityIndicator')).toBe(
     "t('session.restoring')",

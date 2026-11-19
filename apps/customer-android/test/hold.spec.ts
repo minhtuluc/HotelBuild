@@ -84,6 +84,7 @@ function booking(duplicateSuspected: boolean): BookingSummary {
 }
 
 const api = (overrides: Partial<HoldApi> = {}): HoldApi => ({
+  quote: async () => ({ quoteId: 'q-session' }),
   hold: async () => HOLD,
   book: async () => booking(false),
   ...overrides,
@@ -159,6 +160,7 @@ describe('SCR-76/SCR-78 xác nhận & giữ chỗ trên Android (HB-087)', () =>
     expect(await startHold({ api: api(), net: online }, INPUT)).toEqual({
       kind: 'ready',
       hold: HOLD,
+      quoteId: 'q-session',
     });
     expect(await finishBooking({ api: api(), net: online }, INPUT)).toEqual({
       kind: 'ready',
@@ -169,6 +171,44 @@ describe('SCR-76/SCR-78 xác nhận & giữ chỗ trên Android (HB-087)', () =>
       INPUT,
     );
     expect(duplicate.kind).toBe('duplicate');
+  });
+
+  it('HB-249: lấy lại báo giá bằng phiên của khách rồi giữ chỗ bằng mã báo giá mới', async () => {
+    // Báo giá ở màn chi tiết phòng là của khách ẩn danh; API chỉ cho chính chủ thể dùng báo giá
+    // (409 E_RATE_QUOTE_MISMATCH trên máy thật), nên màn xác nhận phải xin giá lại trong phiên.
+    const quoted: unknown[] = [];
+    const held: unknown[] = [];
+    const outcome = await startHold(
+      {
+        api: api({
+          quote: async (request) => {
+            quoted.push(request);
+            return { quoteId: 'q-session' };
+          },
+          hold: async (request) => {
+            held.push(request.quoteId);
+            return HOLD;
+          },
+        }),
+        net: online,
+      },
+      INPUT,
+    );
+    expect(quoted).toEqual([
+      {
+        propertyId: 'synthetic-property',
+        roomTypeId: 'rt-1',
+        channelCode: 'WEB',
+        ratePlanCode: 'SAVER3',
+        checkIn: '2026-12-24',
+        checkOut: '2026-12-26',
+        adults: 2,
+        children: 0,
+        roomCount: 1,
+      },
+    ]);
+    expect(held).toEqual(['q-session']);
+    expect(outcome).toEqual({ kind: 'ready', hold: HOLD, quoteId: 'q-session' });
   });
 
   it('lỗi máy chủ thì trả mã để màn hình hiện câu chữ theo mã', async () => {

@@ -283,23 +283,53 @@ export class GuestsService {
    */
   async loyalty(actor: AuthorizedActor, guestId: string): Promise<GuestLoyalty> {
     if (!staff.includes(actor.role)) throw forbidden();
-    return this.db.$transaction(async (tx) => {
-      const row = await this.manageableGuest(tx, actor, guestId);
-      const stays = await tx.$queryRaw<{ nights: number }[]>`
-        SELECT COALESCE(sum(nights), 0)::int AS nights
-          FROM bookings
-         WHERE guest_id = ${guestId}::uuid
-           AND status = ANY(${[...countedStayStatuses]}::text[])
-           AND check_in >= ${windowStartDate(this.clock.now())}::date`;
-      return {
-        guestId,
-        loyaltyTier: loyaltyTierSchema.parse(row.loyalty_tier),
-        loyaltyPoints: row.loyalty_points,
-        staysLast12Months: stays[0]?.nights ?? 0,
-        totalStays: row.total_stays,
-        updatedAt: row.updated_at.toISOString(),
-      };
+    return this.db.$transaction(async (tx) =>
+      this.loyaltyOf(tx, guestId, await this.manageableGuest(tx, actor, guestId)),
+    );
+  }
+
+  /**
+   * HB-250 — `GET /guests/me`: hồ sơ của **chính khách** trong phiên khách. `guestId` lấy từ phiên đã kiểm
+   * (không nhận từ client). Hồ sơ không còn hoặc đã ẩn danh hoá → `404` như tuyến theo id.
+   */
+  async own(guestId: string): Promise<GuestSummary> {
+    const row = await this.db.guests.findUnique({
+      where: { id: guestId },
+      select: guestAdminSelect,
     });
+    if (row === null || row.anonymized_at !== null) throw missing();
+    return project(row);
+  }
+
+  /** HB-250 — `GET /guests/me/loyalty`: cùng phép tính với tuyến quản trị theo id. */
+  async ownLoyalty(guestId: string): Promise<GuestLoyalty> {
+    return this.db.$transaction(async (tx) => {
+      const row = await tx.guests.findUnique({ where: { id: guestId }, select: guestAdminSelect });
+      if (row === null || row.anonymized_at !== null) throw missing();
+      return this.loyaltyOf(tx, guestId, row);
+    });
+  }
+
+  /** Hạng/điểm từ hồ sơ + số đêm 12 tháng (BR-CRM-02,03) — dùng chung cho tuyến theo id và tuyến `me`. */
+  private async loyaltyOf(
+    tx: Prisma.TransactionClient,
+    guestId: string,
+    row: Prisma.guestsGetPayload<{ select: typeof guestAdminSelect }>,
+  ): Promise<GuestLoyalty> {
+    const stays = await tx.$queryRaw<{ nights: number }[]>`
+      SELECT COALESCE(sum(nights), 0)::int AS nights
+        FROM bookings
+       WHERE guest_id = ${guestId}::uuid
+         AND status = ANY(${[...countedStayStatuses]}::text[])
+         AND check_in >= ${windowStartDate(this.clock.now())}::date`;
+    return {
+      guestId,
+      loyaltyTier: loyaltyTierSchema.parse(row.loyalty_tier),
+      loyaltyPoints: row.loyalty_points,
+      staysLast12Months: stays[0]?.nights ?? 0,
+      totalStays: row.total_stays,
+      updatedAt: row.updated_at.toISOString(),
+    };
   }
 
   /**
