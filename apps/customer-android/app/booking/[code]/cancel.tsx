@@ -67,7 +67,6 @@ function PreviewPanel({ preview }: { preview: CancelPreview }): ReactElement {
       </Text>
       <Text style={theme.body} data-testid="cancel-tier">
         {t('booking.cancel.tier', {
-          tier: breakdown.appliedTierId,
           hours: formatHoursBeforeCheckIn(breakdown.hoursBeforeCheckIn),
           percent: breakdown.refundPercent,
         })}
@@ -110,8 +109,7 @@ function ResultPanel({ result }: { result: CancelResponse }): ReactElement {
         {result.refundRequest === null
           ? t('booking.cancel.resultNoRefund')
           : t('booking.cancel.resultRefund', {
-              id: result.refundRequest.id,
-              status: result.refundRequest.status,
+              status: t(`booking.cancel.refund.${result.refundRequest.status}`),
               amount:
                 result.refundRequest.approvedAmount === null
                   ? t('booking.cancel.resultRefundPending')

@@ -101,7 +101,11 @@ test.each(['cancel', 'reject'])(
   async (action) => {
     const { owner, booking, payment } = await paid();
     const cancelled = (
-      await owner.bookings.cancel(booking.id, { reason: 'GUEST_REQUEST', isForceMajeure: false })
+      await owner.bookings.cancel(
+        booking.id,
+        { reason: 'GUEST_REQUEST', isForceMajeure: false },
+        '"synthetic"',
+      )
     ).data;
     expect(cancelled.refundRequest).not.toBeNull();
     const id = cancelled.refundRequest!.id;

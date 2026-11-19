@@ -56,7 +56,9 @@ test('preview is read-only and unconfirmed cancellation refunds all 250499 VND w
   const booking = await f.booking(owner);
   await f.control(owner, booking.id, 'unconfirmed-partial');
   const input = { reason: 'GUEST_REQUEST' as const, isForceMajeure: false };
-  const preview = (await owner.bookings.cancelPreview(booking.id, input)).data;
+  const previewResponse = await owner.bookings.cancelPreview(booking.id, input);
+  const preview = previewResponse.data;
+  const anchor = previewResponse.etag ?? '"synthetic"';
   expect(preview.cancellation).toMatchObject({
     paidAmount: 250499,
     requestedAmount: 250499,
@@ -65,14 +67,14 @@ test('preview is read-only and unconfirmed cancellation refunds all 250499 VND w
   });
   expect((await owner.bookings.get(booking.id)).data.status).toBe('HELD');
   expect((await owner.refunds.list({ bookingId: booking.id })).data.data).toEqual([]);
-  const cancelled = (await owner.bookings.cancel(booking.id, input)).data;
+  const cancelled = (await owner.bookings.cancel(booking.id, input, anchor)).data;
   expect(cancelled.status).toBe('CANCELLED');
   expect(cancelled.cancellation).toEqual(preview.cancellation);
   expect((await owner.refunds.list({ bookingId: booking.id })).data.data[0]).toMatchObject({
     requestedAmount: 250499,
     status: 'PENDING',
   });
-  await expect(owner.bookings.cancel(booking.id, input)).rejects.toMatchObject({
+  await expect(owner.bookings.cancel(booking.id, input, anchor)).rejects.toMatchObject({
     status: 409,
     code: 'E_CANCEL_NOT_ALLOWED',
   });
@@ -128,7 +130,9 @@ test('guest cannot request force majeure, hotel reason, partial rooms or inject 
     { reason: 'FORCE_MAJEURE' as const, isForceMajeure: true },
     { reason: 'HOTEL_RELOCATION' as const, isForceMajeure: false },
   ])
-    await expect(owner.bookings.cancel(booking.id, body)).rejects.toMatchObject({ status: 403 });
+    await expect(owner.bookings.cancel(booking.id, body, '"synthetic"')).rejects.toMatchObject({
+      status: 403,
+    });
   expect(
     (
       await f.raw(
