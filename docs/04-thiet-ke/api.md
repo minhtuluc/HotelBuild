@@ -367,6 +367,7 @@ Ví dụ (HB-204): `POST /api/v1/front-office/no-show/preview` thân `{ "booking
 | GET | `/api/v1/guests/{guestId}/loyalty` | Hạng, điểm, tổng đêm tích luỹ 12 tháng | FRONT_DESK | — | UC-CRM-02 | BR-CRM-02,03 |
 | GET | `/api/v1/guests/me` | Hồ sơ của **chính khách** đang đăng nhập (phiên khách, không lộ `guestId` cho client) | — | — | UC-CRM-01 | BR-CRM-01 |
 | GET | `/api/v1/guests/me/loyalty` | Hạng, điểm, số đêm của chính khách | — | — | UC-CRM-02 | BR-CRM-02,03 |
+| PATCH | `/api/v1/guests/me` | **Khách tự sửa hồ sơ** (HB-260): `fullName`, `email` (null để xoá), `consentMarketing` (+`consentVersion` khi bật; máy chủ ghi `consentAt`). Không sửa SĐT (định danh BR-CRM-01); trường lạ/thân rỗng ⇒ 400; phiên nhân viên ⇒ 403 | — | `fullName`, `email`, `consentMarketing`, `consentVersion` | UC-CRM-01 | BR-CRM-01, NFR-COMP-01 |
 | POST | `/api/v1/guests/{guestId}/blacklist` | Đưa khách vào danh sách đen | MANAGER | `blacklistReason` | UC-CRM-03 | BR-CRM-04 |
 | DELETE | `/api/v1/guests/{guestId}/blacklist` | Gỡ khỏi danh sách đen (204) | MANAGER | `reason` | UC-CRM-03 | BR-CRM-04, BR-SYS-05 |
 

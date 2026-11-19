@@ -1,15 +1,23 @@
 /**
- * SCR-83 (HB-115) — hồ sơ khách trên Android: **phần chỉ-đọc**.
+ * SCR-83 (HB-115, HB-260) — hồ sơ khách trên Android.
  *
- * Hai tuyến self của hợp đồng (`GET /guests/me`, `GET /guests/me/loyalty`) trả hồ sơ và điểm của **chính
- * khách theo phiên** — client không gửi `guestId` nào. Quyết định của chủ dự án ở HB-105 (web) áp dụng
- * nguyên cho Android: phần **cập nhật** hồ sơ bị cắt cho tới khi có tuyến ghi (`PATCH /guests/me`), màn
- * hình ghi rõ phần chờ thay vì dựng nút giả.
+ * Tuyến self (`GET/PATCH /guests/me`, `GET /guests/me/loyalty`) đọc và sửa hồ sơ của **chính khách theo
+ * phiên** — client không gửi `guestId` nào. Khách tự sửa họ tên, email, đồng ý nhận khuyến mãi; SĐT là
+ * định danh (BR-CRM-01) nên không sửa ở app.
  */
-import { guestLoyaltySchema, guestSummarySchema } from '@pinehill/contracts';
+import {
+  guestLoyaltySchema,
+  guestSelfUpdateRequestSchema,
+  guestSummarySchema,
+} from '@pinehill/contracts';
 import type { ApiClient } from '@pinehill/api-client';
 import { isApiError } from '@pinehill/api-client';
-import type { GuestLoyalty, GuestSummary, LoyaltyTier } from '@pinehill/contracts';
+import type {
+  GuestLoyalty,
+  GuestSelfUpdateRequest,
+  GuestSummary,
+  LoyaltyTier,
+} from '@pinehill/contracts';
 import { OfflineError, requireOnline, type NetInfoSource } from './netinfo';
 import type { MessageKey } from './strings';
 
@@ -60,6 +68,74 @@ export const TIER_LABEL_KEYS: Readonly<Record<LoyaltyTier, MessageKey>> = {
 export interface ProfileApi {
   me(): Promise<GuestSummary>;
   loyalty(): Promise<GuestLoyalty>;
+  /** HB-260 — `PATCH /guests/me`. */
+  update(request: GuestSelfUpdateRequest): Promise<GuestSummary>;
+}
+
+/** Phiên bản điều khoản nhận khuyến mãi — cùng giá trị màn đăng ký gửi (`app/login.tsx`). */
+export const CONSENT_VERSION = '2026-10';
+
+/** Bản nháp của form sửa hồ sơ (SĐT là định danh, không sửa — BR-CRM-01). */
+export interface ProfileDraft {
+  readonly fullName: string;
+  readonly email: string;
+  readonly consent: boolean;
+}
+
+export function draftOf(guest: GuestSummary): ProfileDraft {
+  return { fullName: guest.fullName, email: guest.email ?? '', consent: guest.consentMarketing };
+}
+
+export type DraftIssue = 'name' | 'email' | 'unchanged';
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Chỉ gửi trường đã đổi; kiểm tại chỗ để lỗi hiển nhiên không cần đi máy chủ. */
+export function updateRequestFor(
+  draft: ProfileDraft,
+  guest: GuestSummary,
+): { ok: true; request: GuestSelfUpdateRequest } | { ok: false; issue: DraftIssue } {
+  const fullName = draft.fullName.trim();
+  if (fullName === '') return { ok: false, issue: 'name' };
+  const email = draft.email.trim();
+  if (email !== '' && !EMAIL.test(email)) return { ok: false, issue: 'email' };
+  const nextEmail = email === '' ? null : email;
+  const request: GuestSelfUpdateRequest = {
+    ...(fullName === guest.fullName ? {} : { fullName }),
+    ...(nextEmail === guest.email ? {} : { email: nextEmail }),
+    ...(draft.consent === guest.consentMarketing
+      ? {}
+      : {
+          consentMarketing: draft.consent,
+          ...(draft.consent ? { consentVersion: CONSENT_VERSION } : {}),
+        }),
+  };
+  return Object.keys(request).length === 0
+    ? { ok: false, issue: 'unchanged' }
+    : { ok: true, request };
+}
+
+export type SaveOutcome =
+  | { readonly kind: 'offline' }
+  | { readonly kind: 'saved'; readonly profile: GuestSummary }
+  | { readonly kind: 'failed'; readonly code: string | null };
+
+/** Lưu hồ sơ: offline thì không gọi mạng; hồ sơ trả về là bản máy chủ, không tự ghép. */
+export async function saveProfile(
+  deps: { readonly api: ProfileApi; readonly net: NetInfoSource },
+  request: GuestSelfUpdateRequest,
+): Promise<SaveOutcome> {
+  try {
+    await requireOnline(deps.net);
+  } catch (caught) {
+    if (caught instanceof OfflineError) return { kind: 'offline' };
+    throw caught;
+  }
+  try {
+    return { kind: 'saved', profile: await deps.api.update(request) };
+  } catch (caught) {
+    return { kind: 'failed', code: isApiError(caught) ? (caught.code ?? null) : null };
+  }
 }
 
 export type ProfileOutcome =
@@ -102,6 +178,15 @@ export function profileApiFrom(client: ApiClient): ProfileApi {
         method: 'GET',
         path: '/guests/me/loyalty',
         decoder: guestLoyaltySchema,
+      });
+      return response.data;
+    },
+    update: async (request) => {
+      const response = await client.request({
+        method: 'PATCH',
+        path: '/guests/me',
+        body: guestSelfUpdateRequestSchema.parse(request),
+        decoder: guestSummarySchema,
       });
       return response.data;
     },
