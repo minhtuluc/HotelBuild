@@ -72,3 +72,8 @@ test('on home and on the sign-in steps Android back keeps its default (leave the
     expect(backStep({ ...idle, stage }), stage).toBe('default');
   }
 });
+
+test('HB-267: layout gốc giữ chữ thanh trạng thái tối (giao diện luôn sáng)', () => {
+  const layout = readFileSync(new URL('../app/_layout.tsx', import.meta.url), 'utf8');
+  expect(layout).toContain('useDarkStatusBar();');
+});

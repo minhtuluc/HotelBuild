@@ -4,3 +4,4 @@ export * from './stateMessages.js';
 export * from './translate.js';
 export * from './states.js';
 export * from './panels.js';
+export * from './status-bar.js';
