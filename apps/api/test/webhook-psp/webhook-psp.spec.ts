@@ -115,7 +115,21 @@ test('TN-1/VNPay: chữ ký đúng ⇒ `RspCode 00`, 1 hàng inbox, Payment SUCC
     outcome: 'SUCCEEDED',
     status: 'SUCCEEDED',
   });
-  expect(await bookingStatus(bookingId)).toBe('HELD');
+  // HB-255 / UC-PAY-02 bước 9: đủ cọc khi hold còn hạn ⇒ CONFIRMED cùng transaction ghi thu (BR-BOOK-09).
+  expect(await bookingStatus(bookingId)).toBe('CONFIRMED');
+  expect(
+    await rows(
+      `SELECT from_status,to_status,actor_id FROM booking_status_history
+        WHERE booking_id=$1::uuid AND to_status='CONFIRMED'`,
+      [bookingId],
+    ),
+  ).toEqual([{ from_status: 'HELD', to_status: 'CONFIRMED', actor_id: null }]);
+  const [confirmed] = await rows(
+    `SELECT actor_role,after_json FROM audit_logs WHERE entity_type='Booking' AND entity_id=$1::uuid
+        AND action='BOOKING_CONFIRMED'`,
+    [bookingId],
+  );
+  expect(confirmed).toMatchObject({ actor_role: 'SYSTEM', after_json: { paymentId } });
   expectNoCardData(await auditOf(paymentId));
 });
 
@@ -206,10 +220,10 @@ test('TN-3/TC-PAY-22: 5 callback trùng ⇒ 1 Payment, 1 inbox, tiền cộng đ
       entity_type: 'WebhookInbox',
     })),
   );
-  expect(await bookingStatus(bookingId)).toBe('HELD');
+  expect(await bookingStatus(bookingId)).toBe('CONFIRMED');
 });
 
-test('TN-4: SUCCEEDED sau FAILED ⇒ tiền ghi; decline muộn không hạ; booking giữ HELD', async () => {
+test('TN-4: SUCCEEDED sau FAILED ⇒ tiền ghi + CONFIRMED; decline muộn không hạ', async () => {
   const { bookingId, paymentId, event } = await paidCallback('vnpay');
   const simulator = pspSimulator();
   // 1) Từ chối (như timeout cục bộ BR-PAY-05): Payment về FAILED, chưa có tiền, booking không đổi.
@@ -235,7 +249,7 @@ test('TN-4: SUCCEEDED sau FAILED ⇒ tiền ghi; decline muộn không hạ; boo
   expect(await count('SELECT 1 FROM refund_requests WHERE booking_id=$1::uuid', [bookingId])).toBe(
     0,
   );
-  expect(await bookingStatus(bookingId)).toBe('HELD');
+  expect(await bookingStatus(bookingId)).toBe('CONFIRMED');
   // 3) Từ chối khác giao dịch đến **sau**: ghi vết nhưng không hạ khoản đã thu ⇒ ACK "đã xử lý" (`02`).
   const stale = await http()
     .get(callbackUrl('vnpay'))
@@ -246,7 +260,7 @@ test('TN-4: SUCCEEDED sau FAILED ⇒ tiền ghi; decline muộn không hạ; boo
     provider_txn_id: `${event.providerTxnId}-S`,
   });
   expect(await allocated(paymentId)).toBe(event.amount);
-  expect(await bookingStatus(bookingId)).toBe('HELD');
+  expect(await bookingStatus(bookingId)).toBe('CONFIRMED');
   expect(webhookActions(await auditOf(paymentId))).toEqual([
     'PAYMENT_DECLINED',
     'PAYMENT_APPLIED',

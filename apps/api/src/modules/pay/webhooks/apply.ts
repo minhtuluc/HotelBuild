@@ -12,7 +12,8 @@
  *   phòng; lập yêu cầu hoàn **100% riêng khoản thu muộn**, miễn phí/phạt, reason `PAYMENT_TIMEOUT`,
  *   requester `SYSTEM` (BR-PAY-11) và giữ hạn mức hoàn trong sổ qua `BookingLedger.reserve`.
  * - Booking đang chờ còn hạn: phân bổ khoản thu vào các nghĩa vụ còn thiếu rồi đồng bộ projection
- *   (`BookingLedger.sync`); việc xác nhận (BR-BOOK-09) vẫn là use case riêng, không nằm ở webhook.
+ *   (`BookingLedger.sync`); tiền phòng đã thu (DEPOSIT + BALANCE) đủ cọc ⇒ `CONFIRMED` **cùng transaction**
+ *   bằng writer HB-077 (UC-PAY-02 bước 9, BR-BOOK-09 — HB-255), giống lệnh thu tại quầy HB-096.
  *
  * Lữ khách/PSP không có `ActorContext` của nhân viên: mọi bản audit mang actor `SYSTEM` kèm mã
  * tương quan của callback (BR-GEN-07), snapshot chỉ có mã/tiền/trạng thái — không thẻ, không PII
@@ -27,6 +28,7 @@ import { planReceiptAllocation } from '../ledger/receipt-allocation.js';
 import type { ReceiptCharge } from '../ledger/receipt-allocation.js';
 import type { PspMethod } from '../psp/port.js';
 import type { CallbackDecision } from './contract.js';
+import { confirmBooking } from '../../book/bookings/writes.js';
 
 export interface VerifiedEvent {
   readonly method: PspMethod;
@@ -63,10 +65,12 @@ const WAITING: Readonly<Record<string, true>> = { HELD: true, PENDING_PAYMENT: t
 
 interface BookingFacts {
   readonly id: string;
+  readonly property_id: string;
   readonly status: string;
   readonly hold_expires_at: Date | null;
   readonly check_in: Date;
   readonly rate_plan_id: string;
+  readonly deposit_amount: bigint;
 }
 
 /** Liên thông hai net nghiệp vụ của một webhook: đóng inbox cùng transaction với sổ tiền. */
@@ -101,10 +105,12 @@ export async function applyVerifiedEvent(
     where: { id: payment.booking_id },
     select: {
       id: true,
+      property_id: true,
       status: true,
       hold_expires_at: true,
       check_in: true,
       rate_plan_id: true,
+      deposit_amount: true,
     },
   });
   // Mốc quyết định lấy từ **giờ CSDL** (BR-BOOK-18, ADR-014) vì `hold_expires_at` do CSDL ghi: không
@@ -223,7 +229,44 @@ async function applySuccess(
     event.providerTxnId,
     'SUCCEEDED',
   );
+  await confirmWhenDepositCovered(tx, audit, event, paymentId, booking);
   return { decision: 'APPLIED', note: null };
+}
+
+/**
+ * UC-PAY-02 bước 9 / BR-BOOK-09: booking đang chờ, hold còn hạn theo giờ CSDL và tiền phòng đã thu
+ * (DEPOSIT + BALANCE `SUCCEEDED`) ≥ `deposit_amount` ⇒ `CONFIRMED`. Cùng điều kiện với
+ * `POST /bookings/{id}/confirm` và lệnh thu tại quầy; không hold (kênh `holdMinutes = 0`) thì để nhân
+ * viên xác nhận như trước.
+ */
+async function confirmWhenDepositCovered(
+  tx: Prisma.TransactionClient,
+  audit: AuditWriter,
+  event: VerifiedEvent,
+  paymentId: string,
+  booking: BookingFacts,
+): Promise<void> {
+  if (booking.status !== 'HELD' && booking.status !== 'PENDING_PAYMENT') return;
+  if (booking.hold_expires_at === null || booking.hold_expires_at <= event.now) return;
+  const collected = await tx.payments.aggregate({
+    where: {
+      booking_id: booking.id,
+      status: 'SUCCEEDED',
+      type: { in: ['DEPOSIT', 'BALANCE'] },
+    },
+    _sum: { amount: true },
+  });
+  const paidAmount = collected._sum.amount ?? 0n;
+  if (paidAmount < booking.deposit_amount) return;
+  await confirmBooking(tx, audit, {
+    bookingId: booking.id,
+    propertyId: booking.property_id,
+    fromStatus: booking.status,
+    paymentId,
+    paidAmount,
+    actor: event.actor,
+    now: event.now,
+  });
 }
 
 /** Tiền thu muộn (BR-PAY-11): booking đã kết thúc, hoặc đang chờ mà hold hết hiệu lực theo giờ CSDL. */

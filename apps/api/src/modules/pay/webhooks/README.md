@@ -43,10 +43,14 @@ cổng ──▶ verify (pay/psp, constant-time; sai ⇒ từ chối, KHÔNG ghi
   để đối soát qua vết audit (`PAYLOAD_HASH_MISMATCH`) — không ghi đè payload gốc (csdl §3).
 - **Kết quả chỉ tăng** (BR-PAY-11): `PENDING → FAILED` khi cổng từ chối; `PENDING/FAILED → SUCCEEDED`
   khi cổng báo thu thành công, kể cả trước đó FAILED do timeout cục bộ. `SUCCEEDED` **không** bị hạ.
-- **Không đổi trạng thái booking**: nhận tiền không xác nhận/hạ booking. Booking đang chờ mà hold đã
-  hết hiệu lực (dù job HB-078 chưa chạy) hoặc booking đã kết thúc ⇒ lập `refund_requests` hoàn **100%**
-  riêng khoản thu muộn (`PAYMENT_TIMEOUT`, SYSTEM) và giữ hạn mức bằng `refund_allocations`; còn hạn thì
-  phân bổ vào nghĩa vụ còn thiếu rồi đồng bộ projection của sổ.
+- **Không hạ, không hồi sinh booking**: booking đang chờ mà hold đã hết hiệu lực (dù job HB-078 chưa
+  chạy) hoặc booking đã kết thúc ⇒ lập `refund_requests` hoàn **100%** riêng khoản thu muộn
+  (`PAYMENT_TIMEOUT`, SYSTEM) và giữ hạn mức bằng `refund_allocations`; còn hạn thì phân bổ vào nghĩa
+  vụ còn thiếu rồi đồng bộ projection của sổ.
+- **Đủ cọc trong hạn ⇒ `CONFIRMED` cùng transaction** (UC-PAY-02 bước 9, BR-BOOK-09 — HB-255): tiền
+  phòng đã thu (DEPOSIT + BALANCE `SUCCEEDED`) ≥ `deposit_amount` và hold còn hạn theo giờ CSDL ⇒ writer
+  `confirmBooking` của HB-077 (history + audit `BOOKING_CONFIRMED`, actor `SYSTEM`), giống lệnh thu tại
+  quầy. Booking không có hold (kênh `holdMinutes = 0`) vẫn do nhân viên xác nhận.
 - **ACK theo mã cũ khi trùng**: `RspCode 02`/`204` — không gửi lỗi làm cổng retry vô ích.
 
 ## Xử lý lại và đối soát

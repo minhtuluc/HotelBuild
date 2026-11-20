@@ -170,15 +170,7 @@ export class CounterService {
       fromStatus: status === 'HELD' ? 'HELD' : 'PENDING_PAYMENT',
       paymentId,
       paidAmount: collected,
-      caller: {
-        type: 'USER',
-        id: actor.id,
-        role: actor.role,
-        propertyScope: actor.propertyScope,
-        ip: actor.ip,
-        correlationId: actor.correlationId,
-        principal: { type: 'USER', id: actor.id },
-      },
+      actor: { id: actor.id, role: actor.role, ip: actor.ip, correlationId: actor.correlationId },
       now,
     });
   }

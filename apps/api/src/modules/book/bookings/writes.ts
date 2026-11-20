@@ -19,6 +19,7 @@ import type { AuditWriter } from '../../../infrastructure/audit/audit-writer.js'
 import { maskOperationalText } from '../../prop/room-blocks/operational-text.js';
 import { bookingCode } from '../holds/writes.js';
 import type { BookingCaller } from './principal.js';
+import type { ActorContext } from '../../../common/actor/actor-context.js';
 import type { SnapshotPlan, SnapshotSource } from './snapshot.js';
 import { planSnapshot, snapshotPayload } from './snapshot.js';
 import type { BookingInput } from './validation.js';
@@ -302,7 +303,8 @@ export interface BookingConfirmation {
   readonly fromStatus: 'HELD' | 'PENDING_PAYMENT';
   readonly paymentId: string;
   readonly paidAmount: bigint;
-  readonly caller: BookingCaller;
+  /** Người/hệ thống xác nhận: nhân viên (tay, thu tại quầy) hoặc `SYSTEM` (webhook PSP — HB-255). */
+  readonly actor: ActorContext;
   /** Giờ CSDL đọc sau khoá (BR-BOOK-18). */
   readonly now: Date;
 }
@@ -332,17 +334,12 @@ export async function confirmBooking(
       from_status: confirmation.fromStatus,
       to_status: 'CONFIRMED',
       reason: 'CONFIRMED',
-      actor_id: confirmation.caller.type === 'USER' ? confirmation.caller.id : null,
+      actor_id: confirmation.actor.id,
       at: confirmation.now,
     },
   });
   await audit.record(tx, {
-    actor: {
-      id: confirmation.caller.type === 'USER' ? confirmation.caller.id : null,
-      role: confirmation.caller.role,
-      ip: confirmation.caller.ip,
-      correlationId: confirmation.caller.correlationId,
-    },
+    actor: confirmation.actor,
     action: 'BOOKING_CONFIRMED',
     entityType: 'Booking',
     entityId: confirmation.bookingId,
