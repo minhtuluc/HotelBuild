@@ -1,7 +1,7 @@
 /** Điểm vào Operations Android: đăng nhập → me() → đổi mật khẩu/PIN/chọn cơ sở → màn chính. */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, BackHandler, View } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { color } from '@pinehill/ui-native';
 import type { BookingSummary, UserMe } from '@pinehill/contracts';
 import { createSession } from '../src/session-factory';
@@ -226,6 +226,7 @@ export default function RootScreen(): ReactElement {
         onArrivals={() => setStage('arrivals')}
         onWalkIn={() => setStage('walkIn')}
         onDepartures={() => setStage('departures')}
+        onAlerts={() => router.push('/alerts')}
       />
     );
   };
