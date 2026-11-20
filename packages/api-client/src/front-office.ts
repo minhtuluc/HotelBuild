@@ -24,6 +24,8 @@ import {
   noShowResponseSchema,
   reconciliationCloseRequestSchema,
   reconciliationCloseResponseSchema,
+  reconciliationDailyQuerySchema,
+  reconciliationDailySchema,
   type CheckInRequest,
   type CheckInResponse,
   type CheckOutPreview,
@@ -45,6 +47,8 @@ import {
   type NoShowResponse,
   type ReconciliationCloseRequest,
   type ReconciliationCloseResponse,
+  type ReconciliationDaily,
+  type ReconciliationDailyQuery,
 } from '@pinehill/contracts';
 import { ApiClient, type ApiResponse } from './client.js';
 
@@ -61,6 +65,8 @@ export interface FrontOfficeApi {
   closeReconciliation(
     input: ReconciliationCloseRequest,
   ): Promise<ApiResponse<ReconciliationCloseResponse>>;
+  /** HB-262 (SCR-68): tổng tiền mặt theo người thu trong ngày VN. */
+  dailyReconciliation(query: ReconciliationDailyQuery): Promise<ApiResponse<ReconciliationDaily>>;
 }
 
 export function createFrontOfficeApi(client: ApiClient): FrontOfficeApi {
@@ -108,6 +114,13 @@ export function createFrontOfficeApi(client: ApiClient): FrontOfficeApi {
         body: reconciliationCloseRequestSchema.parse(input),
         pinProtected: true,
         decoder: reconciliationCloseResponseSchema,
+      }),
+    dailyReconciliation: (query) =>
+      client.request({
+        method: 'GET',
+        path: '/reconciliation/daily',
+        query: reconciliationDailyQuerySchema.parse(query),
+        decoder: reconciliationDailySchema,
       }),
   };
 }
