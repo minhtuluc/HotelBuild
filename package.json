@@ -22,6 +22,7 @@
       "decode-uri-component": "0.5.1",
       "postcss@<8.5.28": "8.5.28",
       "@prisma/config@6.19.3>deepmerge-ts": "8.0.2",
+      "@prisma/config@6.19.3>effect": "3.22.5",
       "source-map-js@<1.2.2": "1.2.2",
       "sharp@<0.35.5": "0.35.5",
       "shell-quote@>=1.8.4 <1.11.0": "1.11.0",
