@@ -8,3 +8,4 @@ export * from './status-bar.js';
 export * from './components/styles.js';
 export * from './components/ticket-context.js';
 export * from './components/primitives.js';
+export * from './theme.js';
