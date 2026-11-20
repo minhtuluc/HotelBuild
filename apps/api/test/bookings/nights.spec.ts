@@ -8,9 +8,7 @@ import { bookingPriceSnapshotSchema } from '@pinehill/contracts';
 import { createBooking, http, guestToken, otherGuestToken, staffToken } from './fixture.js';
 
 const snapshot = (bookingId: string, token: string) =>
-  http()
-    .get(`/api/v1/bookings/${bookingId}/nights`)
-    .set('Authorization', `Bearer ${token}`);
+  http().get(`/api/v1/bookings/${bookingId}/nights`).set('Authorization', `Bearer ${token}`);
 
 test('chủ booking đọc giá từng đêm và tổng khớp booking; không có trường nội bộ', async () => {
   const { booking } = await createBooking();
