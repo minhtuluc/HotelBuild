@@ -1,0 +1,12 @@
+{
+  "extends": "../config/tsconfig.react.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "types": []
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "vitest.config.ts"
+  ]
+}

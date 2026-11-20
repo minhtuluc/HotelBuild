@@ -1,0 +1,136 @@
+/**
+ * Định dạng theo locale dùng chung cho web khách và app Android (kế hoạch đa ngôn ngữ §4; chuyển từ customer-web ở HB-275).
+ *
+ * Ngày nhận/trả là **ngày lịch** `yyyy-mm-dd`: không kéo múi giờ máy vào (NFR-LOC-02). Với `vi` đầu ra giữ
+ * nguyên như trước HB-309 (`dd/MM/yyyy`, thứ `CN`/`T2`…), dựng bằng chuỗi; locale khác dùng `Intl` ở múi
+ * giờ UTC trên chính ngày lịch đó nên cũng không lệch ngày.
+ */
+import { formatDateTimeVn, formatMoney } from '@pinehill/ui-web/format';
+import { LOCALE_META, type Locale } from './locales';
+
+const CALENDAR_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const VI_WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'] as const;
+
+interface CalendarParts {
+  readonly year: string;
+  readonly month: string;
+  readonly day: string;
+  readonly utc: Date;
+}
+
+function calendarParts(iso: string): CalendarParts | null {
+  const match = CALENDAR_DATE.exec(iso);
+  if (match === null) return null;
+  const [, year = '', month = '', day = ''] = match;
+  const utc = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (Number.isNaN(utc.getTime()) || utc.getUTCDate() !== Number(day)) return null;
+  return { year, month, day, utc };
+}
+
+function intlDate(locale: Locale, options: Intl.DateTimeFormatOptions, at: Date): string {
+  return new Intl.DateTimeFormat(LOCALE_META[locale].intl, { timeZone: 'UTC', ...options }).format(
+    at,
+  );
+}
+
+/** Tiền VND theo dấu phân cách của locale. */
+export function money(amountVnd: number, locale: Locale): string {
+  return formatMoney(amountVnd, LOCALE_META[locale].intl);
+}
+
+/** `2026-10-12` → `12/10/2026` (vi). Chuỗi không phải ngày lịch thì trả nguyên văn để lộ dữ liệu lạ. */
+export function calendarDate(iso: string, locale: Locale): string {
+  if (locale === 'vi') {
+    const match = CALENDAR_DATE.exec(iso);
+    return match === null ? iso : `${match[3]}/${match[2]}/${match[1]}`;
+  }
+  const parts = calendarParts(iso);
+  if (parts === null) return iso;
+  return intlDate(locale, { day: '2-digit', month: '2-digit', year: 'numeric' }, parts.utc);
+}
+
+/** Nhãn thứ ngắn in trên tem đêm: `CN`, `T2`… (vi). */
+export function weekdayShort(iso: string, locale: Locale): string | null {
+  const parts = calendarParts(iso);
+  if (parts === null) return null;
+  if (locale === 'vi') return VI_WEEKDAYS[parts.utc.getUTCDay()] ?? '';
+  return intlDate(locale, { weekday: 'short' }, parts.utc);
+}
+
+/** `24/12` (vi) — ngày/tháng in trên tem đêm. */
+export function dayMonth(iso: string, locale: Locale): string | null {
+  const parts = calendarParts(iso);
+  if (parts === null) return null;
+  if (locale === 'vi') return `${parts.day}/${parts.month}`;
+  return intlDate(locale, { day: '2-digit', month: '2-digit' }, parts.utc);
+}
+
+/**
+ * `T5, 24/12/2026` (vi) — dòng ngày đầy đủ in dưới ô `<input type="date">` để khách luôn thấy đúng ngày
+ * đã chọn, dù trình duyệt hiển thị ô theo `mm/dd/yyyy`. Chuỗi rỗng / không hợp lệ trả `null`.
+ */
+export function dateLine(iso: string, locale: Locale): string | null {
+  if (locale !== 'vi' && locale !== 'en') {
+    // zh-CN/ja/ko/ru: để `Intl` xếp thứ và ngày theo thói quen của ngôn ngữ (2026/12/24周四, 24.12.2026, чт).
+    const parts = calendarParts(iso);
+    if (parts === null) return null;
+    return intlDate(
+      locale,
+      { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' },
+      parts.utc,
+    );
+  }
+  const weekday = weekdayShort(iso, locale);
+  if (weekday === null) return null;
+  return `${weekday}, ${calendarDate(iso, locale)}`;
+}
+
+const VN_TIME_ZONE = 'Asia/Ho_Chi_Minh';
+
+/**
+ * `12/11/2026 14:00 (giờ VN)` — mốc thời gian UTC hiện theo giờ Việt Nam, ngày trước tháng, 24 giờ. Với `vi`
+ * dùng đúng `formatDateTimeVn` của `ui-web` (đầu ra không đổi); `en` dựng cùng thứ tự bằng `Intl`; locale khác
+ * để `Intl` xếp ngày theo ngôn ngữ đó. Nhãn giờ lấy từ danh mục (`suffix`).
+ */
+export function dateTimeVn(isoUtc: string, locale: Locale, suffix: string): string {
+  if (locale === 'vi') return formatDateTimeVn(isoUtc);
+  const at = new Date(isoUtc);
+  if (Number.isNaN(at.getTime())) throw new RangeError(`Invalid timestamp: ${isoUtc}`);
+  const parts = new Intl.DateTimeFormat(LOCALE_META[locale].intl, {
+    timeZone: VN_TIME_ZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(at);
+  const part = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((item) => item.type === type)?.value ?? '';
+  const time = `${part('hour')}:${part('minute')}`;
+  if (locale === 'en') return `${part('day')}/${part('month')}/${part('year')} ${time} ${suffix}`;
+  // zh-CN/ja/ko/ru: ngày theo thứ tự của ngôn ngữ (2026/11/12, 2026. 11. 12., 12.11.2026), giờ 24h.
+  const date = new Intl.DateTimeFormat(LOCALE_META[locale].intl, {
+    timeZone: VN_TIME_ZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(at);
+  return `${date} ${time} ${suffix}`;
+}
+
+/**
+ * Nhãn tháng của một mùa (HB-322): `Tháng 11 – 12` (vi), `November – December` (en). Tháng ngoài 1–12 bị bỏ.
+ * Chạy ở máy chủ (trang ga dựng tĩnh), nên `Intl` không gây lệch khi hydrate.
+ */
+export function monthRange(months: readonly number[], locale: Locale): string {
+  const valid = months.filter((month) => Number.isInteger(month) && month >= 1 && month <= 12);
+  const first = valid[0];
+  const last = valid[valid.length - 1];
+  if (first === undefined || last === undefined) return '';
+  if (locale === 'vi') return first === last ? `Tháng ${first}` : `Tháng ${first} – ${last}`;
+  const name = (month: number): string =>
+    intlDate(locale, { month: 'long' }, new Date(Date.UTC(2026, month - 1, 1)));
+  const label = first === last ? name(first) : `${name(first)} – ${name(last)}`;
+  return label.charAt(0).toLocaleUpperCase(LOCALE_META[locale].intl) + label.slice(1);
+}
