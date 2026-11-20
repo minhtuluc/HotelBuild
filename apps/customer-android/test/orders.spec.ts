@@ -3,6 +3,7 @@ import { ApiError } from '@pinehill/api-client';
 import type { BookingSummary } from '@pinehill/contracts';
 import {
   ORDERS_CACHE_KEY,
+  canPayDeposit,
   loadOrderDetail,
   balanceRows,
   findByCode,
@@ -142,6 +143,41 @@ describe('SCR-79/SCR-80 đơn của tôi trên Android (HB-113)', () => {
     expect(await loadOrderDetail(deps, 'PH-9999-00000')).toEqual({ kind: 'notFound' });
   });
 
+  it('HB-265: chi tiết đọc thêm GET /bookings/{id} để có danh sách giao dịch; lỗi thì giữ bản danh sách', async () => {
+    const payment = {
+      paymentId: 'pay-1',
+      bookingId: booking().id,
+      type: 'DEPOSIT' as const,
+      method: 'VNPAY' as const,
+      amount: 390_000,
+      status: 'SUCCEEDED' as const,
+      providerTxnId: '14000001',
+      paymentUrl: null,
+      expiresAt: null,
+      paidAt: '2026-12-01T00:10:00.000Z',
+      createdAt: '2026-12-01T00:00:00.000Z',
+    };
+    const detailed = { ...booking(), payments: [payment] };
+    const withGet = { ...api(), get: async () => detailed };
+    const ready = await loadOrderDetail(
+      { api: withGet, net: online, storage: memoryStorage(), nowMs: 0 },
+      'PH-2601-00001',
+    );
+    expect(ready).toEqual({ kind: 'ready', booking: detailed });
+    const failingGet = {
+      ...api(),
+      get: async () => {
+        throw new Error('timeout');
+      },
+    };
+    expect(
+      await loadOrderDetail(
+        { api: failingGet, net: online, storage: memoryStorage(), nowMs: 0 },
+        'PH-2601-00001',
+      ),
+    ).toEqual({ kind: 'ready', booking: booking() });
+  });
+
   it('chi tiết offline: trả bản đã tải của đúng mã, kèm mốc để gắn nhãn cũ (AC1)', async () => {
     const storage = memoryStorage();
     await saveOrders(storage, [booking()], Date.parse('2026-12-02T00:00:00.000Z'));
@@ -181,4 +217,11 @@ describe('SCR-79/SCR-80 đơn của tôi trên Android (HB-113)', () => {
       expect(stay).toEqual({ checkIn, checkOut, nights: 42, roomCount: 3 });
     },
   );
+
+  it('HB-265: lối vào thanh toán cọc chỉ cho booking còn chờ', () => {
+    expect(canPayDeposit({ status: 'HELD' })).toBe(true);
+    expect(canPayDeposit({ status: 'PENDING_PAYMENT' })).toBe(true);
+    expect(canPayDeposit({ status: 'CONFIRMED' })).toBe(false);
+    expect(canPayDeposit({ status: 'CANCELLED' })).toBe(false);
+  });
 });
