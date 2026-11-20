@@ -6,7 +6,7 @@
  * mọi số.
  */
 import type { CustomerMessageKey } from '../vi/customer';
-import { ruContent } from './content';
+import { ruContent } from '@pinehill/content/catalogs/ru';
 import { ruUiWeb } from './ui-web';
 
 export const ruCustomer: Readonly<Record<CustomerMessageKey, string>> = {

@@ -9,9 +9,9 @@ import type { ReactElement } from 'react';
 import { ChainPageHead, chainMetadata } from '../../../components/content/chain-page';
 import { PlanRow } from '../../../components/content/plan-row';
 import { LocaleLink as Link } from '../../../components/locale-link';
-import { LOS_TIERS, PLAN_FACTS, chainPagesCopy, isPlanCode } from '../../../content/chain-pages';
-import { landingContent } from '../../../content/landing-content';
-import { searchCtaHref } from '../../../content/property-pages';
+import { LOS_TIERS, PLAN_FACTS, chainPagesCopy, isPlanCode } from '@pinehill/content/chain-pages';
+import { landingContent } from '@pinehill/content/landing-content';
+import { searchCtaHref } from '@pinehill/content/property-pages';
 import { LOCALE_META } from '../../../i18n/locales';
 import { serverTranslators } from '../../../i18n/server';
 

@@ -10,9 +10,9 @@ import { ChainPageHead, chainMetadata } from '../../../components/content/chain-
 import { LegsTable } from '../../../components/content/legs-table';
 import { RouteMap } from '../../../components/content/route-map';
 import { LocaleLink as Link } from '../../../components/locale-link';
-import { EVISA_URL, chainPagesCopy } from '../../../content/chain-pages';
-import { landingContent } from '../../../content/landing-content';
-import { propertyPageByStation, propertyPageCopy } from '../../../content/property-pages';
+import { EVISA_URL, chainPagesCopy } from '@pinehill/content/chain-pages';
+import { landingContent } from '@pinehill/content/landing-content';
+import { propertyPageByStation, propertyPageCopy } from '@pinehill/content/property-pages';
 import { serverTranslators } from '../../../i18n/server';
 
 const PATH = '/getting-here';

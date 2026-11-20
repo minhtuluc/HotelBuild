@@ -3,7 +3,7 @@
  * ga (ga đang xem có `aria-current="page"`, chấm đặc đỏ dấu bấm).
  */
 import type { ReactElement } from 'react';
-import type { Station } from '../../content/landing-content';
+import type { Station } from '@pinehill/content/landing-content';
 import { LocaleLink } from '../locale-link';
 
 export function RouteMap({

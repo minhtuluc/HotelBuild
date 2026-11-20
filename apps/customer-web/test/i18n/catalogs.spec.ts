@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { CATALOGS } from '../../src/i18n/catalogs';
 import { DEFAULT_LOCALE, LOCALES, LOCALE_META, isLocale } from '../../src/i18n/locales';
 import { translatorsFor } from '../../src/i18n/translate';
-import { landingContent } from '../../src/content/landing-content';
-import { ALL_PHOTO_SLOTS, photoAlt } from '../../src/content/photo-slots';
+import { landingContent } from '@pinehill/content/landing-content';
+import { ALL_PHOTO_SLOTS, photoAlt } from '@pinehill/content/photo-slots';
 
 /** HB-309 — nền tảng i18n customer web: registry đủ khoá, không còn translator toàn cục. */
 

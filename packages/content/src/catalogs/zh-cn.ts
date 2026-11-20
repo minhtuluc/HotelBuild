@@ -1,5 +1,5 @@
 /** 简体中文 bản dịch câu chữ trang nội dung (trang ga, hạng phòng, gallery) — HB-313. */
-import type { viContent } from '../vi/content';
+import type { viContent } from './vi';
 
 export const zhContent: Readonly<Record<keyof typeof viContent, string>> = {
   'guest.content.breadcrumb': '导航路径',

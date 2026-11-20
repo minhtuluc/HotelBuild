@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { DINING_SERVICES, diningPageCopy, includedCopy } from '../../src/content/dining-page';
-import { landingContent } from '../../src/content/landing-content';
+import { DINING_SERVICES, diningPageCopy, includedCopy } from '@pinehill/content/dining-page';
+import { landingContent } from '@pinehill/content/landing-content';
 import { LOCALES } from '../../src/i18n/locales';
 
 /** HB-318 — trang ăn uống ở ga và khối "Giá đã gồm" đủ ở mọi locale, khớp điều khoản docs/02. */

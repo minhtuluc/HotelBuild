@@ -186,6 +186,9 @@ importers:
       '@pinehill/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@pinehill/content':
+        specifier: workspace:*
+        version: link:../../packages/content
       '@pinehill/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -247,6 +250,9 @@ importers:
       '@pinehill/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@pinehill/content':
+        specifier: workspace:*
+        version: link:../../packages/content
       '@pinehill/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -486,6 +492,19 @@ importers:
       typescript-eslint:
         specifier: ^8.70.1
         version: 8.70.1(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
+
+  packages/content:
+    dependencies:
+      '@pinehill/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: ^3.2.7
+        version: 3.2.7(vitest@3.2.7(@types/node@22.20.4)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@22.20.4)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
 
   packages/contracts:
     dependencies:

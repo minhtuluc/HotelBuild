@@ -12,9 +12,9 @@ import {
   propertyPageCopy,
   propertyPageKey,
   searchCtaHref,
-} from '../../../../content/property-pages';
-import { landingContent } from '../../../../content/landing-content';
-import { photoAlt, slotById } from '../../../../content/photo-slots';
+} from '@pinehill/content/property-pages';
+import { landingContent } from '@pinehill/content/landing-content';
+import { photoAlt, slotById } from '@pinehill/content/photo-slots';
 import { serverTranslators } from '../../../../i18n/server';
 import { openGraphImage } from '../../../../lib/site';
 import { LOCALE_META } from '../../../../i18n/locales';

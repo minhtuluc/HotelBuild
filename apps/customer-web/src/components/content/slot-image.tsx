@@ -3,7 +3,7 @@
  * (thẻ vẫn đủ chữ), đúng quy tắc "ô chưa có ảnh tự ẩn". Ảnh luôn `lazy` vì không nằm ở đầu trang.
  */
 import type { ReactElement } from 'react';
-import { slotById } from '../../content/photo-slots';
+import { slotById } from '@pinehill/content/photo-slots';
 import type { Locale } from '../../i18n/locales';
 import { photoSrc, photoSrcSet } from '../../lib/photos';
 import { Photo } from '../photo';

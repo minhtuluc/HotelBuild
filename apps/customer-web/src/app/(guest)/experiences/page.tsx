@@ -9,9 +9,9 @@ import type { ReactElement } from 'react';
 import { ChainPageHead, chainMetadata } from '../../../components/content/chain-page';
 import { LocaleLink as Link } from '../../../components/locale-link';
 import { SlotImage } from '../../../components/content/slot-image';
-import { EXPERIENCES, chainPagesCopy } from '../../../content/chain-pages';
-import { landingContent } from '../../../content/landing-content';
-import { propertyPageByStation, searchCtaHref } from '../../../content/property-pages';
+import { EXPERIENCES, chainPagesCopy } from '@pinehill/content/chain-pages';
+import { landingContent } from '@pinehill/content/landing-content';
+import { propertyPageByStation, searchCtaHref } from '@pinehill/content/property-pages';
 import { monthRange } from '../../../i18n/format';
 import { serverTranslators } from '../../../i18n/server';
 

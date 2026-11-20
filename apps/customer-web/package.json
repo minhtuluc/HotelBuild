@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@pinehill/api-client": "workspace:*",
+    "@pinehill/content": "workspace:*",
     "@pinehill/contracts": "workspace:*",
     "@pinehill/i18n": "workspace:*",
     "@pinehill/ui-web": "workspace:*",

@@ -6,7 +6,7 @@
  * `apps/api/prisma/seed/reference-data.ts`), số chỗ ngủ (`bedCount`), có ở ga nào. Không có diện tích, view,
  * tiện nghi hay giá: giá luôn in theo từng đêm ở bước tìm phòng.
  */
-import type { Locale } from '../i18n/locales';
+import type { Locale } from '@pinehill/i18n';
 import { CONTENT_PACKS } from './locale-packs';
 
 import { ROOM_TYPE_CODES, type RoomTypeCode } from './room-type-codes';

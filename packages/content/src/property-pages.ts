@@ -9,7 +9,7 @@
  * Nội dung tả nơi chốn là MINH HOẠ (`illustrative: true`), thay bằng nội dung thật của cơ sở trước khi phát
  * hành công khai. Không có giá, tồn phòng, mốc huỷ, diện tích, tiện nghi hay giải thưởng ở đây.
  */
-import type { Locale } from '../i18n/locales';
+import type { Locale } from '@pinehill/i18n';
 import { CONTENT_PACKS } from './locale-packs';
 import type { RoomTypeCode } from './room-type-pages';
 

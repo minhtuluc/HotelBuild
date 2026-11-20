@@ -6,8 +6,8 @@ import { LanguageSelect } from './language-select';
 import { VnClock } from './vn-clock';
 import { HeaderAccount } from './header-account';
 import { ExploreMenu, type ExploreGroup } from './explore-menu';
-import { landingContent } from '../content/landing-content';
-import { propertyPageByStation } from '../content/property-pages';
+import { landingContent } from '@pinehill/content/landing-content';
+import { propertyPageByStation } from '@pinehill/content/property-pages';
 import type { Translators } from '../i18n/translate';
 
 const NAV_ITEMS = [

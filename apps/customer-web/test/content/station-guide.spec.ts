@@ -4,8 +4,8 @@ import {
   seasonIndexFor,
   weekendHref,
 } from '../../src/components/content/season-almanac';
-import { PROPERTY_PAGES, propertyPageCopy } from '../../src/content/property-pages';
-import { ROOM_TYPE_PAGES, roomTypePageCopy } from '../../src/content/room-type-pages';
+import { PROPERTY_PAGES, propertyPageCopy } from '@pinehill/content/property-pages';
+import { ROOM_TYPE_PAGES, roomTypePageCopy } from '@pinehill/content/room-type-pages';
 import { monthRange } from '../../src/i18n/format';
 import { LOCALES } from '../../src/i18n/locales';
 

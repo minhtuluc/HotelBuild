@@ -18,14 +18,14 @@ import { SeasonAlmanac, type AlmanacSeason } from '../../../../components/conten
 import { monthRange } from '../../../../i18n/format';
 import { Photo } from '../../../../components/photo';
 import { POSTERS } from '../../../../components/station-posters';
-import { landingContent, type Station } from '../../../../content/landing-content';
-import { photoAlt, slotById } from '../../../../content/photo-slots';
+import { landingContent, type Station } from '@pinehill/content/landing-content';
+import { photoAlt, slotById } from '@pinehill/content/photo-slots';
 import {
   propertyPageByStation,
   type PropertyPageCopy,
   type PropertyPageKey,
-} from '../../../../content/property-pages';
-import { roomTypePageKey } from '../../../../content/room-type-pages';
+} from '@pinehill/content/property-pages';
+import { roomTypePageKey } from '@pinehill/content/room-type-pages';
 import type { Translators } from '../../../../i18n/translate';
 import { availablePhotos, photoSrcSet } from '../../../../lib/photos';
 import { absoluteUrl } from '../../../../lib/site';

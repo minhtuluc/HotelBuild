@@ -15,6 +15,7 @@
   "dependencies": {
     "@expo/metro-runtime": "^57.0.18",
     "@pinehill/api-client": "workspace:*",
+    "@pinehill/content": "workspace:*",
     "@pinehill/contracts": "workspace:*",
     "@pinehill/i18n": "workspace:*",
     "@pinehill/ui-native": "workspace:*",

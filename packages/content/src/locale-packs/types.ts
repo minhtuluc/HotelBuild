@@ -6,7 +6,7 @@
  * Phần tả nơi chốn là MINH HOẠ (`illustrative: true`), phần chính sách dịch từ docs/02 và cần người bản ngữ
  * duyệt trước ngày phát hành công khai (quyết định Q6). Mã gói, số tiền, mốc giờ giữ nguyên.
  */
-import type { Locale } from '../../i18n/locales';
+import type { Locale } from '@pinehill/i18n';
 import type { ChainPagesCopy } from '../chain-pages';
 import type { DiningPageCopy, IncludedCopy } from '../dining-page';
 import type { LandingContent } from '../landing-content';

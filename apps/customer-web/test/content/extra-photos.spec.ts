@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { EXPERIENCES } from '../../src/content/chain-pages';
-import { DINING_SERVICES } from '../../src/content/dining-page';
-import { photoAlt, slotById } from '../../src/content/photo-slots';
-import { EXTRA_PHOTOS } from '../../src/content/photo-slots-extra';
-import { ROOM_TYPE_PAGES } from '../../src/content/room-type-pages';
+import { EXPERIENCES } from '@pinehill/content/chain-pages';
+import { DINING_SERVICES } from '@pinehill/content/dining-page';
+import { photoAlt, slotById } from '@pinehill/content/photo-slots';
+import { EXTRA_PHOTOS } from '@pinehill/content/photo-slots-extra';
+import { ROOM_TYPE_PAGES } from '@pinehill/content/room-type-pages';
 import { LOCALES } from '../../src/i18n/locales';
 import { photoSrc } from '../../src/lib/photos';
 

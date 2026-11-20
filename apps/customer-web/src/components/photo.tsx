@@ -3,7 +3,7 @@
  * ở chế độ xem trước (`?anh=1`) thì vẽ khung ô ảnh kèm mã, tỉ lệ, kích thước và việc cần chụp.
  */
 import type { ReactElement, ReactNode } from 'react';
-import { photoAlt, type PhotoSlot } from '../content/photo-slots';
+import { photoAlt, type PhotoSlot } from '@pinehill/content/photo-slots';
 import type { Locale } from '../i18n/locales';
 
 /** Ảnh thật của ô: ảnh gốc làm `src`; có bản nhỏ thì thêm `srcSet` + `sizes` (HB-325). */

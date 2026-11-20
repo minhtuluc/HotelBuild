@@ -13,7 +13,7 @@ import type { Availability } from '@pinehill/contracts';
 import { useLocale, useMoney, useT } from '../../../i18n/client';
 import { fetchAvailability, type StayCriteria } from './journey-api';
 import { classHref, criteriaIssue, detailHref, parseCriteria } from './search-params';
-import { isRoomTypeCode } from '../../../content/room-type-codes';
+import { isRoomTypeCode } from '@pinehill/content/room-type-codes';
 import { RoomCodeStamp } from '../../../components/stamps';
 import { TableSkeleton } from '../../../components/table-skeleton';
 import { calendarDate } from '../../../i18n/format';

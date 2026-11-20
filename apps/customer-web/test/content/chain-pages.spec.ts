@@ -9,9 +9,9 @@ import {
   PLAN_FACTS,
   chainPagesCopy,
   isPlanCode,
-} from '../../src/content/chain-pages';
-import { galleryEntries, galleryEntry } from '../../src/content/gallery-entries';
-import { landingContent } from '../../src/content/landing-content';
+} from '@pinehill/content/chain-pages';
+import { galleryEntries, galleryEntry } from '@pinehill/content/gallery-entries';
+import { landingContent } from '@pinehill/content/landing-content';
 import { LOCALES } from '../../src/i18n/locales';
 
 /** HB-311b — trang toàn chuỗi: đủ câu chữ mọi locale, quy tắc giá khớp docs/02 §4.4, thư viện ảnh. */

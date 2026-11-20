@@ -3,7 +3,7 @@
  * `/getting-here` (HB-311b). Component máy chủ.
  */
 import type { ReactElement } from 'react';
-import type { ArrivalLeg } from '../../content/property-pages';
+import type { ArrivalLeg } from '@pinehill/content/property-pages';
 import type { Translators } from '../../i18n/translate';
 
 export function LegsTable({
