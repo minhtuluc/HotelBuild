@@ -22,7 +22,11 @@ export interface BarStyleSetter {
 type Schedule = (run: () => void, ms: number) => () => void;
 
 /** Trả hàm huỷ nhịp đặt lại. `schedule` tách ra để test không cần đồng hồ thật. */
-export function applyStatusBarStyle(bar: BarStyleSetter, style: BarStyle, schedule: Schedule): () => void {
+export function applyStatusBarStyle(
+  bar: BarStyleSetter,
+  style: BarStyle,
+  schedule: Schedule,
+): () => void {
   bar.setBarStyle(style, false);
   return schedule(() => bar.setBarStyle(style, false), STATUS_BAR_REAPPLY_MS);
 }
