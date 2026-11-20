@@ -37,13 +37,24 @@ describe('HB-272 createTheme', () => {
     const guest = Object.keys(createTheme('guest').theme).sort();
     const ops = Object.keys(createTheme('ops').theme).sort();
     expect(guest).toEqual(ops);
-    for (const key of [...LEGACY_KEYS, 'ticket', 'label', 'board']) expect(guest).toContain(key);
+    for (const key of [
+      ...LEGACY_KEYS,
+      'ticket',
+      'label',
+      'board',
+      'buttonAccent',
+      'buttonAccentText',
+    ])
+      expect(guest).toContain(key);
   });
 
-  it('khách: nền mẫu biểu, nút chính dấu bấm đỏ, header bảng ga chữ hổ phách', () => {
+  it('khách: nền mẫu biểu, header bảng ga chữ hổ phách; dấu bấm đỏ chỉ cho bước cam kết', () => {
     const { theme, stackScreenOptions, tabScreenOptions } = createTheme('guest');
     expect(theme.screen.backgroundColor).toBe(worldInk.ground);
-    expect(theme.buttonPrimary.backgroundColor).toBe(worldInk.punch);
+    // DESIGN.md: nút tiện ích phía khách (tra cứu, đăng nhập, lọc) là mực in; cam kết là dấu bấm.
+    expect(theme.buttonPrimary.backgroundColor).toBe(color.primary);
+    expect(theme.buttonAccent.backgroundColor).toBe(worldInk.punch);
+    expect(theme.buttonAccentText.color).toBe(color.accentContrast);
     expect(theme.title.fontFamily).toBe(fontFamily.displaySemiBold);
     expect(stackScreenOptions.headerStyle.backgroundColor).toBe(worldInk.board);
     expect(stackScreenOptions.headerTintColor).toBe(worldInk.signal);

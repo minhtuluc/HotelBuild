@@ -111,7 +111,7 @@ describe('HB-272 token vé tàu', () => {
 
 - [ ] **Step 1: Test đỏ.**
   - Hai `surface` có cùng tập khoá, và tập khoá đó bao trọn danh sách cũ.
-  - `guest`: `screen.backgroundColor` là `#DFE5F0`, `buttonPrimary.backgroundColor` là `#B8341C`, header nền `#121614` chữ `#F2B632`.
+  - `guest`: `screen.backgroundColor` là `#DFE5F0`, `buttonPrimary.backgroundColor` là `#1B3A82`, `buttonAccent.backgroundColor` là `#B8341C`, header nền `#121614` chữ `#F2B632`.
   - `ops`: nền `#F3F2EE`, `buttonPrimary` là `#1B3A82`, tiêu đề dùng `fontFamily.sansSemiBold`.
 - [ ] **Step 2:** Chạy test. Kỳ vọng: FAIL.
 - [ ] **Step 3:** Cài đặt.
