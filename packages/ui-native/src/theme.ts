@@ -1,8 +1,7 @@
 /**
  * HB-272 — bảng style dùng chung cho hai app Android theo hệ "vé tàu" của web (DESIGN.md).
- * - `guest` (Persuade, như web khách): nền mẫu biểu xanh xám, header/tab bảng ga chữ hổ phách, nút chính
- *   dấu bấm đỏ, tiêu đề chữ hẹp.
- * - `ops` (Operate, như operations web): nền làm việc, header bảng ga, nút chính mực xanh, tiêu đề chữ thân.
+ * - `guest` (Persuade, như web khách): nền mẫu biểu xanh xám, header/tab bảng ga chữ hổ phách, tiêu đề chữ hẹp.
+ * - `ops` (Operate, như operations web): nền làm việc, header bảng ga, tiêu đề chữ thân.
  * Giữ nguyên tên khoá cũ của `theme.ts` hai app để mọi màn đổi giao diện mà không sửa từng màn.
  * Xuất object thường (không `StyleSheet.create` lúc nạp module) để an toàn trong test UI.
  */
@@ -14,7 +13,6 @@ export type ThemeSurface = 'guest' | 'ops';
 
 interface Surface {
   readonly page: string;
-  readonly action: string;
   readonly titleFont: string;
   readonly headerTint: string;
 }
@@ -22,13 +20,11 @@ interface Surface {
 const SURFACES: Record<ThemeSurface, Surface> = {
   guest: {
     page: worldInk.ground,
-    action: worldInk.punch,
     titleFont: fontFamily.displaySemiBold,
     headerTint: worldInk.signal,
   },
   ops: {
     page: color.bg,
-    action: color.primary,
     titleFont: fontFamily.sansSemiBold,
     headerTint: color.darkText,
   },
@@ -75,7 +71,11 @@ function layout(page: string) {
   };
 }
 
-function controls(action: string) {
+/**
+ * Vai nút theo DESIGN.md: mực in (`buttonPrimary`) cho hành động chính back-office và nút tiện ích phía
+ * khách; dấu bấm (`buttonAccent`) chỉ cho bước cam kết phía khách (tìm phòng, giữ chỗ, thanh toán).
+ */
+function controls() {
   return {
     field: {
       ...text(fontFamily.sans, typography.body.sp),
@@ -86,7 +86,12 @@ function controls(action: string) {
       minHeight: touchTargetDp,
       backgroundColor: color.surface,
     } satisfies TextStyle,
-    buttonPrimary: button(action, action),
+    buttonPrimary: button(color.primary, color.primary),
+    buttonAccent: button(worldInk.punch, worldInk.punch),
+    buttonAccentText: {
+      ...text(fontFamily.sansSemiBold, typography.body.sp, color.accentContrast),
+      textAlign: 'center',
+    } satisfies TextStyle,
     buttonPrimaryText: {
       ...text(fontFamily.sansSemiBold, typography.body.sp, color.primaryContrast),
       textAlign: 'center',
@@ -128,7 +133,7 @@ export function createTheme(surface: ThemeSurface) {
   const ink = SURFACES[surface];
   const headerTitleStyle = { fontFamily: ink.titleFont, fontSize: typography.h2.sp };
   return {
-    theme: { ...layout(ink.page), ...controls(ink.action), ...type(ink.titleFont) },
+    theme: { ...layout(ink.page), ...controls(), ...type(ink.titleFont) },
     stackScreenOptions: {
       headerTitleAlign: 'center',
       headerStyle: { backgroundColor: worldInk.board },

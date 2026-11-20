@@ -82,7 +82,7 @@ Hai file `theme.ts` của hai app hiện giống hệt nhau. Gộp thành `creat
 - **`guest`:**
   - Nền `ground`.
   - Header và tab bar màu `board`, chữ `signal`; tab đang chọn màu `signal`.
-  - `buttonPrimary` là đỏ dấu bấm.
+  - `buttonPrimary` là mực xanh (nút tiện ích: tra cứu, đăng nhập, lọc). Khoá mới `buttonAccent` là đỏ dấu bấm, chỉ dùng cho bước cam kết (tìm phòng, giữ chỗ, thanh toán), đúng DESIGN.md. Sửa sau lần chạy máy thật đầu tiên, khi nút "Tra cứu" bị tô đỏ.
 - **`ops`:**
   - Nền `bg` #F3F2EE.
   - Header màu `board`, chữ `darkText`.
