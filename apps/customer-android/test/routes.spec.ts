@@ -44,3 +44,8 @@ test('screens that need an account send the guest to the login route, not to the
     expect(source, file).not.toContain("router.push('/')");
   }
 });
+
+test('HB-267: layout gốc giữ chữ thanh trạng thái tối (giao diện luôn sáng)', () => {
+  const layout = readFileSync(new URL('../app/_layout.tsx', import.meta.url), 'utf8');
+  expect(layout).toContain('useDarkStatusBar();');
+});
