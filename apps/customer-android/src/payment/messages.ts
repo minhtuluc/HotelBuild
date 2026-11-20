@@ -1,11 +1,11 @@
 import type { Phase } from './flow';
 import { makeTranslate, type TranslateFor } from '@pinehill/ui-native';
 import type { Locale } from '@pinehill/i18n';
-import { enPayment, enPhases } from '../i18n/catalogs/en';
-import { jaPayment, jaPhases } from '../i18n/catalogs/ja';
-import { koPayment, koPhases } from '../i18n/catalogs/ko';
-import { ruPayment, ruPhases } from '../i18n/catalogs/ru';
-import { zhPayment, zhPhases } from '../i18n/catalogs/zh-cn';
+import { enPayment, enPhases } from '../i18n/catalogs/en-payment';
+import { jaPayment, jaPhases } from '../i18n/catalogs/ja-payment';
+import { koPayment, koPhases } from '../i18n/catalogs/ko-payment';
+import { ruPayment, ruPhases } from '../i18n/catalogs/ru-payment';
+import { zhPayment, zhPhases } from '../i18n/catalogs/zh-cn-payment';
 import { currentLocale } from '../i18n/locale';
 
 export const paymentCatalog = {

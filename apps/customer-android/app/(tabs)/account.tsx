@@ -33,7 +33,7 @@ import { chooseLocale, currentLocale } from '../../src/i18n/locale';
 import { LanguagePicker } from '../../src/language-picker';
 import { secureStorage } from '../../src/storage-device.native';
 
-const CELL = { color: color.text } as const;
+const CELL = theme.body;
 
 const PROFILE_KEYS: Readonly<Record<ProfileRow['key'], MessageKey>> = {
   name: 'profile.name',
@@ -72,7 +72,7 @@ function ProfileCard({ guest }: { guest: GuestSummary }): ReactElement {
             theme.hairline,
           ]}
         >
-          <Text style={{ color: color.textMuted, flex: 1 }}>{t(PROFILE_KEYS[row.key])}</Text>
+          <Text style={[theme.muted, { flex: 1 }]}>{t(PROFILE_KEYS[row.key])}</Text>
           <Text style={[CELL, theme.tabular]}>{rowValue(row)}</Text>
         </View>
       ))}
@@ -105,7 +105,7 @@ function LoyaltyPanel({
             theme.hairline,
           ]}
         >
-          <Text style={{ color: color.textMuted, flex: 1 }}>{t(LOYALTY_KEYS[row.key])}</Text>
+          <Text style={[theme.muted, { flex: 1 }]}>{t(LOYALTY_KEYS[row.key])}</Text>
           <Text style={[CELL, theme.tabular]}>{row.value}</Text>
         </View>
       ))}
@@ -130,25 +130,17 @@ function Notice({
   return (
     <>
       {alert === null ? null : (
-        <Text
-          accessibilityRole="alert"
-          accessibilityLiveRegion="polite"
-          style={{ color: color.danger }}
-        >
+        <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={theme.alertDanger}>
           {alert}
         </Text>
       )}
       {!offline ? null : (
-        <Text
-          accessibilityRole="alert"
-          accessibilityLiveRegion="polite"
-          style={{ color: color.danger }}
-        >
+        <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={theme.alertDanger}>
           {t('guest.offline')}
         </Text>
       )}
       {failedCode === null ? null : (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {t('profile.failed', { code: failedCode })}
         </Text>
       )}
@@ -290,7 +282,7 @@ export default function AccountScreen(): ReactElement {
             onPress={() => void session.logout().then(() => setSignedIn(false))}
             style={theme.buttonSecondary}
           >
-            <Text style={{ color: color.danger, fontWeight: '500' }}>{t('home.logout')}</Text>
+            <Text style={[theme.buttonPlainText, { color: color.danger }]}>{t('home.logout')}</Text>
           </Pressable>
         </>
       ) : (

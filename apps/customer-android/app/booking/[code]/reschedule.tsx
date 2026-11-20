@@ -47,17 +47,13 @@ function Messages({ online, alert }: { online: boolean; alert: string | null }):
           accessibilityRole="alert"
           accessibilityLiveRegion="polite"
           data-testid="reschedule-offline"
-          style={{ color: color.warning }}
+          style={theme.alertWarning}
         >
           {t('booking.reschedule.offline')}
         </Text>
       ) : null}
       {alert === null ? null : (
-        <Text
-          accessibilityRole="alert"
-          data-testid="reschedule-alert"
-          style={{ color: color.danger }}
-        >
+        <Text accessibilityRole="alert" data-testid="reschedule-alert" style={theme.alertDanger}>
           {alert}
         </Text>
       )}
@@ -124,33 +120,21 @@ function RescheduleForm({
         style={FIELD}
       />
       {issue === null ? null : (
-        <Text
-          accessibilityRole="alert"
-          data-testid="reschedule-issue"
-          style={{ color: color.danger }}
-        >
+        <Text accessibilityRole="alert" data-testid="reschedule-issue" style={theme.alertDanger}>
           {t(STAY_ISSUE_KEYS[issue])}
         </Text>
       )}
       {!same ? null : (
-        <Text
-          accessibilityRole="alert"
-          data-testid="reschedule-same"
-          style={{ color: color.warning }}
-        >
+        <Text accessibilityRole="alert" data-testid="reschedule-same" style={theme.alertWarning}>
           {t('booking.reschedule.issue.same')}
         </Text>
       )}
       {!states.quoteExpired ? null : (
-        <Text
-          accessibilityRole="alert"
-          data-testid="reschedule-expired"
-          style={{ color: color.warning }}
-        >
+        <Text accessibilityRole="alert" data-testid="reschedule-expired" style={theme.alertWarning}>
           {t('booking.reschedule.staleQuote')}
         </Text>
       )}
-      <Text style={{ color: color.textMuted }}>{t('booking.reschedule.checkRequired')}</Text>
+      <Text style={theme.muted}>{t('booking.reschedule.checkRequired')}</Text>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t('booking.reschedule.check')}
@@ -159,7 +143,7 @@ function RescheduleForm({
         onPress={onCheck}
         style={BUTTON}
       >
-        <Text style={{ color: color.primary }}>{t('booking.reschedule.check')}</Text>
+        <Text style={theme.buttonPlainText}>{t('booking.reschedule.check')}</Text>
       </Pressable>
       <Pressable
         accessibilityRole="button"
@@ -169,7 +153,7 @@ function RescheduleForm({
         onPress={onConfirm}
         style={BUTTON}
       >
-        <Text style={{ color: color.danger }}>{t('booking.reschedule.confirm')}</Text>
+        <Text style={theme.alertDanger}>{t('booking.reschedule.confirm')}</Text>
       </Pressable>
       {quote === null ? null : (
         <DiffPanel

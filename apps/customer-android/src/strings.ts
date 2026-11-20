@@ -40,6 +40,12 @@ export const catalog = {
   'language.title': 'Ngôn ngữ',
   'language.hint': 'Đổi ngôn ngữ hiển thị của ứng dụng.',
   'journey.search.title': 'Tìm phòng',
+  // HB-276: bước của hành trình, chọn nhanh số đêm và chặng giá — cùng câu chữ với web khách.
+  'journey.step': 'Bước {current}/{total}',
+  'search.quickNights': 'Chọn nhanh số đêm',
+  'search.quickNight': '{nights} đêm',
+  'room.segment': 'Chặng {n}',
+  'hold.summary.title': 'Tóm tắt đặt phòng',
   'search.form.property': 'Cơ sở',
   'search.properties.loading': 'Đang tải danh sách cơ sở…',
   'search.properties.failed': 'Không tải được danh sách cơ sở.',

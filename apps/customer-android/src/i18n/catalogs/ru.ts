@@ -1,9 +1,8 @@
 /**
- * HB-275 — câu chữ app khách bằng Русский. Bộ khoá theo tiếng Việt (`strings.ts`, `payment/messages.ts`);
- * thiếu khoá thì báo lỗi khi biên dịch. Bản dịch do Claude soạn — nên có người bản ngữ đọc lại trước khi phát hành.
+ * HB-275 — câu chữ app khách bằng Русский. Bộ khoá theo tiếng Việt; thiếu khoá thì báo lỗi khi biên dịch.
+ * Bản dịch do Claude soạn — nên có người bản ngữ đọc lại trước khi phát hành.
  */
 import type { AppCatalog } from '../../strings';
-import type { PaymentCatalog, PhaseCatalog } from '../../payment/messages';
 
 export const ruApp: AppCatalog = {
   'common.skipToContent': 'Перейти к основному содержимому',
@@ -342,56 +341,9 @@ export const ruApp: AppCatalog = {
   'search.failed': 'Не удалось загрузить результаты: {code}',
   'journey.bookings.title': 'Мои бронирования',
   'journey.account.title': 'Аккаунт',
-};
-
-export const ruPayment: PaymentCatalog = {
-  title: 'Оплата депозита',
-  reading: 'Проверка на сервере',
-  changed: 'Сумма или бронирование изменились. Загрузите новые данные и подтвердите снова.',
-  handoffFailed:
-    'Не удалось открыть браузер. Транзакция сохранена; проверьте ещё раз или откройте ту же транзакцию снова.',
-  backToBookings: 'К моим бронированиям',
-  booking: 'Бронирование {code}',
-  money: '{amount} ₫',
-  total: 'Стоимость номеров: {amount}',
-  paid: 'Оплачено: {amount}',
-  balance: 'Остаток к оплате: {amount}',
-  deposit: 'Депозит к оплате: {amount}',
-  unavailableAmount: 'Данных пока нет',
-  bookingStatus: 'Статус бронирования: {status}',
-  holdExpiry: 'Резерв действует до: {time}. Срок резерва не зависит от платёжной транзакции.',
-  transaction: 'Номер транзакции: {id}',
-  paymentStatus: 'Статус транзакции: {status}',
-  checkedAt: 'Проверено на сервере в {time}',
-  provider: 'Платёжный шлюз',
-  providerVnpay: 'VNPay',
-  providerMomo: 'MoMo',
-  prepare: 'Проверить перед оплатой',
-  confirmInfo:
-    'Выбранный шлюз: {provider}. Оплата откроется в системном браузере; после возврата мы снова проверим данные на сервере.',
-  confirm: 'Подтвердить и открыть страницу оплаты',
-  reopen: 'Снова открыть страницу оплаты этой транзакции',
-  unsafeUrl: 'Сервер ещё не вернул безопасную ссылку HTTPS. Проверьте статус транзакции.',
-  reference: 'Номер обращения: {id}',
-  login: 'Ко входу',
-  check: 'Проверить на сервере ещё раз',
-};
-
-export const ruPhases: PhaseCatalog = {
-  loading: 'Загружаем транзакцию и бронирование с сервера…',
-  ready: 'Выберите платёжный шлюз. Сумма депозита берётся с сервера.',
-  confirm: 'Проверьте сумму и шлюз перед подтверждением.',
-  pending: 'Транзакция в ожидании. Результат оплаты подтверждает только сервер.',
-  unknown:
-    'Результат отправки неизвестен. Не создавайте новую транзакцию; проверьте ещё раз или обратитесь на ресепшен с номером обращения.',
-  received: 'Оплата получена и обрабатывается. Статус бронирования по-прежнему определяет сервер.',
-  confirmed: 'Сервер подтвердил транзакцию и бронирование.',
-  failed: 'Транзакция не прошла. Проверьте ещё раз актуальный статус.',
-  blocked:
-    'На сервере недостаточно данных для онлайн-оплаты. Проверьте ещё раз или обратитесь на ресепшен.',
-  forbidden: 'У вас нет прав на просмотр этой транзакции.',
-  expired: 'Сеанс истёк. Войдите снова.',
-  offline:
-    'Для проверки статуса или оплаты нужно подключение к сети. Старые данные не подтверждают оплату.',
-  error: 'Не удалось получить статус с сервера. Проверьте ещё раз.',
+  'journey.step': 'Шаг {current}/{total}',
+  'search.quickNights': 'Быстрый выбор: число ночей',
+  'search.quickNight': 'Ночей: {nights}',
+  'room.segment': 'Отрезок {n}',
+  'hold.summary.title': 'Сводка бронирования',
 };
