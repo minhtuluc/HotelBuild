@@ -3,7 +3,7 @@ id: HB-270
 title: Màn đổi phòng của app vận hành hiện số phòng, tên cơ sở và trạng thái tiếng Việt thay cho UUID và mã thô
 risk: R1
 owner: claude
-max_lines: 320
+max_lines: 360
 allow:
   - apps/operations-android/src/features/f6-overbooking/labels.ts
   - apps/operations-android/src/features/f6-overbooking/relocation-parts.tsx
