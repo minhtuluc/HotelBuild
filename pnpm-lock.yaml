@@ -189,6 +189,9 @@ importers:
       '@pinehill/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@pinehill/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@pinehill/ui-native':
         specifier: workspace:*
         version: link:../../packages/ui-native
@@ -247,6 +250,9 @@ importers:
       '@pinehill/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@pinehill/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@pinehill/ui-web':
         specifier: workspace:*
         version: link:../../packages/ui-web
@@ -517,6 +523,19 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@22.20.4)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
+
+  packages/i18n:
+    dependencies:
+      '@pinehill/ui-web':
+        specifier: workspace:*
+        version: link:../ui-web
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: ^3.2.7
+        version: 3.2.7(vitest@3.2.7(@types/node@22.20.4)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
       vitest:
         specifier: ^3.2.7
         version: 3.2.7(@types/node@22.20.4)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)

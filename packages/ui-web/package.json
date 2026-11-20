@@ -6,7 +6,8 @@
   "description": "Token và primitive trình bày cho web: 9 trạng thái UI, định dạng vi-VN, token thiết kế",
   "exports": {
     ".": "./src/index.ts",
-    "./messages": "./src/messages.ts"
+    "./messages": "./src/messages.ts",
+    "./format": "./src/format.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
