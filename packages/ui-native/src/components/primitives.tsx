@@ -17,7 +17,6 @@ import {
   type ButtonRole,
   type ButtonSize,
 } from './styles.js';
-import { TicketContext, useOnTicket } from './ticket-context.js';
 
 export interface ButtonProps {
   readonly label: string;
@@ -27,11 +26,17 @@ export interface ButtonProps {
   readonly disabled?: boolean;
   /** Đang xử lý: không bấm được, nhãn nên đổi sang dạng "Đang…" ở nơi gọi. */
   readonly busy?: boolean;
+  /** Nằm trên giấy vé hồng: đỏ dấu bấm đổi sang đỏ đậm (The Ticket Ink Rule). */
+  readonly onTicket?: boolean;
   readonly testID?: string;
 }
 
+/**
+ * Không dùng context để biết "đang trên giấy vé": các harness UI của app tự thay `useState`/`useEffect`
+ * và gọi thẳng component, không có dispatcher cho `useContext`. Nơi đặt nút trên `Ticket` truyền `onTicket`.
+ */
 export function Button(props: ButtonProps): ReactElement {
-  const onTicket = useOnTicket();
+  const onTicket = props.onTicket === true;
   const inactive = props.disabled === true || props.busy === true;
   return (
     <Pressable
@@ -81,7 +86,7 @@ export function Paper({
   );
 }
 
-/** Khối giấy vé hồng; con cháu đổi màu chữ theo The Ticket Ink Rule. */
+/** Khối giấy vé hồng. Con đặt trên vé truyền `onTicket` để đổi màu chữ theo The Ticket Ink Rule. */
 export function Ticket({
   children,
   testID,
@@ -90,11 +95,9 @@ export function Ticket({
   testID?: string;
 }): ReactElement {
   return (
-    <TicketContext.Provider value>
-      <View testID={testID} style={ticketStyle()}>
-        {children}
-      </View>
-    </TicketContext.Provider>
+    <View testID={testID} style={ticketStyle()}>
+      {children}
+    </View>
   );
 }
 
@@ -143,8 +146,8 @@ export function BoardRow(props: {
   );
 }
 
-export function FieldLabel({ children }: { children: string }): ReactElement {
-  return <Text style={labelStyle(useOnTicket())}>{children}</Text>;
+export function FieldLabel(props: { children: string; onTicket?: boolean }): ReactElement {
+  return <Text style={labelStyle(props.onTicket === true)}>{props.children}</Text>;
 }
 
 export interface FieldProps extends Omit<TextInputProps, 'style'> {
@@ -185,8 +188,8 @@ export function Field({ label, error, ...input }: FieldProps): ReactElement {
   );
 }
 
-export function Money({ children }: { children: string }): ReactElement {
-  return <Text style={moneyStyle(useOnTicket())}>{children}</Text>;
+export function Money(props: { children: string; onTicket?: boolean }): ReactElement {
+  return <Text style={moneyStyle(props.onTicket === true)}>{props.children}</Text>;
 }
 
 /** Trạng thái bằng chữ trong viền mảnh — không truyền đạt chỉ bằng màu. */
@@ -241,6 +244,6 @@ export function ScreenTitle({
 }
 
 /** Bước của luồng ("Bước 2/3") là thông tin, không phải nhãn trang trí. */
-export function Step({ text }: { text: string }): ReactElement {
-  return <Text style={labelStyle(useOnTicket())}>{text}</Text>;
+export function Step(props: { text: string; onTicket?: boolean }): ReactElement {
+  return <Text style={labelStyle(props.onTicket === true)}>{props.text}</Text>;
 }

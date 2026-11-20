@@ -77,7 +77,6 @@ describe('HB-272 token vé tàu', () => {
 
 **Files:**
 - Create: `packages/ui-native/src/components/styles.ts` (hàm thuần)
-- Create: `packages/ui-native/src/components/ticket-context.ts`
 - Create: `packages/ui-native/src/components/primitives.tsx` (Button, Paper, Ticket, Board, BoardRow, Field, Money, StatusBadge, ScreenTitle, Step)
 - Modify: `packages/ui-native/src/index.ts`
 - Test: `packages/ui-native/test/components-style.spec.ts`
@@ -94,7 +93,7 @@ describe('HB-272 token vé tàu', () => {
   - Hàng bảng ga đang chọn có màu chữ `signalGo`.
   - Mọi cặp chữ/nền trả về đạt 4,5:1, kiểm bằng `contrastRatio`.
 - [ ] **Step 2:** Chạy test. Kỳ vọng: FAIL.
-- [ ] **Step 3:** Cài các hàm trong `styles.ts`; viết component mỏng trong `primitives.tsx` dùng `Pressable`/`Text`/`View`/`TextInput` với `accessibilityRole`/`accessibilityState`; `Ticket` bọc `TicketContext.Provider value={true}`.
+- [ ] **Step 3:** Cài các hàm trong `styles.ts`; viết component mỏng trong `primitives.tsx` dùng `Pressable`/`Text`/`View`/`TextInput` với `accessibilityRole`/`accessibilityState`; thành phần đặt trên vé nhận prop `onTicket` (không dùng context: harness UI của app không có dispatcher cho `useContext`).
 - [ ] **Step 4:** Chạy test, `tsc` và `eslint packages/ui-native`. Kỳ vọng: PASS.
 - [ ] **Step 5:** Commit.
 

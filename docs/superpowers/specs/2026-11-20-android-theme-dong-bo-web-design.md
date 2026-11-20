@@ -57,7 +57,7 @@ Mỗi thành phần có một hàm style thuần, được test không cần ren
 - **`Paper`:** thẻ giấy in, viền `border`, bo 6, không có bóng.
 - **`Ticket`:**
   - Khối giấy vé hồng, viền trên kẻ đôi 3dp mực xanh.
-  - Đặt ngữ cảnh "trên giấy vé" để `TicketText`/`Money`/`Button` tự đổi màu chữ phụ sang `ticketMuted` và màu đỏ sang `ticketPunch` (quy tắc Ticket Ink).
+  - Thành phần đặt trên vé nhận prop `onTicket` để đổi màu chữ phụ sang `ticketMuted` và màu đỏ sang `ticketPunch` (quy tắc Ticket Ink). Không dùng React context, vì harness UI của các app tự giả lập `useState`/`useEffect` nhưng không có dispatcher cho `useContext`.
 - **`Board` / `BoardRow`:**
   - Nền `board`, tiêu đề chữ hổ phách chữ hoa.
   - Mỗi hàng chữ hẹp màu `darkText`; hàng đang chọn màu `signalGo`.
