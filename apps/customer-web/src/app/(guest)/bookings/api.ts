@@ -65,12 +65,20 @@ export async function fetchBookingBalance(
 /**
  * SCR-11: xem trước tiền hoàn (`POST .../cancel-preview`) rồi mới huỷ (`POST .../cancel`). Không có tuyến
  * nào cho giao diện tự tính tiền — mọi con số trả về được in nguyên (ADR-018).
+ *
+ * HB-271: lệnh huỷ bắt buộc `If-Match` = `ETag` của lần xem trước cùng tập phòng (HB-097; thiếu ⇒ 428,
+ * cũ ⇒ 412). Lần xem trước trả kèm neo; BFF chuyển tiếp nguyên `if-match`/`etag`.
  */
+export interface CancelPreviewRead {
+  readonly preview: CancelPreview;
+  readonly tag: string;
+}
+
 export async function fetchCancelPreview(
   session: JourneySession,
   bookingId: string,
   request: CancelPreviewRequest,
-): Promise<CancelPreview> {
+): Promise<CancelPreviewRead> {
   const client = createJourneyApiClient({ baseUrl: window.location.origin, session });
   const response = await client.request({
     method: 'POST',
@@ -78,18 +86,21 @@ export async function fetchCancelPreview(
     body: cancelPreviewRequestSchema.parse(request),
     decoder: cancelPreviewSchema,
   });
-  return response.data;
+  if (response.etag === undefined) throw new Error('Máy chủ không trả ETag cho bản xem trước huỷ.');
+  return { preview: response.data, tag: response.etag };
 }
 
 export async function cancelBooking(
   session: JourneySession,
   bookingId: string,
   request: CancelRequest,
+  ifMatch: string,
 ): Promise<CancelResponse> {
   const client = createJourneyApiClient({ baseUrl: window.location.origin, session });
   const response = await client.request({
     method: 'POST',
     path: `/bookings/${encodeURIComponent(bookingId)}/cancel`,
+    ifMatch,
     body: cancelRequestSchema.parse(request),
     decoder: cancelResponseSchema,
   });

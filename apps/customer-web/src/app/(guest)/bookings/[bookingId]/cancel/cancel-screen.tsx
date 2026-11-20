@@ -321,7 +321,7 @@ export function CancelScreen(): ReactElement {
     setStale(false);
     setStep('computing');
     try {
-      setPreview(await fetchCancelPreview(session, bookingId, request()));
+      setPreview((await fetchCancelPreview(session, bookingId, request())).preview);
       setStep('previewed');
     } catch (caught) {
       setStep('idle');
@@ -334,7 +334,8 @@ export function CancelScreen(): ReactElement {
     setAlert(null);
     setStep('submitting');
     try {
-      const fresh = await fetchCancelPreview(session, bookingId, request());
+      // Gửi neo của **chính lần đối chiếu này**: số liệu đổi sau đó thì máy chủ từ chối 412.
+      const { preview: fresh, tag } = await fetchCancelPreview(session, bookingId, request());
       if (!samePreview(fresh, preview)) {
         setPreview(fresh);
         setStale(true);
@@ -342,10 +343,12 @@ export function CancelScreen(): ReactElement {
         return;
       }
       const trimmed = note.trim();
-      const cancelled = await cancelBooking(session, bookingId, {
-        ...request(),
-        ...(trimmed === '' ? {} : { note: trimmed }),
-      });
+      const cancelled = await cancelBooking(
+        session,
+        bookingId,
+        { ...request(), ...(trimmed === '' ? {} : { note: trimmed }) },
+        tag,
+      );
       setResult(cancelled);
       setBooking((previous) =>
         previous === null ? previous : { ...previous, status: cancelled.status },
