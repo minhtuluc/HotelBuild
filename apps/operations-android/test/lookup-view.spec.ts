@@ -7,6 +7,8 @@ import {
   guestIndex,
   lookupAccess,
   maskPii,
+  noShowCandidate,
+  todayVn,
   toBookingView,
   toGuestView,
 } from '../src/lookup/view';
@@ -131,4 +133,17 @@ test('money and stay formatting keep VND integers and calendar dates', () => {
   expect(() => formatVnd(-1)).toThrow(RangeError);
   expect(() => formatVnd(1.5)).toThrow(RangeError);
   expect(formatStay('2026-11-01', '2026-11-03', '2 đêm')).toBe('01/11/2026 → 03/11/2026 · 2 đêm');
+});
+
+test('HB-269: no-show offered for CONFIRMED bookings whose VN check-in day has started', () => {
+  const view = toBookingView(booking, guestIndex([]));
+  expect(view.source).toBe(booking);
+  // 2026-11-19T17:00Z = 00:00 ngày 20/11 giờ VN.
+  expect(todayVn(Date.parse('2026-11-19T16:59:59Z'))).toBe('2026-11-19');
+  expect(todayVn(Date.parse('2026-11-19T17:00:00Z'))).toBe('2026-11-20');
+  expect(noShowCandidate(view, '2026-11-02')).toBe(true);
+  expect(noShowCandidate(view, '2026-11-01')).toBe(true);
+  expect(noShowCandidate(view, '2026-10-31')).toBe(false);
+  for (const status of ['HELD', 'PENDING_PAYMENT', 'CHECKED_IN', 'NO_SHOW', 'CANCELLED'] as const)
+    expect(noShowCandidate({ ...view, status }, '2026-11-02')).toBe(false);
 });
