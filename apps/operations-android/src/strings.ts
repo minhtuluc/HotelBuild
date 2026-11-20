@@ -31,6 +31,7 @@ export const catalog = {
   'home.walkIn': 'Tạo booking khách vãng lai',
   'home.departures': 'Khách đi hôm nay & trả phòng',
   'home.alerts': 'Cảnh báo quá tải & đổi phòng',
+  'home.cash': 'Đối soát tiền mặt hôm nay',
   'home.pinDemo': 'Thử thao tác cần PIN',
   'home.pinDemo.ok': 'Đã mở khoá PIN: {purpose}',
   'home.logout': 'Đăng xuất',
@@ -42,6 +43,7 @@ export const catalog = {
   'screen.arrivals': 'Khách đến',
   'screen.walkIn': 'Khách vãng lai',
   'screen.departures': 'Khách đi',
+  'screen.cash': 'Đối soát tiền mặt',
   'screen.notFound': 'Không tìm thấy',
 } as const;
 
