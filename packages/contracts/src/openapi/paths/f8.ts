@@ -32,6 +32,7 @@ import {
   guestBlacklistReleaseQuerySchema,
   guestBlacklistRequestSchema,
   guestLoyaltySchema,
+  guestSelfUpdateRequestSchema,
   guestSummarySchema,
 } from '../../guest.js';
 import { listResponseSchema } from '../../common.js';
@@ -186,6 +187,23 @@ export function registerF8Paths(registry: OpenAPIRegistry, errorBodyComponent: z
     ...bearerRead,
     responses: {
       200: { description: 'Hồ sơ khách', ...jsonBody(guestSummarySchema) },
+      401: errorResponse('E_AUTH_INVALID_CREDENTIALS'),
+      403: errorResponse('E_RBAC_FORBIDDEN'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'patch',
+    path: '/api/v1/guests/me',
+    operationId: 'guestsMeUpdate',
+    summary:
+      'Khách tự sửa họ tên, email, đồng ý nhận khuyến mãi (phiên khách, SCR-83, HB-260); không sửa SĐT',
+    tags: ['crm'],
+    security: [{ bearerAuth: [] }],
+    request: { body: jsonBody(guestSelfUpdateRequestSchema) },
+    responses: {
+      200: { description: 'Hồ sơ sau khi sửa', ...jsonBody(guestSummarySchema) },
+      400: errorResponse('E_GEN_VALIDATION_FAILED'),
       401: errorResponse('E_AUTH_INVALID_CREDENTIALS'),
       403: errorResponse('E_RBAC_FORBIDDEN'),
     },

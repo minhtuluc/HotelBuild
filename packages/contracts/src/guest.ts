@@ -39,6 +39,29 @@ export const guestSummarySchema = z.object({
   createdAt: isoUtcTimestampSchema,
 });
 
+/**
+ * `PATCH /guests/me` (HB-260, SCR-83 "Cập nhật hồ sơ"): khách tự sửa **ba** trường của mình. SĐT là định
+ * danh (BR-CRM-01) nên không có ở đây; bật nhận khuyến mãi phải kèm phiên bản điều khoản (NFR-COMP-01).
+ */
+export const guestSelfUpdateRequestSchema = z
+  .strictObject({
+    fullName: z.string().min(1).max(120).optional(),
+    email: z.string().email().max(254).nullable().optional(),
+    consentMarketing: z.boolean().optional(),
+    consentVersion: z.string().min(1).max(40).optional(),
+  })
+  .refine(
+    (value) =>
+      value.fullName !== undefined ||
+      value.email !== undefined ||
+      value.consentMarketing !== undefined,
+    { message: 'Cần ít nhất một trường để sửa' },
+  )
+  .refine((value) => value.consentMarketing !== true || value.consentVersion !== undefined, {
+    message: 'Đồng ý nhận khuyến mãi phải kèm phiên bản điều khoản',
+    path: ['consentVersion'],
+  });
+
 export const guestQuerySchema = listQuerySchema.extend({
   q: z.string().min(1).optional(),
   loyaltyTier: loyaltyTierSchema.optional(),
@@ -76,6 +99,7 @@ export const guestBlacklistReleaseQuerySchema = z.strictObject({
 });
 
 export type GuestCreateRequest = z.infer<typeof guestCreateRequestSchema>;
+export type GuestSelfUpdateRequest = z.infer<typeof guestSelfUpdateRequestSchema>;
 export type GuestSummary = z.infer<typeof guestSummarySchema>;
 export type GuestQuery = z.infer<typeof guestQuerySchema>;
 export type GuestAnonymizeRequest = z.infer<typeof guestAnonymizeRequestSchema>;
