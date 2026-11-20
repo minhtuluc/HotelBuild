@@ -45,7 +45,14 @@ test('screens that need an account send the guest to the login route, not to the
   }
 });
 
-test('HB-267: layout gốc giữ chữ thanh trạng thái tối (giao diện luôn sáng)', () => {
+test('HB-273: header bảng ga đen ⇒ chữ thanh trạng thái sáng; font thương hiệu nạp trước khi vẽ', () => {
   const layout = readFileSync(new URL('../app/_layout.tsx', import.meta.url), 'utf8');
-  expect(layout).toContain('useDarkStatusBar();');
+  expect(layout).toContain("useStatusBarStyle('light-content');");
+  expect(layout).toContain('useBrandFonts()');
+});
+
+test('HB-273: theme của app là theme khách dùng chung, không tự định nghĩa lại', () => {
+  const source = readFileSync(new URL('../src/theme.ts', import.meta.url), 'utf8');
+  expect(source).toContain("createTheme('guest')");
+  expect(source).not.toContain('backgroundColor');
 });

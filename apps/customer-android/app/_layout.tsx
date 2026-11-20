@@ -1,6 +1,7 @@
 import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import type { ReactElement } from 'react';
-import { NativeErrorPanel, useDarkStatusBar } from '@pinehill/ui-native';
+import { NativeErrorPanel, useStatusBarStyle } from '@pinehill/ui-native';
+import { useBrandFonts } from '@pinehill/ui-native/fonts';
 import { JOURNEY_TABS, SCREEN_TITLES } from '../src/navigation';
 import { t } from '../src/strings';
 import { stackScreenOptions } from '../src/theme';
@@ -14,8 +15,10 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps): ReactElement {
 const STACKLESS = new Set<string>(['index', '(tabs)', ...JOURNEY_TABS]);
 
 export default function RootLayout(): ReactElement {
-  // HB-267: app luôn sáng ⇒ chữ thanh trạng thái tối, kể cả khi máy để chế độ tối.
-  useDarkStatusBar();
+  // HB-273: header bảng ga đen ⇒ chữ thanh trạng thái sáng (cùng cơ chế đặt lại của HB-267).
+  useStatusBarStyle('light-content');
+  // Font thương hiệu là asset cục bộ (vài trăm ms); lỗi nạp thì vẫn vẽ bằng font hệ thống.
+  if (!useBrandFonts()) return <></>;
   return (
     <Stack screenOptions={stackScreenOptions}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
