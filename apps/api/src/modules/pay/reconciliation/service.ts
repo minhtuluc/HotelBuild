@@ -39,14 +39,15 @@ const THRESHOLD_KEYS = [
   'reconciliation.cashDiscrepancyThreshold',
   'reconciliation.discrepancyThresholdVnd',
   'pay.reconciliation.discrepancyThreshold',
-  'deal.threshold.minor',
+  // HB-262: KHÔNG dùng `deal.threshold.minor` — đó là ngưỡng duyệt hoàn tiền (TC-PAY-16, mặc định 5.000.000),
+  // dùng làm ngưỡng lệch quỹ thì lệch dưới 5 triệu không ai báo MANAGER, trái BR-PAY-10 (50.000 VND).
 ] as const;
 /** Đích nhận cảnh báo lệch quỹ — cùng khoá/mặc định với danh mục cảnh báo HB-182 ở worker. */
 const MANAGER_RECIPIENT_KEY = 'alerts.recipient.manager';
 const DEFAULT_MANAGER_RECIPIENT = 'manager@pinehill.local';
 const DISCREPANCY_TEMPLATE = 'alert-reconciliation-discrepancy';
 
-interface CashReceiptRow {
+export interface CashReceiptRow {
   readonly id: string;
   readonly booking_id: string;
   readonly amount: bigint;
@@ -73,9 +74,12 @@ export class ReconciliationService {
     if (!isUuid(command.propertyId)) throw missing();
     const now = this.clock.now();
 
-    await lockPropertyAndUser(tx, command.propertyId, actor.id);
+    // HB-262: người thu được đối soát; vắng thì là chính người chốt (HB-150).
+    const collector = command.collectorId ?? actor.id;
+    await lockPropertyAndUser(tx, command.propertyId, collector);
     requireReconcile(actor, command.propertyId);
-    await assertNotAlreadyClosed(tx, command.propertyId, actor.id, command.businessDate);
+    await requireCollector(tx, collector, command.propertyId);
+    await assertNotAlreadyClosed(tx, command.propertyId, collector, command.businessDate);
 
     await requirePinToken(tx, {
       userId: actor.id,
@@ -88,7 +92,7 @@ export class ReconciliationService {
     const receipts = await collectorCashReceipts(
       tx,
       command.propertyId,
-      actor.id,
+      collector,
       command.businessDate,
     );
     const expectedCash = await verifyAndSumWithLedger(tx, this.ledger, receipts);
@@ -125,7 +129,7 @@ export class ReconciliationService {
       afterJson: {
         propertyId: command.propertyId,
         businessDate: command.businessDate,
-        collectorId: actor.id,
+        collectorId: collector,
         expectedCash: Number(expectedCash),
         countedCash: command.countedCash,
         difference: Number(difference),
@@ -167,6 +171,21 @@ async function lockPropertyAndUser(tx: Tx, propertyId: string, userId: string): 
   await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId}::uuid FOR UPDATE`;
 }
 
+/**
+ * HB-262: người thu phải là nhân viên còn hoạt động có phạm vi ở cơ sở (OWNER toàn chuỗi); khác ⇒ 404 để
+ * không lộ danh tính người dùng ngoài cơ sở.
+ */
+async function requireCollector(tx: Tx, collectorId: string, propertyId: string): Promise<void> {
+  const user = await tx.users.findUnique({
+    where: { id: collectorId },
+    select: { role: true, user_property_scopes: { select: { property_id: true } } },
+  });
+  const scoped =
+    user?.role === 'OWNER' ||
+    (user?.user_property_scopes.some((scope) => scope.property_id === propertyId) ?? false);
+  if (!scoped) throw missing();
+}
+
 async function assertNotAlreadyClosed(
   tx: Tx,
   propertyId: string,
@@ -178,7 +197,7 @@ async function assertNotAlreadyClosed(
      WHERE action = 'RECONCILIATION_DAILY_CLOSED'
        AND entity_type = 'Property'
        AND entity_id = ${propertyId}::uuid
-       AND actor_id = ${collectorId}::uuid
+       AND after_json->>'collectorId' = ${collectorId}
        AND after_json->>'businessDate' = ${businessDate}
      LIMIT 1`;
   if (existing.length > 0) throw alreadyClosed();
@@ -188,7 +207,7 @@ async function assertNotAlreadyClosed(
  * Đọc mọi khoản thu tiền mặt (`method = 'CASH'`, `status = 'SUCCEEDED'`) của người thu trong ngày VN
  * tại cơ sở đang chốt; chỉ lấy các loại khoản thu hợp lệ của sổ cái (loại trừ REFUND/COMPENSATION).
  */
-async function collectorCashReceipts(
+export async function collectorCashReceipts(
   tx: Tx,
   propertyId: string,
   collectorId: string,
@@ -211,7 +230,7 @@ async function collectorCashReceipts(
  * Đối chiếu từng booking phát sinh tiền mặt qua `BookingLedger.read` (HB-093) để đảm bảo các chứng từ
  * thu đều thuộc nguồn thu hợp lệ của sổ cái rồi cộng tổng `expectedCash`.
  */
-async function verifyAndSumWithLedger(
+export async function verifyAndSumWithLedger(
   tx: Tx,
   ledger: BookingLedger,
   receipts: readonly CashReceiptRow[],

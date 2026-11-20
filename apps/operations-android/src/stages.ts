@@ -17,6 +17,7 @@ export const STAGES = [
   'arrivals',
   'walkIn',
   'departures',
+  'cash',
 ] as const;
 
 export type Stage = (typeof STAGES)[number];
@@ -33,6 +34,7 @@ const STAGE_TITLES: Readonly<Record<Stage, string>> = {
   arrivals: t('screen.arrivals'),
   walkIn: t('screen.walkIn'),
   departures: t('screen.departures'),
+  cash: t('screen.cash'),
 };
 
 export function stageTitle(stage: Stage): string {
@@ -68,6 +70,7 @@ const TOOL_STAGES: ReadonlySet<Stage> = new Set([
   'arrivals',
   'walkIn',
   'departures',
+  'cash',
 ]);
 
 /** Nút Back cứng: đóng màn con đang mở trước, rồi đưa công cụ về màn chính; còn lại để Android tự xử. */

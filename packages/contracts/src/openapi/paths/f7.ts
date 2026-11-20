@@ -27,6 +27,8 @@ import {
 import { guestCreateRequestSchema, guestQuerySchema, guestSummarySchema } from '../../guest.js';
 import {
   reconciliationCloseRequestSchema,
+  reconciliationDailyQuerySchema,
+  reconciliationDailySchema,
   reconciliationCloseResponseSchema,
 } from '../../reconciliation.js';
 import {
@@ -234,6 +236,22 @@ export function registerF7Paths(registry: OpenAPIRegistry, errorBodyComponent: z
       401: errorResponse('E_AUTH_PIN_REQUIRED'),
       403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
       409: errorResponse('E_SYS_IDEMPOTENCY_KEY_REUSED'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/reconciliation/daily',
+    operationId: 'reconciliationDaily',
+    summary:
+      'Tổng tiền mặt theo người thu trong ngày VN (HB-262, SCR-68); lễ tân chỉ thấy dòng của mình',
+    tags: ['pay'],
+    ...bearerRead,
+    request: { query: reconciliationDailyQuerySchema },
+    responses: {
+      200: { description: 'Tổng theo người thu', ...jsonBody(reconciliationDailySchema) },
+      400: errorResponse('E_GEN_VALIDATION_FAILED'),
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
     },
   });
 }

@@ -183,7 +183,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
     expect(document.info.version).toBe(CONTRACT_VERSION);
   });
 
-  it('có đủ 125 path của F0…F8 (kèm logout khách TD-58, sửa/ngừng khuyến mãi HB-240, sửa/ngừng mùa HB-241, bảng ngày HB-242, ảnh công khai HB-244, tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151, 3 path HB-204, confirm-transfer HB-215 và hợp đồng F6 HB-120)', () => {
+  it('có đủ 126 path của F0…F8 (kèm đọc đối soát theo người thu HB-262, logout khách TD-58, sửa/ngừng khuyến mãi HB-240, sửa/ngừng mùa HB-241, bảng ngày HB-242, ảnh công khai HB-244, tuyến đọc bổ sung F2/F3, tuyến self HB-105, walk-in HB-151, 3 path HB-204, confirm-transfer HB-215 và hợp đồng F6 HB-120)', () => {
     expect(Object.keys(document.paths ?? {}).sort()).toEqual(
       [
         '/api/v1/auth/login',
@@ -271,6 +271,7 @@ describe('OpenAPI 3.1 sinh từ zod', () => {
         '/api/v1/guests/{guestId}',
         '/api/v1/guests/me',
         '/api/v1/guests/me/loyalty',
+        '/api/v1/reconciliation/daily',
         '/api/v1/reconciliation/daily/close',
         '/api/v1/reports/occupancy',
         '/api/v1/reports/adr-revpar',

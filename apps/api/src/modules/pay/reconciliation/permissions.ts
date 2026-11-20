@@ -9,4 +9,7 @@ import { permissionProvider } from '../../../common/rbac/permissions.js';
 
 export const reconciliationPermissions = permissionProvider('pay-reconciliation', {
   'reconciliation.close': ['ACCOUNTANT'],
+  // HB-262 (SCR-68): lễ tân xem tổng tiền mặt **mình** thu; kế toán/quản lý/chủ xem mọi người thu.
+  'reconciliation.read': ['FRONT_DESK', 'ACCOUNTANT', 'MANAGER', 'OWNER'],
+  'reconciliation.readAll': ['ACCOUNTANT', 'MANAGER', 'OWNER'],
 });

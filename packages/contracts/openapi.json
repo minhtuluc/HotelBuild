@@ -27799,6 +27799,10 @@
                     "type": "string",
                     "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
                   },
+                  "collectorId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
                   "countedCash": {
                     "type": "integer",
                     "minimum": 0
@@ -27896,6 +27900,145 @@
           },
           "409": {
             "description": "E_SYS_IDEMPOTENCY_KEY_REUSED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reconciliation/daily": {
+      "get": {
+        "operationId": "reconciliationDaily",
+        "summary": "Tổng tiền mặt theo người thu trong ngày VN (HB-262, SCR-68); lễ tân chỉ thấy dòng của mình",
+        "tags": [
+          "pay"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "propertyId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": true,
+            "name": "businessDate",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tổng theo người thu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "propertyId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "businessDate": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "collectors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "collectorId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "collectorName": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "cashReceiptCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "expectedCash": {
+                            "type": "integer"
+                          },
+                          "closed": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "properties": {
+                              "countedCash": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "difference": {
+                                "type": "integer"
+                              },
+                              "managerNotified": {
+                                "type": "boolean"
+                              },
+                              "closedAt": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              }
+                            },
+                            "required": [
+                              "countedCash",
+                              "difference",
+                              "managerNotified",
+                              "closedAt"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "collectorId",
+                          "collectorName",
+                          "cashReceiptCount",
+                          "expectedCash",
+                          "closed"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "propertyId",
+                    "businessDate",
+                    "collectors"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "E_GEN_VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
             "content": {
               "application/json": {
                 "schema": {
