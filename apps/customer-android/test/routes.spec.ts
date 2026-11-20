@@ -56,3 +56,11 @@ test('HB-273: theme của app là theme khách dùng chung, không tự định 
   expect(source).toContain("createTheme('guest')");
   expect(source).not.toContain('backgroundColor');
 });
+
+test('HB-275: layout gốc khôi phục ngôn ngữ trước khi vẽ và vẽ lại cả cây khi đổi', () => {
+  const layout = readFileSync(new URL('../app/_layout.tsx', import.meta.url), 'utf8');
+  expect(layout).toContain('restoreLocale(secureStorage(), deviceLocaleTag())');
+  expect(layout).toContain('<Stack key={locale}');
+  const account = readFileSync(new URL('../app/(tabs)/account.tsx', import.meta.url), 'utf8');
+  expect(account).toContain('<LanguagePicker');
+});

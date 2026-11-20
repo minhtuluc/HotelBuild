@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { color, space, formatDateTimeVn } from '@pinehill/ui-native';
+import { color, space } from '@pinehill/ui-native';
 import { createBookingApi } from '@pinehill/api-client';
 import type { BookingSummary } from '@pinehill/contracts';
 import { LoginPrompt } from '../../src/login-prompt';
@@ -25,6 +25,7 @@ import {
   stayOf,
   type OrdersOutcome,
 } from '../../src/orders';
+import { dateTimeLabel } from '../../src/i18n/format';
 
 const CELL = { color: color.text } as const;
 
@@ -120,7 +121,7 @@ function StaleNotice({
   outcome: Extract<OrdersOutcome, { kind: 'offline' }>;
 }): ReactElement {
   const time =
-    outcome.cachedAt === null ? t('orders.stale.unknown') : formatDateTimeVn(outcome.cachedAt);
+    outcome.cachedAt === null ? t('orders.stale.unknown') : dateTimeLabel(outcome.cachedAt);
   return (
     <Text
       accessibilityRole="alert"

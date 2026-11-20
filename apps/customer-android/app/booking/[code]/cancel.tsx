@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
-import { color, space, touchTargetDp, formatDateTimeVn } from '@pinehill/ui-native';
+import { color, space, touchTargetDp } from '@pinehill/ui-native';
 import { createBookingApi } from '@pinehill/api-client';
 import type { CancelPreview, CancelResponse } from '@pinehill/contracts';
 import { createSession } from '../../../src/session-factory';
@@ -43,6 +43,7 @@ import {
   type CancelStep,
   type RefundRow,
 } from '../../../src/cancel';
+import { dateTimeLabel } from '../../../src/i18n/format';
 
 const BUTTON = theme.buttonSecondary;
 const FIELD = theme.field;
@@ -100,7 +101,7 @@ function ResultPanel({ result }: { result: CancelResponse }): ReactElement {
         {t(ORDER_STATUS_KEYS[result.status])}
       </Text>
       <Text style={theme.body}>
-        {t('booking.cancel.resultAt', { time: formatDateTimeVn(result.cancelledAt) })}
+        {t('booking.cancel.resultAt', { time: dateTimeLabel(result.cancelledAt) })}
       </Text>
       <Text style={theme.body}>
         {t('booking.cancel.resultReleased', { count: result.releasedAssignmentCount })}

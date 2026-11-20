@@ -1,10 +1,11 @@
 /**
- * Ngày **lịch** (date-only) của API hiển thị theo `dd/MM/yyyy`.
- *
- * Hoán vị thuần chuỗi ISO `YYYY-MM-DD` → `DD/MM/YYYY`: **không** dựng `Date`/múi giờ để giữ nguyên
- * ngày nghiệp vụ máy chủ trả. Dùng chung cho danh sách/chi tiết đơn (`orders.ts`) và màn xác nhận
- * giữ chỗ (`app/booking/confirm.tsx`).
+ * Ngày **lịch** (date-only) của API hiển thị theo ngôn ngữ đang chọn (HB-275, `@pinehill/i18n`): tiếng Việt
+ * `dd/MM/yyyy` hoán vị thuần chuỗi; ngôn ngữ khác dùng `Intl` ở UTC trên chính ngày lịch nên không lệch ngày.
+ * Chuỗi không phải ngày lịch trả nguyên văn.
  */
+import { calendarDate } from '@pinehill/i18n';
+import { currentLocale } from './i18n/locale';
+
 export function calendarDateLabel(value: string): string {
-  return value.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1');
+  return calendarDate(value, currentLocale());
 }

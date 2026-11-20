@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { color, space, formatDateTimeVn, Button } from '@pinehill/ui-native';
+import { color, space, Button } from '@pinehill/ui-native';
 import type { BookingSummary, RatePlanCode } from '@pinehill/contracts';
 import { LoginPrompt } from '../../src/login-prompt';
 import { createSession } from '../../src/session-factory';
@@ -32,6 +32,7 @@ import {
   type HoldCriteria,
   type HoldInput,
 } from '../../src/hold';
+import { dateTimeLabel } from '../../src/i18n/format';
 
 const TICK_MS = 1000;
 const CELL = { color: color.text } as const;
@@ -131,7 +132,7 @@ function HoldLine({ expiresAt, nowMs }: { expiresAt: string; nowMs: number }): R
       <Text style={[{ color: locked ? color.warning : color.text }, theme.tabular]}>
         {t('hold.countdown', { time: formatCountdown(remaining ?? 0) })}
       </Text>
-      <Text style={theme.muted}>{t('hold.expiresAt', { time: formatDateTimeVn(expiresAt) })}</Text>
+      <Text style={theme.muted}>{t('hold.expiresAt', { time: dateTimeLabel(expiresAt) })}</Text>
     </View>
   );
 }
