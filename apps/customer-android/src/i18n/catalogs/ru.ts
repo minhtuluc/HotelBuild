@@ -346,4 +346,12 @@ export const ruApp: AppCatalog = {
   'search.quickNight': 'Ночей: {nights}',
   'room.segment': 'Отрезок {n}',
   'hold.summary.title': 'Сводка бронирования',
+  'screen.explore': 'Обзор',
+  'screen.station': 'Станции',
+  'screen.cabin': 'Категории номеров',
+  'screen.dining': 'Еда',
+  'screen.experiences': 'Чем заняться',
+  'screen.offers': 'Цена за длительность',
+  'screen.gettingHere': 'Как добраться',
+  'screen.gallery': 'Фотогалерея',
 };

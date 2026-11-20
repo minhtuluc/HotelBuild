@@ -15,6 +15,7 @@ export default function JourneyTabs(): ReactElement {
       }}
     >
       <Tabs.Screen name="search" options={{ title: t('nav.search') }} />
+      <Tabs.Screen name="explore" options={{ title: t('screen.explore') }} />
       <Tabs.Screen name="bookings" options={{ title: t('nav.bookings') }} />
       <Tabs.Screen name="account" options={{ title: t('nav.account') }} />
     </Tabs>

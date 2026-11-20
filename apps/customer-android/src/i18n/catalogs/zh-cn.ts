@@ -327,4 +327,12 @@ export const zhApp: AppCatalog = {
   'search.quickNight': '{nights} 晚',
   'room.segment': '第 {n} 段',
   'hold.summary.title': '预订摘要',
+  'screen.explore': '探索',
+  'screen.station': '车站',
+  'screen.cabin': '房型',
+  'screen.dining': '餐饮',
+  'screen.experiences': '周边体验',
+  'screen.offers': '按晚数计价',
+  'screen.gettingHere': '交通',
+  'screen.gallery': '相册',
 };

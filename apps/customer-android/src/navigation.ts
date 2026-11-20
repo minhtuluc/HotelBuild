@@ -7,8 +7,8 @@ import type { catalog } from './strings';
 
 export const APP_SCHEME = 'pinehill-customer';
 
-/** Các tab chính của journey khách: tìm phòng / đơn của tôi / tài khoản. */
-export const JOURNEY_TABS = ['search', 'bookings', 'account'] as const;
+/** Các tab chính của journey khách: tìm phòng / khám phá (HB-277) / đơn của tôi / tài khoản. */
+export const JOURNEY_TABS = ['search', 'explore', 'bookings', 'account'] as const;
 
 export type JourneyTab = (typeof JOURNEY_TABS)[number];
 
@@ -53,6 +53,14 @@ export const SCREEN_TITLES: Readonly<Record<string, keyof typeof catalog>> = {
   index: 'home.title',
   login: 'guest.title',
   search: 'journey.search.title',
+  explore: 'screen.explore',
+  'stations/[slug]': 'screen.station',
+  'cabins/[code]': 'screen.cabin',
+  dining: 'screen.dining',
+  experiences: 'screen.experiences',
+  offers: 'screen.offers',
+  'getting-here': 'screen.gettingHere',
+  gallery: 'screen.gallery',
   bookings: 'journey.bookings.title',
   account: 'journey.account.title',
   'room/[roomTypeId]': 'screen.room',

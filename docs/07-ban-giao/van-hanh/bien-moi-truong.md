@@ -88,6 +88,7 @@ Hai web **không** giữ bí mật ở biến môi trường: phiên là cookie 
 | --- | --- | --- | --- | --- | --- | --- |
 | `EXPO_PUBLIC_API_BASE_URL` | P | Có (URL đầy đủ) | `http://127.0.0.1:3000/api/v1` | URL API của môi trường | EAS (biến môi trường, **không** secret) | Nhúng vào bundle JS. |
 | `EXPO_PUBLIC_APP_VARIANT` | P | Có | `development` | `preview` / `production` | EAS (biến thường) | Chỉ nhận ba giá trị này (`mobileEnvSchema`). |
+| `EXPO_PUBLIC_WEB_ORIGIN` | P | Không | `http://127.0.0.1:3001` | Origin web khách công khai | EAS (biến thường) | App khách tải ảnh trang nội dung từ `/images/pine-hill/` của web (HB-277). Thiếu/sai dạng ⇒ ẩn ảnh, không chặn app. |
 
 Khoá ký ứng dụng, `EXPO_TOKEN` và mọi bí mật build **không** thuộc hai biến trên; chúng thuộc [HB-189](../../08-thi-cong/tickets/HB-189-phat-hanh-android.md) (EAS Secrets), chưa tồn tại trong repo — xem mục 7.
 
@@ -146,7 +147,7 @@ Không có bí mật nào bị lộ trong repo hay trong biến công khai. Các
 | F5 | Khoá JWT chỉ kiểm `min(1)` | `apps/api/src/config/env.ts` | Cân nhắc ép độ dài tối thiểu ở production (việc mã). |
 | F6 | `NEXT_PUBLIC_FRONT_DESK_CONTACT` là biến công khai nhưng nội dung do vận hành nhập | `apps/customer-web/src/config/index.ts` | Chỉ nhập số/địa chỉ liên hệ chung của khách sạn; đã ghi ở mục 4. |
 
-Kiểm ngược tiền tố công khai: các biến `NEXT_PUBLIC_*`/`EXPO_PUBLIC_*` mã đọc là `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_FRONT_DESK_CONTACT`, `EXPO_PUBLIC_API_BASE_URL`, `EXPO_PUBLIC_APP_VARIANT` — đều là địa chỉ/nhãn, **không có bí mật**.
+Kiểm ngược tiền tố công khai: các biến `NEXT_PUBLIC_*`/`EXPO_PUBLIC_*` mã đọc là `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_FRONT_DESK_CONTACT`, `EXPO_PUBLIC_API_BASE_URL`, `EXPO_PUBLIC_APP_VARIANT`, `EXPO_PUBLIC_WEB_ORIGIN` — đều là địa chỉ/nhãn, **không có bí mật**.
 
 ## 9. Chưa nghiệm thu và BLOCKED
 

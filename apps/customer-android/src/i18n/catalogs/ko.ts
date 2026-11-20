@@ -340,4 +340,12 @@ export const koApp: AppCatalog = {
   'search.quickNight': '{nights}박',
   'room.segment': '{n}구간',
   'hold.summary.title': '예약 요약',
+  'screen.explore': '둘러보기',
+  'screen.station': '역',
+  'screen.cabin': '객실 등급',
+  'screen.dining': '식사',
+  'screen.experiences': '즐길 거리',
+  'screen.offers': '숙박 일수별 요금',
+  'screen.gettingHere': '오시는 길',
+  'screen.gallery': '사진 갤러리',
 };

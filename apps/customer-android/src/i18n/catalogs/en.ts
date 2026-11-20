@@ -350,4 +350,12 @@ export const enApp: AppCatalog = {
   'search.quickNight': '{nights} nights',
   'room.segment': 'Leg {n}',
   'hold.summary.title': 'Booking summary',
+  'screen.explore': 'Explore',
+  'screen.station': 'Stations',
+  'screen.cabin': 'Room classes',
+  'screen.dining': 'Eating',
+  'screen.experiences': 'Things to do',
+  'screen.offers': 'Length-of-stay pricing',
+  'screen.gettingHere': 'Getting here',
+  'screen.gallery': 'Photo gallery',
 };

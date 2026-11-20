@@ -345,4 +345,12 @@ export const jaApp: AppCatalog = {
   'search.quickNight': '{nights} 泊',
   'room.segment': '区間 {n}',
   'hold.summary.title': '予約の概要',
+  'screen.explore': '探す',
+  'screen.station': '駅',
+  'screen.cabin': '客室クラス',
+  'screen.dining': '食事',
+  'screen.experiences': '駅の近くで',
+  'screen.offers': '泊数に応じた料金',
+  'screen.gettingHere': 'アクセス',
+  'screen.gallery': 'フォトギャラリー',
 };
