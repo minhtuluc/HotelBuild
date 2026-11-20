@@ -90,6 +90,16 @@ export type DraftIssue = 'name' | 'email' | 'unchanged';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function consentPatch(
+  next: boolean,
+  current: boolean,
+): Pick<GuestSelfUpdateRequest, 'consentMarketing' | 'consentVersion'> {
+  if (next === current) return {};
+  return next
+    ? { consentMarketing: true, consentVersion: CONSENT_VERSION }
+    : { consentMarketing: false };
+}
+
 /** Chỉ gửi trường đã đổi; kiểm tại chỗ để lỗi hiển nhiên không cần đi máy chủ. */
 export function updateRequestFor(
   draft: ProfileDraft,
@@ -103,12 +113,7 @@ export function updateRequestFor(
   const request: GuestSelfUpdateRequest = {
     ...(fullName === guest.fullName ? {} : { fullName }),
     ...(nextEmail === guest.email ? {} : { email: nextEmail }),
-    ...(draft.consent === guest.consentMarketing
-      ? {}
-      : {
-          consentMarketing: draft.consent,
-          ...(draft.consent ? { consentVersion: CONSENT_VERSION } : {}),
-        }),
+    ...consentPatch(draft.consent, guest.consentMarketing),
   };
   if (Object.keys(request).length === 0) return { ok: false, issue: 'unchanged' };
   // Cùng luật với máy chủ (zod `email()`): email lọt regex sơ bộ nhưng máy chủ từ chối thì báo tại chỗ.
