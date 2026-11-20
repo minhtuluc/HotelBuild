@@ -33,9 +33,11 @@ import {
 import type { FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import type { Clock } from '@pinehill/domain';
-import type { BookingSummary, ListPage } from '@pinehill/contracts';
+import type { BookingPriceSnapshot, BookingSummary, ListPage } from '@pinehill/contracts';
 import { Public } from '../../../common/guards/decorators.js';
 import { Permission } from '../../../common/rbac/permissions.js';
+import { PermissionRegistry } from '../../../common/rbac/permission-registry.js';
+import { readPriceSnapshot } from './price-view.js';
 import { Idempotent } from '../../../common/idempotency/decorators.js';
 import { IdempotencyContext } from '../../../common/idempotency/context.js';
 import { CONFIG } from '../../../config/env.js';
@@ -57,6 +59,7 @@ export class BookingsController {
     @Inject(PRISMA) private readonly db: PrismaClient,
     @Inject(CONFIG) private readonly config: ApiConfig,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(PermissionRegistry) private readonly permissions: PermissionRegistry,
   ) {}
 
   private caller(request: FastifyRequest) {
@@ -97,6 +100,17 @@ export class BookingsController {
     @Req() request: FastifyRequest,
   ): Promise<BookingSummary> {
     return this.service.get(await this.caller(request), bookingId(id));
+  }
+
+  /** HB-266 (SCR-80): giá từng đêm đã chốt của snapshot mới nhất; quyền đọc như chi tiết booking. */
+  @Public()
+  @Get(':bookingId/nights')
+  @Header('Cache-Control', 'no-store')
+  async priceSnapshot(
+    @Param('bookingId') id: unknown,
+    @Req() request: FastifyRequest,
+  ): Promise<BookingPriceSnapshot> {
+    return readPriceSnapshot(this.db, this.permissions, await this.caller(request), bookingId(id));
   }
 
   /** AC3: chỉ `HELD`/`PENDING_PAYMENT` còn hạn theo giờ CSDL mới xác nhận được (BR-BOOK-09,18). */
