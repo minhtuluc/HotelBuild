@@ -97,7 +97,7 @@ export const ruApp: AppCatalog = {
     'Войдите, чтобы зарезервировать номер и создать бронирование. Ваш выбор сохранится.',
   'orders.loginHint': 'Войдите, чтобы видеть свои бронирования.',
   'nav.search': 'Поиск',
-  'nav.bookings': 'Мои брони',
+  'nav.bookings': 'Брони',
   'nav.account': 'Аккаунт',
   'format.vnTime': '(время Вьетнама)',
   'language.title': 'Язык',

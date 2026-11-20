@@ -99,7 +99,7 @@ export const enApp: AppCatalog = {
   'hold.loginHint': 'Sign in to hold the room and create a booking. Your selection is kept.',
   'orders.loginHint': 'Sign in to see your bookings.',
   'nav.search': 'Search',
-  'nav.bookings': 'My bookings',
+  'nav.bookings': 'Bookings',
   'nav.account': 'Account',
   'format.vnTime': '(VN time)',
   'language.title': 'Language',
