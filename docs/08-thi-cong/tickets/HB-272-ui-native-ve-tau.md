@@ -36,7 +36,7 @@ Web đã có hệ thiết kế "vé tàu" (DESIGN.md, ADR-019): ba vật liệu 
    - Không export từ `index`, vì `.ttf` làm hỏng vitest chạy trong node.
 3. **Thành phần:**
    - `Button` (vai `accent`/`primary`/`outline`/`danger`, cỡ 48/56dp; khi không bấm được thì đổi màu nền, không dùng opacity).
-   - `Paper`, `Ticket` (kèm ngữ cảnh Ticket Ink), `Board`/`BoardRow`, `Field`, `Money`, `StatusBadge`, `ScreenTitle`, `Step`.
+   - `Paper`, `Ticket` (Ticket Ink qua prop `onTicket`), `Board`/`BoardRow`, `Field`, `Money`, `StatusBadge`, `ScreenTitle`, `Step`.
    - Style là các hàm thuần trong `components/styles.ts`, test được trong node.
 4. **`createTheme('guest' | 'ops')`:**
    - Giữ đủ khoá cũ của `theme.ts` hai app, thêm `ticket`, `label`, `board`.
