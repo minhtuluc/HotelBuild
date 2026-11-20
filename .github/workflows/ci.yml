@@ -17,7 +17,8 @@ jobs:
   quality:
     name: Quality gate (typecheck, lint, test, build)
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # 189+ file test @pinehill/api (--no-file-parallelism) + build web hiện chạm ~25–27 phút trên ubuntu-latest.
+    timeout-minutes: 35
     # Migration audits are mandatory when present; retain all existing quality checks.
     services:
       postgres:
