@@ -6,9 +6,10 @@
  */
 import type { ReactElement } from 'react';
 import { Text } from 'react-native';
-import { color, formatDateTimeVn } from '@pinehill/ui-native';
+import { color } from '@pinehill/ui-native';
 import { t } from './strings';
 import type { OrderDetailOutcome } from './orders';
+import { dateTimeLabel } from './i18n/format';
 
 interface Notice {
   readonly testId: string;
@@ -30,7 +31,7 @@ export function noticesOf(outcome: OrderDetailOutcome | null): readonly Notice[]
     return [{ testId: 'order-not-found', text: t('orders.detail.notFound'), tone: 'danger' }];
   if (outcome.kind !== 'offline') return [];
   const time =
-    outcome.cachedAt === null ? t('orders.stale.unknown') : formatDateTimeVn(outcome.cachedAt);
+    outcome.cachedAt === null ? t('orders.stale.unknown') : dateTimeLabel(outcome.cachedAt);
   const stale: Notice = {
     testId: 'order-stale',
     text: t('orders.stale', { time }),

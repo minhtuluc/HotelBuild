@@ -1,4 +1,11 @@
-import { makeTranslate, stateMessages } from '@pinehill/ui-native';
+import { makeTranslate, stateMessages, type TranslateFor } from '@pinehill/ui-native';
+import type { Locale } from '@pinehill/i18n';
+import { enApp } from './i18n/catalogs/en';
+import { jaApp } from './i18n/catalogs/ja';
+import { koApp } from './i18n/catalogs/ko';
+import { ruApp } from './i18n/catalogs/ru';
+import { zhApp } from './i18n/catalogs/zh-cn';
+import { currentLocale } from './i18n/locale';
 
 export const catalog = {
   ...stateMessages,
@@ -28,6 +35,10 @@ export const catalog = {
   'nav.search': 'Tìm phòng',
   'nav.bookings': 'Đơn của tôi',
   'nav.account': 'Tài khoản',
+  // HB-275: nhãn giờ sau mốc thời gian, và ô chọn ngôn ngữ ở tab Tài khoản (tên ngôn ngữ viết bằng chính nó).
+  'format.vnTime': '(giờ VN)',
+  'language.title': 'Ngôn ngữ',
+  'language.hint': 'Đổi ngôn ngữ hiển thị của ứng dụng.',
   'journey.search.title': 'Tìm phòng',
   'search.form.property': 'Cơ sở',
   'search.properties.loading': 'Đang tải danh sách cơ sở…',
@@ -57,8 +68,7 @@ export const catalog = {
   'room.title': 'Chi tiết phòng & giá từng đêm',
   'room.plan': 'Gói giá',
   'room.nights.title': 'Giá từng đêm theo báo giá',
-  'room.nights.note':
-    'Số dưới đây là nguyên văn máy chủ trả (BR-RATE-17); app không nhân lại hệ số.',
+  'room.nights.note': 'Giá từng đêm đúng như báo giá của cơ sở.',
   'room.col.date': 'Đêm',
   'room.col.basePrice': 'Giá cơ bản',
   'room.col.nightlyPrice': 'Giá đêm',
@@ -71,7 +81,7 @@ export const catalog = {
   'room.summary.deposit': 'Tiền cọc ({percent}%)',
   'room.summary.quotedAt': 'Báo giá lúc {time}',
   'room.summary.expiresAt': 'Hết hạn lúc {time}',
-  'room.engine': 'Phiên bản engine báo giá: {version}',
+  'room.engine': 'Phiên bản bảng tính giá: {version}',
   'room.terms.title': 'Điều khoản huỷ của gói (xem trước khi xác nhận)',
   'room.terms.deposit': 'Đặt cọc {percent}% khi xác nhận.',
   'room.terms.freeCancel': 'Huỷ miễn phí trước {hours} giờ so với giờ nhận phòng.',
@@ -103,7 +113,6 @@ export const catalog = {
   'orders.detail.status': 'Trạng thái: {status}',
   'orders.detail.stay': 'Kỳ ở: {stay}',
   'orders.detail.total': 'Tổng tiền: {amount}',
-  'orders.detail.print': 'In / lưu xác nhận',
   'orders.detail.share': 'Chia sẻ / lưu xác nhận',
   'orders.detail.pay': 'Thanh toán tiền cọc',
   'orders.detail.notFound': 'Không thấy đơn này trong danh sách đã tải.',
@@ -186,8 +195,7 @@ export const catalog = {
   'booking.reschedule.diff.more': 'Chênh lệch tăng thêm {amount}',
   'booking.reschedule.diff.less': 'Chênh lệch giảm {amount}',
   'booking.reschedule.diff.same': 'Không chênh lệch',
-  'booking.reschedule.feeUnknown':
-    'Phí đổi ngày: hợp đồng chưa có trường này — cơ sở tính khi xác nhận, app không tự tính.',
+  'booking.reschedule.feeUnknown': 'Phí đổi ngày (nếu có) do cơ sở tính khi xác nhận.',
   'booking.reschedule.offline':
     'Đang offline — không xác nhận được thao tác tiền. Kết nối lại rồi thử lại.',
   'booking.reschedule.failed': 'Không đổi được ngày: {code}',
@@ -221,7 +229,7 @@ export const catalog = {
   'profile.points': 'Điểm tích luỹ',
   'profile.stays12': 'Số đêm 12 tháng gần nhất',
   'profile.staysTotal': 'Tổng số đêm',
-  'profile.mismatch': 'Hạng/điểm ở hai tuyến máy chủ trả chưa khớp — cơ sở sẽ kiểm tra lại.',
+  'profile.mismatch': 'Hạng hoặc điểm chưa khớp — cơ sở sẽ kiểm tra lại.',
   'profile.reload': 'Tải lại hồ sơ',
   'profile.failed': 'Không tải được hồ sơ: {code}',
   'profile.signedOut': 'Phiên đã hết hạn — đăng nhập lại ở tab Tài khoản.',
@@ -265,13 +273,31 @@ export const catalog = {
   'search.empty': 'Không có loại phòng nào cho kỳ đã chọn.',
   'search.failed': 'Không tải được kết quả: {code}',
   'journey.bookings.title': 'Đơn của tôi',
-  'journey.bookings.placeholder': 'Danh sách đơn — màn hình thật ở HB-079/HB-113.',
   'journey.account.title': 'Tài khoản',
-  'journey.account.placeholder': 'Hồ sơ khách — màn hình thật ở HB-115.',
-  'booking.title': 'Booking {code}',
-  'booking.placeholder': 'Chi tiết booking mở từ deep link — màn hình thật ở HB-086.',
 } as const;
 
 export type MessageKey = keyof typeof catalog;
+export type AppCatalog = Readonly<Record<MessageKey, string>>;
 
-export const t = makeTranslate(catalog);
+/** HB-275: tiếng Việt là bộ khoá chuẩn; ngôn ngữ khác phải đủ đúng bộ khoá (kiểu báo thiếu khi biên dịch). */
+export const APP_CATALOGS: Readonly<Record<Locale, AppCatalog>> = {
+  vi: catalog,
+  en: enApp,
+  'zh-CN': zhApp,
+  ja: jaApp,
+  ko: koApp,
+  ru: ruApp,
+};
+
+const translators = new Map<Locale, TranslateFor<AppCatalog>>();
+
+/** Dịch theo ngôn ngữ đang chọn; layout gốc vẽ lại cả cây khi khách đổi ngôn ngữ. */
+export function t(key: MessageKey, vars?: Readonly<Record<string, string | number>>): string {
+  const locale = currentLocale();
+  let translate = translators.get(locale);
+  if (translate === undefined) {
+    translate = makeTranslate(APP_CATALOGS[locale]);
+    translators.set(locale, translate);
+  }
+  return translate(key, vars);
+}

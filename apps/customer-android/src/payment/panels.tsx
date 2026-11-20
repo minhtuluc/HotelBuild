@@ -1,12 +1,13 @@
 import type { ReactElement } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { color, space, radius, touchTargetDp, formatDateTimeVn } from '@pinehill/ui-native';
+import { color, space, radius, touchTargetDp } from '@pinehill/ui-native';
 import { formatVnd } from '../search';
 import type { PaymentView } from './flow';
 import { approvedAmount, safePaymentUrl } from './model';
 import { Link } from 'expo-router';
 import { paymentText as text } from './messages';
 import { theme } from '../theme';
+import { dateTimeLabel } from '../i18n/format';
 
 const money = (amount: number): string => text('money', { amount: formatVnd(amount) });
 
@@ -65,7 +66,7 @@ export function PaymentSummary({ view }: { view: PaymentView }): ReactElement | 
       <Text style={theme.body}>{text('bookingStatus', { status: offer.booking.status })}</Text>
       {offer.booking.holdExpiresAt ? (
         <Text style={{ color: color.textMuted }}>
-          {text('holdExpiry', { time: formatDateTimeVn(offer.booking.holdExpiresAt) })}
+          {text('holdExpiry', { time: dateTimeLabel(offer.booking.holdExpiresAt) })}
         </Text>
       ) : null}
       {view.payment ? (
@@ -80,7 +81,7 @@ export function PaymentSummary({ view }: { view: PaymentView }): ReactElement | 
       ) : null}
       {view.checkedAt ? (
         <Text style={{ color: color.textMuted }}>
-          {text('checkedAt', { time: formatDateTimeVn(view.checkedAt) })}
+          {text('checkedAt', { time: dateTimeLabel(view.checkedAt) })}
         </Text>
       ) : null}
     </View>

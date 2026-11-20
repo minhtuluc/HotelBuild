@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { color, radius, space, touchTargetDp, formatDateTimeVn } from '@pinehill/ui-native';
+import { color, radius, space, touchTargetDp } from '@pinehill/ui-native';
 import type { Quote, RatePlanCode, RatePlanPublic } from '@pinehill/contracts';
 import { createAppApiClient } from '../../src/api';
 import { createPublicJourneyApi } from '../../src/public-client';
@@ -31,6 +31,7 @@ import {
   type QuoteOutcome,
   type RoomCriteria,
 } from '../../src/room-detail';
+import { dateTimeLabel } from '../../src/i18n/format';
 
 const CELL = { flex: 1, color: color.text } as const;
 
@@ -227,10 +228,10 @@ function QuoteBlock({
       <NightsTable quote={quote} />
       <Totals quote={quote} />
       <Text style={{ color: color.textMuted }}>
-        {t('room.summary.quotedAt', { time: formatDateTimeVn(quote.quotedAt) })}
+        {t('room.summary.quotedAt', { time: dateTimeLabel(quote.quotedAt) })}
       </Text>
       <Text style={{ color: color.textMuted }}>
-        {t('room.summary.expiresAt', { time: formatDateTimeVn(quote.expiresAt) })}
+        {t('room.summary.expiresAt', { time: dateTimeLabel(quote.expiresAt) })}
       </Text>
       <Text style={{ color: color.textMuted }}>
         {t('room.engine', { version: quote.engineVersion })}

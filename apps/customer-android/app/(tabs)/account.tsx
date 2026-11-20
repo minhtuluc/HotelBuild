@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { color, space, formatDateTimeVn } from '@pinehill/ui-native';
+import { color, space } from '@pinehill/ui-native';
 import type { GuestLoyalty, GuestSummary } from '@pinehill/contracts';
 import { useFocusEffect } from 'expo-router';
 import { LoginPrompt } from '../../src/login-prompt';
@@ -28,6 +28,10 @@ import {
   type ProfileOutcome,
   type ProfileRow,
 } from '../../src/profile';
+import { dateTimeLabel } from '../../src/i18n/format';
+import { chooseLocale, currentLocale } from '../../src/i18n/locale';
+import { LanguagePicker } from '../../src/language-picker';
+import { secureStorage } from '../../src/storage-device.native';
 
 const CELL = { color: color.text } as const;
 
@@ -46,7 +50,7 @@ const LOYALTY_KEYS: Readonly<Record<'points' | 'stays12' | 'staysTotal', Message
 };
 
 function rowValue(row: ProfileRow): string {
-  if (row.key === 'created') return formatDateTimeVn(row.value);
+  if (row.key === 'created') return dateTimeLabel(row.value);
   if (row.key === 'consent')
     return t(row.value === 'yes' ? 'profile.consentYes' : 'profile.consentNo');
   return row.value;
@@ -292,6 +296,10 @@ export default function AccountScreen(): ReactElement {
       ) : (
         <LoginPrompt hint="account.loginHint" />
       )}
+      <LanguagePicker
+        current={currentLocale()}
+        onChoose={(locale) => void chooseLocale(secureStorage(), locale)}
+      />
     </ScrollView>
   );
 }
