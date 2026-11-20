@@ -204,7 +204,7 @@ export default function SearchScreen(): ReactElement {
         onPress={() => {
           void submit();
         }}
-        style={theme.buttonPrimary}
+        style={theme.buttonAccent}
       >
         {busy ? (
           <ActivityIndicator
