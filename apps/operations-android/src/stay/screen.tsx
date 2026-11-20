@@ -77,21 +77,15 @@ function SyncInfo({ state }: { state: DeparturesState }): ReactElement {
   return (
     <>
       {state.date === null ? null : (
-        <Text style={{ color: color.textMuted }}>
-          {text('date', { date: formatBusinessDate(state.date) })}
-        </Text>
+        <Text style={theme.muted}>{text('date', { date: formatBusinessDate(state.date) })}</Text>
       )}
       {stamp !== null && !stale ? (
-        <Text testID="departures-synced" style={{ color: color.textMuted }}>
+        <Text testID="departures-synced" style={theme.muted}>
           {text('synced', { time: stamp })}
         </Text>
       ) : null}
       {stale ? (
-        <Text
-          testID="departures-stale"
-          accessibilityLiveRegion="polite"
-          style={{ color: color.warning }}
-        >
+        <Text testID="departures-stale" accessibilityLiveRegion="polite" style={theme.alertWarning}>
           {text(state.notice === 'offline' ? 'staleOffline' : 'staleError', { time: stamp })}
         </Text>
       ) : null}
@@ -102,7 +96,7 @@ function SyncInfo({ state }: { state: DeparturesState }): ReactElement {
 function Notice({ id, message }: { id: string; message: string | null }): ReactElement | null {
   if (message === null) return null;
   return (
-    <Text testID={id} accessibilityLiveRegion="polite" style={{ color: color.textMuted }}>
+    <Text testID={id} accessibilityLiveRegion="polite" style={theme.muted}>
       {message}
     </Text>
   );

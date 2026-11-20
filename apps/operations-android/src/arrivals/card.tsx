@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { Pressable, Text } from 'react-native';
 import type { BookingSummary } from '@pinehill/contracts';
-import { color } from '@pinehill/ui-native';
+import { fontFamily } from '@pinehill/ui-native';
 import { statusText, stayPeriodText } from '../lookup/messages';
 import { formatVnd } from '../lookup/view';
 import { theme } from '../theme';
@@ -35,12 +35,12 @@ export function ArrivalCard({
       {guestName === null ? null : (
         <Text
           testID={'arrival-name-' + booking.id}
-          style={{ color: color.text, fontWeight: '600' }}
+          style={[theme.body, { fontFamily: fontFamily.sansSemiBold }]}
         >
           {guestName}
         </Text>
       )}
-      <Text style={{ color: color.text, fontWeight: '600' }}>
+      <Text style={[theme.body, { fontFamily: fontFamily.sansSemiBold }]}>
         {booking.code} · {statusText(booking.status)}
       </Text>
       <Text style={theme.body}>

@@ -28,6 +28,7 @@ import { CashScreen } from '../src/reconciliation/screen';
 import { createCloseWriter } from '../src/reconciliation/writer-factory.native';
 import { publicPropertyList } from '../src/property-names';
 import { backStep, stageTitle, type Stage } from '../src/stages';
+import { workingPropertyName } from '../src/working-property';
 
 export default function RootScreen(): ReactElement {
   const session = useMemo(createSession, []);
@@ -45,6 +46,7 @@ export default function RootScreen(): ReactElement {
     () => publicPropertyList(session.resourceClient())(),
     [session],
   );
+  const loadPropertyName = useMemo(() => workingPropertyName(session), [session]);
   const [collecting, setCollecting] = useState<BookingSummary | null>(null);
   const [walkInFromArrivals, setWalkInFromArrivals] = useState(false);
   const [stage, setStage] = useState<Stage>('boot');
@@ -252,6 +254,8 @@ export default function RootScreen(): ReactElement {
         onDepartures={() => setStage('departures')}
         onAlerts={() => router.push('/alerts')}
         onCash={() => setStage('cash')}
+        profile={profile}
+        loadPropertyName={loadPropertyName}
       />
     );
   };

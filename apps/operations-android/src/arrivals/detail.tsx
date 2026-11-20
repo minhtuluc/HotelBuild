@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import type { BookingSummary, CheckInResponse, RoomSummary } from '@pinehill/contracts';
-import { color, space } from '@pinehill/ui-native';
+import { color, space, fontFamily } from '@pinehill/ui-native';
 import { statusText, stayPeriodText } from '../lookup/messages';
 import { formatVnd } from '../lookup/view';
 import { theme } from '../theme';
@@ -50,26 +50,28 @@ function FailureNotice({ failure }: { failure: ActionFailure }): ReactElement {
     case 'rejected':
       return (
         <View accessibilityRole="alert" accessibilityLiveRegion="polite" style={{ gap: space.s1 }}>
-          <Text style={{ color: color.danger, fontWeight: '700' }}>{text('rejected')}</Text>
+          <Text style={[theme.alertDanger, { fontFamily: fontFamily.sansBold }]}>
+            {text('rejected')}
+          </Text>
           <Text>{text('rejectedCode', { code: failure.code })}</Text>
           <Text>{text('rejectedReason', { reason: failure.reason })}</Text>
         </View>
       );
     case 'conflict':
       return (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {text('conflict')}
         </Text>
       );
     case 'forbidden':
       return (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {text('failForbidden')}
         </Text>
       );
     case 'unknownOutcome':
       return (
-        <Text accessibilityRole="alert" style={{ color: color.warning }}>
+        <Text accessibilityRole="alert" style={theme.alertWarning}>
           {text('unknownOutcome', { reference: failure.reference })}
         </Text>
       );
@@ -79,11 +81,7 @@ function FailureNotice({ failure }: { failure: ActionFailure }): ReactElement {
 function ResultNotice({ result }: { result: Result | null }): ReactElement | null {
   if (result?.kind === 'offline')
     return (
-      <Text
-        accessibilityRole="alert"
-        accessibilityLiveRegion="polite"
-        style={{ color: color.danger }}
-      >
+      <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={theme.alertDanger}>
         {text('offlineBlock')}
       </Text>
     );
@@ -116,7 +114,7 @@ function Facts({
       <Text testID="check-in-balance" style={theme.moneyInline}>
         {text('balanceLine', { balance: formatVnd(booking.balanceDue) })}
       </Text>
-      {owes ? <Text style={{ color: color.textMuted }}>{text('balanceNote')}</Text> : null}
+      {owes ? <Text style={theme.muted}>{text('balanceNote')}</Text> : null}
       {owes && onCollectBalance ? (
         <ActionButton
           testID="check-in-collect"
@@ -149,7 +147,7 @@ function RoomPicker({
   return (
     <View style={{ gap: space.s2 }}>
       <Text style={{ fontWeight: '700' }}>{text('roomsLegend', { count })}</Text>
-      <Text style={{ color: color.textMuted }}>{text('roomsHint')}</Text>
+      <Text style={theme.muted}>{text('roomsHint')}</Text>
       {choices.length === 0 ? <Text>{text('roomsEmpty')}</Text> : null}
       {choices.map((room) => (
         <CheckRow
@@ -164,11 +162,7 @@ function RoomPicker({
         />
       ))}
       {issue === null ? null : (
-        <Text
-          accessibilityRole="alert"
-          testID="check-in-room-issue"
-          style={{ color: color.danger }}
-        >
+        <Text accessibilityRole="alert" testID="check-in-room-issue" style={theme.alertDanger}>
           {text('roomIssue', { count })}
         </Text>
       )}
@@ -329,7 +323,7 @@ export function CheckInDetail(props: CheckInDetailProps): ReactElement {
           disabled={busy}
           onToggle={form.setEarly}
         />
-        <Text style={{ color: color.textMuted }}>{text('earlyNote')}</Text>
+        <Text style={theme.muted}>{text('earlyNote')}</Text>
         <Text>{text('idNumber')}</Text>
         <TextInput
           testID="check-in-id"

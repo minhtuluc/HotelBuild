@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { color } from '@pinehill/ui-native';
+import { fontFamily } from '@pinehill/ui-native';
 import { lookupText as text, statusText, stayPeriodText, tierText } from './messages';
 import { formatVnd, type GuestView, type BookingView } from './view';
 import { theme } from '../theme';
@@ -8,7 +8,10 @@ import { theme } from '../theme';
 function BlacklistFlag({ flagged }: { flagged: boolean }): ReactElement | null {
   if (!flagged) return null;
   return (
-    <Text accessibilityLabel={text('blacklist')} style={{ color: color.danger, fontWeight: '700' }}>
+    <Text
+      accessibilityLabel={text('blacklist')}
+      style={[theme.alertDanger, { fontFamily: fontFamily.sansBold }]}
+    >
       {text('blacklist')}
     </Text>
   );
@@ -29,7 +32,10 @@ export function BookingCard({
       accessibilityLabel={`${text('bookingGroup')} ${booking.code}, ${statusText(booking.status)}`}
       style={theme.card}
     >
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '600' }}>
+      <Text
+        accessibilityRole="header"
+        style={[theme.body, { fontFamily: fontFamily.sansSemiBold }]}
+      >
         {booking.code} · {statusText(booking.status)}
       </Text>
       <Text style={theme.body}>
@@ -80,7 +86,10 @@ export function GuestCard({
       accessibilityLabel={`${text('guestGroup')} ${guest.fullName}, ${text('phone', { phone: guest.phone })}`}
       style={theme.card}
     >
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '600' }}>
+      <Text
+        accessibilityRole="header"
+        style={[theme.body, { fontFamily: fontFamily.sansSemiBold }]}
+      >
         {guest.fullName}
       </Text>
       <BlacklistFlag flagged={guest.blacklisted} />

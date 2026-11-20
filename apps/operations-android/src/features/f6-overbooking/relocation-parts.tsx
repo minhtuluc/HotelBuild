@@ -27,7 +27,7 @@ export function Ladder({ steps }: { steps: OverbookingCaseDetail['ladderPreview'
         {text('ladderTitle')}
       </Text>
       {steps.map((step) => (
-        <Text key={step.step} testID={`ladder-step-${step.step}`} style={{ color: color.text }}>
+        <Text key={step.step} testID={`ladder-step-${step.step}`} style={theme.body}>
           {`${text('ladderStep', { step: step.step, type: moveTypeText(step.moveType) })} — ${
             step.feasible
               ? text('stepFeasible', { count: step.candidateCount })
@@ -83,9 +83,7 @@ function OptionNotes({
   return (
     <>
       {option.note === undefined ? null : <Text>{text('optionNote', { note: option.note })}</Text>}
-      {option.feasible ? null : (
-        <Text style={{ color: color.warning }}>{text('optionUnavailable')}</Text>
-      )}
+      {option.feasible ? null : <Text style={theme.alertWarning}>{text('optionUnavailable')}</Text>}
       {option.feasible && !selectable ? <Text>{text('optionWeb')}</Text> : null}
     </>
   );
@@ -139,7 +137,7 @@ export function Options(props: {
       <Text accessibilityRole="header" style={{ fontWeight: '700', color: color.text }}>
         {text('optionsTitle')}
       </Text>
-      <Text style={{ color: color.textMuted }}>{text('impactBlocked')}</Text>
+      <Text style={theme.muted}>{text('impactBlocked')}</Text>
       {props.view.options.map((option, index) => (
         <OptionCard
           key={`${option.moveType}-${index}`}

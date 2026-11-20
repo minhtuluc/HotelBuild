@@ -213,7 +213,7 @@ export function CashScreen(props: CashScreenProps): ReactElement {
         <ActivityIndicator accessibilityLabel={text('loading')} color={color.primary} />
       ) : null}
       {load.kind === 'failed' ? (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {load.message}
         </Text>
       ) : null}

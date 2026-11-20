@@ -1,7 +1,9 @@
 /** Điều khiển dùng chung của SCR-57/58: vùng chạm ≥ 48 dp, nhãn trợ năng và trạng thái đầy đủ. */
+import { actionButtonStyle, type ActionTone } from './controls-style';
 import type { ReactElement } from 'react';
 import { Pressable, Text } from 'react-native';
-import { color, radius, space, touchTargetDp } from '@pinehill/ui-native';
+import { color, radius, space, touchTargetDp, fontFamily } from '@pinehill/ui-native';
+import { theme } from '../theme';
 
 export function ActionButton({
   testID,
@@ -14,9 +16,8 @@ export function ActionButton({
   label: string;
   onPress: () => void;
   disabled?: boolean;
-  tone?: 'primary' | 'plain';
+  tone?: ActionTone;
 }): ReactElement {
-  const filled = tone === 'primary';
   return (
     <Pressable
       testID={testID}
@@ -25,26 +26,9 @@ export function ActionButton({
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={{
-        minHeight: touchTargetDp,
-        justifyContent: 'center',
-        paddingHorizontal: space.s3,
-        borderRadius: radius.md,
-        ...(filled
-          ? { backgroundColor: color.primary }
-          : { borderWidth: 1, borderColor: color.border, backgroundColor: color.surface }),
-        ...(disabled ? { opacity: 0.5 } : {}),
-      }}
+      style={({ pressed }) => actionButtonStyle(tone, disabled, pressed).container}
     >
-      <Text
-        style={{
-          textAlign: 'center',
-          fontWeight: '600',
-          color: filled ? color.primaryContrast : color.primary,
-        }}
-      >
-        {label}
-      </Text>
+      <Text style={actionButtonStyle(tone, disabled).label}>{label}</Text>
     </Pressable>
   );
 }
@@ -80,7 +64,7 @@ export function CheckRow({
         borderColor: checked ? color.primary : color.border,
       }}
     >
-      <Text style={{ color: color.text, fontWeight: checked ? '700' : '400' }}>
+      <Text style={[theme.body, checked ? { fontFamily: fontFamily.sansBold } : null]}>
         {checked ? '☑ ' : '☐ '}
         {label}
       </Text>

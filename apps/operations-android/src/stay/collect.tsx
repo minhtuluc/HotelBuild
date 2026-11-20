@@ -263,11 +263,7 @@ export function CollectScreen({
           style={[FIELD, theme.tabular]}
         />
         {form.issue === null ? null : (
-          <Text
-            testID="collect-amount-issue"
-            accessibilityRole="alert"
-            style={{ color: color.danger }}
-          >
+          <Text testID="collect-amount-issue" accessibilityRole="alert" style={theme.alertDanger}>
             {text(AMOUNT_KEY[form.issue])}
           </Text>
         )}

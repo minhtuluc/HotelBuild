@@ -5,10 +5,11 @@
  */
 import { useState, type ReactElement } from 'react';
 import { Text, View } from 'react-native';
-import { color, space } from '@pinehill/ui-native';
+import { space } from '@pinehill/ui-native';
 import { ActionButton } from './controls';
 import { arrivalsText as text } from './messages';
 import type { CheckInWriter, InspectionOutcome } from './writer';
+import { theme } from '../theme';
 
 type Status = 'idle' | 'busy' | 'done' | 'offline' | { failed: string };
 
@@ -47,20 +48,20 @@ export function InspectionPanel({
 
   if (status === 'done')
     return (
-      <Text accessibilityLiveRegion="polite" style={{ color: color.success }}>
+      <Text accessibilityLiveRegion="polite" style={theme.alertSuccess}>
         {text('inspectDone', { rooms: roomCodes })}
       </Text>
     );
   return (
     <View style={{ gap: space.s2 }}>
-      <Text style={{ color: color.text }}>{text('inspectHint')}</Text>
+      <Text style={theme.body}>{text('inspectHint')}</Text>
       {status === 'offline' ? (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {text('inspectOffline')}
         </Text>
       ) : null}
       {typeof status === 'object' ? (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {text('inspectFailed', { code: status.failed })}
         </Text>
       ) : null}

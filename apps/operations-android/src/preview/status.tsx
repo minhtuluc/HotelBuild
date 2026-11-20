@@ -4,6 +4,7 @@ import { color, space } from '@pinehill/ui-native';
 import { ActionButton } from '../arrivals/controls';
 import { previewText as text } from './messages';
 import type { PreviewPhase } from './reader';
+import { theme } from '../theme';
 
 const MESSAGE = {
   offline: 'offline',
@@ -27,14 +28,14 @@ export function PreviewStatus({
     return (
       <View style={{ gap: space.s1 }}>
         <ActivityIndicator accessibilityLabel={text('loading')} color={color.primary} />
-        <Text testID={testID} accessibilityLiveRegion="polite" style={{ color: color.textMuted }}>
+        <Text testID={testID} accessibilityLiveRegion="polite" style={theme.muted}>
           {text('loading')}
         </Text>
       </View>
     );
   return (
     <View style={{ gap: space.s2 }}>
-      <Text testID={testID} accessibilityLiveRegion="polite" style={{ color: color.warning }}>
+      <Text testID={testID} accessibilityLiveRegion="polite" style={theme.alertWarning}>
         {text(MESSAGE[phase])}
       </Text>
       <ActionButton
