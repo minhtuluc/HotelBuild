@@ -10,11 +10,29 @@ export function f5Pay(keyed: Oracle): void {
     method: RequestMethod.POST,
   };
   // HB-131: MANAGER theo dõi tác vụ CHAN do chính mình khởi tạo (service vẫn kiểm người tạo/scope).
+  // HB-246: SYSADMIN theo dõi thao tác sao lưu/diễn tập do chính mình yêu cầu.
   keyed[`${RequestMethod.GET}:operations/:operationId`] = readMissing([
     'ACCOUNTANT',
     'MANAGER',
     'OWNER',
+    'SYSADMIN',
   ]);
+  // HB-246: sao lưu/diễn tập chỉ cho SYSADMIN; thân oracle (trường lạ) ⇒ 400 trước khi ghi gì.
+  keyed[`${RequestMethod.GET}:system/backups`] = {
+    roles: ['SYSADMIN'],
+    status: 200,
+    method: RequestMethod.GET,
+  };
+  keyed[`${RequestMethod.POST}:system/backups`] = {
+    roles: ['SYSADMIN'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
+  keyed[`${RequestMethod.POST}:system/backups/:backupId/restore`] = {
+    roles: ['SYSADMIN'],
+    status: 400,
+    method: RequestMethod.POST,
+  };
   keyed[`${RequestMethod.GET}:operations/:operationId/download`] = readMissing([
     'ACCOUNTANT',
     'OWNER',

@@ -82,6 +82,8 @@ const AUTH_OPERATIONS: readonly (readonly [Method, string, 'public' | 'bearer'])
   // HB-044: bổ sung tuyến đọc tham số cho SCR-17 (thêm tuyến, không phá vỡ hợp đồng).
   ['get', '/api/v1/system-settings', 'bearer'],
   ['put', '/api/v1/system-settings/{key}', 'bearer'],
+  // HB-246: trạng thái sao lưu cho SCR-18.
+  ['get', '/api/v1/system/backups', 'bearer'],
   ['post', '/api/v1/system/backups', 'bearer'],
   ['post', '/api/v1/system/backups/{backupId}/restore', 'bearer'],
   ['get', '/api/v1/operations/{operationId}', 'bearer'],
