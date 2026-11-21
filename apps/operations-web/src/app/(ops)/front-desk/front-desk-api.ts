@@ -15,6 +15,9 @@ import {
   type ApiResponse,
 } from '@pinehill/api-client';
 import {
+  housekeepingTaskCreateRequestSchema,
+  housekeepingTaskSchema,
+  type HousekeepingTaskCreateRequest,
   listResponseSchema,
   roomSummarySchema,
   roomTypeSummarySchema,
@@ -86,6 +89,8 @@ export interface DeskApi {
   ): Promise<ApiResponse<Payment>>;
   /** `idempotencyKey` giữ nguyên khi thử lại để máy chủ phát lại booking thay vì tạo mới. */
   walkIn(input: WalkInRequest, idempotencyKey?: string): Promise<ApiResponse<WalkInResult>>;
+  /** Go-live: biên bản đã kiểm phòng (HB-204) khi nhận phòng bị từ chối vì phòng chưa sẵn sàng. */
+  recordInspection(input: HousekeepingTaskCreateRequest): Promise<ApiResponse<unknown>>;
 }
 
 export function createDeskApi(client: ApiClient): DeskApi {
@@ -192,6 +197,13 @@ export function createDeskApi(client: ApiClient): DeskApi {
         body: walkInRequestSchema.parse(input),
         ...(idempotencyKey === undefined ? {} : { idempotencyKey }),
         decoder: walkInResultSchema,
+      }),
+    recordInspection: (input) =>
+      client.request({
+        method: 'POST',
+        path: '/housekeeping/tasks',
+        body: housekeepingTaskCreateRequestSchema.parse(input),
+        decoder: housekeepingTaskSchema,
       }),
   };
 }

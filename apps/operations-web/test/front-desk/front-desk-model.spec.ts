@@ -248,3 +248,30 @@ describe('SCR-48 walk-in ≤ 5 bước (AC3)', () => {
     expect(amountIssue('9007199254740993')).toBe('FORMAT');
   });
 });
+
+describe('go-live: phòng chưa sẵn sàng ⇒ đề nghị ghi biên bản đã kiểm (BR-FO-07)', () => {
+  it('chỉ UNITS_NOT_READY mới đề nghị; giữ lý do máy đọc trong thất bại', async () => {
+    const { ApiError } = await import('@pinehill/api-client');
+    const { actionFailure, needsInspection, inspectionBody } =
+      await import('../../src/app/(ops)/front-desk/front-desk-model');
+    const refused = (issue: string) =>
+      actionFailure(
+        new ApiError({
+          kind: 'http',
+          status: 409,
+          code: 'E_FO_CHECKIN_NOT_ALLOWED',
+          message: 'x',
+          details: [{ field: 'reason', issue }],
+        }),
+      );
+    expect(needsInspection(refused('UNITS_NOT_READY'))).toBe(true);
+    expect(needsInspection(refused('DEBT_APPROVAL_REQUIRED'))).toBe(false);
+    expect(needsInspection(null)).toBe(false);
+    expect(inspectionBody('room-1', '2026-11-21')).toEqual({
+      roomId: 'room-1',
+      businessDate: '2026-11-21',
+      status: 'INSPECTED',
+      reason: 'Lễ tân xác nhận đã kiểm phòng tại quầy khi nhận phòng',
+    });
+  });
+});
