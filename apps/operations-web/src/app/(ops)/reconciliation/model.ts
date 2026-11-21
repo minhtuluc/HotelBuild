@@ -86,3 +86,10 @@ export function earlyCheckoutPreviewRequestOf(
 export function canConfirmEarlyCheckout(step: PinStep, preview: CheckOutPreview | null): boolean {
   return step === 'verified' && preview !== null;
 }
+
+/** Báo cáo dùng khoảng nửa mở `[from, to)` (truy vấn `stay_date < to`): một ngày nghiệp vụ ⇒ `to` = hôm sau. */
+export function dayRange(businessDate: string): { from: string; to: string } {
+  const next = new Date(`${businessDate}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  return { from: businessDate, to: next.toISOString().slice(0, 10) };
+}
