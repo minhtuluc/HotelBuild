@@ -9,7 +9,7 @@ import {
   type LoyaltyTier,
   type StaffApproverRole,
 } from '@pinehill/domain/overbooking';
-import { money, nightsBetween, notFound } from '../support.js';
+import { invalid, money, nightsBetween, notFound } from '../support.js';
 import type { Tx } from '../support.js';
 import { activeAssignmentsOf, type BookingRow } from './writes.js';
 
@@ -144,4 +144,18 @@ export async function approverOf(tx: Tx, userId: string | null): Promise<StaffAp
     { role: string }[]
   >`SELECT role FROM users WHERE id=${userId}::uuid`;
   return STAFF_ROLES[rows[0]?.role ?? ''] ?? null;
+}
+
+/**
+ * HB-268: phòng đang hoạt động **duy nhất** của booking khi lệnh không chỉ rõ `bookingRoomId` (lễ tân chỉ
+ * thấy booking trong cảnh báo, không thấy phòng). Không có hoặc nhiều hơn một ⇒ 400 để client chỉ rõ.
+ */
+export async function soleActiveRoom(tx: Tx, bookingId: string): Promise<string> {
+  const active = await tx.$queryRaw<{ id: string }[]>`
+    SELECT id::text FROM booking_rooms
+     WHERE booking_id=${bookingId}::uuid AND status='ACTIVE'
+     ORDER BY id LIMIT 2`;
+  if (active.length !== 1)
+    throw invalid('Booking có nhiều phòng: cần chỉ rõ phòng điều chuyển (bookingRoomId).');
+  return active[0]!.id;
 }

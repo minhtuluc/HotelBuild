@@ -30,6 +30,7 @@ import {
   type Tx,
 } from '../support.js';
 import { moveApproveInput, moveCreateInput, moveExecuteInput } from './validation.js';
+import type { NormalizedMove } from './validation.js';
 import { moveView, type MoveRow } from '../views.js';
 import {
   assertBookingMovable,
@@ -37,7 +38,13 @@ import {
   insertProposedMove,
   resolveTarget,
 } from './create.js';
-import { bookingRoomOf, currentRoomOf, keepScoreOf, overbookingCaseOf } from './queries.js';
+import {
+  bookingRoomOf,
+  currentRoomOf,
+  keepScoreOf,
+  overbookingCaseOf,
+  soleActiveRoom,
+} from './queries.js';
 import { executeRelocation } from './relocate.js';
 import { executeWalkOut } from './walkout.js';
 import { notifyGuestOfMove } from './notify.js';
@@ -80,14 +87,18 @@ export class RoomMoveService {
   }
 
   async create(tx: Tx, actor: AuthorizedActor, body: unknown) {
-    const command = moveCreateInput(body);
-    const caseProperty = await this.openCaseProperty(tx, actor, command.overbookingCaseId);
-    const booking = await lockBooking(tx, command.bookingId);
+    const input = moveCreateInput(body);
+    const caseProperty = await this.openCaseProperty(tx, actor, input.overbookingCaseId);
+    const booking = await lockBooking(tx, input.bookingId);
     requireProperties(actor, [booking.property_id]);
     assertBookingMovable(booking.status);
     // HB-230: lệnh gắn với ca nào thì ca đó phải thuộc đúng cơ sở của booking.
     if (caseProperty !== null && caseProperty !== booking.property_id)
       throw invalid('Ca quá tải không thuộc cơ sở của booking.');
+    const command: NormalizedMove = {
+      ...input,
+      bookingRoomId: input.bookingRoomId ?? (await soleActiveRoom(tx, booking.id)),
+    };
     const bookingRoom = await bookingRoomOf(tx, command.bookingRoomId, booking.id);
     const fromRoomId = await currentRoomOf(tx, command.bookingRoomId);
     assertMoveTypeAllowed(command, booking.status);
