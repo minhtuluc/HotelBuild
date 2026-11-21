@@ -261,7 +261,9 @@ test('server_plan_complete_score_and_ladder', async () => {
   );
   await desk.settle();
   expect(desk.byId('candidates')).toBeUndefined();
-  expect(desk.byId('options')?.text).toContain('room-9');
+  // HB-270: không in id thô; chưa tải được tên thì nói rõ là chưa rõ tên.
+  expect(desk.byId('options')?.text).not.toContain('room-9');
+  expect(desk.byId('options')?.text).toContain('Cùng loại phòng, cùng cơ sở → phòng chưa rõ tên');
 });
 
 test('impact_and_checked_in_server_guards', async () => {

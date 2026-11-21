@@ -59,7 +59,8 @@ export const roomMoveCreateRequestSchema = z
   .strictObject({
     overbookingCaseId: z.string().min(1).optional(),
     bookingId: z.string().min(1),
-    bookingRoomId: z.string().min(1),
+    /** HB-268: vắng thì máy chủ dùng phòng đang hoạt động **duy nhất** của booking; nhiều phòng ⇒ 400. */
+    bookingRoomId: z.string().min(1).optional(),
     moveType: moveTypeSchema,
     toRoomId: z.string().min(1).optional(),
     toPropertyId: z.string().min(1).optional(),

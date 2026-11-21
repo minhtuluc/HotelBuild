@@ -116,9 +116,13 @@ services:
     environment:
       <<: *pgbackrest-env
       BACKUP_FULL_AT_UTC: ${BACKUP_FULL_AT_UTC:-19:00}
+      # HB-246: sidecar nhận yêu cầu sao lưu/diễn tập từ bảng `operations` qua socket (role chủ CSDL).
+      POSTGRES_DB: ${POSTGRES_DB:-pinehill}
     volumes:
       - pgdata:/var/lib/postgresql/data:ro
       - pgrun:/var/run/postgresql
+      # Diễn tập theo yêu cầu phục hồi vào đây (socket/cổng riêng), xoá sau khi đo. Cần đĩa trống ≈ cỡ CSDL.
+      - drilldata:/var/lib/pinehill-drill
     depends_on:
       postgres: { condition: service_healthy }
     healthcheck:
@@ -278,6 +282,7 @@ volumes:
   pgdata: {}
   pgrun: {}
   restoredata: {}
+  drilldata: {}
   redisdata: {}
   exports: {}
   caddy_data: {}

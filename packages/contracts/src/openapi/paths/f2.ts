@@ -10,7 +10,6 @@ import {
   businessDateSchema,
   listResponseSchema,
   operationDownloadQuerySchema,
-  operationRefSchema,
   operationStatusViewSchema,
 } from '../../common.js';
 import {
@@ -34,8 +33,6 @@ import {
 import {
   auditLogEntrySchema,
   auditLogQuerySchema,
-  backupRequestSchema,
-  restoreRequestSchema,
   systemSettingQuerySchema,
   systemSettingSchema,
   systemSettingUpdateRequestSchema,
@@ -344,34 +341,6 @@ export function registerF2Paths(registry: OpenAPIRegistry, errorBodyComponent: z
       404: errorResponse('E_GEN_NOT_FOUND'),
       412: errorResponse('E_GEN_VERSION_CONFLICT'),
       428: errorResponse('E_GEN_PRECONDITION_REQUIRED'),
-    },
-  });
-
-  registry.registerPath({
-    method: 'post',
-    path: '/api/v1/system/backups',
-    operationId: 'systemBackupsCreate',
-    summary: 'Yêu cầu sao lưu — trả 202 kèm tham chiếu tác vụ (UC-SYS-03, BR-SYS-03)',
-    ...bearerWrite(['sys']),
-    request: { body: jsonBody(backupRequestSchema) },
-    responses: {
-      202: { description: 'Đã nhận yêu cầu sao lưu', ...jsonBody(operationRefSchema) },
-      403: errorResponse('E_RBAC_FORBIDDEN'),
-    },
-  });
-
-  registry.registerPath({
-    method: 'post',
-    path: '/api/v1/system/backups/{backupId}/restore',
-    operationId: 'systemBackupsRestore',
-    summary: 'Diễn tập phục hồi vào môi trường tạm — không nhận URL/đường dẫn CSDL (§2.14)',
-    ...bearerWrite(['sys']),
-    parameters: [...idempotencyHeaders, pathParam('backupId')],
-    request: { body: jsonBody(restoreRequestSchema) },
-    responses: {
-      202: { description: 'Đã nhận yêu cầu phục hồi', ...jsonBody(operationRefSchema) },
-      403: errorResponse('E_RBAC_FORBIDDEN'),
-      404: errorResponse('E_GEN_NOT_FOUND'),
     },
   });
 

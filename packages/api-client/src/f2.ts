@@ -27,6 +27,7 @@ import {
   systemSettingSchema,
   systemSettingUpdateRequestSchema,
   backupRequestSchema,
+  backupStatusSchema,
   restoreRequestSchema,
   type AllotmentPutRequest,
   type DayBoard,
@@ -35,6 +36,7 @@ import {
   type Availability,
   type AuditLogEntry,
   type BackupRequest,
+  type BackupStatus,
   type InventoryGrid,
   type ListPage,
   type PropertySummary,
@@ -271,6 +273,8 @@ export interface SystemApi {
     input: SystemSettingUpdateRequest,
     ifMatch: string,
   ): Promise<ApiResponse<undefined>>;
+  /** HB-246: trạng thái sao lưu cho SCR-18 (SYSADMIN). */
+  backupStatus(): Promise<ApiResponse<BackupStatus>>;
   requestBackup(input: BackupRequest): Promise<ApiResponse<OperationRef>>;
   requestRestore(backupId: string, input: RestoreRequest): Promise<ApiResponse<OperationRef>>;
   operation(operationId: string): Promise<ApiResponse<OperationStatusView>>;
@@ -299,6 +303,8 @@ export function createSystemApi(client: ApiClient): SystemApi {
         body: systemSettingUpdateRequestSchema.parse(input),
         ifMatch,
       }),
+    backupStatus: () =>
+      client.request({ method: 'GET', path: '/system/backups', decoder: backupStatusSchema }),
     requestBackup: (input) =>
       client.request({
         method: 'POST',

@@ -39,6 +39,7 @@ const offline = { getConnected: async () => false };
 const api = (overrides: Partial<ProfileApi> = {}): ProfileApi => ({
   me: async () => GUEST,
   loyalty: async () => LOYALTY,
+  update: async () => GUEST,
   ...overrides,
 });
 

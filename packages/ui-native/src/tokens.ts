@@ -25,6 +25,37 @@ export const color = {
   focus: '#1B3A82',
 } as const;
 
+/**
+ * HB-272 — vật liệu của thế giới vé tàu (DESIGN.md): giấy vé, bảng ga, đèn tín hiệu. Sao y `@pinehill/ui-web`.
+ * Trên giấy vé hồng: chữ phụ dùng `ticketMuted`, đỏ hành động dùng `ticketPunch` (The Ticket Ink Rule).
+ */
+export const worldInk = {
+  /** Nền giấy mẫu biểu nhà ga: nền màn phía khách. */
+  ground: '#DFE5F0',
+  ticket: '#F0C2B3',
+  ticketLight: '#F6DCD3',
+  ticketMuted: '#6B2F22',
+  ticketPunch: '#962A16',
+  board: '#121614',
+  boardRow: '#1C221F',
+  signal: '#F2B632',
+  signalGo: '#7CD08A',
+  punch: '#B8341C',
+} as const;
+
+/**
+ * Họ chữ đóng gói offline (OFL, giống web): Be Vietnam Pro cho chữ thân, Barlow Condensed cho bảng ga/tiêu đề.
+ * Android không tổng hợp `fontWeight` cho font tự nạp, nên mỗi độ đậm là một họ riêng — đừng đặt `fontWeight`.
+ */
+export const fontFamily = {
+  sans: 'BeVietnamPro_400Regular',
+  sansMedium: 'BeVietnamPro_500Medium',
+  sansSemiBold: 'BeVietnamPro_600SemiBold',
+  sansBold: 'BeVietnamPro_700Bold',
+  display: 'BarlowCondensed_500Medium',
+  displaySemiBold: 'BarlowCondensed_600SemiBold',
+} as const;
+
 export type GridStatusKey =
   | 'available'
   | 'arriving'
@@ -63,18 +94,22 @@ export const gridStatus: Record<GridStatusKey, GridStatusToken> = {
 
 /** Token chữ theo sp (§7.3). Cấm nhỏ hơn 12 sp; tiền không nhỏ hơn 14 sp. */
 export const typography = {
-  display: { sp: 30, weight: '500' },
-  h1: { sp: 24, weight: '500' },
-  h2: { sp: 20, weight: '500' },
+  display: { sp: 30, weight: '600' },
+  h1: { sp: 24, weight: '600' },
+  h2: { sp: 20, weight: '600' },
   body: { sp: 16, weight: '400' },
   sm: { sp: 14, weight: '400' },
   caption: { sp: 12, weight: '400' },
-  money: { sp: 20, weight: '500', fontVariant: ['tabular-nums'] },
+  money: { sp: 20, weight: '600', fontVariant: ['tabular-nums'] },
+  /** Nhãn trường in trên vé (web 11px chữ hoa; native giữ sàn 12sp). */
+  label: { sp: 12, weight: '700', letterSpacing: 0.8 },
+  /** Chữ trên bảng ga: chữ hẹp, chữ hoa, số đều cột. */
+  board: { sp: 20, weight: '600', fontVariant: ['tabular-nums'] },
 } as const;
 
-/** Khoảng cách và bán kính (§7.4). */
+/** Khoảng cách và bán kính (§7.4); góc gần vuông như mép tem, giống web (HB-272). */
 export const space = { s1: 4, s2: 8, s3: 12, s4: 16, s6: 24, s8: 32, s10: 40, s12: 48 } as const;
-export const radius = { sm: 4, md: 8, lg: 12, full: 999 } as const;
+export const radius = { sm: 3, md: 6, lg: 10, full: 999 } as const;
 
 /** Vùng chạm tối thiểu 48 dp trên Android (UI-05). */
 export const touchTargetDp = 48;

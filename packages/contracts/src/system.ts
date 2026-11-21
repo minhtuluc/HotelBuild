@@ -66,6 +66,55 @@ export const restoreRequestSchema = z.strictObject({
   reason: z.string().min(1).max(500),
 });
 
+/**
+ * HB-246: `GET /system/backups` — trạng thái sao lưu cho SCR-18. Nguồn: ảnh chụp `pgbackrest info` do
+ * sidecar ghi (`backups`, `catalogRefreshedAt`), `pg_stat_archiver` (`archive`) và lịch sử `operations`.
+ * `backupId` là nhãn pgBackRest (vd. `20261113-190002F`), dùng làm tham số của lệnh diễn tập phục hồi.
+ */
+export const backupSetSchema = z.object({
+  backupId: z.string().regex(/^\d{8}-\d{6}F(_\d{8}-\d{6}[DI])?$/),
+  type: z.enum(['FULL', 'DIFF', 'INCR']),
+  startedAt: isoUtcTimestampSchema,
+  finishedAt: isoUtcTimestampSchema,
+  /** Dung lượng CSDL lúc sao lưu và dung lượng đã nén/mã hoá trong kho (byte). */
+  databaseSizeBytes: z.number().int().min(0).nullable(),
+  repositorySizeBytes: z.number().int().min(0).nullable(),
+});
+
+export const backupOperationSchema = z.object({
+  operationId: z.string().min(1),
+  kind: z.enum(['BACKUP', 'RESTORE_DRILL']),
+  status: z.enum(['PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED']),
+  requestedAt: isoUtcTimestampSchema,
+  startedAt: isoUtcTimestampSchema.nullable(),
+  finishedAt: isoUtcTimestampSchema.nullable(),
+  /** Tham số đã yêu cầu: `mode` (sao lưu) hoặc `backupId` + `targetTimestamp` (diễn tập). */
+  request: z.record(z.string(), z.unknown()),
+  /** Biên bản: nhãn bản sao lưu mới, hoặc số đo RTO và đối soát sau phục hồi. */
+  result: z.record(z.string(), z.unknown()).nullable(),
+  errorCode: z.string().min(1).nullable(),
+});
+
+export const backupStatusSchema = z.object({
+  /** `null` = sidecar chưa ghi ảnh chụp nào (chưa chạy hoặc môi trường không có kho sao lưu). */
+  catalogRefreshedAt: isoUtcTimestampSchema.nullable(),
+  /** Mới nhất trước. */
+  backups: z.array(backupSetSchema),
+  archive: z.object({
+    archivedCount: z.number().int().min(0),
+    failedCount: z.number().int().min(0),
+    lastArchivedAt: isoUtcTimestampSchema.nullable(),
+    lastFailedAt: isoUtcTimestampSchema.nullable(),
+  }),
+  /** Số giây kể từ WAL cuối cùng lên kho — ước lượng mất dữ liệu nếu sự cố xảy ra lúc này (RPO ≤ 900). */
+  secondsSinceLastArchive: z.number().int().min(0).nullable(),
+  /** 20 thao tác sao lưu/diễn tập gần nhất, mới nhất trước. */
+  operations: z.array(backupOperationSchema),
+});
+
+export type BackupSet = z.infer<typeof backupSetSchema>;
+export type BackupOperation = z.infer<typeof backupOperationSchema>;
+export type BackupStatus = z.infer<typeof backupStatusSchema>;
 export type AuditLogEntry = z.infer<typeof auditLogEntrySchema>;
 export type SystemSettingUpdateRequest = z.infer<typeof systemSettingUpdateRequestSchema>;
 export type SystemSetting = z.infer<typeof systemSettingSchema>;

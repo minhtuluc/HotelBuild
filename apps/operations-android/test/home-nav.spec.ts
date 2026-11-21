@@ -17,3 +17,9 @@ test('màn chính có thẻ mở cảnh báo quá tải, câu chữ lấy từ c
 test('luồng chính đẩy route `/alerts` (Back của Stack quay lại màn chính)', () => {
   expect(source('../app/index.tsx')).toContain("onAlerts={() => router.push('/alerts')}");
 });
+
+test('HB-263: màn chính mở SCR-68 đối soát tiền mặt; Back cứng về màn chính', () => {
+  expect(source('../app/home.tsx')).toContain("testID: 'open-cash'");
+  expect(source('../app/index.tsx')).toContain("onCash={() => setStage('cash')}");
+  expect(catalog['home.cash'].length).toBeGreaterThan(0);
+});

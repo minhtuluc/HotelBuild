@@ -69,6 +69,7 @@ import { ReportsModule } from './modules/rep/reports/module.js';
 import { GuestsModule } from './modules/crm/guests/module.js';
 import { OperationsModule } from './modules/sys/operations/module.js';
 import { ReportExportModule } from './modules/rep/export/module.js';
+import { BackupModule } from './modules/sys/backups/module.js';
 import { NotiModule } from './modules/noti/module.js';
 import { OverModule } from './modules/over/over.module.js';
 import { CancelModule } from './modules/book/cancel/module.js';
@@ -190,6 +191,8 @@ export class AppModule {
         PayBalanceModule,
         ReportsModule,
         ReportExportModule,
+        // HB-246: sao lưu/diễn tập theo yêu cầu + trạng thái SCR-18 (sidecar `backup` thực thi).
+        BackupModule,
         GuestsModule,
         OperationsModule,
         NotiModule,

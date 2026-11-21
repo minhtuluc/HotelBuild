@@ -17,6 +17,9 @@ const owner = process.env.DATABASE_MIGRATION_URL;
 /** Chỉ ghi thêm: sổ kiểm toán, ảnh giá, chứng từ duyệt hoàn, lượt đồng bộ, lịch sử trạng thái. */
 const APPEND_ONLY = [
   'audit_logs',
+  // HB-246: thực ra **chỉ đọc** (REVOKE cả INSERT) — sidecar sao lưu ghi bằng role chủ; test riêng ở
+  // `test/backups/backups.spec.ts` khẳng định `app_rw` không có INSERT.
+  'backup_catalog',
   'booking_status_history',
   'channel_sync_attempts',
   'price_snapshots',

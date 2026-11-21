@@ -6,9 +6,9 @@
  * hạn; nếu máy chủ nghi trùng thì hỏi khách thay vì tự tạo thêm.
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { color, space, formatDateTimeVn } from '@pinehill/ui-native';
+import { color, space, formatDateTimeVn, Button } from '@pinehill/ui-native';
 import type { BookingSummary, RatePlanCode } from '@pinehill/contracts';
 import { LoginPrompt } from '../../src/login-prompt';
 import { createSession } from '../../src/session-factory';
@@ -118,16 +118,8 @@ function Action({
   disabled?: boolean;
 }): ReactElement {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      style={[theme.buttonPrimary, disabled ? { backgroundColor: color.borderStrong } : null]}
-    >
-      <Text style={theme.buttonPrimaryText}>{label}</Text>
-    </Pressable>
+    // Bước cam kết phía khách: nút dấu bấm cỡ lớn (DESIGN.md §Buttons, HB-273).
+    <Button role="accent" size="lg" label={label} onPress={onPress} disabled={disabled === true} />
   );
 }
 
