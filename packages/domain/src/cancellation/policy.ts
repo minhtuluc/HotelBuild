@@ -52,3 +52,32 @@ function validateRefund(tier: CancellationTier, previous: number): void {
       'Policy refunds must be nonincreasing integer percentages with no refund when charging first night',
     );
 }
+
+/** Một mốc huỷ tuyệt đối: bậc `tier` còn áp tới **hết** `until` (ms, tính cả); `null` = bậc bắt tất. */
+export interface RefundDeadline {
+  readonly until: number | null;
+  readonly tier: CancellationTier;
+}
+
+/**
+ * Quy các bậc "số giờ trước giờ nhận phòng" ra mốc tuyệt đối, **cùng luật** với `resolveTier`: bậc
+ * `offsetHours = h ≥ 0` áp khi `checkIn − now ≥ h giờ`, tức `now ≤ checkIn − h giờ`. Kết quả xếp theo
+ * thời gian tăng dần; bậc bắt tất (`-1`) đứng cuối với `until = null` (áp sau mốc cuối cùng).
+ * Chính sách sai cấu hình bị từ chối y như `resolveTier`, nên mốc và quyết định huỷ không thể lệch nhau.
+ */
+export function refundDeadlines(
+  policy: CancellationPolicy,
+  checkInDateTime: number,
+): readonly RefundDeadline[] {
+  integer(checkInDateTime, 'checkInDateTime', true);
+  // Kiểm cấu hình bằng chính `resolveTier` (cùng thông báo lỗi), `now` bất kỳ.
+  resolveTier(policy, checkInDateTime, checkInDateTime);
+  return [...policy.tiers]
+    .sort((a, b) => b.offsetHours - a.offsetHours)
+    .map((tier) =>
+      Object.freeze({
+        until: tier.offsetHours >= 0 ? checkInDateTime - tier.offsetHours * 3_600_000 : null,
+        tier: Object.freeze({ ...tier }),
+      }),
+    );
+}

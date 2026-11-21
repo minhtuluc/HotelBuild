@@ -10228,6 +10228,34 @@
                     "expiresAt": {
                       "type": "string",
                       "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "refundDeadlines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "until": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "refundPercent": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "chargeFirstNight": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "until",
+                          "refundPercent",
+                          "chargeFirstNight"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -10715,6 +10743,34 @@
                           "expiresAt",
                           "paidAt",
                           "createdAt"
+                        ]
+                      }
+                    },
+                    "refundDeadlines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "until": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "refundPercent": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "chargeFirstNight": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "until",
+                          "refundPercent",
+                          "chargeFirstNight"
                         ]
                       }
                     }
@@ -11207,6 +11263,34 @@
                                 "createdAt"
                               ]
                             }
+                          },
+                          "refundDeadlines": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "until": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                                },
+                                "refundPercent": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 100
+                                },
+                                "chargeFirstNight": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "until",
+                                "refundPercent",
+                                "chargeFirstNight"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -11581,6 +11665,34 @@
                         "expiresAt": {
                           "type": "string",
                           "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                        },
+                        "refundDeadlines": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "until": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "refundPercent": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 100
+                              },
+                              "chargeFirstNight": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "until",
+                              "refundPercent",
+                              "chargeFirstNight"
+                            ]
+                          }
                         }
                       },
                       "required": [
@@ -11865,6 +11977,34 @@
                               "expiresAt",
                               "paidAt",
                               "createdAt"
+                            ]
+                          }
+                        },
+                        "refundDeadlines": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "until": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "refundPercent": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 100
+                              },
+                              "chargeFirstNight": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "until",
+                              "refundPercent",
+                              "chargeFirstNight"
                             ]
                           }
                         }
@@ -12063,6 +12203,34 @@
                         "expiresAt": {
                           "type": "string",
                           "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                        },
+                        "refundDeadlines": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "until": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "refundPercent": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 100
+                              },
+                              "chargeFirstNight": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "until",
+                              "refundPercent",
+                              "chargeFirstNight"
+                            ]
+                          }
                         }
                       },
                       "required": [
@@ -12347,6 +12515,34 @@
                               "expiresAt",
                               "paidAt",
                               "createdAt"
+                            ]
+                          }
+                        },
+                        "refundDeadlines": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "until": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "refundPercent": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 100
+                              },
+                              "chargeFirstNight": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "until",
+                              "refundPercent",
+                              "chargeFirstNight"
                             ]
                           }
                         }
@@ -12739,6 +12935,34 @@
                           "expiresAt",
                           "paidAt",
                           "createdAt"
+                        ]
+                      }
+                    },
+                    "refundDeadlines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "until": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "refundPercent": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "chargeFirstNight": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "until",
+                          "refundPercent",
+                          "chargeFirstNight"
                         ]
                       }
                     }
@@ -13218,6 +13442,34 @@
                           "expiresAt",
                           "paidAt",
                           "createdAt"
+                        ]
+                      }
+                    },
+                    "refundDeadlines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "until": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "refundPercent": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "chargeFirstNight": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "until",
+                          "refundPercent",
+                          "chargeFirstNight"
                         ]
                       }
                     }
@@ -14440,6 +14692,34 @@
                           "expiresAt",
                           "paidAt",
                           "createdAt"
+                        ]
+                      }
+                    },
+                    "refundDeadlines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "until": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "refundPercent": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "chargeFirstNight": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "until",
+                          "refundPercent",
+                          "chargeFirstNight"
                         ]
                       }
                     }
