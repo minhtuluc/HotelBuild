@@ -131,3 +131,14 @@ describe('SCR-33/SCR-34 tạo booking tại quầy/điện thoại (HB-107)', ()
     expect(depositOf(QUOTE)).toEqual({ percent: 30, amount: 600_000 });
   });
 });
+
+describe('go-live: danh sách kênh không chặn lễ tân', () => {
+  it('lỗi quyền khi đọc GET /channels ⇒ danh sách rỗng (giữ chỗ hiện “—”), không ném', async () => {
+    const { channelsOrEmpty } = await import('../../src/app/(ops)/bookings/new/new-booking-model');
+    await expect(
+      channelsOrEmpty(() => Promise.reject(new Error('E_RBAC_FORBIDDEN'))),
+    ).resolves.toEqual([]);
+    const listed = [{ code: 'WALKIN', holdMinutes: 15 }] as unknown as ChannelSummary[];
+    await expect(channelsOrEmpty(() => Promise.resolve(listed))).resolves.toBe(listed);
+  });
+});

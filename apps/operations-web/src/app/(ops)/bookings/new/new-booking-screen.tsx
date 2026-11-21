@@ -38,6 +38,7 @@ import { t } from '../../../../lib/i18n';
 import { writeFailureState } from '../../../../lib/screen-state';
 import { ChannelStep, ConfirmStep, DoneStep, GuestStep, RoomStep } from './new-booking-steps';
 import {
+  channelsOrEmpty,
   EMPTY_DRAFT,
   bookingRequestOf,
   holdMinutesOf,
@@ -153,14 +154,9 @@ export function NewBookingScreen(): ReactElement {
   useEffect(() => {
     if (forced !== undefined) return;
     let cancelled = false;
-    void api.rate
-      .listChannels()
-      .then((response) => {
-        if (!cancelled) setChannels(response.data.data);
-      })
-      .catch((caught: unknown) => {
-        if (!cancelled) setError(caught);
-      });
+    void channelsOrEmpty(async () => (await api.rate.listChannels()).data.data).then((list) => {
+      if (!cancelled) setChannels(list);
+    });
     return () => {
       cancelled = true;
     };

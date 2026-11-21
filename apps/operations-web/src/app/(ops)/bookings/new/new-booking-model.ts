@@ -169,3 +169,17 @@ export function planCodeOf(value: string): RatePlanCode | null {
   const parsed = ratePlanCodeSchema.safeParse(value);
   return parsed.success ? parsed.data : null;
 }
+
+/**
+ * `GET /channels` chỉ cấp MANAGER/OWNER (`channels.read`); lễ tân vẫn tạo được booking. Kênh ở đây chỉ để
+ * hiện số phút giữ chỗ, nên đọc lỗi (kể cả 403) ⇒ danh sách rỗng, màn hiện “—” thay vì chặn cả luồng.
+ */
+export async function channelsOrEmpty(
+  load: () => Promise<readonly ChannelSummary[]>,
+): Promise<readonly ChannelSummary[]> {
+  try {
+    return await load();
+  } catch {
+    return [];
+  }
+}
