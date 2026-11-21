@@ -118,18 +118,18 @@ export default function RootScreen(): ReactElement {
     });
     return () => subscription.remove();
   }, [back]);
+  const noShowScreen = (target: BookingSummary): ReactElement => (
+    <NoShowScreen
+      session={session}
+      booking={target}
+      writer={noShowWriter}
+      now={Date.now}
+      onChanged={() => undefined}
+      onClose={() => setNoShowTarget(null)}
+    />
+  );
   const arrivalsStage = (): ReactElement => {
-    if (noShowTarget !== null)
-      return (
-        <NoShowScreen
-          session={session}
-          booking={noShowTarget}
-          writer={noShowWriter}
-          now={Date.now}
-          onChanged={() => undefined}
-          onClose={() => setNoShowTarget(null)}
-        />
-      );
+    if (noShowTarget !== null) return noShowScreen(noShowTarget);
     if (collecting !== null)
       return (
         <CollectScreen
@@ -173,7 +173,13 @@ export default function RootScreen(): ReactElement {
         onBack={goHome}
       />
     ),
-    lookup: () => <LookupScreen session={session} onBack={goHome} />,
+    // HB-269: booking quá ngày nhận phòng không còn trong danh sách khách đến; ghi no-show từ tra cứu.
+    lookup: () =>
+      noShowTarget !== null ? (
+        noShowScreen(noShowTarget)
+      ) : (
+        <LookupScreen session={session} onBack={goHome} onNoShow={setNoShowTarget} />
+      ),
     cash: () => (
       <CashScreen
         session={session}
