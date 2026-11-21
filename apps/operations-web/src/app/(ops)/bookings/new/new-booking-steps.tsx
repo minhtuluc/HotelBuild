@@ -35,10 +35,13 @@ const STEP_CARD = { display: 'grid', gap: space.s3, padding: space.s4, margin: 0
 export function ChannelStep({
   draft,
   channels,
+  properties = [],
   onChange,
 }: {
   draft: NewBookingDraft;
   channels: readonly ChannelSummary[];
+  /** Cơ sở được cấp trong phiên (go-live): chọn theo tên thay vì gõ mã. Rỗng ⇒ ô nhập mã như cũ. */
+  properties?: readonly { readonly id: string; readonly name: string }[];
   onChange: (patch: Partial<NewBookingDraft>) => void;
 }): ReactElement {
   return (
@@ -62,13 +65,29 @@ export function ChannelStep({
         </select>
       </Field>
       <Field label={t('newBooking.propertyId')}>
-        <input
-          name="propertyId"
-          value={draft.propertyId}
-          onChange={(event) => {
-            onChange({ propertyId: event.target.value });
-          }}
-        />
+        {properties.length > 0 ? (
+          <select
+            name="propertyId"
+            value={draft.propertyId}
+            onChange={(event) => {
+              onChange({ propertyId: event.target.value });
+            }}
+          >
+            {properties.map((property) => (
+              <option key={property.id} value={property.id}>
+                {property.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            name="propertyId"
+            value={draft.propertyId}
+            onChange={(event) => {
+              onChange({ propertyId: event.target.value });
+            }}
+          />
+        )}
       </Field>
       <Field label={t('newBooking.checkIn')}>
         <input

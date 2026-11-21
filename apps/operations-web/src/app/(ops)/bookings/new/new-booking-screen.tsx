@@ -34,6 +34,7 @@ import {
 import { ScreenAlert } from '../../../../components/screen-alert';
 import { useForcedState } from '../../../../components/forced-state';
 import { useOpsSession } from '../../../../lib/ops-session';
+import { useOptionalStaffSession } from '../../../../session/staff-session';
 import { t } from '../../../../lib/i18n';
 import { writeFailureState } from '../../../../lib/screen-state';
 import { ChannelStep, ConfirmStep, DoneStep, GuestStep, RoomStep } from './new-booking-steps';
@@ -72,6 +73,7 @@ interface StepBodyProps {
   readonly step: Step;
   readonly draft: NewBookingDraft;
   readonly channels: readonly ChannelSummary[];
+  readonly properties: readonly { readonly id: string; readonly name: string }[];
   readonly rooms: Availability | null;
   readonly plans: readonly RatePlanPublic[];
   readonly quote: Quote | null;
@@ -84,7 +86,14 @@ interface StepBodyProps {
 
 function StepBody(props: StepBodyProps): ReactElement {
   if (props.step === 'channel')
-    return <ChannelStep draft={props.draft} channels={props.channels} onChange={props.onChange} />;
+    return (
+      <ChannelStep
+        draft={props.draft}
+        channels={props.channels}
+        properties={props.properties}
+        onChange={props.onChange}
+      />
+    );
   if (props.step === 'room')
     return (
       <RoomStep
@@ -139,7 +148,13 @@ export function NewBookingScreen(): ReactElement {
 
   const [state, setState] = useState<ScreenState>({ kind: 'ready' });
   const [step, setStep] = useState<Step>('channel');
-  const [draft, setDraft] = useState<NewBookingDraft>(EMPTY_DRAFT);
+  const staff = useOptionalStaffSession();
+  const properties = staff?.properties ?? [];
+  // Go-live: mặc định cơ sở đang làm việc (thanh đầu trang), lễ tân không phải gõ mã cơ sở.
+  const [draft, setDraft] = useState<NewBookingDraft>(() => ({
+    ...EMPTY_DRAFT,
+    propertyId: staff?.propertyId ?? EMPTY_DRAFT.propertyId,
+  }));
   const [channels, setChannels] = useState<readonly ChannelSummary[]>([]);
   const [rooms, setRooms] = useState<Availability | null>(null);
   const [plans, setPlans] = useState<readonly RatePlanPublic[]>([]);
@@ -279,6 +294,7 @@ export function NewBookingScreen(): ReactElement {
           step={step}
           draft={draft}
           channels={channels}
+          properties={properties}
           rooms={rooms}
           plans={plans}
           quote={quote}
