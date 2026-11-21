@@ -22,6 +22,7 @@ import {
   JOURNEY_STEPS,
   duplicateChoices,
   guestIssues,
+  loginRedirectFor,
   planTerms,
   type GuestDraft,
   type PlanTerms,
@@ -263,6 +264,11 @@ function BookFlow({
       }
       router.push(localPath(`/booking/${encodeURIComponent(booking.id)}`));
     } catch (caught) {
+      const login = loginRedirectFor(caught, query);
+      if (login !== null) {
+        router.push(localPath(login));
+        return;
+      }
       setReadError(caught);
       setState({ kind: 'ready' });
     }
