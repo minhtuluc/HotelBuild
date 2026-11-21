@@ -13,6 +13,17 @@ import type { CommandResponse } from './store.js';
 import { identifyRequest } from './request.js';
 import { normalizeResponse } from './response.js';
 
+/** Header của tầng HTTP (không phải controller) được giữ khi lệnh lỗi. */
+const KEEP_ON_ERROR = /^(x-trace-id|vary|access-control-[a-z-]+)$/i;
+
+export function pruneErrorHeaders(reply: {
+  getHeaders(): Record<string, unknown>;
+  removeHeader(name: string): unknown;
+}): void {
+  for (const name of Object.keys(reply.getHeaders()))
+    if (!KEEP_ON_ERROR.test(name)) reply.removeHeader(name);
+}
+
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
   constructor(
@@ -32,9 +43,9 @@ export class IdempotencyInterceptor implements NestInterceptor {
       try {
         return await this.command(context, next, accessType);
       } catch (error) {
-        // Remove unsafe controller headers before the exception filter writes its JSON error.
-        for (const name of Object.keys(reply.getHeaders()))
-          if (name.toLowerCase() !== 'x-trace-id') reply.removeHeader(name);
+        // Remove unsafe controller headers before the exception filter writes its JSON error. CORS headers
+        // (set by the `onRequest` hook in main.ts) stay, or browsers block every command error response.
+        pruneErrorHeaders(reply);
         throw error;
       }
     });
