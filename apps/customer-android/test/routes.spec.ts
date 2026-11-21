@@ -79,5 +79,7 @@ test('HB-276: hành trình 3 bước như web — tìm phòng, chi tiết phòng
   expect(confirm).toContain("t('journey.step', { current: 3, total: 3 })");
   expect(confirm).toContain('<Ticket testID="hold-summary">');
   for (const source of [search, room, confirm])
-    expect(source, 'chữ phải dùng style của theme').not.toMatch(/style=\{\{ color: color\.text \}\}/);
+    expect(source, 'chữ phải dùng style của theme').not.toMatch(
+      /style=\{\{ color: color\.text \}\}/,
+    );
 });

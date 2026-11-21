@@ -16,7 +16,10 @@ describe('HB-276 chọn nhanh số đêm', () => {
       checkIn: '2026-12-30',
       checkOut: '2027-01-02',
     });
-    expect(withNights('', 2, '2026-11-20')).toEqual({ checkIn: '2026-11-20', checkOut: '2026-11-22' });
+    expect(withNights('', 2, '2026-11-20')).toEqual({
+      checkIn: '2026-11-20',
+      checkOut: '2026-11-22',
+    });
     expect(withNights('2026-02-30', 2, '2026-11-20').checkIn).toBe('2026-11-20');
   });
 

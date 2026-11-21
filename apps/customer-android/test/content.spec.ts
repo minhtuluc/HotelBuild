@@ -19,8 +19,12 @@ describe('HB-277 câu chữ nội dung theo ngôn ngữ (khoá của web)', () =
 
 describe('HB-277 ảnh tải từ web', () => {
   it('chỉ nhận origin HTTP(S) đúng dạng; thiếu thì không hiện ảnh', () => {
-    expect(readWebOrigin({ EXPO_PUBLIC_WEB_ORIGIN: 'https://pinehill.vn' })).toBe('https://pinehill.vn');
-    expect(readWebOrigin({ EXPO_PUBLIC_WEB_ORIGIN: 'https://pinehill.vn/' })).toBe('https://pinehill.vn');
+    expect(readWebOrigin({ EXPO_PUBLIC_WEB_ORIGIN: 'https://pinehill.vn' })).toBe(
+      'https://pinehill.vn',
+    );
+    expect(readWebOrigin({ EXPO_PUBLIC_WEB_ORIGIN: 'https://pinehill.vn/' })).toBe(
+      'https://pinehill.vn',
+    );
     expect(readWebOrigin({ EXPO_PUBLIC_WEB_ORIGIN: 'ftp://x' })).toBeNull();
     expect(readWebOrigin({})).toBeNull();
   });
