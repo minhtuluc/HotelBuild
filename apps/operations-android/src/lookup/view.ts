@@ -86,6 +86,8 @@ export interface BookingView {
   readonly guestName: string | null;
   /** `null` = hồ sơ khách không nằm trong cùng kết quả nên chưa đối chiếu được cờ. */
   readonly blacklisted: boolean | null;
+  /** Bản máy chủ, để mở SCR-64 (HB-269) mà không dựng lại booking. */
+  readonly source: BookingSummary;
 }
 
 export function toBookingView(
@@ -106,7 +108,22 @@ export function toBookingView(
     guestId: booking.guestId,
     guestName: guest?.fullName ?? null,
     blacklisted: guest?.blacklisted ?? null,
+    source: booking,
   };
+}
+
+/** Ngày lịch hiện tại theo giờ Việt Nam (UTC+7, không có giờ mùa hè). */
+export function todayVn(nowMs: number): string {
+  return new Date(nowMs + 7 * 3_600_000).toISOString().slice(0, 10);
+}
+
+/**
+ * HB-269: danh sách khách đến chỉ có ngày hôm nay, còn mốc ghi no-show là 23:59 ngày nhận phòng
+ * (BR-CANCEL-10). Vì vậy booking `CONFIRMED` đã tới ngày nhận phòng được mời ghi no-show ngay từ
+ * kết quả tra cứu. Mốc giờ, trạng thái và tiền phạt vẫn do máy chủ quyết (xem trước + `409`).
+ */
+export function noShowCandidate(booking: BookingView, today: string): boolean {
+  return booking.status === 'CONFIRMED' && booking.checkIn <= today;
 }
 
 export type LookupRow =

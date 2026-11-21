@@ -5243,233 +5243,6 @@
         }
       }
     },
-    "/api/v1/system/backups": {
-      "post": {
-        "operationId": "systemBackupsCreate",
-        "summary": "Yêu cầu sao lưu — trả 202 kèm tham chiếu tác vụ (UC-SYS-03, BR-SYS-03)",
-        "tags": [
-          "sys"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
-          },
-          {
-            "name": "X-Correlation-Id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "mode": {
-                    "type": "string",
-                    "enum": [
-                      "PITR",
-                      "FULL"
-                    ]
-                  }
-                },
-                "required": [
-                  "mode"
-                ],
-                "additionalProperties": false
-              }
-            }
-          }
-        },
-        "responses": {
-          "202": {
-            "description": "Đã nhận yêu cầu sao lưu",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "operationId": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "PENDING",
-                        "RUNNING",
-                        "SUCCEEDED",
-                        "FAILED"
-                      ]
-                    },
-                    "statusUrl": {
-                      "type": "string",
-                      "minLength": 1
-                    }
-                  },
-                  "required": [
-                    "operationId",
-                    "status",
-                    "statusUrl"
-                  ]
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "E_RBAC_FORBIDDEN",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/system/backups/{backupId}/restore": {
-      "post": {
-        "operationId": "systemBackupsRestore",
-        "summary": "Diễn tập phục hồi vào môi trường tạm — không nhận URL/đường dẫn CSDL (§2.14)",
-        "tags": [
-          "sys"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
-          },
-          {
-            "name": "X-Correlation-Id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
-          },
-          {
-            "name": "backupId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "targetTimestamp": {
-                    "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
-                  },
-                  "reason": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 500
-                  }
-                },
-                "required": [
-                  "targetTimestamp",
-                  "reason"
-                ],
-                "additionalProperties": false
-              }
-            }
-          }
-        },
-        "responses": {
-          "202": {
-            "description": "Đã nhận yêu cầu phục hồi",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "operationId": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "PENDING",
-                        "RUNNING",
-                        "SUCCEEDED",
-                        "FAILED"
-                      ]
-                    },
-                    "statusUrl": {
-                      "type": "string",
-                      "minLength": 1
-                    }
-                  },
-                  "required": [
-                    "operationId",
-                    "status",
-                    "statusUrl"
-                  ]
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "E_RBAC_FORBIDDEN",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "E_GEN_NOT_FOUND",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/operations/{operationId}": {
       "get": {
         "operationId": "operationsGet",
@@ -9001,6 +8774,488 @@
         }
       }
     },
+    "/api/v1/system/backups": {
+      "get": {
+        "operationId": "systemBackupsStatus",
+        "summary": "Trạng thái sao lưu: bản sao lưu trong kho, WAL archive, thao tác gần đây (SCR-18)",
+        "tags": [
+          "sys"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trạng thái sao lưu hiện tại",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "catalogRefreshedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "backups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "backupId": {
+                            "type": "string",
+                            "pattern": "^\\d{8}-\\d{6}F(_\\d{8}-\\d{6}[DI])?$"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "FULL",
+                              "DIFF",
+                              "INCR"
+                            ]
+                          },
+                          "startedAt": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "finishedAt": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "databaseSizeBytes": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "repositorySizeBytes": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "backupId",
+                          "type",
+                          "startedAt",
+                          "finishedAt",
+                          "databaseSizeBytes",
+                          "repositorySizeBytes"
+                        ]
+                      }
+                    },
+                    "archive": {
+                      "type": "object",
+                      "properties": {
+                        "archivedCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "failedCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "lastArchivedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                        },
+                        "lastFailedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                        }
+                      },
+                      "required": [
+                        "archivedCount",
+                        "failedCount",
+                        "lastArchivedAt",
+                        "lastFailedAt"
+                      ]
+                    },
+                    "secondsSinceLastArchive": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "operations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "operationId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "BACKUP",
+                              "RESTORE_DRILL"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "PENDING",
+                              "RUNNING",
+                              "SUCCEEDED",
+                              "FAILED"
+                            ]
+                          },
+                          "requestedAt": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "startedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "finishedAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "request": {
+                            "type": "object",
+                            "additionalProperties": {}
+                          },
+                          "result": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "additionalProperties": {}
+                          },
+                          "errorCode": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "minLength": 1
+                          }
+                        },
+                        "required": [
+                          "operationId",
+                          "kind",
+                          "status",
+                          "requestedAt",
+                          "startedAt",
+                          "finishedAt",
+                          "request",
+                          "result",
+                          "errorCode"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "catalogRefreshedAt",
+                    "backups",
+                    "archive",
+                    "secondsSinceLastArchive",
+                    "operations"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "systemBackupsCreate",
+        "summary": "Yêu cầu sao lưu — trả 202 kèm tham chiếu tác vụ; `FULL` = toàn phần, `PITR` = gia tăng trên bản full gần nhất (UC-SYS-03, BR-SYS-03)",
+        "tags": [
+          "sys"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "PITR",
+                      "FULL"
+                    ]
+                  }
+                },
+                "required": [
+                  "mode"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Đã nhận yêu cầu sao lưu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "operationId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "RUNNING",
+                        "SUCCEEDED",
+                        "FAILED"
+                      ]
+                    },
+                    "statusUrl": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "operationId",
+                    "status",
+                    "statusUrl"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "E_GEN_VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_SYS_REQUEST_IN_PROGRESS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/backups/{backupId}/restore": {
+      "post": {
+        "operationId": "systemBackupsRestore",
+        "summary": "Diễn tập phục hồi vào môi trường tạm do server chọn — không nhận URL/đường dẫn CSDL (§2.14); không chạm CSDL đang chạy",
+        "tags": [
+          "sys"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Bắt buộc cho mọi lệnh ghi; hiệu lực 24 giờ (api.md §1.3)."
+          },
+          {
+            "name": "X-Correlation-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mã tương quan do client sinh; server tự sinh nếu thiếu (kiến trúc §9)."
+          },
+          {
+            "name": "backupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "targetTimestamp": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "targetTimestamp",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Đã nhận yêu cầu diễn tập",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "operationId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "RUNNING",
+                        "SUCCEEDED",
+                        "FAILED"
+                      ]
+                    },
+                    "statusUrl": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "operationId",
+                    "status",
+                    "statusUrl"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "E_GEN_VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "E_SYS_REQUEST_IN_PROGRESS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/properties/{propertyId}/photos": {
       "get": {
         "operationId": "photosPropertyList",
@@ -10228,6 +10483,34 @@
                     "expiresAt": {
                       "type": "string",
                       "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "refundDeadlines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "until": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "refundPercent": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "chargeFirstNight": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "until",
+                          "refundPercent",
+                          "chargeFirstNight"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -10715,6 +10998,34 @@
                           "expiresAt",
                           "paidAt",
                           "createdAt"
+                        ]
+                      }
+                    },
+                    "refundDeadlines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "until": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "refundPercent": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "chargeFirstNight": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "until",
+                          "refundPercent",
+                          "chargeFirstNight"
                         ]
                       }
                     }
@@ -11207,6 +11518,34 @@
                                 "createdAt"
                               ]
                             }
+                          },
+                          "refundDeadlines": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "until": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ],
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                                },
+                                "refundPercent": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 100
+                                },
+                                "chargeFirstNight": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "until",
+                                "refundPercent",
+                                "chargeFirstNight"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -11581,6 +11920,34 @@
                         "expiresAt": {
                           "type": "string",
                           "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                        },
+                        "refundDeadlines": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "until": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "refundPercent": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 100
+                              },
+                              "chargeFirstNight": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "until",
+                              "refundPercent",
+                              "chargeFirstNight"
+                            ]
+                          }
                         }
                       },
                       "required": [
@@ -11865,6 +12232,34 @@
                               "expiresAt",
                               "paidAt",
                               "createdAt"
+                            ]
+                          }
+                        },
+                        "refundDeadlines": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "until": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "refundPercent": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 100
+                              },
+                              "chargeFirstNight": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "until",
+                              "refundPercent",
+                              "chargeFirstNight"
                             ]
                           }
                         }
@@ -12063,6 +12458,34 @@
                         "expiresAt": {
                           "type": "string",
                           "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                        },
+                        "refundDeadlines": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "until": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "refundPercent": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 100
+                              },
+                              "chargeFirstNight": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "until",
+                              "refundPercent",
+                              "chargeFirstNight"
+                            ]
+                          }
                         }
                       },
                       "required": [
@@ -12347,6 +12770,34 @@
                               "expiresAt",
                               "paidAt",
                               "createdAt"
+                            ]
+                          }
+                        },
+                        "refundDeadlines": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "until": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                              },
+                              "refundPercent": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 100
+                              },
+                              "chargeFirstNight": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "until",
+                              "refundPercent",
+                              "chargeFirstNight"
                             ]
                           }
                         }
@@ -12739,6 +13190,34 @@
                           "expiresAt",
                           "paidAt",
                           "createdAt"
+                        ]
+                      }
+                    },
+                    "refundDeadlines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "until": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "refundPercent": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "chargeFirstNight": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "until",
+                          "refundPercent",
+                          "chargeFirstNight"
                         ]
                       }
                     }
@@ -13354,6 +13833,34 @@
                           "expiresAt",
                           "paidAt",
                           "createdAt"
+                        ]
+                      }
+                    },
+                    "refundDeadlines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "until": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "refundPercent": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "chargeFirstNight": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "until",
+                          "refundPercent",
+                          "chargeFirstNight"
                         ]
                       }
                     }
@@ -14576,6 +15083,34 @@
                           "expiresAt",
                           "paidAt",
                           "createdAt"
+                        ]
+                      }
+                    },
+                    "refundDeadlines": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "until": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                          },
+                          "refundPercent": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "chargeFirstNight": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "until",
+                          "refundPercent",
+                          "chargeFirstNight"
                         ]
                       }
                     }
@@ -21935,7 +22470,6 @@
                 },
                 "required": [
                   "bookingId",
-                  "bookingRoomId",
                   "moveType",
                   "reason",
                   "compensationAmount",

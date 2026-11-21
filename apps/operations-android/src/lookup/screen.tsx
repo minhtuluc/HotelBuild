@@ -13,19 +13,23 @@ import {
   View,
 } from 'react-native';
 import { color, space } from '@pinehill/ui-native';
+import type { BookingSummary } from '@pinehill/contracts';
 import type { Session } from '../session';
 import { theme } from '../theme';
 import { LookupReader, type LookupState } from './reader';
 import { lookupPorts } from './ports';
 import { lookupText as text } from './messages';
 import { BookingCard, GuestCard } from './rows';
-import type { LookupRow } from './view';
+import { noShowCandidate, todayVn, type LookupRow } from './view';
 
 export interface LookupScreenProps {
   session: Session;
   onBack: () => void;
   /** Mở trình quay số; bơm được để test không cần thiết bị. */
   openPhone?: (phone: string) => void;
+  /** HB-269: mở SCR-64 cho booking `CONFIRMED` đã tới ngày nhận phòng; thiếu thì không hiện nút. */
+  onNoShow?: (booking: BookingSummary) => void;
+  now?: () => number;
 }
 
 function defaultOpenPhone(phone: string): void {
@@ -36,6 +40,8 @@ export function LookupScreen({
   session,
   onBack,
   openPhone = defaultOpenPhone,
+  onNoShow,
+  now = Date.now,
 }: LookupScreenProps): ReactElement {
   const [reader, setReader] = useState<LookupReader | null>(null);
   const [state, setState] = useState<LookupState>({
@@ -115,7 +121,12 @@ export function LookupScreen({
         contentContainerStyle={{ gap: space.s3 }}
         renderItem={({ item }) =>
           item.kind === 'booking' ? (
-            <BookingCard booking={item.booking} />
+            <BookingCard
+              booking={item.booking}
+              {...(onNoShow !== undefined && noShowCandidate(item.booking, todayVn(now()))
+                ? { onNoShow: () => onNoShow(item.booking.source) }
+                : {})}
+            />
           ) : (
             <GuestCard guest={item.guest} onCall={openPhone} />
           )

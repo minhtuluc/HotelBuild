@@ -73,7 +73,14 @@ test('on home and on the sign-in steps Android back keeps its default (leave the
   }
 });
 
-test('HB-267: layout gốc giữ chữ thanh trạng thái tối (giao diện luôn sáng)', () => {
+test('HB-274: header bảng ga đen ⇒ chữ thanh trạng thái sáng; font thương hiệu nạp trước khi vẽ', () => {
   const layout = readFileSync(new URL('../app/_layout.tsx', import.meta.url), 'utf8');
-  expect(layout).toContain('useDarkStatusBar();');
+  expect(layout).toContain("useStatusBarStyle('light-content');");
+  expect(layout).toContain('useBrandFonts()');
+});
+
+test('HB-274: theme của app là theme vận hành dùng chung, không tự định nghĩa lại', () => {
+  const source = readFileSync(new URL('../src/theme.ts', import.meta.url), 'utf8');
+  expect(source).toContain("createTheme('ops')");
+  expect(source).not.toContain('backgroundColor');
 });

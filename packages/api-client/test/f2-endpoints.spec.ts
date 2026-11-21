@@ -92,6 +92,25 @@ const ROUTES: Record<string, (request: Recorded) => Outcome> = {
   }),
   'PUT /api/v1/system-settings/rate.floorPct': () => ({ status: 204 }),
   'POST /api/v1/system/backups': () => ({ status: 202, body: OPERATION }),
+  'GET /api/v1/system/backups': () => ({
+    status: 200,
+    body: {
+      catalogRefreshedAt: '2026-11-16T13:26:57.000Z',
+      backups: [
+        {
+          backupId: '20261116-132653F',
+          type: 'FULL',
+          startedAt: '2026-11-16T13:26:53.000Z',
+          finishedAt: '2026-11-16T13:26:57.000Z',
+          databaseSizeBytes: 31_561_728,
+          repositorySizeBytes: 3_880_960,
+        },
+      ],
+      archive: { archivedCount: 7, failedCount: 0, lastArchivedAt: null, lastFailedAt: null },
+      secondsSinceLastArchive: null,
+      operations: [],
+    },
+  }),
   'GET /api/v1/operations/op1': () => ({
     status: 200,
     body: { operationId: 'op1', status: 'RUNNING' },
@@ -312,6 +331,9 @@ describe('hợp đồng F2 qua HTTP thật', () => {
     expect(backup.data.statusUrl).toBe('/api/v1/operations/op1');
     const operation = await system.operation('op1');
     expect(operation.data.status).toBe('RUNNING');
+    // HB-246: trạng thái cho SCR-18.
+    const status = await system.backupStatus();
+    expect(status.data.backups[0]?.backupId).toBe('20261116-132653F');
   });
 });
 

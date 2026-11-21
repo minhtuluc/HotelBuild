@@ -14,7 +14,14 @@ function BlacklistFlag({ flagged }: { flagged: boolean }): ReactElement | null {
   );
 }
 
-export function BookingCard({ booking }: { booking: BookingView }): ReactElement {
+export function BookingCard({
+  booking,
+  onNoShow,
+}: {
+  booking: BookingView;
+  /** Có thì hiện nút "Ghi no-show" (HB-269); điều kiện hiện do màn tra cứu quyết. */
+  onNoShow?: () => void;
+}): ReactElement {
   return (
     <View
       testID={'lookup-booking-' + booking.id}
@@ -44,6 +51,17 @@ export function BookingCard({ booking }: { booking: BookingView }): ReactElement
       {booking.blacklisted === null ? (
         <Text style={theme.muted}>{text('blacklistUnknown')}</Text>
       ) : null}
+      {onNoShow === undefined ? null : (
+        <Pressable
+          testID={'lookup-no-show-' + booking.id}
+          accessibilityRole="button"
+          accessibilityLabel={text('noShow')}
+          onPress={onNoShow}
+          style={theme.buttonPlain}
+        >
+          <Text style={theme.buttonPlainText}>{text('noShow')}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }

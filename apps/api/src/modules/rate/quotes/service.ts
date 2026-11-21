@@ -27,6 +27,8 @@ import { principalKey } from './principal.js';
 import { QUOTE_TTL_SECONDS, RateQuoteStore } from './store.js';
 import type { StoredQuote } from './store.js';
 import { consumedInput, quoteInput } from './validation.js';
+import { loadPolicySnapshot } from '../../book/bookings/policy.js';
+import { deadlinesFor, OTA_CHANNEL_CODES } from '../../book/bookings/refund-deadlines.js';
 import type { QuoteInput } from './validation.js';
 
 /** Engine từ chối cấu hình/kỳ/khuyến mãi ⇒ 422 theo catalogue (cùng ánh xạ với HB-056). */
@@ -155,6 +157,7 @@ export class RateQuoteService {
       engineVersion,
       quotedAt: quotedAt.toISOString(),
       expiresAt: expiresAt.toISOString(),
+      refundDeadlines: await this.refundDeadlines(tx, input),
     });
     await this.store.save(quoteId, {
       quote,
@@ -168,6 +171,35 @@ export class RateQuoteService {
       },
     });
     return quote;
+  }
+
+  /**
+   * HB-245: mốc huỷ theo chính sách **hiện hành** của gói giá và giờ nhận phòng của cơ sở — cùng hai
+   * nguồn mà `POST /bookings` chụp vào snapshot. Kênh OTA hoàn theo hợp đồng kênh ⇒ không trả mốc.
+   */
+  private async refundDeadlines(tx: Prisma.TransactionClient, input: QuoteInput) {
+    if (OTA_CHANNEL_CODES.includes(input.channelCode)) return undefined;
+    const plan = await tx.rate_plans.findUnique({
+      where: { code: input.ratePlanCode },
+      select: { cancellation_policy_id: true },
+    });
+    if (plan === null) return undefined;
+    const rows = await tx.$queryRaw<{ timezone: string; check_in_time: string }[]>`
+      SELECT timezone, to_char(check_in_time, 'HH24:MI') AS check_in_time
+        FROM properties WHERE id=${input.propertyId}::uuid`;
+    const stay = rows[0];
+    if (stay === undefined) return undefined;
+    try {
+      const policy = await loadPolicySnapshot(tx, plan.cancellation_policy_id);
+      return deadlinesFor(policy.tiers, input.checkIn, {
+        checkInTime: stay.check_in_time,
+        timezone: stay.timezone,
+      });
+    } catch {
+      // Chính sách không chốt được (không bậc, thiếu bậc bắt tất…) là lỗi cấu hình mà `POST /bookings`
+      // hoặc lệnh huỷ sẽ báo; báo giá chỉ vắng mốc chứ không hỏng.
+      return undefined;
+    }
   }
 
   /**

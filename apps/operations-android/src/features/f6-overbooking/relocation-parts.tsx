@@ -7,6 +7,14 @@ import { ActionButton } from '../../arrivals/controls';
 import { theme } from '../../theme';
 import { f6Text as text } from './messages';
 import { androidStep } from './model';
+import {
+  actionText,
+  moveStatusText,
+  moveTypeText,
+  roomText,
+  targetText,
+  type PlaceNames,
+} from './labels';
 import type { MoveState } from './reader';
 
 const card = theme.card;
@@ -20,7 +28,7 @@ export function Ladder({ steps }: { steps: OverbookingCaseDetail['ladderPreview'
       </Text>
       {steps.map((step) => (
         <Text key={step.step} testID={`ladder-step-${step.step}`} style={{ color: color.text }}>
-          {`${text('ladderStep', { step: step.step, type: step.moveType })} — ${
+          {`${text('ladderStep', { step: step.step, type: moveTypeText(step.moveType) })} — ${
             step.feasible
               ? text('stepFeasible', { count: step.candidateCount })
               : text('stepUnavailable', { note: step.note ?? '' })
@@ -89,6 +97,7 @@ function OptionCard(props: {
   picked: boolean;
   canPick: boolean;
   onPick: (index: number) => void;
+  names: PlaceNames;
 }): ReactElement {
   const { option } = props;
   const selectable = option.feasible && androidStep(option.moveType);
@@ -96,8 +105,8 @@ function OptionCard(props: {
     <View testID={`option-${props.index}`} accessible style={card}>
       <Text style={{ fontWeight: '600', color: color.text }}>
         {text('optionLine', {
-          type: option.moveType,
-          target: option.targetRoomId ?? option.targetPropertyId ?? '—',
+          type: moveTypeText(option.moveType),
+          target: targetText(option, props.names),
         })}
       </Text>
       <Text style={[theme.body, theme.tabular]}>
@@ -123,6 +132,7 @@ export function Options(props: {
   picked: number | null;
   canPick: boolean;
   onPick: (index: number) => void;
+  names: PlaceNames;
 }): ReactElement {
   return (
     <View testID="options" style={{ gap: space.s2 }}>
@@ -138,6 +148,7 @@ export function Options(props: {
           picked={props.picked === index}
           canPick={props.canPick}
           onPick={props.onPick}
+          names={props.names}
         />
       ))}
     </View>
@@ -145,27 +156,38 @@ export function Options(props: {
 }
 
 /** Điều chuyển do máy chủ trả; chỉ `EXECUTED` mới là hoàn tất. */
-export function MoveSummary({ move }: { move: MoveState; role: UserMe['role'] }): ReactElement {
+export function MoveSummary({
+  move,
+  names,
+}: {
+  move: MoveState;
+  role: UserMe['role'];
+  names: PlaceNames;
+}): ReactElement {
   const { view } = move;
   return (
     <View testID="move" style={card}>
       <Text accessibilityRole="header" style={{ fontWeight: '700', color: color.text }}>
-        {text('moveCreated', { id: view.id, status: view.status })}
+        {text('moveCreated', {
+          type: moveTypeText(view.moveType),
+          status: moveStatusText(view.status),
+        })}
       </Text>
-      <Text>{text('moveRooms', { from: view.fromRoomId ?? '—', to: view.toRoomId ?? '—' })}</Text>
+      <Text>
+        {text('moveRooms', {
+          from: roomText(view.fromRoomId, names),
+          to: roomText(view.toRoomId, names),
+        })}
+      </Text>
       <Text style={[theme.body, theme.tabular]}>
         {text('optionMoney', { comp: view.compensationAmount, transport: view.transportCost })}
       </Text>
       <Text>{text('optionLocked')}</Text>
-      <Text>
-        {view.approvedBy === null
-          ? text('moveNotApproved')
-          : text('moveApprovedBy', { by: view.approvedBy })}
-      </Text>
+      <Text>{view.approvedBy === null ? text('moveNotApproved') : text('moveApproved')}</Text>
       <Text testID="move-final">
         {view.status === 'EXECUTED' ? text('moveExecuted') : text('moveNotExecuted')}
       </Text>
-      <Text>{text('actions', { list: view.allowedActions.join(', ') || text('noActions') })}</Text>
+      <Text>{text('actions', { list: actionText(view.allowedActions) })}</Text>
     </View>
   );
 }

@@ -26,6 +26,7 @@ export const catalog = {
   blacklist: 'Danh sách đen',
   blacklistUnknown: 'Chưa xác định cờ danh sách đen',
   call: 'Gọi khách',
+  noShow: 'Ghi no-show',
   phone: 'SĐT: {phone}',
   email: 'Email: {email}',
   tier: 'Hạng: {tier}',

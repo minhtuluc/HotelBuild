@@ -52,6 +52,22 @@ docker compose --env-file .env exec -T postgres psql -U "$POSTGRES_USER" -d "$PO
 
 Lúc stack khởi động **lần đầu**, `pg_stat_archiver.failed_count` có thể có vài lỗi. Nguyên nhân: PostgreSQL đẩy WAL trước khi sidecar kịp tạo stanza (lỗi `archive.info` missing). Các đoạn này được thử lại và đẩy thành công sau đó. Chỉ đáng lo khi `last_failed_time` **mới hơn** `last_archived_time`.
 
+### Qua API (SCR-18, HB-246)
+
+SYSADMIN làm được ba việc mà không cần vào máy chủ:
+
+| Việc | Lệnh | Ghi chú |
+|---|---|---|
+| Xem trạng thái | `GET /api/v1/system/backups` | Danh sách bản sao lưu trong kho (ảnh chụp `pgbackrest info`, làm mới mỗi 5 phút và sau mỗi lần sao lưu), số liệu `pg_stat_archiver`, số giây từ WAL cuối, 20 thao tác gần nhất |
+| Sao lưu ngay | `POST /api/v1/system/backups` `{ "mode": "FULL" \| "PITR" }` | `PITR` = gia tăng trên bản full gần nhất. Trả 202 + `Location: /api/v1/operations/{id}` |
+| Diễn tập | `POST /api/v1/system/backups/{backupId}/restore` `{ targetTimestamp, reason }` | Phục hồi vào volume tạm `drilldata` trong sidecar (socket `/tmp/pinehill-drill-sock`, không nghe TCP), đo RTO, đếm dòng rồi **xoá**. CSDL đang chạy không bị đụng |
+
+- Mỗi lúc chỉ một thao tác sao lưu **hoặc** diễn tập (409 `E_SYS_REQUEST_IN_PROGRESS`).
+- Sidecar giành việc mỗi 30 giây. Kết quả nằm ở `result` của thao tác: nhãn bản sao lưu mới, hoặc biên bản diễn tập `{ rtoSeconds, rows: { bookings, payments, roomAssignments, auditLogs }, lastAuditAt }`.
+- Lỗi: `E_SYS_BACKUP_FAILED`, `E_SYS_RESTORE_DRILL_FAILED` (kèm 2 dòng lỗi cuối của pgBackRest/PostgreSQL), `E_SYS_BACKUP_INTERRUPTED` (sidecar khởi động lại giữa chừng; yêu cầu lại).
+- **Đĩa:** diễn tập cần chỗ trống cỡ bằng CSDL trong lúc chạy. Volume được xoá ngay sau khi đo.
+- Diễn tập qua API không thay biên bản có người ký của TC-SYS-07: nó đo RTO và kiểm phục hồi được, còn đối soát số liệu với nguồn vẫn theo §4.
+
 ## 4. Diễn tập phục hồi (TC-SYS-07): ít nhất mỗi quý và sau mỗi lần đổi hạ tầng
 
 Chạy trên staging. Trên production cũng chạy được: `restore-drill` chỉ đọc kho và ghi vào volume tạm.
@@ -106,5 +122,5 @@ Chạy trên staging. Trên production cũng chạy được: `restore-drill` ch
 ## 6. Giới hạn hiện tại
 
 - **Chưa có cảnh báo tự động.** Trạng thái `backup` unhealthy và `pg_stat_archiver.failed_count` cần được nối vào cảnh báo (HB-182). Trước khi việc đó xong, kiểm thủ công theo §3.
-- **Chưa có `POST /system/backups`** (yêu cầu sao lưu hoặc diễn tập qua API, api.md §2.13). Phần này tách thành việc riêng; hiện thao tác bằng compose như trên.
+- **API sao lưu/diễn tập đã có (HB-246, §3 "Qua API").** Diễn tập API dùng chung sidecar `backup`, nên trong lúc diễn tập, sao lưu lịch 19:00 UTC sẽ chờ tới khi diễn tập xong.
 - **Chưa diễn tập trên staging thật**, vì chưa chốt VPS và kho S3 (QĐ-08). Biên bản hiện có là diễn tập trên máy dev, dùng SeaweedFS làm kho (`backup/s3.local.yml`).
