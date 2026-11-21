@@ -26,6 +26,7 @@ import { createCheckOutWriter, createCollectWriter } from '../src/stay/writer-fa
 import { t } from '../src/strings';
 import { CashScreen } from '../src/reconciliation/screen';
 import { createCloseWriter } from '../src/reconciliation/writer-factory.native';
+import { publicPropertyList } from '../src/property-names';
 import { backStep, stageTitle, type Stage } from '../src/stages';
 
 export default function RootScreen(): ReactElement {
@@ -39,6 +40,11 @@ export default function RootScreen(): ReactElement {
   const makeCheckOutWriter = useCallback(() => createCheckOutWriter(session), [session]);
   const makeCollectWriter = useCallback(() => createCollectWriter(session), [session]);
   const makeCloseWriter = useCallback(() => createCloseWriter(session), [session]);
+  // `resourceClient()` ghim token lúc tạo: tạo ở từng lần gọi để dùng token sau khi đăng nhập (HB-264).
+  const listProperties = useCallback(
+    () => publicPropertyList(session.resourceClient())(),
+    [session],
+  );
   const [collecting, setCollecting] = useState<BookingSummary | null>(null);
   const [walkInFromArrivals, setWalkInFromArrivals] = useState(false);
   const [stage, setStage] = useState<Stage>('boot');
@@ -219,6 +225,7 @@ export default function RootScreen(): ReactElement {
       return (
         <SelectPropertyScreen
           properties={profile?.propertyScope ?? []}
+          listProperties={listProperties}
           onSelect={(propertyId) => {
             session.selectProperty(propertyId);
             setStage('home');
