@@ -1,7 +1,9 @@
 /** Màn chính sau khi đăng nhập: điều hướng tác vụ vận hành và đăng xuất (SCR-56, §8.1/§8.3). */
-import { useState, type ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { color, radius, space, touchTargetDp, waitMessage } from '@pinehill/ui-native';
+import type { UserMe } from '@pinehill/contracts';
+import { Board, BoardRow, color, waitMessage } from '@pinehill/ui-native';
+import { contextRows } from '../src/context-bar';
 import { isApiError } from '@pinehill/api-client';
 import { isDemoEnabled } from '../src/config/index';
 import { Session, PIN_LOCK_SECONDS } from '../src/session';
@@ -21,17 +23,31 @@ export interface HomeScreenProps {
   /** HB-263: SCR-68 đối soát tiền mặt theo ngày VN. */
   onCash?: () => void;
   demoMode?: boolean;
+  /** HB-278: hồ sơ phiên cho thanh ngữ cảnh (vai trò). */
+  profile?: UserMe | null;
+  /** HB-278: tên cơ sở đang làm việc; không có thì thanh ngữ cảnh ghi "Pine Hill", không in id. */
+  loadPropertyName?: () => Promise<string | null>;
 }
 
-const navCardStyle = {
-  minHeight: touchTargetDp,
-  justifyContent: 'center' as const,
-  paddingHorizontal: space.s3,
-  backgroundColor: color.surface,
-  borderWidth: 1,
-  borderColor: color.border,
-  borderRadius: radius.md,
-};
+/** Tên cơ sở đang làm việc (tải một lần) và giờ VN cập nhật mỗi phút. */
+function useContext(loadPropertyName: (() => Promise<string | null>) | undefined) {
+  const [propertyName, setPropertyName] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(Date.now());
+  useEffect(() => {
+    let live = true;
+    void loadPropertyName?.()
+      .then((name) => {
+        if (live) setPropertyName(name);
+      })
+      .catch(() => undefined);
+    const timer = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => {
+      live = false;
+      clearInterval(timer);
+    };
+  }, [loadPropertyName]);
+  return { propertyName, nowMs };
+}
 
 function PinDemoSection({ session }: { session: Session }): ReactElement {
   const [pinResult, setPinResult] = useState<string | null>(null);
@@ -93,7 +109,11 @@ export default function HomeScreen({
   onAlerts,
   onCash,
   demoMode = isDemoEnabled(),
+  profile = null,
+  loadPropertyName,
 }: HomeScreenProps): ReactElement {
+  const { propertyName, nowMs } = useContext(loadPropertyName);
+  const context = contextRows({ nowMs, role: profile?.role ?? 'FRONT_DESK', propertyName });
   const navItems: ReadonlyArray<{
     testID: string;
     label: string;
@@ -110,21 +130,27 @@ export default function HomeScreen({
 
   return (
     <View style={theme.screen}>
-      <Text style={theme.title}>{t('home.title')}</Text>
-      {navItems.map((item) =>
-        item.onPress ? (
-          <Pressable
-            key={item.testID}
-            testID={item.testID}
-            accessibilityRole="button"
-            accessibilityLabel={item.label}
-            onPress={item.onPress}
-            style={navCardStyle}
-          >
-            <Text style={{ color: color.primary, fontWeight: '500' }}>{item.label}</Text>
-          </Pressable>
-        ) : null,
-      )}
+      <Text accessibilityRole="header" style={theme.title}>
+        {t('home.title')}
+      </Text>
+      {/* HB-278: thanh ngữ cảnh và thanh công việc dạng bảng ga, như operations web. */}
+      <Board title={context.title}>
+        {context.rows.map((row) => (
+          <BoardRow key={row} label={row} />
+        ))}
+      </Board>
+      <Board title={t('home.tasksGroup')}>
+        {navItems.map((item) =>
+          item.onPress ? (
+            <BoardRow
+              key={item.testID}
+              testID={item.testID}
+              label={item.label}
+              onPress={item.onPress}
+            />
+          ) : null,
+        )}
+      </Board>
       {demoMode ? <PinDemoSection session={session} /> : null}
       <Pressable
         testID="logout"
@@ -133,7 +159,7 @@ export default function HomeScreen({
         onPress={() => void session.logout().then(onLogout)}
         style={theme.buttonSecondary}
       >
-        <Text style={{ color: color.danger, fontWeight: '500' }}>{t('home.logout')}</Text>
+        <Text style={[theme.buttonPlainText, { color: color.danger }]}>{t('home.logout')}</Text>
       </Pressable>
     </View>
   );

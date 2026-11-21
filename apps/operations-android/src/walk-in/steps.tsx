@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { Text, View } from 'react-native';
 import type { RoomTypeSummary } from '@pinehill/contracts';
-import { color, space } from '@pinehill/ui-native';
+import { space, fontFamily } from '@pinehill/ui-native';
 import { theme } from '../theme';
 import { ActionButton, Choice, Field } from './controls';
 import { walkInText as text } from './messages';
@@ -51,7 +51,7 @@ export function StepHeader({ step }: { step: WalkInStep }): ReactElement {
     <Text
       testID="walk-in-step"
       accessibilityLiveRegion="polite"
-      style={{ color: color.textMuted, fontWeight: '700' }}
+      style={[theme.muted, { fontFamily: fontFamily.sansBold }]}
     >
       {text('step', {
         current: stepNumber(step),
@@ -71,7 +71,7 @@ export function Problem({
 }): ReactElement | null {
   if (message === null) return null;
   return (
-    <Text testID={id} accessibilityRole="alert" style={{ color: color.danger }}>
+    <Text testID={id} accessibilityRole="alert" style={theme.alertDanger}>
       {message}
     </Text>
   );
@@ -319,7 +319,9 @@ export function FailureNotice({ failure }: { failure: FlowFailure }): ReactEleme
     case 'rejected':
       return (
         <View testID="walk-in-failure" accessibilityRole="alert" style={{ gap: space.s1 }}>
-          <Text style={{ color: color.danger, fontWeight: '700' }}>{text('rejected')}</Text>
+          <Text style={[theme.alertDanger, { fontFamily: fontFamily.sansBold }]}>
+            {text('rejected')}
+          </Text>
           <Text>{text('rejectedCode', { code: failure.code })}</Text>
           <Text>{text('rejectedReason', { reason: failure.reason })}</Text>
         </View>

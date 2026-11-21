@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
-import { color, space, touchTargetDp } from '@pinehill/ui-native';
+import { space, touchTargetDp } from '@pinehill/ui-native';
 import type { HousekeepingTask } from '@pinehill/contracts';
 import type { Session } from '../session';
 import type { TaskReader } from './reader';
@@ -9,6 +9,7 @@ import { TaskWriter, type TaskWritePhase } from './writer';
 import { TaskCard } from './task-card';
 import { taskText } from './messages';
 import { phaseText, writeText } from './write-messages';
+import { theme } from '../theme';
 interface Props {
   session: Session;
   reader: TaskReader | null;
@@ -52,11 +53,7 @@ export function TaskWorkspace({ session, reader, tasks, createWriter }: Props): 
   }
   return (
     <View style={{ flex: 1, gap: space.s2 }}>
-      <Text
-        testID="task-write-state"
-        accessibilityLiveRegion="polite"
-        style={{ color: color.textMuted }}
-      >
+      <Text testID="task-write-state" accessibilityLiveRegion="polite" style={theme.muted}>
         {phaseText(phase)}
       </Text>
       <Pressable
@@ -70,7 +67,7 @@ export function TaskWorkspace({ session, reader, tasks, createWriter }: Props): 
         }}
         style={{ minHeight: touchTargetDp, justifyContent: 'center', padding: space.s2 }}
       >
-        <Text style={{ color: color.primary }}>{writeText('inspect')}</Text>
+        <Text style={theme.buttonPlainText}>{writeText('inspect')}</Text>
       </Pressable>
       {writer?.canRetry ? (
         <Pressable
@@ -84,7 +81,7 @@ export function TaskWorkspace({ session, reader, tasks, createWriter }: Props): 
           }}
           style={{ minHeight: touchTargetDp, justifyContent: 'center', padding: space.s2 }}
         >
-          <Text style={{ color: color.primary }}>{writeText('retry')}</Text>
+          <Text style={theme.buttonPlainText}>{writeText('retry')}</Text>
         </Pressable>
       ) : null}
       <FlatList

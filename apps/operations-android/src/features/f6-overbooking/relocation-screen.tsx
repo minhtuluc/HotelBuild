@@ -306,11 +306,7 @@ function Body(props: {
 function ReadNote({ read }: { read: RelocationState }): ReactElement | null {
   if (read.phase === 'idle' || read.phase === 'ready') return null;
   return (
-    <Text
-      testID="relocation-state"
-      accessibilityLiveRegion="polite"
-      style={{ color: color.textMuted }}
-    >
+    <Text testID="relocation-state" accessibilityLiveRegion="polite" style={theme.muted}>
       {text(read.phase === 'empty' ? 'ready' : read.phase)}
     </Text>
   );
