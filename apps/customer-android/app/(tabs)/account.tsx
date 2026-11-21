@@ -1,10 +1,9 @@
 /**
- * SCR-83 (HB-115) — hồ sơ khách trên Android, **phần chỉ-đọc**.
+ * SCR-83 (HB-115, HB-260) — hồ sơ khách trên Android.
  *
- * Đọc `GET /guests/me` + `GET /guests/me/loyalty` bằng client đã có access token của phiên (không gửi
- * `guestId` nào); phần cập nhật hồ sơ bị **cắt** theo quyết định của chủ dự án ở HB-105 cho tới khi có
- * tuyến ghi — màn hình ghi rõ phần chờ, không dựng nút giả. Mọi nhãn ở `src/strings.ts`, phần tử tương tác
- * đều có nhãn trợ năng.
+ * Đọc `GET /guests/me` + `GET /guests/me/loyalty` và sửa bằng `PATCH /guests/me` qua client đã có access
+ * token của phiên (không gửi `guestId` nào). Mọi nhãn ở `src/strings.ts`, phần tử tương tác đều có nhãn
+ * trợ năng.
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
@@ -14,6 +13,8 @@ import { useFocusEffect } from 'expo-router';
 import { LoginPrompt } from '../../src/login-prompt';
 import { createSession } from '../../src/session-factory';
 import { netInfoSource } from '../../src/netinfo-device.native';
+import type { NetInfoSource } from '../../src/netinfo';
+import { ProfileEditor } from '../../src/profile-editor';
 import { t, type MessageKey } from '../../src/strings';
 import { theme } from '../../src/theme';
 import {
@@ -23,6 +24,7 @@ import {
   profileApiFrom,
   profileRows,
   tierMismatch,
+  type ProfileApi,
   type ProfileOutcome,
   type ProfileRow,
 } from '../../src/profile';
@@ -170,11 +172,17 @@ function ProfileBody({
   alert,
   busy,
   onReload,
+  api,
+  net,
+  onSaved,
 }: {
   outcome: ProfileOutcome | null;
   alert: string | null;
   busy: boolean;
   onReload: () => void;
+  api: ProfileApi;
+  net: NetInfoSource;
+  onSaved: (next: ProfileOutcome) => void;
 }): ReactElement {
   const offline = outcome !== null && outcome.kind === 'offline';
   const failedCode =
@@ -188,6 +196,12 @@ function ProfileBody({
       {outcome === null || outcome.kind !== 'ready' ? null : (
         <>
           <ProfileCard guest={outcome.profile} />
+          <ProfileEditor
+            guest={outcome.profile}
+            api={api}
+            net={net}
+            onSaved={(profile) => onSaved({ ...outcome, profile })}
+          />
           <LoyaltyPanel guest={outcome.profile} loyalty={outcome.loyalty} />
         </>
       )}
@@ -220,12 +234,13 @@ export default function AccountScreen(): ReactElement {
     }, [session]),
   );
 
+  const api = useMemo(() => profileApiFrom(session.apiClient()), [session]);
   const load = useCallback(async (): Promise<void> => {
     setBusy(true);
     setAlert(null);
-    setOutcome(await loadProfile({ api: profileApiFrom(session.apiClient()), net }));
+    setOutcome(await loadProfile({ api, net }));
     setBusy(false);
-  }, [net, session]);
+  }, [api, net]);
 
   useEffect(() => {
     if (!ready || !signedIn) return;
@@ -257,6 +272,9 @@ export default function AccountScreen(): ReactElement {
             outcome={outcome}
             alert={alert}
             busy={busy}
+            api={api}
+            net={net}
+            onSaved={setOutcome}
             onReload={() => {
               void load();
             }}
@@ -274,9 +292,6 @@ export default function AccountScreen(): ReactElement {
       ) : (
         <LoginPrompt hint="account.loginHint" />
       )}
-      <Text style={{ color: color.textMuted }} data-testid="profile-cut">
-        {t('profile.cut')}
-      </Text>
     </ScrollView>
   );
 }
