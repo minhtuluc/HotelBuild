@@ -1,7 +1,7 @@
 /** Điều khiển dùng chung của SCR-65: vùng chạm ≥ 48 dp, nhãn trợ năng và trạng thái đầy đủ. */
 import type { ReactElement } from 'react';
 import { Pressable, Text, TextInput } from 'react-native';
-import { color, radius, space, touchTargetDp } from '@pinehill/ui-native';
+import { color, radius, space, touchTargetDp, fontFamily } from '@pinehill/ui-native';
 import { theme } from '../theme';
 
 export function ActionButton({
@@ -81,7 +81,7 @@ export function Choice({
         borderColor: selected ? color.primary : color.border,
       }}
     >
-      <Text style={{ color: color.text, fontWeight: selected ? '700' : '400' }}>
+      <Text style={[theme.body, selected ? { fontFamily: fontFamily.sansBold } : null]}>
         {selected ? '◉ ' : '○ '}
         {label}
       </Text>
@@ -110,7 +110,7 @@ export function Field({
 }): ReactElement {
   return (
     <>
-      <Text style={{ color: color.text }}>{label}</Text>
+      <Text style={theme.body}>{label}</Text>
       <TextInput
         testID={testID}
         accessibilityLabel={label}

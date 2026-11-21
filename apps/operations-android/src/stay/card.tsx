@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { Pressable, Text } from 'react-native';
 import type { BookingSummary } from '@pinehill/contracts';
-import { color } from '@pinehill/ui-native';
+import { color, fontFamily } from '@pinehill/ui-native';
 import { formatBusinessDate } from '../housekeeping/date';
 import { formatVnd } from '../lookup/view';
 import { stayPeriodText } from '../lookup/messages';
@@ -30,7 +30,7 @@ export function DepartureCard({
       }}
       style={[theme.card, overdue ? { borderColor: color.warning } : null]}
     >
-      <Text style={{ color: color.text, fontWeight: '600' }}>{booking.code}</Text>
+      <Text style={[theme.body, { fontFamily: fontFamily.sansSemiBold }]}>{booking.code}</Text>
       <Text style={theme.body}>
         {stayPeriodText(booking.checkIn, booking.checkOut, booking.nights)}
       </Text>

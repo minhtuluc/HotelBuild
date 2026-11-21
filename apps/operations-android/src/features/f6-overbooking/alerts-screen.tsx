@@ -78,16 +78,12 @@ function Freshness({ state }: { state: AlertsState }): ReactElement {
         </Text>
       )}
       {state.overdueCount === null ? null : (
-        <Text testID="alerts-overdue-count" style={{ color: color.textMuted }}>
+        <Text testID="alerts-overdue-count" style={theme.muted}>
           {text('overdueCount', { count: state.overdueCount })}
         </Text>
       )}
       {state.stale && stamp !== null ? (
-        <Text
-          testID="alerts-stale"
-          accessibilityLiveRegion="polite"
-          style={{ color: color.warning }}
-        >
+        <Text testID="alerts-stale" accessibilityLiveRegion="polite" style={theme.alertWarning}>
           {text(state.notice === 'offline' ? 'staleOffline' : 'staleError', { time: stamp })}
         </Text>
       ) : null}
@@ -165,11 +161,7 @@ function Message({ state }: { state: AlertsState }): ReactElement | null {
       ? emptyMessage(state)
       : text(state.phase === 'ready' ? 'ready' : state.phase);
   return (
-    <Text
-      testID="alerts-message"
-      accessibilityLiveRegion="polite"
-      style={{ color: color.textMuted }}
-    >
+    <Text testID="alerts-message" accessibilityLiveRegion="polite" style={theme.muted}>
       {message}
     </Text>
   );

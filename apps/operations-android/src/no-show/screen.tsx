@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import type { BookingSummary, NoShowPreview, NoShowResponse } from '@pinehill/contracts';
-import { color, space } from '@pinehill/ui-native';
+import { color, space, fontFamily } from '@pinehill/ui-native';
 import { ActionButton } from '../arrivals/controls';
 import { formatVnDateTime } from '../arrivals/format';
 import type { ActionFailure } from '../arrivals/model';
@@ -51,26 +51,28 @@ function FailureNotice({ failure }: { failure: ActionFailure }): ReactElement {
     case 'rejected':
       return (
         <View accessibilityRole="alert" accessibilityLiveRegion="polite" style={{ gap: space.s1 }}>
-          <Text style={{ color: color.danger, fontWeight: '700' }}>{text('rejected')}</Text>
+          <Text style={[theme.alertDanger, { fontFamily: fontFamily.sansBold }]}>
+            {text('rejected')}
+          </Text>
           <Text>{text('rejectedCode', { code: failure.code })}</Text>
           <Text>{text('rejectedReason', { reason: failure.reason })}</Text>
         </View>
       );
     case 'conflict':
       return (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {text('conflict')}
         </Text>
       );
     case 'forbidden':
       return (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {text('failForbidden')}
         </Text>
       );
     case 'unknownOutcome':
       return (
-        <Text accessibilityRole="alert" style={{ color: color.warning }}>
+        <Text accessibilityRole="alert" style={theme.alertWarning}>
           {text('unknownOutcome', { reference: failure.reference })}
         </Text>
       );
@@ -80,11 +82,7 @@ function FailureNotice({ failure }: { failure: ActionFailure }): ReactElement {
 function ResultNotice({ result }: { result: Result | null }): ReactElement | null {
   if (result?.kind === 'offline')
     return (
-      <Text
-        accessibilityRole="alert"
-        accessibilityLiveRegion="polite"
-        style={{ color: color.danger }}
-      >
+      <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={theme.alertDanger}>
         {text('offlineBlock')}
       </Text>
     );
@@ -251,11 +249,7 @@ function ReasonField({
         style={theme.field}
       />
       {issue === null ? null : (
-        <Text
-          accessibilityRole="alert"
-          testID="no-show-reason-issue"
-          style={{ color: color.danger }}
-        >
+        <Text accessibilityRole="alert" testID="no-show-reason-issue" style={theme.alertDanger}>
           {text(issue === 'EMPTY' ? 'reasonEmpty' : 'reasonTooLong')}
         </Text>
       )}
@@ -326,7 +320,7 @@ export function NoShowScreen(props: NoShowScreenProps): ReactElement {
           }}
         />
         <Countdown markableFrom={preview.state.value?.markableFrom ?? null} nowMs={nowMs} />
-        <Text testID="no-show-policy" style={{ color: color.textMuted }}>
+        <Text testID="no-show-policy" style={theme.muted}>
           {text('policy')}
         </Text>
         <ReasonField reason={form.reason} issue={form.issue} busy={busy} onChange={form.edit} />

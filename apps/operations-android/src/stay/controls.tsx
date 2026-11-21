@@ -1,7 +1,7 @@
 /** Điều khiển riêng của SCR-59/61 (nhóm chọn một, ô PIN); nút và ô chọn dùng lại từ `arrivals/controls`. */
 import { useState, type ReactElement } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import { color, radius, space, touchTargetDp } from '@pinehill/ui-native';
+import { color, radius, space, touchTargetDp, fontFamily } from '@pinehill/ui-native';
 import { ActionButton } from '../arrivals/controls';
 import type { ActionFailure } from '../arrivals/model';
 import { pinIssue } from './model';
@@ -40,7 +40,7 @@ export function ChoiceRow({
         borderColor: selected ? color.primary : color.border,
       }}
     >
-      <Text style={{ color: color.text, fontWeight: selected ? '700' : '400' }}>
+      <Text style={[theme.body, selected ? { fontFamily: fontFamily.sansBold } : null]}>
         {selected ? '◉ ' : '○ '}
         {label}
       </Text>
@@ -53,26 +53,28 @@ export function FailureNotice({ failure }: { failure: ActionFailure }): ReactEle
     case 'rejected':
       return (
         <View accessibilityRole="alert" accessibilityLiveRegion="polite" style={{ gap: space.s1 }}>
-          <Text style={{ color: color.danger, fontWeight: '700' }}>{text('rejected')}</Text>
+          <Text style={[theme.alertDanger, { fontFamily: fontFamily.sansBold }]}>
+            {text('rejected')}
+          </Text>
           <Text>{text('rejectedCode', { code: failure.code })}</Text>
           <Text>{text('rejectedReason', { reason: failure.reason })}</Text>
         </View>
       );
     case 'conflict':
       return (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {text('conflict')}
         </Text>
       );
     case 'forbidden':
       return (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {text('failForbidden')}
         </Text>
       );
     case 'unknownOutcome':
       return (
-        <Text accessibilityRole="alert" style={{ color: color.warning }}>
+        <Text accessibilityRole="alert" style={theme.alertWarning}>
           {text('unknownOutcome', { reference: failure.reference })}
         </Text>
       );
@@ -121,7 +123,7 @@ export function PinPanel({
   const [message, setMessage] = useState<string | null>(null);
   if (unlocked)
     return (
-      <Text testID="pin-unlocked" accessibilityLiveRegion="polite" style={{ color: color.success }}>
+      <Text testID="pin-unlocked" accessibilityLiveRegion="polite" style={theme.alertSuccess}>
         {text('pinUnlocked')}
       </Text>
     );
@@ -141,7 +143,7 @@ export function PinPanel({
   return (
     <View style={{ gap: space.s2 }}>
       <Text style={{ fontWeight: '700' }}>{text('pinTitle')}</Text>
-      <Text style={{ color: color.textMuted }}>{text('pinHint')}</Text>
+      <Text style={theme.muted}>{text('pinHint')}</Text>
       <TextInput
         testID="pin-input"
         accessibilityLabel={text('pinLabel')}
@@ -155,7 +157,7 @@ export function PinPanel({
         style={theme.field}
       />
       {message === null ? null : (
-        <Text testID="pin-message" accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text testID="pin-message" accessibilityRole="alert" style={theme.alertDanger}>
           {message}
         </Text>
       )}
@@ -177,11 +179,7 @@ export function ResultNotice<R>({ result }: { result: Outcome<R> | null }): Reac
   if (result === null || result.kind === 'done') return null;
   if (result.kind === 'failed') return <FailureNotice failure={result.failure} />;
   return (
-    <Text
-      accessibilityRole="alert"
-      accessibilityLiveRegion="polite"
-      style={{ color: color.danger }}
-    >
+    <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={theme.alertDanger}>
       {result.kind === 'offline' ? text('offlineBlock') : text('pinRequired')}
     </Text>
   );

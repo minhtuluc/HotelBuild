@@ -35,6 +35,9 @@ export const catalog = {
   'home.pinDemo': 'Thử thao tác cần PIN',
   'home.pinDemo.ok': 'Đã mở khoá PIN: {purpose}',
   'home.logout': 'Đăng xuất',
+  // HB-278: thanh ngữ cảnh và bảng công việc của màn chính (như operations web).
+  'home.context.time': '{time} giờ VN',
+  'home.tasksGroup': 'Công việc hôm nay',
   'screen.home': 'Vận hành',
   'screen.login': 'Đăng nhập',
   'screen.property': 'Chọn cơ sở',

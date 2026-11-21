@@ -19,6 +19,7 @@ import { formatVnd } from '../lookup/view';
 import { PinPanel } from '../stay/controls';
 import type { PinnedWriter } from '../stay/writer';
 import { theme } from '../theme';
+import { formatBusinessDate } from '../housekeeping/date';
 import { cashText as text } from './messages';
 import {
   businessDateVn,
@@ -207,13 +208,13 @@ export function CashScreen(props: CashScreenProps): ReactElement {
       <Text accessibilityRole="header" style={theme.title}>
         {text('title')}
       </Text>
-      <Text style={theme.body}>{text('date', { date: businessDate })}</Text>
+      <Text style={theme.body}>{text('date', { date: formatBusinessDate(businessDate) })}</Text>
       <Text style={theme.muted}>{closable ? text('hintClose') : text('hintView')}</Text>
       {load.kind === 'loading' ? (
         <ActivityIndicator accessibilityLabel={text('loading')} color={color.primary} />
       ) : null}
       {load.kind === 'failed' ? (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {load.message}
         </Text>
       ) : null}
