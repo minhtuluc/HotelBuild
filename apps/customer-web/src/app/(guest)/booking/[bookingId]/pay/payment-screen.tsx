@@ -8,6 +8,7 @@ import { StateSurface } from '@pinehill/ui-web';
 import { paymentPorts } from './payment-api';
 import { PaymentFlow, type PaymentView } from './payment-flow';
 import { canPoll } from './payment-model';
+import { vnpayRelayPath } from './vnpay-return';
 import { usePaymentCatalog } from '../../../../../i18n/client';
 import {
   PaymentSummary,
@@ -103,6 +104,17 @@ export function PaymentScreen({ fixtureOrigin }: { fixtureOrigin?: string | unde
   const requestedId = useSearchParams().get('paymentId') ?? undefined;
   const flow = usePaymentFlow(bookingId, requestedId, fixtureOrigin);
   const { view } = flow;
+  const reload = useRef(flow.reload);
+  reload.current = flow.reload;
+  useEffect(() => {
+    const relay = vnpayRelayPath(window.location.search);
+    if (relay === null) return;
+    void fetch(relay, { cache: 'no-store' })
+      .catch(() => undefined)
+      .then(() => {
+        reload.current();
+      });
+  }, []);
   return (
     <section
       aria-labelledby="pay-title"
