@@ -8,6 +8,7 @@ import { runRegister } from './account-flows';
 import {
   normalizePhone,
   safeNext,
+  withNext,
   type AccountFailure,
   type Issues,
   type RegisterForm,
@@ -144,12 +145,12 @@ export function RegisterScreen({ contact }: { contact: string | null }): ReactEl
       )}
       {notSignedIn ? (
         <Notice tone="info" testId="register-created" lines={[text('registeredNotSignedIn')]}>
-          <a href={localPath('/account/login')}>{text('loginLink')}</a>
+          <a href={localPath(withNext('/account/login', next))}>{text('loginLink')}</a>
         </Notice>
       ) : null}
       <SubmitButton busy={busy} label={text('submitRegister')} testId="register-submit" />
       <a
-        href={localPath('/account/login')}
+        href={localPath(withNext('/account/login', next))}
         style={{
           display: 'inline-flex',
           alignItems: 'center',

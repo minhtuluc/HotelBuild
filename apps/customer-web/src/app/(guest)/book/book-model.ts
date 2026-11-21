@@ -3,6 +3,7 @@
  * của gói hiển thị **trước khi xác nhận** (depositPercent/freeCancelHours của tuyến công khai).
  * Không suy diễn điều khoản nào ngoài dữ liệu hợp đồng trả.
  */
+import { isApiError } from '@pinehill/api-client';
 import { guestContactSchema } from '@pinehill/contracts';
 import type { RatePlanPublic } from '@pinehill/contracts';
 
@@ -56,4 +57,13 @@ export function planTerms(plan: RatePlanPublic): PlanTerms {
 /** Câu hỏi khi máy chủ nghi trùng booking: khách chọn mở booking cũ hay quay lại chỉnh thông tin. */
 export function duplicateChoices(bookingId: string): { openHref: string; keepEditing: boolean } {
   return { openHref: `/booking/${encodeURIComponent(bookingId)}`, keepEditing: true };
+}
+
+/**
+ * Go-live: `POST /bookings` cần phiên khách. Khách chưa đăng nhập nhận 401 ⇒ đưa sang đăng nhập rồi quay lại
+ * đúng trang đặt (cùng tiêu chí), thay vì báo nhầm "không lấy được báo giá".
+ */
+export function loginRedirectFor(caught: unknown, query: string): string | null {
+  if (!isApiError(caught) || caught.status !== 401) return null;
+  return `/account/login?next=${encodeURIComponent(`/book?${query}`)}`;
 }

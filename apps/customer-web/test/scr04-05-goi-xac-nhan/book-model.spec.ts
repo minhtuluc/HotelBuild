@@ -62,3 +62,22 @@ describe('duplicateChoices (AC2)', () => {
     });
   });
 });
+
+describe('go-live: khách chưa đăng nhập bấm Xác nhận đặt phòng', () => {
+  it('401 ⇒ đường đăng nhập quay lại đúng trang đặt; lỗi khác ⇒ null', async () => {
+    const { ApiError } = await import('@pinehill/api-client');
+    const { loginRedirectFor } = await import('../../src/app/(guest)/book/book-model');
+    const unauth = new ApiError({
+      kind: 'http',
+      status: 401,
+      code: 'E_AUTH_INVALID_CREDENTIALS',
+      message: 'x',
+    });
+    expect(loginRedirectFor(unauth, 'propertyId=p&checkIn=2026-11-28')).toBe(
+      '/account/login?next=%2Fbook%3FpropertyId%3Dp%26checkIn%3D2026-11-28',
+    );
+    const other = new ApiError({ kind: 'http', status: 409, code: 'E_X', message: 'x' });
+    expect(loginRedirectFor(other, 'a=1')).toBeNull();
+    expect(loginRedirectFor(new Error('net'), 'a=1')).toBeNull();
+  });
+});

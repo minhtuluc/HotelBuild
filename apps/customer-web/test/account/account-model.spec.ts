@@ -170,3 +170,13 @@ describe('failureOf', () => {
     expect(failureOf(error)).toBe(kind);
   });
 });
+
+describe('go-live: chuyển qua lại đăng nhập/đăng ký giữ trang cần quay về', () => {
+  it('giữ next khác mặc định, bỏ khi là mặc định', async () => {
+    const { withNext } = await import('../../src/app/(guest)/account/account-model');
+    expect(withNext('/account/register', '/book?a=1&b=2')).toBe(
+      '/account/register?next=%2Fbook%3Fa%3D1%26b%3D2',
+    );
+    expect(withNext('/account/login', '/profile')).toBe('/account/login');
+  });
+});

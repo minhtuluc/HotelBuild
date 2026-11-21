@@ -26,6 +26,8 @@ const messages = {
   balance: 'Còn phải thu',
   actions: 'Thao tác',
   checkIn: 'Nhận phòng',
+  recordInspection: 'Ghi biên bản đã kiểm các phòng đã chọn',
+  inspectionRecorded: 'Đã ghi biên bản phòng sẵn sàng. Bấm Xác nhận nhận phòng lần nữa.',
   checkOut: 'Trả phòng',
   collect: 'Thu tiền (SCR-37)',
   noShow: 'Ghi no-show',

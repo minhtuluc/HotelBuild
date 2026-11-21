@@ -48,6 +48,7 @@ import { opsReconcileText } from './messages';
 import {
   canCloseReconciliation,
   cashIssue,
+  dayRange,
   defaultBusinessDate,
   hasDiscrepancyWarning,
   reconciliationRequestOf,
@@ -202,8 +203,7 @@ export function ReconciliationScreen({ baseUrl }: { baseUrl: string }): ReactEle
         const list = (await api.properties.list()).data.data;
         const chosen = chooseProperty(list, targetPropertyId, working);
         const repRes = await api.reports.revenueByChannel({
-          from: targetDate,
-          to: targetDate,
+          ...dayRange(targetDate),
           ...(chosen === '' ? {} : { propertyId: chosen }),
         });
         setProperties(list);
@@ -278,7 +278,7 @@ export function ReconciliationScreen({ baseUrl }: { baseUrl: string }): ReactEle
       const ref = await api.reports.export({
         report: 'revenue-by-channel',
         format: 'CSV',
-        params: { from: businessDate, to: businessDate },
+        params: dayRange(businessDate),
       });
       setOperationId(ref.data.operationId);
     } catch (caught) {

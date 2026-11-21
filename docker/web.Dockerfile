@@ -27,6 +27,8 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
 WORKDIR /app
 COPY --from=build --chown=node:node /repo/apps/${APP}/.next/standalone ./
 COPY --from=build --chown=node:node /repo/apps/${APP}/.next/static ./apps/${APP}/.next/static
+# Standalone không gồm `public/` (font tự host, ảnh trang khách) — thiếu dòng này thì mọi /fonts, /images 404.
+COPY --from=build --chown=node:node /repo/apps/${APP}/public ./apps/${APP}/public
 # `server.js` nằm theo đường dẫn monorepo; symlink cố định để CMD không phụ thuộc tên app.
 RUN ln -s /app/apps/${APP}/server.js /app/server.js
 USER node

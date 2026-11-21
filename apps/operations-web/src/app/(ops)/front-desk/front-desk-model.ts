@@ -13,6 +13,7 @@ import type {
   BookingSummary,
   RoomSummary,
   WalkInRequest,
+  HousekeepingTaskCreateRequest,
 } from '@pinehill/contracts';
 import { addDays, businessDate } from '../../../lib/inventory-grid';
 
@@ -69,6 +70,8 @@ export type ActionFailure =
       readonly code: string;
       readonly status: number | null;
       readonly reason: string;
+      /** Lý do máy đọc (`details[field=reason].issue`, HB-251), vd. `UNITS_NOT_READY`. */
+      readonly issue?: string;
     }
   | { readonly kind: 'conflict' }
   | { readonly kind: 'forbidden' }
@@ -88,11 +91,31 @@ const CONFLICT_CODES: readonly string[] = [
  * `E_AUTH_PIN_REQUIRED` là 401 nhưng không phải thiếu quyền — cho nhập PIN lại.
  */
 function rejected(caught: ApiError): ActionFailure {
+  const issue = caught.details?.find((detail) => detail.field === 'reason')?.issue;
   return {
     kind: 'rejected',
     code: caught.code ?? String(caught.status ?? 'UNKNOWN'),
     status: caught.status ?? null,
     reason: caught.message,
+    ...(issue === undefined ? {} : { issue }),
+  };
+}
+
+/** Go-live: nhận phòng bị từ chối vì phòng chưa có bằng chứng sẵn sàng (BR-FO-07) ⇒ đề nghị ghi biên bản. */
+export function needsInspection(failure: ActionFailure | null): boolean {
+  return failure?.kind === 'rejected' && failure.issue === 'UNITS_NOT_READY';
+}
+
+/** `POST /housekeeping/tasks` biên bản **đã kiểm** (HB-204) cho phòng lễ tân vừa chọn. */
+export function inspectionBody(
+  roomId: string,
+  businessDate: string,
+): HousekeepingTaskCreateRequest {
+  return {
+    roomId,
+    businessDate,
+    status: 'INSPECTED',
+    reason: 'Lễ tân xác nhận đã kiểm phòng tại quầy khi nhận phòng',
   };
 }
 

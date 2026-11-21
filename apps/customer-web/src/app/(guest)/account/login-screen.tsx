@@ -5,7 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { failureLines } from './account-copy';
 import { browserDeps } from './account-deps';
 import { runLogin } from './account-flows';
-import { normalizePhone, safeNext, type AccountFailure, type Issues } from './account-model';
+import {
+  normalizePhone,
+  safeNext,
+  withNext,
+  type AccountFailure,
+  type Issues,
+} from './account-model';
 import {
   FormShell,
   Notice,
@@ -111,7 +117,7 @@ export function LoginScreen({ contact }: { contact: string | null }): ReactEleme
           {text('toForgot')}
         </a>
         <a
-          href={localPath('/account/register')}
+          href={localPath(withNext('/account/register', next))}
           style={{
             display: 'inline-flex',
             alignItems: 'center',

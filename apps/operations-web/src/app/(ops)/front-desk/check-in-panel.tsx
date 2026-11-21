@@ -6,6 +6,8 @@ import type { DeskApi } from './front-desk-api';
 import {
   actionFailure,
   checkInBody,
+  inspectionBody,
+  needsInspection,
   roomChoices,
   roomSelectionIssue,
   type ActionFailure,
@@ -40,6 +42,7 @@ export function CheckInPanel({
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [result, setResult] = useState<CheckInResponse | null>(null);
   const [busy, setBusy] = useState(false);
+  const [inspected, setInspected] = useState(false);
   const toggle = (roomId: string, checked: boolean): void => {
     setSelected((previous) =>
       checked
@@ -60,6 +63,19 @@ export function CheckInPanel({
       );
       setResult(response.data);
       onDone();
+    } catch (caught) {
+      setFailure(actionFailure(caught));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const recordInspection = async (): Promise<void> => {
+    setBusy(true);
+    try {
+      for (const roomId of selected)
+        await api.recordInspection(inspectionBody(roomId, booking.checkIn));
+      setFailure(null);
+      setInspected(true);
     } catch (caught) {
       setFailure(actionFailure(caught));
     } finally {
@@ -186,6 +202,25 @@ export function CheckInPanel({
         />
       </label>
       {failure === null ? null : <FailureNotice failure={failure} onInspect={onInspect} />}
+      {needsInspection(failure) && selected.length > 0 ? (
+        <button
+          type="button"
+          data-testid="record-inspection"
+          className="ph-btn"
+          style={{ justifySelf: 'start' }}
+          disabled={busy}
+          onClick={() => {
+            void recordInspection();
+          }}
+        >
+          {deskText('recordInspection')}
+        </button>
+      ) : null}
+      {inspected ? (
+        <p role="status" data-testid="inspection-recorded" style={{ margin: 0 }}>
+          {deskText('inspectionRecorded')}
+        </p>
+      ) : null}
       <button
         type="submit"
         className="ph-btn-primary"

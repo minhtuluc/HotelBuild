@@ -49,6 +49,7 @@ export const OPS_NAV_GROUPS: readonly NavGroup[] = [
       { href: '/crm/guests', labelKey: 'navCrmGuests' },
       { href: '/crm/loyalty', labelKey: 'navCrmLoyalty' },
       { href: '/noti/notifications', labelKey: 'navNotifications' },
+      { href: '/account/pin', labelKey: 'navPin' },
     ],
   },
   {

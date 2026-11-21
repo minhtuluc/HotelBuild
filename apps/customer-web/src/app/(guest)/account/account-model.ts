@@ -189,3 +189,8 @@ export function failureOf(caught: unknown): AccountFailure {
   if (status === 400 || status === 422) return 'validation';
   return status >= 500 ? 'unavailable' : 'other';
 }
+
+/** Go-live: link chéo đăng nhập ⇄ đăng ký mang theo `next` để khách đang đặt phòng quay lại đúng trang. */
+export function withNext(path: string, next: string): string {
+  return next === DEFAULT_NEXT ? path : `${path}?next=${encodeURIComponent(next)}`;
+}

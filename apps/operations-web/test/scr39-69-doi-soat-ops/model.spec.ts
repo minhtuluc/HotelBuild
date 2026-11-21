@@ -67,3 +67,12 @@ describe('HB-111 SCR-39 & SCR-69 pure model', () => {
     ).toBe(true);
   });
 });
+
+describe('go-live: báo cáo một ngày nghiệp vụ dùng khoảng nửa mở [from, to)', () => {
+  it('to là ngày kế tiếp, kể cả qua tháng/năm', async () => {
+    const { dayRange } = await import('../../src/app/(ops)/reconciliation/model');
+    expect(dayRange('2026-11-21')).toEqual({ from: '2026-11-21', to: '2026-11-22' });
+    expect(dayRange('2026-11-30')).toEqual({ from: '2026-11-30', to: '2026-12-01' });
+    expect(dayRange('2026-12-31')).toEqual({ from: '2026-12-31', to: '2027-01-01' });
+  });
+});
