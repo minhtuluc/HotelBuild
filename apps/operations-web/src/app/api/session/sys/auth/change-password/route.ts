@@ -10,7 +10,7 @@ export async function POST(request: Request): Promise<Response> {
       req.method === 'POST' && new URL(req.url).pathname === '/api/session/sys/auth/change-password'
         ? {
             method: 'POST',
-            path: '/auth/change-password',
+            path: '/auth/password',
             protected: true,
             body: changePasswordRequestSchema,
           }

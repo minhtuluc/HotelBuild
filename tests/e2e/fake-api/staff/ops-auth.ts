@@ -55,7 +55,7 @@ export function createHandler(context: FakeApiContext): FakeHandler {
   const changed = new Set<string>();
   return (request) => {
     const path = request.url.pathname;
-    if (!['/api/v1/auth/me', '/api/v1/auth/change-password', '/api/v1/properties'].includes(path))
+    if (!['/api/v1/auth/me', '/api/v1/auth/password', '/api/v1/properties'].includes(path))
       return undefined;
     const actor = context.authenticateActor?.(request.authorization);
     if (actor === undefined || !actor.key.startsWith(PREFIX)) return undefined;
@@ -85,7 +85,7 @@ export function createHandler(context: FakeApiContext): FakeHandler {
         },
       };
     }
-    if (path === '/api/v1/auth/change-password' && request.method === 'POST') {
+    if (path === '/api/v1/auth/password' && request.method === 'POST') {
       const body: unknown = request.body;
       const fields = typeof body === 'object' && body !== null ? body : {};
       const currentPassword = 'currentPassword' in fields ? fields.currentPassword : undefined;
