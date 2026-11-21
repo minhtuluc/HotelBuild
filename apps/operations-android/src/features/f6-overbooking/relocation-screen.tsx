@@ -24,6 +24,7 @@ import { PinForm } from './pin-form';
 import { f6Ports } from './ports';
 import { Candidates, Ladder, MoveSummary, Options } from './relocation-parts';
 import type { RelocationState } from './reader';
+import { loadPlaceNames, NO_NAMES, sessionNameSources, type PlaceNames } from './labels';
 
 export interface RelocationScreenProps {
   session: Session;
@@ -86,6 +87,21 @@ function useRelocation(props: RelocationScreenProps) {
     createId,
   ]);
   return { flow, read, state };
+}
+
+/** HB-270: tên phòng/cơ sở cho nhãn; khai báo **sau** `useRelocation` để giữ thứ tự hook của harness. */
+function usePlaceNames(session: Session): PlaceNames {
+  const [names, setNames] = useState<PlaceNames>(NO_NAMES);
+  useEffect(() => {
+    let live = true;
+    void loadPlaceNames(sessionNameSources(() => session.resourceClient())).then((loaded) => {
+      if (live) setNames(loaded);
+    });
+    return () => {
+      live = false;
+    };
+  }, [session]);
+  return names;
 }
 
 function failureText(failure: Failure): string {
@@ -258,8 +274,9 @@ function Body(props: {
   state: FlowState;
   flow: RelocationFlow;
   role: UserMe['role'];
+  names: PlaceNames;
 }): ReactElement {
-  const { read, state, flow, role } = props;
+  const { read, state, flow, role, names } = props;
   return (
     <>
       {read.detail === null ? null : (
@@ -274,12 +291,13 @@ function Body(props: {
           picked={state.picked}
           canPick={canCreate(role) && read.move === null}
           onPick={(index) => flow.pick(index)}
+          names={names}
         />
       )}
       {canCreate(role) && read.options !== null && read.move === null && state.picked !== null ? (
         <CreateForm state={state} flow={flow} />
       ) : null}
-      {read.move === null ? null : <MoveSummary move={read.move} role={role} />}
+      {read.move === null ? null : <MoveSummary move={read.move} role={role} names={names} />}
       <Actions read={read} state={state} flow={flow} role={role} />
     </>
   );
@@ -300,6 +318,7 @@ function ReadNote({ read }: { read: RelocationState }): ReactElement | null {
 
 export function RelocationScreen(props: RelocationScreenProps): ReactElement {
   const { flow, read, state } = useRelocation(props);
+  const names = usePlaceNames(props.session);
   const role = props.profile.role;
   const missing = !canReadCases(role) && props.context.bookingId === '';
   return (
@@ -320,7 +339,7 @@ export function RelocationScreen(props: RelocationScreenProps): ReactElement {
         </Text>
       ) : null}
       {flow === null || state === null ? null : (
-        <Body read={read} state={state} flow={flow} role={role} />
+        <Body read={read} state={state} flow={flow} role={role} names={names} />
       )}
       {flow === null || state === null ? null : <CommandNote state={state} flow={flow} />}
       <ActionButton
