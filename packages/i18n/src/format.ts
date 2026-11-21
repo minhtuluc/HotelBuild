@@ -23,7 +23,12 @@ function calendarParts(iso: string): CalendarParts | null {
   if (match === null) return null;
   const [, year = '', month = '', day = ''] = match;
   const utc = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-  if (Number.isNaN(utc.getTime()) || utc.getUTCDate() !== Number(day)) return null;
+  if (
+    Number.isNaN(utc.getTime()) ||
+    utc.getUTCDate() !== Number(day) ||
+    utc.getUTCMonth() !== Number(month) - 1
+  )
+    return null;
   return { year, month, day, utc };
 }
 
