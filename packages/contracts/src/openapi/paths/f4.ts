@@ -12,6 +12,7 @@ import {
   bookingConfirmRequestSchema,
   bookingsQuerySchema,
   bookingCreateRequestSchema,
+  bookingPriceSnapshotSchema,
   bookingSummarySchema,
   holdCreateRequestSchema,
   holdReleaseQuerySchema,
@@ -130,6 +131,21 @@ export function registerF4Paths(registry: OpenAPIRegistry, errorBodyComponent: z
     parameters: [pathParam('bookingId')],
     responses: {
       200: { description: 'Chi tiết booking', ...jsonBody(bookingSummarySchema) },
+      403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
+      404: errorResponse('E_GEN_NOT_FOUND'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/bookings/{bookingId}/nights',
+    operationId: 'bookingsNights',
+    summary: 'Giá từng đêm đã chốt của snapshot mới nhất (SCR-80, BR-RATE-16, HB-266)',
+    tags: ['booking'],
+    ...bearerRead,
+    parameters: [pathParam('bookingId')],
+    responses: {
+      200: { description: 'Bảng giá theo đêm', ...jsonBody(bookingPriceSnapshotSchema) },
       403: errorResponse('E_RBAC_FORBIDDEN', 'E_AUTH_OUT_OF_SCOPE'),
       404: errorResponse('E_GEN_NOT_FOUND'),
     },
