@@ -138,7 +138,7 @@ describe('go-live: danh sách kênh không chặn lễ tân', () => {
     await expect(
       channelsOrEmpty(() => Promise.reject(new Error('E_RBAC_FORBIDDEN'))),
     ).resolves.toEqual([]);
-    const listed = [{ code: 'WALKIN', holdMinutes: 15 }] as unknown as ChannelSummary[];
+    const listed: ChannelSummary[] = [];
     await expect(channelsOrEmpty(() => Promise.resolve(listed))).resolves.toBe(listed);
   });
 });
