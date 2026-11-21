@@ -13,6 +13,8 @@ describe('HB-275 định dạng dùng chung', () => {
     expect(calendarDate('2026-12-24', 'vi')).toBe('24/12/2026');
     expect(calendarDate('2026-12-24', 'en')).toBe('24/12/2026');
     expect(dateTimeVn('2026-11-20T05:30:00Z', 'vi', '(giờ VN)')).toBe('20/11/2026 12:30 (giờ VN)');
-    expect(dateTimeVn('2026-11-20T05:30:00Z', 'en', '(VN time)')).toBe('20/11/2026 12:30 (VN time)');
+    expect(dateTimeVn('2026-11-20T05:30:00Z', 'en', '(VN time)')).toBe(
+      '20/11/2026 12:30 (VN time)',
+    );
   });
 });
