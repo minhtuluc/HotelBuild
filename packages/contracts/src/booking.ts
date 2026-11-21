@@ -169,3 +169,31 @@ export type BookingConfirmRequest = z.infer<typeof bookingConfirmRequestSchema>;
 export type Hold = z.infer<typeof holdSchema>;
 export type HoldCreateRequest = z.infer<typeof holdCreateRequestSchema>;
 export type GuestContact = z.infer<typeof guestContactSchema>;
+
+/**
+ * `GET /bookings/{bookingId}/nights` (HB-266, SCR-80, BR-RATE-16): giá từng đêm **đã chốt** của
+ * snapshot mới nhất. Chỉ trả số khách cần xem — không có hoa hồng kênh hay hệ số định giá nội bộ.
+ */
+export const bookingPriceSnapshotSchema = z.object({
+  bookingId: z.string().min(1),
+  /** Số thứ tự snapshot (ORIGINAL = 1; đổi ngày/huỷ một phần tạo bản mới). */
+  seq: z.number().int().min(1),
+  kind: z.string().min(1),
+  capturedAt: isoUtcTimestampSchema,
+  currency: z.literal('VND'),
+  /** Theo ngày lưu trú: tổng tiền mọi phòng của đêm đó. */
+  nights: z.array(
+    z.object({
+      date: businessDateSchema,
+      amount: z.number().int().min(0),
+      roomCount: z.number().int().min(1),
+    }),
+  ),
+  totals: z.object({
+    subtotal: z.number().int().min(0),
+    discountAmount: z.number().int().min(0),
+    grossAmount: z.number().int().min(0),
+  }),
+});
+
+export type BookingPriceSnapshot = z.infer<typeof bookingPriceSnapshotSchema>;

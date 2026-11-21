@@ -13369,6 +13369,142 @@
         }
       }
     },
+    "/api/v1/bookings/{bookingId}/nights": {
+      "get": {
+        "operationId": "bookingsNights",
+        "summary": "Giá từng đêm đã chốt của snapshot mới nhất (SCR-80, BR-RATE-16, HB-266)",
+        "tags": [
+          "booking"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bảng giá theo đêm",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bookingId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "seq": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "kind": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "capturedAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$"
+                    },
+                    "currency": {
+                      "type": "string",
+                      "enum": [
+                        "VND"
+                      ]
+                    },
+                    "nights": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "amount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "roomCount": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "amount",
+                          "roomCount"
+                        ]
+                      }
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "subtotal": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "discountAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "grossAmount": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "subtotal",
+                        "discountAmount",
+                        "grossAmount"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "bookingId",
+                    "seq",
+                    "kind",
+                    "capturedAt",
+                    "currency",
+                    "nights",
+                    "totals"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "E_RBAC_FORBIDDEN, E_AUTH_OUT_OF_SCOPE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "E_GEN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/bookings/{bookingId}/confirm": {
       "post": {
         "operationId": "bookingsConfirm",
