@@ -6,7 +6,7 @@
  */
 import type { ReactElement } from 'react';
 import type { Metadata } from 'next';
-import { diningPageCopy } from '../../../content/dining-page';
+import { diningPageCopy } from '@pinehill/content/dining-page';
 import { LOCALE_META } from '../../../i18n/locales';
 import { localeAlternates } from '../../../i18n/seo';
 import { serverTranslators } from '../../../i18n/server';

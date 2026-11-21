@@ -118,9 +118,13 @@ export function BoardRow(props: {
   value?: string;
   selected?: boolean;
   onPress?: () => void;
+  /** HB-276: hàng là một lựa chọn trong nhóm (ga đang chọn) thì dùng `radio` + `checked`. */
+  choice?: boolean;
+  accessibilityLabel?: string;
   testID?: string;
 }): ReactElement {
   const style = boardRowStyle(props.selected === true);
+  const selected = props.selected === true;
   const content = (
     <>
       <Text style={style.label}>{props.label}</Text>
@@ -136,8 +140,11 @@ export function BoardRow(props: {
   return (
     <Pressable
       testID={props.testID}
-      accessibilityRole="button"
-      accessibilityState={{ selected: props.selected === true }}
+      accessibilityRole={props.choice === true ? 'radio' : 'button'}
+      accessibilityState={props.choice === true ? { checked: selected } : { selected }}
+      {...(props.accessibilityLabel === undefined
+        ? {}
+        : { accessibilityLabel: props.accessibilityLabel })}
       onPress={props.onPress}
       style={style.container}
     >

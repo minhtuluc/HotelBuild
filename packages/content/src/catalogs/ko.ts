@@ -1,5 +1,5 @@
 /** Bản tiếng Hàn của câu chữ trang nội dung (trang ga, hạng phòng, gallery) — HB-313. */
-import type { viContent } from '../vi/content';
+import type { viContent } from './vi';
 
 export const koContent: Readonly<Record<keyof typeof viContent, string>> = {
   'guest.content.breadcrumb': '이동 경로',

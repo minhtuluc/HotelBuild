@@ -12,6 +12,8 @@ const nextConfig = {
   transpilePackages: [
     '@pinehill/contracts',
     '@pinehill/api-client',
+    '@pinehill/content',
+    '@pinehill/i18n',
     '@pinehill/ui-web',
     '@pinehill/web-session',
   ],

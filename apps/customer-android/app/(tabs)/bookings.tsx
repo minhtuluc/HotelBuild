@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { color, space, formatDateTimeVn } from '@pinehill/ui-native';
+import { color, space, fontFamily } from '@pinehill/ui-native';
 import { createBookingApi } from '@pinehill/api-client';
 import type { BookingSummary } from '@pinehill/contracts';
 import { LoginPrompt } from '../../src/login-prompt';
@@ -25,8 +25,9 @@ import {
   stayOf,
   type OrdersOutcome,
 } from '../../src/orders';
+import { dateTimeLabel } from '../../src/i18n/format';
 
-const CELL = { color: color.text } as const;
+const CELL = theme.body;
 
 function money(amount: number): string {
   return t('orders.money', { amount: formatVnd(amount) });
@@ -51,7 +52,7 @@ function OrderRow({
       accessibilityLabel={`${booking.code}. ${status}. ${stayOf(booking)}. ${moneyLine}`}
       style={theme.card}
     >
-      <Text style={{ color: color.text, fontWeight: '600' }}>{booking.code}</Text>
+      <Text style={[theme.body, { fontFamily: fontFamily.sansSemiBold }]}>{booking.code}</Text>
       <Text style={CELL}>{status}</Text>
       <Text style={theme.muted}>{stayOf(booking)}</Text>
       <Text style={[theme.muted, theme.tabular]}>{moneyLine}</Text>
@@ -107,7 +108,7 @@ function SearchBar({
           onPress={onSearch}
           style={[theme.buttonSecondary, { flex: 1 }]}
         >
-          <Text style={{ color: color.primary, fontWeight: '500' }}>{t('orders.reload')}</Text>
+          <Text style={theme.buttonPlainText}>{t('orders.reload')}</Text>
         </Pressable>
       </View>
     </View>
@@ -120,12 +121,12 @@ function StaleNotice({
   outcome: Extract<OrdersOutcome, { kind: 'offline' }>;
 }): ReactElement {
   const time =
-    outcome.cachedAt === null ? t('orders.stale.unknown') : formatDateTimeVn(outcome.cachedAt);
+    outcome.cachedAt === null ? t('orders.stale.unknown') : dateTimeLabel(outcome.cachedAt);
   return (
     <Text
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
-      style={{ color: color.warning }}
+      style={theme.alertWarning}
       data-testid="orders-stale"
     >
       {outcome.cached.length === 0 ? t('guest.offline') : t('orders.stale', { time })}
@@ -147,12 +148,12 @@ function OrdersNotice({
       )}
       {outcome === null || outcome.kind !== 'offline' ? null : <StaleNotice outcome={outcome} />}
       {outcome === null || outcome.kind !== 'failed' ? null : (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {t('orders.failed', { code: outcome.code ?? 'UNKNOWN' })}
         </Text>
       )}
       {outcome === null || outcome.kind !== 'empty' ? null : (
-        <Text accessibilityRole="alert" style={{ color: color.textMuted }}>
+        <Text accessibilityRole="alert" style={theme.muted}>
           {t('orders.empty')}
         </Text>
       )}

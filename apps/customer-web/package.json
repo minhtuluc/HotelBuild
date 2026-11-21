@@ -15,12 +15,14 @@
   },
   "dependencies": {
     "@pinehill/api-client": "workspace:*",
+    "@pinehill/content": "workspace:*",
     "@pinehill/contracts": "workspace:*",
+    "@pinehill/i18n": "workspace:*",
     "@pinehill/ui-web": "workspace:*",
+    "@pinehill/web-session": "workspace:*",
     "next": "^15.5.28",
     "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "@pinehill/web-session": "workspace:*"
+    "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

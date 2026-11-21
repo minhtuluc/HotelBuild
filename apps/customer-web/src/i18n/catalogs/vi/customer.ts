@@ -3,7 +3,7 @@
  * Mở rộng danh mục dùng chung của `ui-web`; không viết cứng câu chữ trong component.
  */
 import { viCatalog as uiWebVi } from '@pinehill/ui-web/messages';
-import { viContent } from './content';
+import { viContent } from '@pinehill/content/catalogs/vi';
 
 export const viCustomer = {
   ...uiWebVi,

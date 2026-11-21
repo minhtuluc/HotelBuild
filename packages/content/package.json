@@ -1,0 +1,24 @@
+{
+  "name": "@pinehill/content",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Nội dung trang khách dùng chung cho web khách và app khách Android: ga, hạng phòng, ăn uống, trải nghiệm, ưu đãi, ảnh, kèm câu chữ 6 ngôn ngữ (HB-277; chuyển từ customer-web).",
+  "exports": {
+    "./*": "./src/*.ts",
+    "./catalogs/*": "./src/catalogs/*.ts",
+    "./locale-packs": "./src/locale-packs/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@pinehill/i18n": "workspace:*"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.7",
+    "vitest": "^3.2.7"
+  }
+}

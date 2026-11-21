@@ -7,13 +7,13 @@
 import type { ReactElement } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { landingContent } from '../../../../content/landing-content';
-import { photoAlt, slotById } from '../../../../content/photo-slots';
+import { landingContent } from '@pinehill/content/landing-content';
+import { photoAlt, slotById } from '@pinehill/content/photo-slots';
 import {
   ROOM_TYPE_PAGES,
   roomTypePageCopy,
   roomTypePageKey,
-} from '../../../../content/room-type-pages';
+} from '@pinehill/content/room-type-pages';
 import { serverTranslators } from '../../../../i18n/server';
 import { openGraphImage } from '../../../../lib/site';
 import { LOCALE_META } from '../../../../i18n/locales';

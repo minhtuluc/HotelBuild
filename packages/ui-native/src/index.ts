@@ -4,7 +4,7 @@ export * from './stateMessages.js';
 export * from './translate.js';
 export * from './states.js';
 export * from './panels.js';
-export * from './status-bar.js';
 export * from './components/styles.js';
 export * from './components/primitives.js';
 export * from './theme.js';
+export * from './status-bar.js';

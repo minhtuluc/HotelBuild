@@ -4,7 +4,7 @@
  * áp cho mọi locale ngoài `vi`. Thiếu khoá so với `vi` thì kiểu báo lỗi.
  */
 import type { CustomerMessageKey } from '../vi/customer';
-import { zhContent } from './content';
+import { zhContent } from '@pinehill/content/catalogs/zh-cn';
 import { zhUiWeb } from './ui-web';
 
 export const zhCustomer: Readonly<Record<CustomerMessageKey, string>> = {

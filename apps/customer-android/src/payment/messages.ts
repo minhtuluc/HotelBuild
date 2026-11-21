@@ -1,5 +1,12 @@
 import type { Phase } from './flow';
-import { makeTranslate } from '@pinehill/ui-native';
+import { makeTranslate, type TranslateFor } from '@pinehill/ui-native';
+import type { Locale } from '@pinehill/i18n';
+import { enPayment, enPhases } from '../i18n/catalogs/en-payment';
+import { jaPayment, jaPhases } from '../i18n/catalogs/ja-payment';
+import { koPayment, koPhases } from '../i18n/catalogs/ko-payment';
+import { ruPayment, ruPhases } from '../i18n/catalogs/ru-payment';
+import { zhPayment, zhPhases } from '../i18n/catalogs/zh-cn-payment';
+import { currentLocale } from '../i18n/locale';
 
 export const paymentCatalog = {
   title: 'Thanh toán tiền cọc',
@@ -34,9 +41,11 @@ export const paymentCatalog = {
   check: 'Kiểm tra lại từ máy chủ',
 } as const;
 
-export const paymentText = makeTranslate(paymentCatalog);
+export type PaymentKey = keyof typeof paymentCatalog;
+export type PaymentCatalog = Readonly<Record<PaymentKey, string>>;
+export type PhaseCatalog = Readonly<Record<Phase, string>>;
 
-export const phaseMessages: Record<Phase, string> = {
+const phaseMessages: PhaseCatalog = {
   loading: 'Đang đọc giao dịch và đặt phòng từ máy chủ…',
   ready: 'Chọn cổng thanh toán. Số cọc lấy từ máy chủ.',
   confirm: 'Kiểm tra số tiền và cổng thanh toán trước khi xác nhận.',
@@ -54,3 +63,41 @@ export const phaseMessages: Record<Phase, string> = {
     'Cần kết nối mạng để đọc trạng thái hoặc thanh toán. Dữ liệu cũ không xác nhận đã trả tiền.',
   error: 'Không đọc được trạng thái máy chủ. Vui lòng kiểm tra lại.',
 };
+
+/** HB-275: câu chữ thanh toán theo 6 ngôn ngữ; tiếng Việt là bộ khoá chuẩn. */
+export const PAYMENT_CATALOGS: Readonly<Record<Locale, PaymentCatalog>> = {
+  vi: paymentCatalog,
+  en: enPayment,
+  'zh-CN': zhPayment,
+  ja: jaPayment,
+  ko: koPayment,
+  ru: ruPayment,
+};
+
+export const PHASE_CATALOGS: Readonly<Record<Locale, PhaseCatalog>> = {
+  vi: phaseMessages,
+  en: enPhases,
+  'zh-CN': zhPhases,
+  ja: jaPhases,
+  ko: koPhases,
+  ru: ruPhases,
+};
+
+const translators = new Map<Locale, TranslateFor<PaymentCatalog>>();
+
+export function paymentText(
+  key: PaymentKey,
+  vars?: Readonly<Record<string, string | number>>,
+): string {
+  const locale = currentLocale();
+  let translate = translators.get(locale);
+  if (translate === undefined) {
+    translate = makeTranslate(PAYMENT_CATALOGS[locale]);
+    translators.set(locale, translate);
+  }
+  return translate(key, vars);
+}
+
+export function phaseText(phase: Phase): string {
+  return PHASE_CATALOGS[currentLocale()][phase];
+}

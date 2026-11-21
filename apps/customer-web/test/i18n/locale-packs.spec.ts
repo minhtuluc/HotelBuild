@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { CATALOGS } from '../../src/i18n/catalogs';
 import { calendarDate, dateLine, dateTimeVn, money } from '../../src/i18n/format';
 import { LOCALES, LOCALE_META, localizePath, splitLocale } from '../../src/i18n/locales';
-import { landingContent } from '../../src/content/landing-content';
-import { CONTENT_PACKS, type PackLocale } from '../../src/content/locale-packs';
-import { ALL_PHOTO_SLOTS } from '../../src/content/photo-slots';
-import { PROPERTY_PAGES, propertyPageCopy } from '../../src/content/property-pages';
-import { ROOM_TYPE_PAGES, roomTypePageCopy } from '../../src/content/room-type-pages';
+import { landingContent } from '@pinehill/content/landing-content';
+import { CONTENT_PACKS, type PackLocale } from '@pinehill/content/locale-packs';
+import { ALL_PHOTO_SLOTS } from '@pinehill/content/photo-slots';
+import { PROPERTY_PAGES, propertyPageCopy } from '@pinehill/content/property-pages';
+import { ROOM_TYPE_PAGES, roomTypePageCopy } from '@pinehill/content/room-type-pages';
 
 /** HB-313 — bốn locale zh-CN, ja, ko, ru: đường dẫn, định dạng, danh mục và gói nội dung đủ và khớp `vi`. */
 

@@ -10,7 +10,7 @@
  * Giờ phục vụ, món và quán quanh ga là MINH HOẠ (`illustrative: true`): thay bằng thông tin thật của từng cơ
  * sở trước khi phát hành công khai. Không có giá món: khoản gọi riêng trả tại quầy, ngoài hệ thống đặt phòng.
  */
-import type { Locale } from '../i18n/locales';
+import type { Locale } from '@pinehill/i18n';
 import { CONTENT_PACKS } from './locale-packs';
 
 export type DiningServiceId = 'breakfast' | 'tea' | 'evening';

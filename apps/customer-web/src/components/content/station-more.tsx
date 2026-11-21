@@ -1,7 +1,7 @@
 /** Ga đã có tờ giới thiệu thì thêm link "Đọc thêm"; ga chưa có trang thì không có link (HB-310). */
 import type { ReactElement } from 'react';
 import { LocaleLink as Link } from '../locale-link';
-import { propertyPageByStation } from '../../content/property-pages';
+import { propertyPageByStation } from '@pinehill/content/property-pages';
 import { serverTranslators } from '../../i18n/server';
 
 export async function StationMore({

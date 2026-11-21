@@ -5,12 +5,12 @@
  * Component máy chủ.
  */
 import type { ReactElement } from 'react';
-import { landingContent } from '../../content/landing-content';
+import { landingContent } from '@pinehill/content/landing-content';
 import {
   ROOM_TYPE_PAGES,
   roomTypePageCopy,
   type RoomTypeCode,
-} from '../../content/room-type-pages';
+} from '@pinehill/content/room-type-pages';
 import type { Locale } from '../../i18n/locales';
 import type { Translators } from '../../i18n/translate';
 import { LocaleLink as Link } from '../locale-link';

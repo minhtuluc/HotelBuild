@@ -4,7 +4,7 @@
  * áp cho mọi locale ngoài `vi`. Thiếu khoá so với `vi` thì kiểu báo lỗi.
  */
 import type { CustomerMessageKey } from '../vi/customer';
-import { jaContent } from './content';
+import { jaContent } from '@pinehill/content/catalogs/ja';
 import { jaUiWeb } from './ui-web';
 
 export const jaCustomer: Readonly<Record<CustomerMessageKey, string>> = {

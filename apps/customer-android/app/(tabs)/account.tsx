@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { color, space, formatDateTimeVn } from '@pinehill/ui-native';
+import { color, space } from '@pinehill/ui-native';
 import type { GuestLoyalty, GuestSummary } from '@pinehill/contracts';
 import { useFocusEffect } from 'expo-router';
 import { LoginPrompt } from '../../src/login-prompt';
@@ -28,8 +28,12 @@ import {
   type ProfileOutcome,
   type ProfileRow,
 } from '../../src/profile';
+import { dateTimeLabel } from '../../src/i18n/format';
+import { chooseLocale, currentLocale } from '../../src/i18n/locale';
+import { LanguagePicker } from '../../src/language-picker';
+import { secureStorage } from '../../src/storage-device.native';
 
-const CELL = { color: color.text } as const;
+const CELL = theme.body;
 
 const PROFILE_KEYS: Readonly<Record<ProfileRow['key'], MessageKey>> = {
   name: 'profile.name',
@@ -46,7 +50,7 @@ const LOYALTY_KEYS: Readonly<Record<'points' | 'stays12' | 'staysTotal', Message
 };
 
 function rowValue(row: ProfileRow): string {
-  if (row.key === 'created') return formatDateTimeVn(row.value);
+  if (row.key === 'created') return dateTimeLabel(row.value);
   if (row.key === 'consent')
     return t(row.value === 'yes' ? 'profile.consentYes' : 'profile.consentNo');
   return row.value;
@@ -68,7 +72,7 @@ function ProfileCard({ guest }: { guest: GuestSummary }): ReactElement {
             theme.hairline,
           ]}
         >
-          <Text style={{ color: color.textMuted, flex: 1 }}>{t(PROFILE_KEYS[row.key])}</Text>
+          <Text style={[theme.muted, { flex: 1 }]}>{t(PROFILE_KEYS[row.key])}</Text>
           <Text style={[CELL, theme.tabular]}>{rowValue(row)}</Text>
         </View>
       ))}
@@ -101,7 +105,7 @@ function LoyaltyPanel({
             theme.hairline,
           ]}
         >
-          <Text style={{ color: color.textMuted, flex: 1 }}>{t(LOYALTY_KEYS[row.key])}</Text>
+          <Text style={[theme.muted, { flex: 1 }]}>{t(LOYALTY_KEYS[row.key])}</Text>
           <Text style={[CELL, theme.tabular]}>{row.value}</Text>
         </View>
       ))}
@@ -126,25 +130,17 @@ function Notice({
   return (
     <>
       {alert === null ? null : (
-        <Text
-          accessibilityRole="alert"
-          accessibilityLiveRegion="polite"
-          style={{ color: color.danger }}
-        >
+        <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={theme.alertDanger}>
           {alert}
         </Text>
       )}
       {!offline ? null : (
-        <Text
-          accessibilityRole="alert"
-          accessibilityLiveRegion="polite"
-          style={{ color: color.danger }}
-        >
+        <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={theme.alertDanger}>
           {t('guest.offline')}
         </Text>
       )}
       {failedCode === null ? null : (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {t('profile.failed', { code: failedCode })}
         </Text>
       )}
@@ -286,12 +282,16 @@ export default function AccountScreen(): ReactElement {
             onPress={() => void session.logout().then(() => setSignedIn(false))}
             style={theme.buttonSecondary}
           >
-            <Text style={{ color: color.danger, fontWeight: '500' }}>{t('home.logout')}</Text>
+            <Text style={[theme.buttonPlainText, { color: color.danger }]}>{t('home.logout')}</Text>
           </Pressable>
         </>
       ) : (
         <LoginPrompt hint="account.loginHint" />
       )}
+      <LanguagePicker
+        current={currentLocale()}
+        onChoose={(locale) => void chooseLocale(secureStorage(), locale)}
+      />
     </ScrollView>
   );
 }

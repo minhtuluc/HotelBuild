@@ -1,12 +1,13 @@
 import type { ReactElement } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { color, space, radius, touchTargetDp, formatDateTimeVn } from '@pinehill/ui-native';
+import { color, space, radius, touchTargetDp } from '@pinehill/ui-native';
 import { formatVnd } from '../search';
 import type { PaymentView } from './flow';
 import { approvedAmount, safePaymentUrl } from './model';
 import { Link } from 'expo-router';
 import { paymentText as text } from './messages';
 import { theme } from '../theme';
+import { dateTimeLabel } from '../i18n/format';
 
 const money = (amount: number): string => text('money', { amount: formatVnd(amount) });
 
@@ -64,23 +65,21 @@ export function PaymentSummary({ view }: { view: PaymentView }): ReactElement | 
       <View style={theme.divider} />
       <Text style={theme.body}>{text('bookingStatus', { status: offer.booking.status })}</Text>
       {offer.booking.holdExpiresAt ? (
-        <Text style={{ color: color.textMuted }}>
-          {text('holdExpiry', { time: formatDateTimeVn(offer.booking.holdExpiresAt) })}
+        <Text style={theme.muted}>
+          {text('holdExpiry', { time: dateTimeLabel(offer.booking.holdExpiresAt) })}
         </Text>
       ) : null}
       {view.payment ? (
         <>
-          <Text selectable style={{ color: color.text }}>
+          <Text selectable style={theme.body}>
             {text('transaction', { id: view.payment.paymentId })}
           </Text>
-          <Text style={{ color: color.text }}>
-            {text('paymentStatus', { status: view.payment.status })}
-          </Text>
+          <Text style={theme.body}>{text('paymentStatus', { status: view.payment.status })}</Text>
         </>
       ) : null}
       {view.checkedAt ? (
-        <Text style={{ color: color.textMuted }}>
-          {text('checkedAt', { time: formatDateTimeVn(view.checkedAt) })}
+        <Text style={theme.muted}>
+          {text('checkedAt', { time: dateTimeLabel(view.checkedAt) })}
         </Text>
       ) : null}
     </View>
@@ -118,7 +117,7 @@ export function PaymentMethods({
             borderColor: method === value ? color.primary : color.border,
           }}
         >
-          <Text style={{ color: color.text }}>
+          <Text style={theme.body}>
             {method === value ? '● ' : '○ '}
             {value === 'VNPAY' ? text('providerVnpay') : text('providerMomo')}
           </Text>
@@ -155,7 +154,7 @@ function CreationActions({
   if (view.phase !== 'confirm') return null;
   return (
     <>
-      <Text style={{ color: color.text }}>
+      <Text style={theme.body}>
         {text('confirmInfo', {
           provider: method === 'MOMO' ? text('providerMomo') : text('providerVnpay'),
         })}
@@ -170,7 +169,7 @@ function PendingActions({ view, open }: Actions): ReactElement | null {
   return url ? (
     <PaymentButton label={text('reopen')} disabled={view.busy} onPress={() => open(url)} />
   ) : (
-    <Text style={{ color: color.warning }}>{text('unsafeUrl')}</Text>
+    <Text style={theme.alertWarning}>{text('unsafeUrl')}</Text>
   );
 }
 export function PaymentActions(props: Actions): ReactElement {
@@ -178,7 +177,7 @@ export function PaymentActions(props: Actions): ReactElement {
   return (
     <>
       {props.view.phase === 'unknown' && props.referenceId ? (
-        <Text selectable style={{ color: color.text }}>
+        <Text selectable style={theme.body}>
           {text('reference', { id: props.referenceId })}
         </Text>
       ) : null}

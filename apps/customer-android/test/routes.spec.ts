@@ -56,3 +56,30 @@ test('HB-273: theme của app là theme khách dùng chung, không tự định 
   expect(source).toContain("createTheme('guest')");
   expect(source).not.toContain('backgroundColor');
 });
+
+test('HB-275: layout gốc khôi phục ngôn ngữ trước khi vẽ và vẽ lại cả cây khi đổi', () => {
+  const layout = readFileSync(new URL('../app/_layout.tsx', import.meta.url), 'utf8');
+  expect(layout).toContain('restoreLocale(secureStorage(), deviceLocaleTag())');
+  expect(layout).toContain('<Stack key={locale}');
+  const account = readFileSync(new URL('../app/(tabs)/account.tsx', import.meta.url), 'utf8');
+  expect(account).toContain('<LanguagePicker');
+});
+
+test('HB-276: hành trình 3 bước như web — tìm phòng, chi tiết phòng (chặng trên giấy vé), xác nhận', () => {
+  const read = (path: string): string => readFileSync(new URL(path, import.meta.url), 'utf8');
+  const search = read('../app/(tabs)/search.tsx');
+  expect(search).toContain("t('journey.step', { current: 1, total: 3 })");
+  expect(search).toContain('<QuickNights');
+  expect(search).toContain('hint={stayDateLine(criteria.checkIn)}');
+  const room = read('../app/room/[roomTypeId].tsx');
+  expect(room).toContain("t('journey.step', { current: 2, total: 3 })");
+  expect(room).toContain('<Ticket testID="price-strip">');
+  expect(room).toContain('<Button role="accent" size="lg" label={t(\'hold.open\')}');
+  const confirm = read('../app/booking/confirm.tsx');
+  expect(confirm).toContain("t('journey.step', { current: 3, total: 3 })");
+  expect(confirm).toContain('<Ticket testID="hold-summary">');
+  for (const source of [search, room, confirm])
+    expect(source, 'chữ phải dùng style của theme').not.toMatch(
+      /style=\{\{ color: color\.text \}\}/,
+    );
+});

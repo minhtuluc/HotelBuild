@@ -33,7 +33,7 @@ describe('bookingDeepLink', () => {
 
 describe('resolveTab', () => {
   it('nhận tab hợp lệ và về mặc định khi không rõ', () => {
-    expect(JOURNEY_TABS).toEqual(['search', 'bookings', 'account']);
+    expect(JOURNEY_TABS).toEqual(['search', 'explore', 'bookings', 'account']);
     expect(resolveTab('bookings')).toBe('bookings');
     expect(resolveTab('lạ')).toBe('search');
   });

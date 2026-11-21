@@ -4,11 +4,11 @@ import { webEnv } from '../../config';
 import { serverTranslators } from '../../i18n/server';
 import { money } from '../../i18n/format';
 import type { Locale } from '../../i18n/locales';
-import { landingContent } from '../../content/landing-content';
+import { landingContent } from '@pinehill/content/landing-content';
 import { PlanRow } from '../../components/content/plan-row';
 import { POSTERS } from '../../components/station-posters';
 import { Photo } from '../../components/photo';
-import { ALL_PHOTO_SLOTS, slotById } from '../../content/photo-slots';
+import { ALL_PHOTO_SLOTS, slotById } from '@pinehill/content/photo-slots';
 import { availablePhotos, photoSrcSet } from '../../lib/photos';
 
 /** Ảnh trang chủ rộng nhất là áp phích ga: gần cả khung ở màn hẹp, khoảng nửa khung ở màn rộng (HB-325). */
@@ -19,9 +19,9 @@ import { CabinDiagram } from '../../components/content/cabin-diagram';
 import { PageToc } from '../../components/content/page-toc';
 import { ScrollRails } from '../../components/content/scroll-rails';
 import { HOME_TOC } from './home-toc';
-import { propertyPageKey } from '../../content/property-pages';
+import { propertyPageKey } from '@pinehill/content/property-pages';
 import { StationMore } from '../../components/content/station-more';
-import { roomTypePageKey } from '../../content/room-type-pages';
+import { roomTypePageKey } from '@pinehill/content/room-type-pages';
 import { ApiProbe } from './api-probe';
 import { SearchBlock } from './search/search-block';
 import { draftFromUrl, urlParams } from './search/journey-context';

@@ -33,3 +33,22 @@ export function readDemoEnabled(source: Readonly<Record<string, string | undefin
 export function isDemoEnabled(): boolean {
   return readDemoEnabled(process.env);
 }
+
+/**
+ * HB-277: origin công khai của web khách, nơi app tải ảnh trang nội dung (`/images/pine-hill/...`).
+ * Không bắt buộc: thiếu hoặc sai dạng thì màn nội dung vẫn hiện chữ, chỉ ẩn ảnh (giống web khi chưa có ảnh).
+ */
+export function readWebOrigin(source: Readonly<Record<string, string | undefined>>): string | null {
+  const raw = source.EXPO_PUBLIC_WEB_ORIGIN;
+  if (raw === undefined || raw === '') return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
+
+export function webOrigin(): string | null {
+  return readWebOrigin(process.env);
+}

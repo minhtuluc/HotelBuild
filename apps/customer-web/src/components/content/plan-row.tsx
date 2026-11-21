@@ -3,7 +3,7 @@
  * của trang chủ và `/offers` (HB-311b). Component máy chủ; `children` là dòng thông số thêm của từng trang.
  */
 import type { ReactElement, ReactNode } from 'react';
-import type { FarePlan } from '../../content/landing-content';
+import type { FarePlan } from '@pinehill/content/landing-content';
 import type { Translators } from '../../i18n/translate';
 
 export function PlanRow({

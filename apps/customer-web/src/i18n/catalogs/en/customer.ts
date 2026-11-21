@@ -4,7 +4,7 @@
  * phát hành công khai. Thiếu khoá so với `vi` thì kiểu báo lỗi.
  */
 import type { CustomerMessageKey } from '../vi/customer';
-import { enContent } from './content';
+import { enContent } from '@pinehill/content/catalogs/en';
 import { enUiWeb } from './ui-web';
 
 export const enCustomer: Readonly<Record<CustomerMessageKey, string>> = {

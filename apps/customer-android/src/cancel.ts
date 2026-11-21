@@ -15,6 +15,8 @@ import type {
 } from '@pinehill/contracts';
 import { OfflineError, requireOnline, type NetInfoSource } from './netinfo';
 import type { MessageKey } from './strings';
+import { LOCALE_META } from '@pinehill/i18n';
+import { currentLocale } from './i18n/locale';
 
 /** Lý do khách được phép khai trên app (máy chủ vẫn kiểm quyền theo từng lý do). */
 export type CancelReason = 'GUEST_REQUEST' | 'FORCE_MAJEURE';
@@ -88,16 +90,14 @@ export function refundRows(breakdown: CancellationBreakdown): readonly RefundRow
 }
 
 /**
- * Số giờ trước giờ nhận phòng tại lúc xem trước (máy chủ tính), hiển thị một chữ số thập phân theo quy
- * ước `vi-VN` (dấu phẩy thập phân — NFR-LOC-02). Đây là số giờ, không phải tiền.
+ * Số giờ trước giờ nhận phòng tại lúc xem trước (máy chủ tính), một chữ số thập phân theo ngôn ngữ đang
+ * chọn (tiếng Việt dấu phẩy thập phân — NFR-LOC-02; HB-275). Đây là số giờ, không phải tiền.
  */
-const HOURS_FORMATTER = new Intl.NumberFormat('vi-VN', {
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
-});
-
 export function formatHoursBeforeCheckIn(hours: number): string {
-  return HOURS_FORMATTER.format(hours);
+  return new Intl.NumberFormat(LOCALE_META[currentLocale()].intl, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(hours);
 }
 
 /** Xem trước kèm `ETag` máy chủ — neo **bắt buộc** của lệnh huỷ (`If-Match`, HB-097/HB-257). */

@@ -10,7 +10,7 @@
  * Phần tả nơi chốn và hoạt động là MINH HOẠ (`illustrative: true`). Không có giá, mã khuyến mãi, lịch sự kiện
  * có ngày cụ thể hay so sánh với kênh trung gian (kế hoạch §8.2, Q15).
  */
-import type { Locale } from '../i18n/locales';
+import type { Locale } from '@pinehill/i18n';
 import { CONTENT_PACKS } from './locale-packs';
 
 export interface ExperienceKey {

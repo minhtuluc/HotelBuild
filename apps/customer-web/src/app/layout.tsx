@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from 'react';
 import type { Metadata } from 'next';
 import { tokensToCssVariables } from '@pinehill/ui-web';
-import { photoAlt, SHARE_PHOTO } from '../content/photo-slots';
+import { photoAlt, SHARE_PHOTO } from '@pinehill/content/photo-slots';
 import { photoSrc } from '../lib/photos';
 import { siteOrigin } from '../lib/site';
 import { GuestFooter, GuestHeader } from '../components/guest-shell';

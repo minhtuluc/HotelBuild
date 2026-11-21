@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
-import { color, space, touchTargetDp, formatDateTimeVn } from '@pinehill/ui-native';
+import { color, space, touchTargetDp, fontFamily } from '@pinehill/ui-native';
 import { createBookingApi } from '@pinehill/api-client';
 import type { CancelPreview, CancelResponse } from '@pinehill/contracts';
 import { createSession } from '../../../src/session-factory';
@@ -43,6 +43,7 @@ import {
   type CancelStep,
   type RefundRow,
 } from '../../../src/cancel';
+import { dateTimeLabel } from '../../../src/i18n/format';
 
 const BUTTON = theme.buttonSecondary;
 const FIELD = theme.field;
@@ -100,7 +101,7 @@ function ResultPanel({ result }: { result: CancelResponse }): ReactElement {
         {t(ORDER_STATUS_KEYS[result.status])}
       </Text>
       <Text style={theme.body}>
-        {t('booking.cancel.resultAt', { time: formatDateTimeVn(result.cancelledAt) })}
+        {t('booking.cancel.resultAt', { time: dateTimeLabel(result.cancelledAt) })}
       </Text>
       <Text style={theme.body}>
         {t('booking.cancel.resultReleased', { count: result.releasedAssignmentCount })}
@@ -136,18 +137,18 @@ function Messages({
           accessibilityRole="alert"
           accessibilityLiveRegion="polite"
           data-testid="cancel-offline"
-          style={{ color: color.warning }}
+          style={theme.alertWarning}
         >
           {t('booking.cancel.offline')}
         </Text>
       ) : null}
       {alert === null ? null : (
-        <Text accessibilityRole="alert" data-testid="cancel-alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" data-testid="cancel-alert" style={theme.alertDanger}>
           {alert}
         </Text>
       )}
       {stale ? (
-        <Text accessibilityRole="alert" data-testid="cancel-stale" style={{ color: color.warning }}>
+        <Text accessibilityRole="alert" data-testid="cancel-stale" style={theme.alertWarning}>
           {t('booking.cancel.stale')}
         </Text>
       ) : null}
@@ -179,7 +180,7 @@ function CancelForm({
   const states = actionStates(step, online);
   return (
     <>
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+      <Text accessibilityRole="header" style={[theme.body, { fontFamily: fontFamily.sansBold }]}>
         {t('booking.cancel.reason')}
       </Text>
       {CANCEL_REASONS.map((value) => (
@@ -192,7 +193,7 @@ function CancelForm({
           onPress={() => onReason(value)}
           style={{ ...BUTTON, alignItems: 'flex-start' }}
         >
-          <Text style={{ color: color.text }}>
+          <Text style={theme.body}>
             {`${reason === value ? '◉' : '○'} ${t(CANCEL_REASON_KEYS[value])}`}
           </Text>
         </Pressable>
@@ -205,7 +206,7 @@ function CancelForm({
         onChangeText={onChangeNote}
         style={FIELD}
       />
-      <Text style={{ color: color.textMuted }}>{t('booking.cancel.previewRequired')}</Text>
+      <Text style={theme.muted}>{t('booking.cancel.previewRequired')}</Text>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t('booking.cancel.preview')}
@@ -214,7 +215,7 @@ function CancelForm({
         onPress={onPreview}
         style={BUTTON}
       >
-        <Text style={{ color: color.primary }}>{t('booking.cancel.preview')}</Text>
+        <Text style={theme.buttonPlainText}>{t('booking.cancel.preview')}</Text>
       </Pressable>
       <Pressable
         accessibilityRole="button"
@@ -224,7 +225,7 @@ function CancelForm({
         onPress={onConfirm}
         style={BUTTON}
       >
-        <Text style={{ color: color.danger }}>{t('booking.cancel.confirm')}</Text>
+        <Text style={theme.alertDanger}>{t('booking.cancel.confirm')}</Text>
       </Pressable>
       {preview === null ? null : <PreviewPanel preview={preview} />}
     </>

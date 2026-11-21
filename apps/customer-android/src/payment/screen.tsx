@@ -2,7 +2,7 @@ import type { ReactElement } from 'react';
 import { ActivityIndicator, Linking, ScrollView, Text } from 'react-native';
 import { Link } from 'expo-router';
 import { color, space, touchTargetDp } from '@pinehill/ui-native';
-import { phaseMessages, paymentText as text } from './messages';
+import { phaseText, paymentText as text } from './messages';
 import { PaymentSummary, PaymentActions } from './panels';
 import { usePayment } from './use-payment';
 import { theme } from '../theme';
@@ -33,7 +33,7 @@ export function PaymentScreen({ bookingId }: { bookingId: string }): ReactElemen
         {text('title')}
       </Text>
       <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={theme.body}>
-        {phaseMessages[view.phase]}
+        {phaseText(view.phase)}
       </Text>
       {view.busy ? (
         <ActivityIndicator accessibilityLabel={text('reading')} color={color.primary} />

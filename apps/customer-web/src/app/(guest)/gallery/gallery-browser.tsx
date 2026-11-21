@@ -5,7 +5,7 @@
  */
 import { useState, type ReactElement } from 'react';
 import { GalleryGrid, type GalleryItem } from '../../../components/content/gallery-grid';
-import type { GalleryGroup } from '../../../content/gallery-entries';
+import type { GalleryGroup } from '@pinehill/content/gallery-entries';
 import { useT } from '../../../i18n/client';
 
 export interface BrowserItem extends GalleryItem {

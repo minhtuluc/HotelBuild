@@ -10,7 +10,7 @@
  *
  * Không có giá bán, đánh giá hay số liệu kinh doanh nào ở đây.
  */
-import type { Locale } from '../i18n/locales';
+import type { Locale } from '@pinehill/i18n';
 import { LANDING_EN } from './landing-content-en';
 import { CONTENT_PACKS } from './locale-packs';
 

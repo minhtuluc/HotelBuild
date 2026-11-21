@@ -8,7 +8,21 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { color, radius, space, touchTargetDp, formatDateTimeVn } from '@pinehill/ui-native';
+import {
+  Button,
+  color,
+  FieldLabel,
+  Money,
+  radius,
+  space,
+  Step,
+  Ticket,
+  touchTargetDp,
+  worldInk,
+  fontFamily,
+} from '@pinehill/ui-native';
+import { calendarDateLabel } from '../../src/calendar-date';
+import { stayDateLine } from '../../src/journey';
 import type { Quote, RatePlanCode, RatePlanPublic } from '@pinehill/contracts';
 import { createAppApiClient } from '../../src/api';
 import { createPublicJourneyApi } from '../../src/public-client';
@@ -31,6 +45,7 @@ import {
   type QuoteOutcome,
   type RoomCriteria,
 } from '../../src/room-detail';
+import { dateTimeLabel } from '../../src/i18n/format';
 
 const CELL = { flex: 1, color: color.text } as const;
 
@@ -45,23 +60,33 @@ function NightsTable({ quote }: { quote: Quote }): ReactElement {
         {t('room.nights.title')}
       </Text>
       <Text style={theme.muted}>{t('room.nights.note')}</Text>
-      {nightsTable(quote).map((night) => (
-        <View
-          key={night.date}
-          accessible
-          accessibilityLabel={`${night.date}. ${t('room.col.basePrice')} ${money(night.basePrice)}. ${t('room.col.nightlyPrice')} ${money(night.nightlyPrice)}${night.clamped ? `. ${t('room.flag.clamped')}` : ''}`}
-          style={theme.card}
-        >
-          <Text style={CELL}>{night.date}</Text>
-          <Text style={[theme.muted, theme.tabular]}>
-            {t('room.col.basePrice')}: {money(night.basePrice)}
-          </Text>
-          <Text style={[{ color: color.text, fontWeight: '600' }, theme.tabular]}>
-            {t('room.col.nightlyPrice')}: {money(night.nightlyPrice)}
-          </Text>
-          {!night.clamped ? null : <Text style={theme.alertWarning}>{t('room.flag.clamped')}</Text>}
-        </View>
-      ))}
+      {/* HB-276: mỗi đêm là một chặng in trên giấy vé, như dải giá của web (DESIGN.md §Fare Segments). */}
+      <Ticket testID="price-strip">
+        {nightsTable(quote).map((night, index) => (
+          <View
+            key={night.date}
+            accessible
+            accessibilityLabel={`${t('room.segment', { n: index + 1 })}. ${stayDateLine(night.date) ?? night.date}. ${t('room.col.basePrice')} ${money(night.basePrice)}. ${t('room.col.nightlyPrice')} ${money(night.nightlyPrice)}${night.clamped ? `. ${t('room.flag.clamped')}` : ''}`}
+            style={{
+              gap: space.s1,
+              paddingVertical: space.s2,
+              borderStyle: night.clamped ? 'dotted' : 'dashed',
+              borderBottomWidth: 1.5,
+              borderColor: color.primary,
+            }}
+          >
+            <FieldLabel onTicket>{t('room.segment', { n: index + 1 })}</FieldLabel>
+            <Text style={theme.body}>{stayDateLine(night.date) ?? night.date}</Text>
+            <Text style={[theme.muted, theme.tabular, { color: worldInk.ticketMuted }]}>
+              {t('room.col.basePrice')}: {money(night.basePrice)}
+            </Text>
+            <Money onTicket>{money(night.nightlyPrice)}</Money>
+            {!night.clamped ? null : (
+              <Text style={theme.alertWarning}>{t('room.flag.clamped')}</Text>
+            )}
+          </View>
+        ))}
+      </Ticket>
     </View>
   );
 }
@@ -85,7 +110,7 @@ function Totals({ quote }: { quote: Quote }): ReactElement {
           accessibilityLabel={`${labels[row.key]}: ${money(row.amount)}`}
           style={[{ flexDirection: 'row', paddingVertical: space.s1 }, theme.hairline]}
         >
-          <Text style={{ color: color.textMuted, flex: 1 }}>{labels[row.key]}</Text>
+          <Text style={[theme.muted, { flex: 1 }]}>{labels[row.key]}</Text>
           <Text style={[CELL, theme.tabular]}>{money(row.amount)}</Text>
         </View>
       ))}
@@ -121,7 +146,7 @@ function TextAction({ label, onPress }: { label: string; onPress: () => void }):
       onPress={onPress}
       style={{ minHeight: touchTargetDp, justifyContent: 'center' }}
     >
-      <Text style={{ color: color.primary }}>{label}</Text>
+      <Text style={theme.buttonPlainText}>{label}</Text>
     </Pressable>
   );
 }
@@ -169,7 +194,7 @@ function PlanPicker({
 }): ReactElement {
   return (
     <View style={{ gap: space.s2 }}>
-      <Text accessibilityRole="header" style={{ color: color.text, fontWeight: '700' }}>
+      <Text accessibilityRole="header" style={[theme.body, { fontFamily: fontFamily.sansBold }]}>
         {t('room.plan')}
       </Text>
       {plans.map((plan) => (
@@ -192,7 +217,7 @@ function PlanPicker({
             paddingHorizontal: space.s3,
           }}
         >
-          <Text style={{ color: color.text }}>{plan.name}</Text>
+          <Text style={theme.body}>{plan.name}</Text>
         </Pressable>
       ))}
     </View>
@@ -217,7 +242,7 @@ function QuoteBlock({
           <Text
             accessibilityRole="alert"
             accessibilityLiveRegion="polite"
-            style={{ color: color.warning }}
+            style={theme.alertWarning}
           >
             {t('room.expired')}
           </Text>
@@ -226,15 +251,13 @@ function QuoteBlock({
       )}
       <NightsTable quote={quote} />
       <Totals quote={quote} />
-      <Text style={{ color: color.textMuted }}>
-        {t('room.summary.quotedAt', { time: formatDateTimeVn(quote.quotedAt) })}
+      <Text style={theme.muted}>
+        {t('room.summary.quotedAt', { time: dateTimeLabel(quote.quotedAt) })}
       </Text>
-      <Text style={{ color: color.textMuted }}>
-        {t('room.summary.expiresAt', { time: formatDateTimeVn(quote.expiresAt) })}
+      <Text style={theme.muted}>
+        {t('room.summary.expiresAt', { time: dateTimeLabel(quote.expiresAt) })}
       </Text>
-      <Text style={{ color: color.textMuted }}>
-        {t('room.engine', { version: quote.engineVersion })}
-      </Text>
+      <Text style={theme.muted}>{t('room.engine', { version: quote.engineVersion })}</Text>
       {plan === undefined ? null : <Terms plan={plan} />}
     </>
   );
@@ -259,7 +282,7 @@ function RoomView({
 }): ReactElement {
   if (view.kind === 'invalid')
     return (
-      <Text accessibilityRole="alert" style={{ color: color.danger }}>
+      <Text accessibilityRole="alert" style={theme.alertDanger}>
         {t('room.invalid')}
       </Text>
     );
@@ -275,7 +298,7 @@ function RoomView({
       {view.quote === null ? null : (
         <>
           <QuoteBlock quote={view.quote} plan={plan} expired={view.expired} onRenew={onRenew} />
-          <TextAction label={t('hold.open')} onPress={onContinue} />
+          <Button role="accent" size="lg" label={t('hold.open')} onPress={onContinue} />
         </>
       )}
     </>
@@ -331,12 +354,14 @@ export default function RoomDetailScreen(): ReactElement {
 
   return (
     <ScrollView style={theme.scroll} contentContainerStyle={theme.scrollContent}>
+      <Step text={t('journey.step', { current: 2, total: 3 })} />
       <Text accessibilityRole="header" style={theme.title}>
         {t('room.title')}
       </Text>
       {criteria === null ? null : (
-        <Text style={{ color: color.text }}>
-          {roomName} · {criteria.checkIn} → {criteria.checkOut}
+        <Text style={theme.body}>
+          {roomName} · {calendarDateLabel(criteria.checkIn)} →{' '}
+          {calendarDateLabel(criteria.checkOut)}
         </Text>
       )}
       <RoomView

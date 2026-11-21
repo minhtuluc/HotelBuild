@@ -9,6 +9,8 @@ import { isApiError } from '@pinehill/api-client';
 import type { Availability, AvailabilityItem } from '@pinehill/contracts';
 import { OfflineError, requireOnline, type NetInfoSource } from './netinfo';
 import type { PublicJourneyApi } from './public-client';
+import { LOCALE_META } from '@pinehill/i18n';
+import { currentLocale } from './i18n/locale';
 
 export interface SearchCriteria {
   readonly propertyId: string;
@@ -130,9 +132,14 @@ export async function runSearch(
   }
 }
 
-/** `1.222.000` — tiền VND nguyên, nhóm nghìn bằng dấu chấm (Hermes không cần Intl). */
+/**
+ * Tiền VND nguyên. Tiếng Việt `1.222.000` dựng thuần chuỗi như trước; ngôn ngữ khác nhóm nghìn theo `Intl`
+ * của ngôn ngữ đó (HB-275): `1,222,000` (en/zh/ja/ko), `1 222 000` (ru).
+ */
 export function formatVnd(amount: number): string {
   if (!Number.isInteger(amount)) throw new RangeError('Tiền phải là số nguyên VND (BR-GEN-01).');
+  const locale = currentLocale();
+  if (locale !== 'vi') return new Intl.NumberFormat(LOCALE_META[locale].intl).format(amount);
   const sign = amount < 0 ? '-' : '';
   const digits = String(Math.abs(amount));
   let grouped = '';

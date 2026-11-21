@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { color, space, formatDateTimeVn, Button } from '@pinehill/ui-native';
+import { color, space, Button, Step, Ticket, FieldLabel } from '@pinehill/ui-native';
 import type { BookingSummary, RatePlanCode } from '@pinehill/contracts';
 import { LoginPrompt } from '../../src/login-prompt';
 import { createSession } from '../../src/session-factory';
@@ -32,9 +32,10 @@ import {
   type HoldCriteria,
   type HoldInput,
 } from '../../src/hold';
+import { dateTimeLabel } from '../../src/i18n/format';
 
 const TICK_MS = 1000;
-const CELL = { color: color.text } as const;
+const CELL = theme.body;
 
 interface ConfirmParams {
   readonly criteria: HoldCriteria;
@@ -131,7 +132,7 @@ function HoldLine({ expiresAt, nowMs }: { expiresAt: string; nowMs: number }): R
       <Text style={[{ color: locked ? color.warning : color.text }, theme.tabular]}>
         {t('hold.countdown', { time: formatCountdown(remaining ?? 0) })}
       </Text>
-      <Text style={theme.muted}>{t('hold.expiresAt', { time: formatDateTimeVn(expiresAt) })}</Text>
+      <Text style={theme.muted}>{t('hold.expiresAt', { time: dateTimeLabel(expiresAt) })}</Text>
     </View>
   );
 }
@@ -176,13 +177,13 @@ function Outcome({
     <>
       {expiresAt === null ? null : <HoldLine expiresAt={expiresAt} nowMs={nowMs} />}
       {!locked ? null : (
-        <Text accessibilityRole="alert" style={{ color: color.warning }}>
+        <Text accessibilityRole="alert" style={theme.alertWarning}>
           {t('hold.locked')}
         </Text>
       )}
       {!duplicate || booking === null ? null : (
         <View style={{ gap: space.s2 }}>
-          <Text accessibilityRole="alert" style={{ color: color.warning }}>
+          <Text accessibilityRole="alert" style={theme.alertWarning}>
             {t('hold.duplicate', { code: booking.code })}
           </Text>
           <Action label={t('hold.duplicate.open')} onPress={onOpenOld} />
@@ -306,16 +307,21 @@ export default function ConfirmHoldScreen(): ReactElement {
 
   return (
     <ScrollView style={theme.scroll} contentContainerStyle={theme.scrollContent}>
+      <Step text={t('journey.step', { current: 3, total: 3 })} />
       <Text accessibilityRole="header" style={theme.title}>
         {t('hold.title')}
       </Text>
-      <Text style={CELL}>
-        {t('hold.criteria', {
-          checkIn: calendarDateLabel(parsed.criteria.checkIn),
-          checkOut: calendarDateLabel(parsed.criteria.checkOut),
-          roomCount: parsed.criteria.roomCount,
-        })}
-      </Text>
+      {/* HB-276: tóm tắt kỳ ở in trên giấy vé như vé mẫu của web. */}
+      <Ticket testID="hold-summary">
+        <FieldLabel onTicket>{t('hold.summary.title')}</FieldLabel>
+        <Text style={theme.body}>
+          {t('hold.criteria', {
+            checkIn: calendarDateLabel(parsed.criteria.checkIn),
+            checkOut: calendarDateLabel(parsed.criteria.checkOut),
+            roomCount: parsed.criteria.roomCount,
+          })}
+        </Text>
+      </Ticket>
 
       <Text accessibilityRole="header" style={theme.sectionTitle}>
         {t('hold.guest.title')}
@@ -338,16 +344,12 @@ export default function ConfirmHoldScreen(): ReactElement {
       <Field label={t('hold.note')} value={note} onChange={setNote} />
 
       {issue === null ? null : (
-        <Text accessibilityRole="alert" style={{ color: color.danger }}>
+        <Text accessibilityRole="alert" style={theme.alertDanger}>
           {t(issue === 'NAME' ? 'hold.issue.NAME' : 'hold.issue.PHONE')}
         </Text>
       )}
       {alert === null ? null : (
-        <Text
-          accessibilityRole="alert"
-          accessibilityLiveRegion="polite"
-          style={{ color: color.danger }}
-        >
+        <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={theme.alertDanger}>
           {alert}
         </Text>
       )}

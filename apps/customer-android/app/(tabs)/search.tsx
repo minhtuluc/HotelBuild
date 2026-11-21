@@ -8,7 +8,8 @@
 import { useCallback, useMemo, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { color, space } from '@pinehill/ui-native';
+import { color, space, Step } from '@pinehill/ui-native';
+import { QUICK_NIGHTS, activeNights, stayDateLine, todayVn, withNights } from '../../src/journey';
 import { createAppApiClient } from '../../src/api';
 import { createPublicJourneyApi } from '../../src/public-client';
 import { PropertyPicker } from '../../src/property-picker';
@@ -49,15 +50,18 @@ function Field({
   value,
   onChange,
   numeric = false,
+  hint = null,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   numeric?: boolean;
+  /** HB-276: dòng ngày (thứ + ngày) dưới ô ngày, như web. */
+  hint?: string | null;
 }): ReactElement {
   return (
     <View style={{ gap: space.s1 }}>
-      <Text style={{ color: color.text }}>{label}</Text>
+      <Text style={theme.label}>{label}</Text>
       <TextInput
         accessibilityLabel={label}
         value={value}
@@ -66,6 +70,42 @@ function Field({
         autoCapitalize="none"
         style={theme.field}
       />
+      {hint === null ? null : <Text style={theme.muted}>{hint}</Text>}
+    </View>
+  );
+}
+
+/** HB-276: chọn nhanh 2/3/5 đêm từ ngày nhận đang chọn (như HB-317 của web); ô ngày vẫn gõ tự do. */
+function QuickNights({
+  criteria,
+  onPick,
+}: {
+  criteria: SearchCriteria;
+  onPick: (dates: { checkIn: string; checkOut: string }) => void;
+}): ReactElement {
+  const active = activeNights(criteria.checkIn, criteria.checkOut);
+  return (
+    <View
+      accessibilityRole="radiogroup"
+      accessibilityLabel={t('search.quickNights')}
+      style={{ flexDirection: 'row', gap: space.s2 }}
+    >
+      {QUICK_NIGHTS.map((nights) => (
+        <Pressable
+          key={nights}
+          testID={`quick-nights-${nights}`}
+          accessibilityRole="radio"
+          accessibilityState={{ checked: active === nights }}
+          onPress={() => onPick(withNights(criteria.checkIn, nights, todayVn(Date.now())))}
+          style={[
+            theme.buttonSecondary,
+            { flex: 1 },
+            active === nights ? { borderColor: color.primary, borderWidth: 2 } : null,
+          ]}
+        >
+          <Text style={theme.buttonSecondaryText}>{t('search.quickNight', { nights })}</Text>
+        </Pressable>
+      ))}
     </View>
   );
 }
@@ -86,8 +126,8 @@ function ResultRow({ row, onOpen }: { row: SearchRow; onOpen: () => void }): Rea
       accessibilityLabel={`${row.name}. ${availability}. ${nightly}. ${total}`}
       style={theme.card}
     >
-      <Text style={{ color: color.text, fontWeight: '600' }}>{row.name}</Text>
-      <Text style={{ color: color.text }}>{availability}</Text>
+      <Text style={theme.sectionTitle}>{row.name}</Text>
+      <Text style={theme.body}>{availability}</Text>
       <Text style={[theme.muted, theme.tabular]}>{nightly}</Text>
       <Text style={[theme.muted, theme.tabular]}>{total}</Text>
       <Text style={theme.muted}>
@@ -136,6 +176,7 @@ export default function SearchScreen(): ReactElement {
 
   return (
     <ScrollView style={theme.scroll} contentContainerStyle={theme.scrollContent}>
+      <Step text={t('journey.step', { current: 1, total: 3 })} />
       <Text accessibilityRole="header" style={theme.title}>
         {t('journey.search.title')}
       </Text>
@@ -150,6 +191,7 @@ export default function SearchScreen(): ReactElement {
       <Field
         label={t('search.form.checkIn')}
         value={criteria.checkIn}
+        hint={stayDateLine(criteria.checkIn)}
         onChange={(value) => {
           change({ checkIn: value });
         }}
@@ -157,10 +199,12 @@ export default function SearchScreen(): ReactElement {
       <Field
         label={t('search.form.checkOut')}
         value={criteria.checkOut}
+        hint={stayDateLine(criteria.checkOut)}
         onChange={(value) => {
           change({ checkOut: value });
         }}
       />
+      <QuickNights criteria={criteria} onPick={change} />
       <Field
         label={t('search.form.adults')}
         value={String(criteria.adults)}
@@ -187,11 +231,7 @@ export default function SearchScreen(): ReactElement {
       />
 
       {issue === null ? null : (
-        <Text
-          accessibilityRole="alert"
-          accessibilityLiveRegion="polite"
-          style={{ color: color.danger }}
-        >
+        <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={theme.alertDanger}>
           {t(ISSUE_KEYS[issue])}
         </Text>
       )}

@@ -3,7 +3,7 @@
  * `docs/02-nghiep-vu/tien-nghi-trong-gia.md`. Component máy chủ, không có giá: chỉ nói giá đã báo gồm gì.
  */
 import type { ReactElement } from 'react';
-import { includedCopy } from '../../content/dining-page';
+import { includedCopy } from '@pinehill/content/dining-page';
 import type { Translators } from '../../i18n/translate';
 import { LocaleLink as Link } from '../locale-link';
 

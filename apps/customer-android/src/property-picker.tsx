@@ -1,7 +1,10 @@
-/** HB-249: chọn cơ sở từ `GET /public/properties` thay vì gõ mã — API tìm phòng cần id cơ sở. */
+/**
+ * HB-249: chọn cơ sở từ `GET /public/properties` thay vì gõ mã — API tìm phòng cần id cơ sở.
+ * HB-276: hiện như bảng ga của web (bảng đen chữ hổ phách, ga đang chọn chuyển xanh còn chỗ).
+ */
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { color, radius, space, touchTargetDp } from '@pinehill/ui-native';
+import { Board, BoardRow, color, space } from '@pinehill/ui-native';
 import { initialPropertyId, type PropertyChoice } from './properties';
 import { t } from './strings';
 import { theme } from './theme';
@@ -39,7 +42,6 @@ export function PropertyPicker({
 
   return (
     <View style={{ gap: space.s2 }}>
-      <Text style={{ color: color.text }}>{t('search.form.property')}</Text>
       {state.kind === 'loading' ? (
         <ActivityIndicator
           accessibilityLabel={t('search.properties.loading')}
@@ -61,29 +63,23 @@ export function PropertyPicker({
           </Pressable>
         </View>
       ) : null}
-      {state.kind === 'ready'
-        ? state.list.map((property) => (
-            <Pressable
+      {state.kind === 'ready' ? (
+        <Board title={t('search.form.property')}>
+          {state.list.map((property) => (
+            <BoardRow
               key={property.id}
               testID={`property-${property.id}`}
-              accessibilityRole="radio"
+              label={property.name}
+              selected={value === property.id}
+              choice
               accessibilityLabel={t('search.properties.option', { name: property.name })}
-              accessibilityState={{ checked: value === property.id }}
               onPress={() => onChange(property.id)}
-              style={{
-                backgroundColor: color.surface,
-                borderColor: value === property.id ? color.primary : color.border,
-                borderRadius: radius.md,
-                borderWidth: value === property.id ? 2 : 1,
-                justifyContent: 'center',
-                minHeight: touchTargetDp,
-                paddingHorizontal: space.s3,
-              }}
-            >
-              <Text style={{ color: color.text }}>{property.name}</Text>
-            </Pressable>
-          ))
-        : null}
+            />
+          ))}
+        </Board>
+      ) : (
+        <Text style={theme.label}>{t('search.form.property')}</Text>
+      )}
     </View>
   );
 }

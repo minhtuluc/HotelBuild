@@ -5,7 +5,7 @@
  * Xem trước toàn bộ ô ảnh: mở trang với `?anh=1` (vd. http://localhost:3001/?anh=1).
  * Brief chụp chi tiết: docs/04-thiet-ke/anh-trang-khach.md.
  */
-import type { Locale } from '../i18n/locales';
+import type { Locale } from '@pinehill/i18n';
 import { CONTENT_PACKS } from './locale-packs';
 import { EXTRA_PHOTOS } from './photo-slots-extra';
 

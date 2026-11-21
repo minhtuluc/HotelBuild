@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { landingContent } from '../../src/content/landing-content';
-import { slotById } from '../../src/content/photo-slots';
+import { landingContent } from '@pinehill/content/landing-content';
+import { slotById } from '@pinehill/content/photo-slots';
 import {
   PROPERTY_PAGES,
   matchPropertyId,
@@ -8,13 +8,13 @@ import {
   propertyPageCopy,
   propertyPageKey,
   searchCtaHref,
-} from '../../src/content/property-pages';
+} from '@pinehill/content/property-pages';
 import {
   ROOM_TYPE_CODES,
   ROOM_TYPE_PAGES,
   roomTypePageCopy,
   roomTypePageKey,
-} from '../../src/content/room-type-pages';
+} from '@pinehill/content/room-type-pages';
 import { initialPropertyId } from '../../src/app/(guest)/search/public-properties';
 import { LOCALES } from '../../src/i18n/locales';
 

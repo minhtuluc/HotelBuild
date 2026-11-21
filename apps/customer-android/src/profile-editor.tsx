@@ -31,7 +31,7 @@ function Input({
 }): ReactElement {
   return (
     <View style={{ gap: space.s1 }}>
-      <Text style={{ color: color.text }}>{label}</Text>
+      <Text style={theme.body}>{label}</Text>
       <TextInput
         accessibilityLabel={label}
         value={value}
@@ -107,7 +107,7 @@ export function ProfileEditor({
           value={draft.consent}
           onValueChange={(consent) => setDraft((previous) => ({ ...previous, consent }))}
         />
-        <Text style={{ color: color.text, flex: 1 }}>{t('profile.edit.consent')}</Text>
+        <Text style={[theme.body, { flex: 1 }]}>{t('profile.edit.consent')}</Text>
       </View>
       <Text style={theme.muted}>{t('profile.edit.phoneNote')}</Text>
       {message === null ? null : (

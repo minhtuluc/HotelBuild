@@ -5,10 +5,10 @@
 import type { Metadata } from 'next';
 import type { ReactElement } from 'react';
 import { ChainPageHead, chainMetadata } from '../../../components/content/chain-page';
-import { chainPagesCopy } from '../../../content/chain-pages';
-import { GALLERY_GROUPS, galleryEntries } from '../../../content/gallery-entries';
-import { landingContent } from '../../../content/landing-content';
-import { photoAlt, slotById } from '../../../content/photo-slots';
+import { chainPagesCopy } from '@pinehill/content/chain-pages';
+import { GALLERY_GROUPS, galleryEntries } from '@pinehill/content/gallery-entries';
+import { landingContent } from '@pinehill/content/landing-content';
+import { photoAlt, slotById } from '@pinehill/content/photo-slots';
 import { serverTranslators } from '../../../i18n/server';
 import { availablePhotos, photoSrcSet } from '../../../lib/photos';
 import { GalleryBrowser, type BrowserItem } from './gallery-browser';

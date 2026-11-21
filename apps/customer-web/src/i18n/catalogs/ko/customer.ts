@@ -4,7 +4,7 @@
  * áp cho mọi locale ngoài `vi`. Thiếu khoá so với `vi` thì kiểu báo lỗi.
  */
 import type { CustomerMessageKey } from '../vi/customer';
-import { koContent } from './content';
+import { koContent } from '@pinehill/content/catalogs/ko';
 import { koUiWeb } from './ui-web';
 
 export const koCustomer: Readonly<Record<CustomerMessageKey, string>> = {
